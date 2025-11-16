@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/models/category_data_model.dart';
+import '../../../api_firebase/models/category_data_model.dart';
 
 // 카테고리 관련 다이얼로그들을 관리합니다.
 // 팝업 메뉴에서 호출되는 다이얼로그들을 포함합니다.

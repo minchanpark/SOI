@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/models/notification_model.dart';
+import '../../../api_firebase/models/notification_model.dart';
 
 /// 개별 알림 아이템 위젯
 class NotificationItemWidget extends StatefulWidget {

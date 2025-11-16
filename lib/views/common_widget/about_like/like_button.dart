@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_reaction_button/flutter_reaction_button.dart';
 
-import '../../../firebase_logic/controllers/emoji_reaction_controller.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/models/emoji_reaction_model.dart';
+import '../../../api_firebase/controllers/emoji_reaction_controller.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api_firebase/models/emoji_reaction_model.dart';
 
 class EmojiButton extends StatefulWidget {
   final String photoId;

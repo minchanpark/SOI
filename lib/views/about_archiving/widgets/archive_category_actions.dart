@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:soi/firebase_logic/controllers/auth_controller.dart';
+import 'package:soi/api_firebase/controllers/auth_controller.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/firebase_logic/controllers/category_member_controller.dart';
-import '../../../firebase_logic/controllers/category_controller.dart';
-import '../../../firebase_logic/models/category_data_model.dart';
+import 'package:soi/api_firebase/controllers/category_member_controller.dart';
+import '../../../api_firebase/controllers/category_controller.dart';
+import '../../../api_firebase/models/category_data_model.dart';
 
 /// ⚡ 아카이브 카테고리 액션 처리 클래스
 /// 카테고리 관련 비즈니스 로직을 담당합니다.

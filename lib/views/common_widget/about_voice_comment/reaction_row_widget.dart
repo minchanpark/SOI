@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:soi/firebase_logic/models/comment_record_model.dart';
+import 'package:soi/api_firebase/models/comment_record_model.dart';
 import '../../../utils/format_utils.dart';
 
 class ReactionRow extends StatelessWidget {

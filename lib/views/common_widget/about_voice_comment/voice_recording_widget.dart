@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
-import '../../../firebase_logic/models/comment_record_model.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
+import '../../../api_firebase/models/comment_record_model.dart';
 import 'voice_comment_active_widget.dart';
 import 'voice_comment_text_widget.dart';
 

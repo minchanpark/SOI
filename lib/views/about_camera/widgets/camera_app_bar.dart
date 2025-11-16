@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../../firebase_logic/controllers/notification_controller.dart';
+import '../../../api_firebase/controllers/notification_controller.dart';
 
 class CameraAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CameraAppBar({

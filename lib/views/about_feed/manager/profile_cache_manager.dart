@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
 
 class ProfileCacheManager {
   // 프로필 정보 캐싱

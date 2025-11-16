@@ -6,9 +6,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../firebase_logic/models/user_search_model.dart';
-import '../../firebase_logic/controllers/user_matching_controller.dart';
-import '../../firebase_logic/controllers/friend_request_controller.dart';
+import '../../api_firebase/models/user_search_model.dart';
+import '../../api_firebase/controllers/user_matching_controller.dart';
+import '../../api_firebase/controllers/friend_request_controller.dart';
 
 /// ID로 친구를 검색/추가하는 전체 화면 플로우
 /// 기존 다이얼로그(AddByIdDialog)를 대체하며

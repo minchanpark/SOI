@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:soi/firebase_logic/controllers/category_controller.dart';
+import 'package:soi/api_firebase/controllers/category_controller.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../firebase_logic/controllers/auth_controller.dart';
+import '../../../../api_firebase/controllers/auth_controller.dart';
 
-import '../../../../firebase_logic/controllers/photo_controller.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
-import '../../../../firebase_logic/models/photo_data_model.dart';
+import '../../../../api_firebase/controllers/photo_controller.dart';
+import '../../../../api_firebase/models/category_data_model.dart';
+import '../../../../api_firebase/models/photo_data_model.dart';
 import '../../../../theme/theme.dart';
 import '../../widgets/photo_grid_item.dart';
 import '../../widgets/category_members_bottom_sheet.dart';

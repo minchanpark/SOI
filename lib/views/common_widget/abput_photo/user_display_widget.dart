@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
 
 /// 사용자 이름 표시 위젯 - AuthController의 getUserInfo를 통해 실제 name 필드 조회
 /// 단일 책임: 사용자 이름 표시

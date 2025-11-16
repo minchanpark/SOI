@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../../firebase_logic/controllers/contact_controller.dart';
+import '../../../../api_firebase/controllers/auth_controller.dart';
+import '../../../../api_firebase/controllers/contact_controller.dart';
 
 class FriendAddAndSharePage extends StatefulWidget {
   final PageController? pageController;

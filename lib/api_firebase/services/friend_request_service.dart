@@ -1,4 +1,4 @@
-import 'package:soi/firebase_logic/controllers/auth_controller.dart';
+import 'package:soi/api_firebase/controllers/auth_controller.dart';
 import '../repositories/friend_request_repository.dart';
 import '../repositories/friend_repository.dart';
 import '../repositories/user_search_repository.dart';

@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/models/category_data_model.dart';
-import '../../../firebase_logic/models/auth_model.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api_firebase/models/category_data_model.dart';
+import '../../../api_firebase/models/auth_model.dart';
 import '../../about_friends/friend_list_add_screen.dart';
 
 /// 카테고리 멤버들을 보여주는 바텀시트

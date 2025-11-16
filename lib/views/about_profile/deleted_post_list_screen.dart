@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/firebase_logic/controllers/auth_controller.dart';
-import '../../firebase_logic/controllers/photo_controller.dart';
-import '../../firebase_logic/models/photo_data_model.dart';
+import 'package:soi/api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/controllers/photo_controller.dart';
+import '../../api_firebase/models/photo_data_model.dart';
 
 class DeletedPostListScreen extends StatefulWidget {
   const DeletedPostListScreen({super.key});

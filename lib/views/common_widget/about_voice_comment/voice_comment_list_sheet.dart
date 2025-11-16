@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/models/comment_record_model.dart';
-import '../../../firebase_logic/controllers/emoji_reaction_controller.dart';
-import '../../../firebase_logic/controllers/comment_record_controller.dart';
+import '../../../api_firebase/models/comment_record_model.dart';
+import '../../../api_firebase/controllers/emoji_reaction_controller.dart';
+import '../../../api_firebase/controllers/comment_record_controller.dart';
 import 'voice_comment_row_widget.dart';
 
 /// 재사용 가능한 음성 댓글 리스트 Bottom Sheet

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
-import '../../../firebase_logic/models/comment_record_model.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
+import '../../../api_firebase/models/comment_record_model.dart';
 import '../../about_feed/manager/voice_comment_state_manager.dart';
 import 'user_info_row_widget.dart';
 import '../about_voice_comment/voice_recording_widget.dart';

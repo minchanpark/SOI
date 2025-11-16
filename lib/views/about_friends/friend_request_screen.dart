@@ -3,12 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../firebase_logic/controllers/friend_request_controller.dart';
-import '../../firebase_logic/controllers/contact_controller.dart';
-import '../../firebase_logic/controllers/auth_controller.dart';
-import '../../firebase_logic/controllers/user_matching_controller.dart';
-import '../../firebase_logic/services/user_matching_service.dart';
-import '../../firebase_logic/services/firebase_deeplink_service.dart';
+import '../../api_firebase/controllers/friend_request_controller.dart';
+import '../../api_firebase/controllers/contact_controller.dart';
+import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/controllers/user_matching_controller.dart';
+import '../../api_firebase/services/user_matching_service.dart';
+import '../../api_firebase/services/firebase_deeplink_service.dart';
 import 'widgets/friend_request_card.dart';
 import 'widgets/friend_suggest_card.dart';
 

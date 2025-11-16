@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
+import '../../../../api_firebase/models/category_data_model.dart';
 
 class AddFriendButton extends StatelessWidget {
   final CategoryDataModel category;

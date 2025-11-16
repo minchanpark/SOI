@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/friend_request_controller.dart';
-import '../../../firebase_logic/models/friend_request_model.dart';
+import '../../../api_firebase/controllers/friend_request_controller.dart';
+import '../../../api_firebase/models/friend_request_model.dart';
 
 class FriendRequestCard extends StatelessWidget {
   final double scale;

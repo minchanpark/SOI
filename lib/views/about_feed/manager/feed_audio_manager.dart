@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/audio_controller.dart';
-import '../../../firebase_logic/controllers/comment_audio_controller.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
+import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api_firebase/controllers/comment_audio_controller.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
 
 class FeedAudioManager {
   /// 오디오 재생/일시정지 토글

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_boxicons/flutter_boxicons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/controllers/contact_controller.dart';
+import '../../../api_firebase/controllers/contact_controller.dart';
 import '../add_friend_by_id_screen.dart';
 
 class FriendAddOptionsCard extends StatelessWidget {

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/firebase_logic/controllers/category_search_controller.dart';
+import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 
-import '../../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../../firebase_logic/controllers/category_controller.dart';
+import '../../../../api_firebase/controllers/auth_controller.dart';
+import '../../../../api_firebase/controllers/category_controller.dart';
 import '../../../../theme/theme.dart';
 import '../../models/archive_layout_mode.dart';
 import '../../widgets/archive_card_widget/archive_card_widget.dart';

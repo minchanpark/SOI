@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/controllers/comment_record_controller.dart';
-import '../../../firebase_logic/models/comment_record_model.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api_firebase/controllers/comment_record_controller.dart';
+import '../../../api_firebase/models/comment_record_model.dart';
 import '../../../utils/position_converter.dart';
 
 /// 보류 중인 음성 댓글 정보를 담는 단순 데이터 객체

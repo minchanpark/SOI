@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../firebase_logic/controllers/friend_controller.dart';
-import '../../firebase_logic/models/friend_model.dart';
+import '../../api_firebase/controllers/friend_controller.dart';
+import '../../api_firebase/models/friend_model.dart';
 
 class FriendListScreen extends StatefulWidget {
   final String? categoryId;

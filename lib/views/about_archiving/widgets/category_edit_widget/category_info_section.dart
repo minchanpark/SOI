@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
+import '../../../../api_firebase/controllers/auth_controller.dart';
+import '../../../../api_firebase/models/category_data_model.dart';
 
 class CategoryInfoSection extends StatelessWidget {
   final CategoryDataModel category;

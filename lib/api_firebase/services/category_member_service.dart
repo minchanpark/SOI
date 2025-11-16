@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:soi/firebase_logic/services/auth_service.dart';
+import 'package:soi/api_firebase/services/auth_service.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/user_search_repository.dart';
 import '../models/category_data_model.dart';

@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../../../../firebase_logic/controllers/auth_controller.dart';
+import '../../../../api_firebase/controllers/auth_controller.dart';
 
 // 프로필 이미지 행 위젯 (Figma 디자인 기준)
 class ArchiveProfileRowWidget extends StatefulWidget {

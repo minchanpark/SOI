@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../firebase_logic/controllers/friend_controller.dart';
-import '../../firebase_logic/controllers/auth_controller.dart';
-import '../../firebase_logic/models/auth_model.dart';
+import '../../api_firebase/controllers/friend_controller.dart';
+import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/models/auth_model.dart';
 
 class BlockedFriendListScreen extends StatefulWidget {
   const BlockedFriendListScreen({super.key});

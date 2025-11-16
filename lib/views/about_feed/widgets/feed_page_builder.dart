@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/controllers/photo_controller.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
-import '../../../firebase_logic/models/comment_record_model.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api_firebase/controllers/photo_controller.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
+import '../../../api_firebase/models/comment_record_model.dart';
 import '../../common_widget/abput_photo/photo_card_widget_common.dart';
 
 // 피드 페이지 빌더

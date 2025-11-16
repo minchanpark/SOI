@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/controllers/audio_controller.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
 import '../screens/archive_detail/photo_detail_screen.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 

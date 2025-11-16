@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/controllers/category_controller.dart';
+import '../../../api_firebase/controllers/category_controller.dart';
 import 'category_item_widget.dart';
 
 /// 카테고리 목록을 표시하는 위젯

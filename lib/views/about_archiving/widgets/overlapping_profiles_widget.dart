@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/models/selected_friend_model.dart';
+import '../../../api_firebase/models/selected_friend_model.dart';
 
 /// 선택된 친구들의 프로필 이미지를 겹쳐서 표시하는 위젯
 /// 최대 4개의 프로필 이미지를 표시합니다.

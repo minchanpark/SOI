@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
+import '../../../api_firebase/models/photo_data_model.dart';
 import '../../../utils/format_utils.dart';
-import '../../../firebase_logic/controllers/comment_record_controller.dart';
+import '../../../api_firebase/controllers/comment_record_controller.dart';
 import '../about_like/like_button.dart';
 import '../about_more_menu/more_menu_button_widget.dart';
 import '../about_voice_comment/voice_comment_list_sheet.dart';

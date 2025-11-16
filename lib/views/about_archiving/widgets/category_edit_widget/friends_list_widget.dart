@@ -2,8 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
-import '../../../../firebase_logic/models/auth_model.dart';
+import '../../../../api_firebase/models/category_data_model.dart';
+import '../../../../api_firebase/models/auth_model.dart';
 import '../../../about_friends/friend_list_add_screen.dart';
 
 class FriendsListWidget extends StatelessWidget {

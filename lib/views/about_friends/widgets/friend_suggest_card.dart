@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/contact_controller.dart';
-import '../../../firebase_logic/services/friend_request_service.dart';
-import '../../../firebase_logic/repositories/friend_request_repository.dart';
-import '../../../firebase_logic/repositories/friend_repository.dart';
-import '../../../firebase_logic/repositories/user_search_repository.dart';
+import '../../../api_firebase/controllers/contact_controller.dart';
+import '../../../api_firebase/services/friend_request_service.dart';
+import '../../../api_firebase/repositories/friend_request_repository.dart';
+import '../../../api_firebase/repositories/friend_repository.dart';
+import '../../../api_firebase/repositories/user_search_repository.dart';
 
 class FriendSuggestCard extends StatefulWidget {
   final double scale;

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/firebase_logic/controllers/category_member_controller.dart';
-import '../../firebase_logic/controllers/friend_controller.dart';
-import '../../firebase_logic/controllers/category_controller.dart';
-import '../../firebase_logic/controllers/auth_controller.dart';
-import '../../firebase_logic/models/friend_model.dart';
-import '../../firebase_logic/models/selected_friend_model.dart';
+import 'package:soi/api_firebase/controllers/category_member_controller.dart';
+import '../../api_firebase/controllers/friend_controller.dart';
+import '../../api_firebase/controllers/category_controller.dart';
+import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/models/friend_model.dart';
+import '../../api_firebase/models/selected_friend_model.dart';
 
 /// 친구 추가 화면
 class FriendListAddScreen extends StatefulWidget {
