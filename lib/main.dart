@@ -57,6 +57,8 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'utils/app_route_observer.dart';
 import 'views/launch_video_screen.dart';
 
+/// 앱 진입점
+/// firebase-version 코드입니다.
 void main() async {
   // Flutter 바인딩 초기화
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
