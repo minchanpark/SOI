@@ -7,7 +7,7 @@ import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 import 'api_firebase/controllers/category_member_controller.dart';
 import 'api_firebase/controllers/comment_record_controller.dart';
 import 'api_firebase/controllers/contact_controller.dart';
-import 'api_firebase/controllers/photo_controller.dart';
+import 'api_firebase/controllers/media_controller.dart';
 import 'api_firebase/controllers/friend_request_controller.dart';
 import 'api_firebase/controllers/friend_controller.dart';
 import 'api_firebase/controllers/user_matching_controller.dart';

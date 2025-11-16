@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../api_firebase/controllers/auth_controller.dart';
 
-import '../../../../api_firebase/controllers/photo_controller.dart';
+import '../../../../api_firebase/controllers/media_controller.dart';
 import '../../../../api_firebase/models/category_data_model.dart';
 import '../../../../api_firebase/models/photo_data_model.dart';
 import '../../../../theme/theme.dart';

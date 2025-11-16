@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/audio_controller.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 import '../../api_firebase/controllers/category_controller.dart';
-import '../../api_firebase/controllers/photo_controller.dart';
+import '../../api_firebase/controllers/media_controller.dart';
 import '../../api_firebase/models/selected_friend_model.dart';
 import '../../utils/video_thumbnail_generator.dart';
 import '../home_navigator_screen.dart';

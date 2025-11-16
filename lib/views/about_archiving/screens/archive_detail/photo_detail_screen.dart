@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../api_firebase/controllers/audio_controller.dart';
 import '../../../../api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/controllers/comment_record_controller.dart';
-import '../../../../api_firebase/controllers/photo_controller.dart';
+import '../../../../api_firebase/controllers/media_controller.dart';
 import '../../../../api_firebase/models/comment_record_model.dart';
 import '../../../../api_firebase/models/photo_data_model.dart';
 import '../../../../utils/position_converter.dart';

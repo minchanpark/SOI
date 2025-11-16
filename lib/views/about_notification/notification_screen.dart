@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:soi/api_firebase/controllers/photo_controller.dart';
+import 'package:soi/api_firebase/controllers/media_controller.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/category_photos_screen.dart';
 import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/category_controller.dart';

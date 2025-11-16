@@ -71,11 +71,22 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
 
   // 비디오 플레이어 관련
   VideoPlayerController? _videoController;
+
+  // 비디오 초기화되었는 지를 체크하는 변수
   bool _isVideoInitialized = false;
+
+  // 비디오 음소거 상태를 체크하는 변수
   bool _isMuted = false;
+
+  // 비디오 fit 모드 - 초기 모드는 contain
   BoxFit _videoFit = BoxFit.contain;
+
+  // 현재 Route 저장용
   ModalRoute<dynamic>? _route;
-  bool _isVisible = true;
+
+  // 비디오가 실제로 보이는지 체크하는 변수
+  // 이 변수는 TickerMode 상태와 실제 위젯의 가시성을 분리하여 관리합니다.
+  bool _isVisible = false;
 
   @override
   void initState() {
@@ -100,14 +111,27 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
         appRouteObserver.subscribe(this, route);
       }
     }
-    _updateVisibility(TickerMode.of(context));
+
+    // 비디오인 경우: 초기화 완료 후에만 visibility 업데이트 -> 비디오 초기화가 된 경우에만 가시성을 업데이트해서
+    //             컨텐츠가 표시되도록 한다.
+    if (widget.photo.isVideo) {
+      if (_isVideoInitialized) {
+        _updateVisibility(TickerMode.of(context));
+      }
+    }
+    // 비디오가 아닌 경우: 즉시 visibility 업데이트 -> 즉시 가시성을 업데이트해서 바로 컨텐츠가 표시되도록 한다.
+    else {
+      _updateVisibility(TickerMode.of(context));
+    }
   }
 
   @override
   void dispose() {
     if (_route != null) {
+      // Route 구독 해제
       appRouteObserver.unsubscribe(this);
     }
+    // 비디오 컨트롤러 해제 -> 메모리 누수 방지
     _videoController?.dispose();
     super.dispose();
   }
@@ -118,17 +142,23 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
         widget.photo.videoUrl != null &&
         widget.photo.videoUrl!.isNotEmpty) {
       try {
+        // 비디오 컨트롤러를 생성한다.
         _videoController = VideoPlayerController.networkUrl(
           Uri.parse(widget.photo.videoUrl!),
         );
+
+        // 비디오 컨트롤러를 초기화하여서 사용 대기
         await _videoController!.initialize();
-        await _videoController!.setLooping(true); // 반복 재생 설정
+
+        // 반복 재생 설정
+        await _videoController!.setLooping(true);
         if (mounted) {
           setState(() {
+            // 비디오가 초기화 되었다는 것을 표시하기 위해서 true로 설정
             _isVideoInitialized = true;
           });
-          // 초기화 완료 후 자동 재생
-          _resumeVideoPlayback();
+          // TickerMode 상태에 따라 재생 여부 결정
+          _updateVisibility(TickerMode.of(context));
         }
       } catch (e) {
         debugPrint('비디오 초기화 실패: $e');
@@ -169,6 +199,7 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
     }
   }
 
+  // 비디오 일시정지
   void _pauseVideoPlayback() {
     if (_videoController != null &&
         _isVideoInitialized &&
@@ -178,6 +209,7 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
     }
   }
 
+  // 비디오 재생 재개
   void _resumeVideoPlayback() {
     if (_videoController != null &&
         _isVideoInitialized &&

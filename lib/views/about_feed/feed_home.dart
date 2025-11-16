@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
-import '../../api_firebase/controllers/photo_controller.dart';
+import '../../api_firebase/controllers/media_controller.dart';
 import '../../api_firebase/controllers/audio_controller.dart';
 import '../../api_firebase/controllers/comment_audio_controller.dart';
 import '../../api_firebase/models/photo_data_model.dart';
