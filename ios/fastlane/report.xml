@@ -5,27 +5,27 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000332">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000206">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.005436">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001943">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa --release" time="373.901305">
+      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa --release" time="299.865151">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: increment_build_number" time="0.849941">
+      <testcase classname="fastlane.lanes" name="3: increment_build_number" time="0.241387">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: pilot" time="403.106113">
+      <testcase classname="fastlane.lanes" name="4: pilot" time="396.788458">
         
       </testcase>
     
