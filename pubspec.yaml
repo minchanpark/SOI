@@ -90,12 +90,6 @@ dependencies:
   copy_with_extension: ^10.0.1
   video_thumbnail: ^0.5.6
 
-  # API 관련 의존성
-  dio: ^5.9.0 # HTTP 클라이언트
-  soi_api_client: # OpenAPI로 생성된 API 클라이언트
-    path: ./api/generated
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
