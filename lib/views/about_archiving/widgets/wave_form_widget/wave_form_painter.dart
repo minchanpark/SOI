@@ -19,10 +19,9 @@ class WaveformPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (waveformData.isEmpty) return;
 
-    final paint =
-        Paint()
-          ..strokeWidth = 3.0
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round;
 
     // 항상 전체 너비를 채우도록 고정된 바 개수 사용
     final barSpacing = 7.0;
@@ -36,7 +35,7 @@ class WaveformPainter extends CustomPainter {
     final centerY = size.height / 2;
 
     // 파형의 최대 바의 높이는 전체적으로 조절하는 부분
-    final maxBarHeight = size.height * 0.8;
+    final maxBarHeight = size.height * 0.5;
 
     for (int i = 0; i < barCount; i++) {
       final x = i * barSpacing;
