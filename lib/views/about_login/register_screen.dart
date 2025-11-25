@@ -23,7 +23,10 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  // 페이지 컨트롤러
   final PageController _pageController = PageController();
+
+  // AuthController 인스턴스 late로 선언하고 나중에 초기화
   late final AuthController _authController;
 
   // 자동 인증을 위한 Timer
@@ -74,7 +77,10 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
+
+    // AuthController 인스턴스 가져오기
     _authController = Provider.of<AuthController>(context, listen: false);
+
     // 컨트롤러 및 상태 초기화
     nameController = TextEditingController();
     monthController = TextEditingController();
@@ -84,8 +90,6 @@ class _AuthScreenState extends State<AuthScreen> {
     smsController = TextEditingController();
     idController = TextEditingController();
     pageReady = List.generate(8, (_) => ValueNotifier<bool>(false));
-
-    // AuthController는 Provider에서 이미 초기화됨
 
     // ID 컨트롤러 리스너 추가
     idController.addListener(() {
@@ -471,11 +475,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       });
 
-      await _authController.signInWithSmsCodeAndSave(
-        code,
-        phoneNumber,
-        () {},
-      );
+      await _authController.signInWithSmsCodeAndSave(code, phoneNumber, () {});
     } catch (e) {
       setState(() {
         isCheckingUser = false;
