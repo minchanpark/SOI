@@ -556,7 +556,7 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
         // PageView도 함께 이동 - 부드러운 애니메이션으로 변경
         _pageController.animateToPage(
           index,
-          duration: Duration(milliseconds: 250),
+          duration: Duration(milliseconds: 100),
           curve: Curves.easeInOut,
         );
       },
