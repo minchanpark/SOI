@@ -43,7 +43,7 @@ class WaveformPainter extends CustomPainter {
 
       // 파형 높이 계산 (0.0 ~ 1.0 범위의 데이터를 바 높이로 변환)
       // sampledData[i] * 3 --> 파형을 얼마나 민감하게 감지하고 표시하는 지 조절하는 부분
-      final normalizedHeight = (sampledData[i] * 3).clamp(0.0, 1.0);
+      final normalizedHeight = (sampledData[i] * 1).clamp(0.0, 1.0);
       final barHeight = normalizedHeight * maxBarHeight;
 
       // 진행 상태에 따라 색상 결정
