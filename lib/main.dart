@@ -55,6 +55,7 @@ import 'views/about_profile/post_management_screen.dart';
 import 'views/about_profile/profile_screen.dart';
 import 'views/about_profile/privacy_protect_screen.dart';
 import 'views/about_setting/privacy.dart';
+import 'views/about_setting/terms_of_service.dart';
 import 'views/home_navigator_screen.dart';
 import 'views/launch_video_screen.dart';
 
@@ -245,6 +246,7 @@ class MyApp extends StatelessWidget {
             '/feed_home': (context) => const FeedHomeScreen(),
             '/profile_screen': (context) => const ProfileScreen(),
             '/privacy_protect': (context) => const PrivacyProtectScreen(),
+            '/terms_of_service': (context) => const TermsOfService(),
             '/blocked_friends': (context) => const BlockedFriendListScreen(),
             '/post_management': (context) => const PostManagementScreen(),
             '/delete_photo': (context) => const DeletedPostListScreen(),

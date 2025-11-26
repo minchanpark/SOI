@@ -1,455 +1,239 @@
 import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
-/// SOI 개인정보 처리방침 – Flutter 전용 화면
+/// SOI 개인정보 처리방침 – WebView를 통한 HTML 렌더링
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  // ---------- 색상 팔레트 ---------- //
+  static const String _htmlContent = '''
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>SOI 개인정보 처리방침</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { 
+      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; 
+      line-height: 1.6; 
+      padding: 16px; 
+      background-color: #000; 
+      color: #fff; 
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.2rem; margin-top: 1.5rem; }
+    p, li { font-size: 0.95rem; }
+    ul, ol { padding-left: 1.1rem; }
+    small { font-size: 0.8rem; color: #999; }
+    a { color: #4A90D9; }
+  </style>
+</head>
+<body>
+  <h1>SOI 개인정보 처리방침</h1>
+  <p>
+    NewDawn(이하 "회사")가 제공하는 SOI 서비스(이하 "서비스")는
+    이용자의 개인정보를 소중하게 생각하며, 「개인정보 보호법」 등 관련 법령을 준수합니다.
+    본 개인정보 처리방침은 SOI 서비스 내에서 처리되는 개인정보에 대한 수집·이용 목적,
+    보유기간, 보호조치 등에 관하여 설명합니다.
+  </p>
+  <p><small>시행일: 2025년 11월 27일</small></p>
 
-  static const _accent = Color(0xFF0066FF);
-  static const _bg = Colors.black; // 배경색을 검정색으로 변경
-  static const _border = Color(0xFF3A3A3A); // 테두리 색상 어둡게 변경
-  static const _textColor = Colors.white; // 텍스트 색상을 흰색으로 변경
+  <h2>제1조 (처리하는 개인정보의 항목 및 처리 목적)</h2>
+  <ol>
+    <li>
+      회사는 다음과 같은 항목의 개인정보를 다음의 목적을 위하여 처리합니다.
+      <ol>
+        <li>
+          <strong>회원가입 및 본인 확인</strong><br />
+          - 수집 항목: 이름, 생년월일, 휴대전화번호, 사용자 ID, 프로필 사진<br />
+          - 처리 목적: 본인 여부 확인, 연령 확인, 계정 생성 및 관리, 부정 사용 방지, 서비스 이용자 식별
+        </li>
+        <li>
+          <strong>서비스 제공 및 이용 기록 관리</strong><br />
+          - 수집 항목: 이용자가 업로드하는 사진/영상 파일, 사진 내 텍스트 태그, 음성 태그(오디오 데이터)<br />
+          - 처리 목적: 사진 업로드 기능 제공, 사진 내 특정 지점에 텍스트·음성 태그 기능 제공,
+          친구와의 사진 공유, 사진에 대한 댓글 및 태그 기능 제공, 서비스 이용 기록 관리
+        </li>
+        <li>
+          <strong>친구 추천 및 소셜 기능 제공</strong><br />
+          - 수집·이용 항목: 친구 목록(연락처 연동 정보)<br />
+          - 처리 목적: 친구 검색 및 추천, 친구와의 사진 공유 등 소셜 기능 제공<br />
+          - 추가 안내: 연락처 연동 정보는 서버에 저장되지 않으며, 이용자의 기기(프론트) 내에서만
+          일시적으로 사용됩니다.
+        </li>
+        <li>
+          <strong>서비스 이용 과정에서 자동으로 생성·수집될 수 있는 정보</strong><br />
+          - 수집 항목(예): 서비스 이용 기록, 접속 일시, 접속 IP 주소, 기기 정보(단말기 모델, OS 버전 등),
+          오류 로그 등<br />
+          - 처리 목적: 서비스 안정성 확보, 이용자 보호, 부정 이용 방지, 서비스 품질 향상 및 통계 분석
+        </li>
+      </ol>
+    </li>
+  </ol>
 
-  // ---------- 공통 스타일/헬퍼 ---------- //
-  Text _title(String text, {double size = 22}) => Text(
-    text,
-    style: TextStyle(
-      fontSize: size,
-      fontWeight: FontWeight.w700,
-      color: Colors.white, // 타이틀 색상을 흰색으로 변경
-      height: 1.3,
-    ),
-  );
+  <h2>제2조 (개인정보의 처리 및 보유 기간)</h2>
+  <ol>
+    <li>
+      회사는 이용자의 개인정보를 원칙적으로 다음 각 호의 기간 동안 보유·이용하며,
+      해당 기간이 경과하거나 처리 목적이 달성된 경우 지체 없이 파기합니다.
+    </li>
+    <li>
+      <strong>회원가입 정보(이름, 생년월일, 휴대전화번호, 사용자 ID, 프로필 사진)</strong><br />
+      - 보유 기간: 회원 탈퇴 시까지<br />
+      - 파기 시점: 탈퇴 요청 처리 완료 후 지체 없이 즉시 삭제
+    </li>
+    <li>
+      <strong>서비스 이용을 통해 생성된 콘텐츠(사진/영상, 텍스트 태그, 음성 태그 등)</strong><br />
+      - 보유 기간: 회원 탈퇴 시까지 또는 이용자가 직접 삭제하는 시점까지<br />
+      - 파기 시점: 탈퇴 또는 삭제 요청 처리 완료 후 지체 없이 즉시 삭제
+    </li>
+    <li>
+      <strong>친구 목록(연락처 연동 정보)</strong><br />
+      - 서버에 저장하지 않고, 이용자의 기기 내에서만 일시적으로 사용됩니다.<br />
+      - 사용 목적 달성 후 또는 앱 종료 시 즉시 파기될 수 있습니다.
+    </li>
+    <li>
+      <strong>서비스 이용 기록, 로그 정보 등</strong><br />
+      - 보유 기간: 서비스 안정성 및 보안, 오류 분석을 위하여 필요한 기간 동안 보유 후 지체 없이 파기하며,
+      구체적인 보유 기간은 내부 정책에 따라 최소한으로 운영됩니다.
+    </li>
+  </ol>
 
-  Table _twoColumnTable(List<List<Widget>> rows) => Table(
-    border: TableBorder.all(color: _border),
-    columnWidths: const {0: FractionColumnWidth(.28)},
-    children:
-        rows
-            .map(
-              (cells) => TableRow(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1A1A1A),
-                ), // 테이블 셀 배경색 어둡게 변경
-                children:
-                    cells
-                        .map(
-                          (c) => Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 10,
-                            ),
-                            child: c,
-                          ),
-                        )
-                        .toList(),
-              ),
-            )
-            .toList(),
-  );
+  <h2>제3조 (개인정보의 제3자 제공)</h2>
+  <ol>
+    <li>
+      회사는 이용자의 개인정보를 원칙적으로 제3자에게 제공하지 않습니다.
+    </li>
+    <li>
+      다만, 다음의 경우에는 예외적으로 개인정보를 제공할 수 있습니다.
+      <ul>
+        <li>이용자가 사전에 별도의 동의를 한 경우</li>
+        <li>법령에 특별한 규정이 있는 경우 또는 수사기관이 법령에 정해진 절차와 방법에 따라 요청한 경우</li>
+      </ul>
+    </li>
+  </ol>
 
-  TableRow _row(List<String> texts) => TableRow(
-    children:
-        texts
-            .map(
-              (t) => Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 8,
-                ),
-                child: Text(
-                  t,
-                  style: const TextStyle(
-                    color: Colors.white,
-                  ), // 테이블 행 텍스트 색상 변경
-                ),
-              ),
-            )
-            .toList(),
-  );
+  <h2>제4조 (개인정보 처리의 위탁)</h2>
+  <ol>
+    <li>
+      회사는 현재 개인정보 처리 업무를 외부 업체에 위탁하고 있지 않습니다.
+    </li>
+    <li>
+      향후 서비스 제공을 위하여 개인정보 처리 업무를 위탁하는 경우,
+      위탁받는 자와 위탁 업무의 내용, 보관 기간 등을 관련 법령에 따라 이용자에게 고지하고 필요한 경우 동의를 받겠습니다.
+    </li>
+  </ol>
 
-  TableRow _rowBold(List<String> texts) => TableRow(
-    decoration: const BoxDecoration(
-      color: Color(0xFF2A2A2A),
-    ), // 굵은 텍스트 행 배경색 변경
-    children:
-        texts
-            .map(
-              (t) => Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 8,
-                ),
-                child: Text(
-                  t,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ), // 텍스트 색상 추가
-                ),
-              ),
-            )
-            .toList(),
-  );
+  <h2>제5조 (개인정보의 국외 이전)</h2>
+  <ol>
+    <li>
+      회사는 개인정보를 저장·관리하기 위하여 서버를 국내(서울 리전)에 두고 있으며,
+      이용자의 개인정보를 국외로 이전하지 않습니다.
+    </li>
+    <li>
+      향후 국외 이전이 발생하는 경우, 관련 법령에 따른 고지 및 동의 절차를 거친 후 처리하겠습니다.
+    </li>
+  </ol>
+
+  <h2>제6조 (이용자 및 법정대리인의 권리와 그 행사 방법)</h2>
+  <ol>
+    <li>
+      이용자는 회사에 대해 언제든지 자신의 개인정보에 대한 열람, 정정, 삭제, 처리 정지를 요청할 수 있습니다.
+    </li>
+    <li>
+      회사는 만 14세 미만 아동의 개인정보를 법정대리인의 동의 없이 수집하지 않습니다.
+      만 14세 미만 이용자가 서비스를 이용하기 위해 가입하는 경우,
+      법정대리인의 동의를 받는 절차를 통하여 개인정보를 처리합니다.
+    </li>
+    <li>
+      위 권리 행사는 서비스 내 설정, 문의 이메일 등을 통해 요청하실 수 있으며,
+      회사는 지체 없이 필요한 조치를 취하겠습니다. 단, 관련 법령에 따라 열람 및 정정이 제한될 수 있습니다.
+    </li>
+  </ol>
+
+  <h2>제7조 (개인정보의 파기 절차 및 방법)</h2>
+  <ol>
+    <li>
+      회사는 개인정보 보유 기간이 경과하거나 처리 목적이 달성된 경우,
+      내부 방침 및 관련 법령에 따라 지체 없이 해당 정보를 파기합니다.
+    </li>
+    <li>
+      파기 절차<br />
+      - 이용자가 회원 탈퇴를 요청하거나, 서비스 이용을 통해 생성된 콘텐츠를 삭제하는 경우,
+      관련 개인정보는 지체 없이 파기됩니다.<br />
+      - 법령에 따라 일정 기간 저장이 요구되는 경우, 해당 기간 동안 별도의 DB 또는 보관 장소에 옮겨져
+      내부 방침에 따라 안전하게 보관 후 파기합니다.
+    </li>
+    <li>
+      파기 방법<br />
+      - 전자적 파일 형태: 복구 및 재생이 불가능한 기술적 방법을 사용하여 삭제<br />
+      - 종이 문서 형태: 분쇄 또는 소각 등의 방법으로 파기
+    </li>
+  </ol>
+
+  <h2>제8조 (개인정보의 안전성 확보 조치)</h2>
+  <p>회사는 이용자의 개인정보를 안전하게 관리하기 위하여 다음과 같은 조치를 취하고 있습니다.</p>
+  <ul>
+    <li>개인정보에 대한 접근 권한 최소화 및 권한 관리</li>
+    <li>비밀번호 등의 중요 정보에 대한 암호화 처리</li>
+    <li>시스템 취약점 점검 및 보안 업데이트 등 기술적 보호 조치</li>
+    <li>개인정보 처리자에 대한 교육 및 관리 감독</li>
+  </ul>
+
+  <h2>제9조 (개인정보 자동 수집 장치의 설치·운영 및 거부에 관한 사항)</h2>
+  <ol>
+    <li>
+      회사는 서비스 이용 과정에서 쿠키(Cookie) 등 자동 수집 장치를 사용할 수 있습니다.
+      쿠키는 서비스 이용 기록, 선호 설정 등을 저장하여 이용자에게 보다 편리한 사용 환경을 제공하기 위한 목적으로 사용될 수 있습니다.
+    </li>
+    <li>
+      이용자는 단말기 또는 브라우저 설정을 통하여 쿠키 저장을 거부하거나 삭제할 수 있으며,
+      이 경우 일부 서비스 이용에 제한이 있을 수 있습니다.
+    </li>
+  </ol>
+
+  <h2>제10조 (개인정보 보호책임자 및 문의처)</h2>
+  <p>
+    이용자는 서비스 이용 중 발생하는 모든 개인정보 보호 관련 문의, 불만 처리, 피해 구제 등에 관한 사항을
+    아래 연락처로 문의하실 수 있습니다.
+  </p>
+  <ul>
+    <li>개인정보 보호 책임자: NewDawn 지정 담당자</li>
+    <li>이메일: <a href="mailto:itisnewdawn@gmail.com">itisnewdawn@gmail.com</a></li>
+  </ul>
+  <p>
+    회사는 이용자의 문의에 대해 지체 없이 답변 및 처리해 드리기 위해 최선을 다하겠습니다.
+  </p>
+
+  <h2>제11조 (개인정보 처리방침의 변경)</h2>
+  <ol>
+    <li>
+      본 개인정보 처리방침의 내용 추가, 삭제 또는 수정이 있을 경우,
+      회사는 개정 내용과 시행일자를 명시하여 서비스 내 공지사항 등을 통해 사전에 공지합니다.
+    </li>
+    <li>
+      본 방침은 상단에 기재된 시행일로부터 적용됩니다.
+    </li>
+  </ol>
+</body>
+</html>
+''';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('개인정보 처리방침'),
-        backgroundColor: Colors.black, // 앱바 배경색 검정으로 변경
+        backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
-      body: SafeArea(
-        child: Scrollbar(
-          thumbVisibility: true,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-            child: DefaultTextStyle(
-              style: const TextStyle(
-                fontSize: 15.5,
-                height: 1.6,
-                color: _textColor, // 기본 텍스트 스타일에서 이미 흰색으로 변경됨
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ────────────────── 1. 서문 ────────────────── //
-                  _title('SOI 개인정보 처리방침', size: 26),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'SOI(이하 “회사”)는 「개인정보 보호법」 제30조에 따라 이용자의 개인정보와 권익을 '
-                    '보호하고 관련 고충을 신속히 처리하기 위하여 본 처리방침을 수립·공개합니다.',
-                  ),
-
-                  // ────────────────── 2. 처리 목적 ────────────────── //
-                  const SizedBox(height: 32),
-                  _title('2. 개인정보의 처리 목적'),
-                  const SizedBox(height: 12),
-                  _twoColumnTable([
-                    [
-                      const Text(
-                        '회원가입·관리',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('본인 확인, 부정 이용 방지, 계정 탈퇴 처리 등'),
-                    ],
-                    [
-                      const Text(
-                        '콘텐츠 업로드·공유',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('사진·음성 기록 저장, 비공개 SNS 피드 제공'),
-                    ],
-                    [
-                      const Text(
-                        '맞춤 서비스',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('활동 통계, 알림 PUSH'),
-                    ],
-                    [
-                      const Text(
-                        '결제(선택)',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('구독 결제 및 환불 처리'),
-                    ],
-                    [
-                      const Text(
-                        '서비스 개선',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text(
-                        'Firebase Crashlytics·Analytics를 통한 오류·이용 패턴 분석',
-                      ),
-                    ],
-                  ]),
-
-                  // ────────────────── 3. 처리 항목 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('3. 처리하는 개인정보 항목'),
-                  const SizedBox(height: 8),
-                  const _BulletList(
-                    items: [
-                      '필수: 이메일, 암호화된 비밀번호, 닉네임, 기기 ID, 로그(접속 IP, 브라우저·OS 정보, 이용기록)',
-                      '선택: 프로필 사진, 생년월일, 성별',
-                      '콘텐츠: 사용자가 업로드한 사진·음성·텍스트',
-                      '자동 수집: Firebase Analytics User‑ID, 이벤트 로그, 광고 ID',
-                    ],
-                  ),
-
-                  // ────────────────── 4. 14세 미만 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('4. 14세 미만 아동의 개인정보 처리'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '회사는 만 14세 미만 아동의 회원가입을 허용하지 않습니다. '
-                    '부득이하게 수집할 경우 법정대리인의 동의를 얻으며, 동의 절차·확인 방법은 별도 고지합니다.',
-                  ),
-
-                  // ────────────────── 5. 보유 기간 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('5. 개인정보의 보유 및 이용 기간'),
-                  const SizedBox(height: 12),
-                  Table(
-                    border: TableBorder.all(color: _border),
-                    columnWidths: const {
-                      0: FractionColumnWidth(.26),
-                      1: FractionColumnWidth(.27),
-                      2: FlexColumnWidth(),
-                    },
-                    children: [
-                      _rowBold(['구분', '법적 근거', '보유 기간']),
-                      _row([
-                        '회원정보',
-                        '이용계약 이행(제15조 ① 4호)',
-                        '회원 탈퇴 시까지\n※ 1년간 미이용 시 휴면 → 3년 후 파기',
-                      ]),
-                      _row(['전자상거래 결제 기록', '전자상거래법 시행령 §6', '5년']),
-                      _row(['로그 기록', '통신비밀보호법 §15‑2 ②', '3개월']),
-                    ],
-                  ),
-
-                  // ────────────────── 6. 파기 절차 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('6. 개인정보의 파기 절차 및 방법'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '만료된 데이터는 주 1회 배치 스케줄러로 선별 후, 개인정보 보호책임자 승인 절차를 '
-                    '거쳐 즉시 삭제합니다. 전자 파일은 복구 불가 방식으로 영구 삭제하며, 출력물은 '
-                    '분쇄·소각 처리합니다.',
-                  ),
-
-                  // ────────────────── 7. 제3자 제공 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('7. 개인정보의 제3자 제공'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '회사는 이용자의 개인정보를 제3자에게 제공하지 않습니다. '
-                    '제공이 필요할 경우 별도 동의를 받아 고지합니다.',
-                  ),
-
-                  // ────────────────── 8. 추가 이용 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('8. 추가적인 이용·제공의 판단 기준'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '수집 목적과의 관련성, 이용자의 예측 가능성, 이익 침해 여부, '
-                    '안전성 확보 조치 등을 종합 고려합니다.',
-                  ),
-
-                  // ────────────────── 9. 위탁 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('9. 개인정보 처리업무의 위탁'),
-                  const SizedBox(height: 12),
-                  _twoColumnTable([
-                    [
-                      const Text(
-                        'Google Cloud Platform',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('Firestore·Cloud Storage·서버 호스팅'),
-                    ],
-                  ]),
-
-                  // ────────────────── 10. 국외 이전 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('10. 개인정보의 국외 이전'),
-                  const SizedBox(height: 12),
-                  _twoColumnTable([
-                    [
-                      const Text(
-                        '법적 근거',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('계약 이행을 위한 국외 보관(§28‑8 ① 3호)'),
-                    ],
-                    [
-                      const Text(
-                        '이전 국가·설비',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text(
-                        '미국(us‑central1), 싱가포르(asia‑southeast1) 등 Google Cloud Regions',
-                      ),
-                    ],
-                    [
-                      const Text(
-                        '시기·방법',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('콘텐츠 업로드 또는 서비스 접속 시 TLS 암호화 전송'),
-                    ],
-                    [
-                      const Text(
-                        '이전받는 자',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('Google LLC (privacy@google.com)'),
-                    ],
-                    [
-                      const Text(
-                        '목적·보유 기간',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('클라우드 호스팅·백업 / 계정 삭제 또는 보유 기간 만료 시까지'),
-                    ],
-                    [
-                      const Text(
-                        '거부 권리',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Text('국외 이전을 거부할 수 있으나, 이 경우 서비스 이용이 제한될 수 있습니다.'),
-                    ],
-                  ]),
-
-                  // ────────────────── 11. 안전조치 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('11. 개인정보의 안전성 확보조치'),
-                  const SizedBox(height: 8),
-                  const _BulletList(
-                    items: [
-                      '관리적 : 내부 관리계획 수립·시행, 연 2회 직원 교육',
-                      '기술적 : 전송·저장 구간 AES‑256/TLS 암호화, 접근 제어(IAM)',
-                      '물리적 : 데이터센터·사무실 출입 통제',
-                    ],
-                  ),
-
-                  // ────────────────── 12. 민감정보 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('12. 민감정보 공개 가능성 및 비공개 선택 방법'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '서비스 사용 과정에서 건강 정보 등 민감정보가 노출될 수 있습니다. '
-                    '설정 > 개인정보 메뉴에서 공개 범위를 “나만 보기”로 변경할 수 있습니다.',
-                  ),
-
-                  // ────────────────── 13. 가명정보 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('13. 가명정보 처리'),
-                  const SizedBox(height: 8),
-                  const Text('통계·연구 목적에 한해 가명처리 후 별도 보관하며, 추가 정보를 분리 관리합니다.'),
-
-                  // ────────────────── 14. 쿠키/SDK ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('14. 개인정보 자동 수집 장치의 설치‧운영 및 거부'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '회사는 쿠키 및 Firebase Analytics SDK를 사용하여 이용 행태를 분석합니다. '
-                    '이용자는 브라우저 설정 또는 모바일 OS 광고 ID 재설정을 통해 저장을 거부·삭제할 수 있습니다.',
-                  ),
-
-                  // ────────────────── 15. 정보주체 권리 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('15. 정보주체와 법정대리인의 권리·의무 및 행사방법'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '이용자는 ‘설정 > 개인정보 > 내 정보’ 화면에서 개인정보 열람·정정·삭제·동의 철회를 직접 수행할 수 있습니다. '
-                    '또한 서면, 이메일(pia@soi.app), 전화(02‑0000‑0000)를 통해서도 요청이 가능합니다.',
-                  ),
-
-                  // ────────────────── 16. 자동화된 결정 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('16. 자동화된 결정에 대한 정보'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'AI 추천 알고리즘 관련 설명 요구 및 거부 기능을 제공할 예정입니다 '
-                    '(설정 > AI 추천 관리).',
-                  ),
-
-                  // ────────────────── 17. PIC ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('17. 개인정보 보호책임자 및 담당 부서'),
-                  const SizedBox(height: 12),
-                  Table(
-                    border: TableBorder.all(color: _border),
-                    columnWidths: const {
-                      0: FractionColumnWidth(.28),
-                      1: FractionColumnWidth(.24),
-                      2: FlexColumnWidth(),
-                    },
-                    children: [
-                      _rowBold(['구분', '성명', '연락처']),
-                      _row([
-                        '개인정보 보호책임자',
-                        '박OO CTO',
-                        'privacy@soi.app\n02‑0000‑1111',
-                      ]),
-                      _row(['고충처리 부서', '서비스운영팀', 'help@soi.app\n02‑0000‑2222']),
-                    ],
-                  ),
-
-                  // ────────────────── 18. 국내대리인 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('18. 국내대리인'),
-                  const SizedBox(height: 8),
-                  const Text('해당 없음'),
-
-                  // ────────────────── 19. 권익침해 구제 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('19. 권익침해 구제 방법'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '개인정보 침해로 인한 신고·상담은 개인정보분쟁조정위원회(☎ 1833‑6972) 등을 통해 가능합니다.',
-                  ),
-
-                  // ────────────────── 20. 영상정보처리기기 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('20. 영상정보처리기기 운영·관리'),
-                  const SizedBox(height: 8),
-                  const Text('해당 없음'),
-
-                  // ────────────────── 21. 변경 이력 ────────────────── //
-                  const SizedBox(height: 28),
-                  _title('21. 처리방침 변경 이력'),
-                  const SizedBox(height: 8),
-                  const _BulletList(
-                    items: ['2025‑05‑06 제1.0 버전 제정', '※ 변경 시 최소 7일 전에 공지합니다.'],
-                  ),
-
-                  // ────────────────── Footer ────────────────── //
-                  const SizedBox(height: 36),
-                  Center(
-                    child: Text(
-                      '© 2025 SOI. All rights reserved.',
-                      style: TextStyle(fontSize: 13, color: _accent),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+      body: WebViewWidget(
+        controller: WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setBackgroundColor(Colors.black)
+          ..loadHtmlString(_htmlContent),
       ),
     );
   }
-}
-
-/// 점(•) 목록 전용 위젯 - 텍스트 색상이 이미 상위 DefaultTextStyle에서 흰색으로 설정됨
-class _BulletList extends StatelessWidget {
-  final List<String> items;
-  const _BulletList({required this.items});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children:
-        items
-            .map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(height: 1.55)),
-                    Expanded(child: Text(e)),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-  );
 }

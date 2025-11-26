@@ -691,6 +691,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.pushNamed(context, '/privacy_protect');
             } else if (title == '게시물 관리') {
               Navigator.pushNamed(context, '/post_management');
+            } else if (title == '개인정보 처리방침') {
+              Navigator.pushNamed(context, '/privacy_policy');
+            } else if (title == '서비스 이용 약관') {
+              Navigator.pushNamed(context, '/terms_of_service');
             }
           },
       child: Container(
