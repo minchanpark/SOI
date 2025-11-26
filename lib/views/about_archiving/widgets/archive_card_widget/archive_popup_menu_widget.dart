@@ -4,9 +4,11 @@ import 'package:soi/api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/models/category_data_model.dart';
 import '../archive_category_actions.dart';
 import '../archive_category_dialogs.dart';
+import 'animated_menu_overlay.dart';
 
 /// 아카이브 팝업 메뉴 위젯
 /// 카테고리 카드의 더보기 메뉴를 담당합니다.
+/// 부드러운 scale + fade 애니메이션 적용
 class ArchivePopupMenuWidget extends StatefulWidget {
   final CategoryDataModel category;
   final VoidCallback? onEditName;
@@ -23,36 +25,130 @@ class ArchivePopupMenuWidget extends StatefulWidget {
   State<ArchivePopupMenuWidget> createState() => _ArchivePopupMenuWidgetState();
 }
 
-class _ArchivePopupMenuWidgetState extends State<ArchivePopupMenuWidget> {
-  final MenuController _menuController = MenuController();
+class _ArchivePopupMenuWidgetState extends State<ArchivePopupMenuWidget>
+    with SingleTickerProviderStateMixin {
+  // 애니메이션 컨트롤러
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  // 오버레이 관련
+  OverlayEntry? _overlayEntry;
+  final GlobalKey _buttonKey = GlobalKey();
+  bool _isMenuOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    // Scale 애니메이션: 0.8 → 1.0 (easeOutBack으로 자연스러운 탄성 효과)
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
+
+    // Fade 애니메이션: 0.0 → 1.0
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _closeMenu();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  /// 메뉴 열기
+  void _openMenu() {
+    if (_isMenuOpen) return;
+
+    // 버튼 위치 및 크기 가져오기
+    final RenderBox? renderBox =
+        _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+
+    // 렌더박스가 없으면 종료
+    if (renderBox == null) return;
+
+    // 버튼 위치
+    final Offset buttonPosition = renderBox.localToGlobal(Offset.zero);
+
+    // 버튼 크기
+    final Size buttonSize = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      // 애니메이션이 적용된 메뉴 오버레이 위젯 사용
+      // 메뉴 팝업이 Scale + Fade 애니메이션으로 부드럽게 나타남
+      builder: (context) => AnimatedMenuOverlay(
+        scaleAnimation: _scaleAnimation,
+        fadeAnimation: _fadeAnimation,
+        buttonPosition: buttonPosition,
+        buttonSize: buttonSize,
+        menuWidget: _buildMenuContent(),
+        onDismiss: _closeMenu,
+      ),
+    );
+
+    // 오버레이 삽입
+    // 현재 컨텍스트의 오버레이에 메뉴 오버레이를 삽입하여 화면에 표시
+    Overlay.of(context).insert(_overlayEntry!);
+    _isMenuOpen = true;
+    _animationController.forward();
+  }
+
+  /// 메뉴 닫기
+  Future<void> _closeMenu() async {
+    if (!_isMenuOpen) return;
+
+    await _animationController.reverse();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _isMenuOpen = false;
+  }
+
+  /// 메뉴 토글
+  void _toggleMenu() {
+    if (_isMenuOpen) {
+      _closeMenu();
+    } else {
+      _openMenu();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MenuAnchor(
-      controller: _menuController,
-      style: MenuStyle(
-        backgroundColor: WidgetStateProperty.all(const Color(0xFF323232)),
-        shadowColor: WidgetStateProperty.all(
-          Colors.black.withValues(alpha: 0.3),
+    return GestureDetector(
+      key: _buttonKey,
+      onTap: _toggleMenu,
+      child: widget.child,
+    );
+  }
+
+  /// 메뉴 콘텐츠 빌드
+  Widget _buildMenuContent() {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 151.w,
+        decoration: BoxDecoration(
+          color: const Color(0xFF323232),
+          borderRadius: BorderRadius.circular(8.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 8.0,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        elevation: WidgetStateProperty.all(8.0),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _buildMenuItems(),
         ),
-        padding: WidgetStateProperty.all(EdgeInsets.zero),
-        maximumSize: WidgetStateProperty.all(Size(151.w, 115.h)),
-        minimumSize: WidgetStateProperty.all(Size(151.w, 115.h)),
-      ),
-      menuChildren: _buildMenuItems(),
-      child: GestureDetector(
-        onTap: () {
-          if (_menuController.isOpen) {
-            _menuController.close();
-          } else {
-            _menuController.open();
-          }
-        },
-        child: widget.child,
       ),
     );
   }
@@ -140,7 +236,7 @@ class _ArchivePopupMenuWidgetState extends State<ArchivePopupMenuWidget> {
   /// 메뉴 액션 처리
   void _handleMenuAction(String action) {
     // 메뉴 먼저 닫기
-    _menuController.close();
+    _closeMenu();
 
     // 액션 처리
     switch (action) {
