@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../../../../api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/controllers/category_controller.dart';
 import '../../../../api_firebase/models/category_data_model.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../models/archive_layout_mode.dart';
 
 // 아카이브 카드 위젯
+// Lazy Loading: 화면에 보이는 카드만 Firebase 스트림 구독
 class ArchiveCardWidget extends StatefulWidget {
   final String categoryId;
   final bool isEditMode;
@@ -35,30 +37,83 @@ class ArchiveCardWidget extends StatefulWidget {
 }
 
 class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
-  late final Stream<CategoryDataModel?> _categoryStream;
+  // Lazy Loading: 스트림을 nullable로 변경하여 필요할 때만 초기화
+  Stream<CategoryDataModel?>? _categoryStream;
+
+  // 한 번이라도 보였는지 추적 (스트림 재생성 방지)
+  bool _hasBeenVisible = false;
+
+  // 데이터 로드 완료 여부 (shimmer 한 번만 표시하기 위함)
+  bool _hasLoadedData = false;
 
   @override
   void initState() {
     super.initState();
-    final categoryController = Provider.of<CategoryController>(
-      context,
-      listen: false,
-    );
-    _categoryStream = categoryController.streamSingleCategory(
-      widget.categoryId,
-    );
+    // Lazy Loading: initState에서 스트림을 생성하지 않음
+    // 화면에 보일 때 _initializeStreamIfNeeded()가 호출됨
+  }
+
+  /// 화면에 보일 때만 스트림 초기화 (Lazy Loading)
+  void _initializeStreamIfNeeded() {
+    if (_categoryStream == null && mounted) {
+      final categoryController = Provider.of<CategoryController>(
+        context,
+        listen: false,
+      );
+      _categoryStream = categoryController.streamSingleCategory(
+        widget.categoryId,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // VisibilityDetector로 감싸서 화면에 보일 때만 데이터 로드
+    return VisibilityDetector(
+      key: Key('archive_card_visibility_${widget.categoryId}'),
+      onVisibilityChanged: (VisibilityInfo info) {
+        final isNowVisible = info.visibleFraction > 0;
+
+        // 화면에 처음 보이게 되면 스트림 초기화
+        if (isNowVisible && !_hasBeenVisible) {
+          _hasBeenVisible = true;
+          if (mounted) {
+            setState(() {
+              _initializeStreamIfNeeded();
+            });
+          }
+        }
+      },
+      child: _buildCardContent(),
+    );
+  }
+
+  /// 카드 콘텐츠 빌드 (shimmer를 한 번만 표시)
+  Widget _buildCardContent() {
+    // 아직 화면에 보이지 않았거나 스트림이 없으면 shimmer 표시
+    /* if (!_hasBeenVisible || _categoryStream == null) {
+      return widget.layoutMode == ArchiveLayoutMode.list
+          ? _buildLoadingListCard()
+          : _buildLoadingGridCard();
+    }*/
+
+    // 화면에 보였으면 실제 스트림 구독
     return StreamBuilder<CategoryDataModel?>(
       stream: _categoryStream,
       builder: (context, snapshot) {
-        // 로딩 중
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return widget.layoutMode == ArchiveLayoutMode.list
+        // 데이터가 아직 로드되지 않았으면 shimmer 유지 (한 번만)
+        // _hasLoadedData를 사용하여 shimmer → 카드 전환이 한 번만 일어나도록 함
+        if (!_hasLoadedData) {
+          if (snapshot.hasData && snapshot.data != null) {
+            // 데이터가 도착하면 플래그 업데이트 (다음 빌드에서 카드 표시)
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _hasLoadedData = true);
+            });
+          }
+          // 데이터 로드 전까지 shimmer 유지
+          /* return widget.layoutMode == ArchiveLayoutMode.list
               ? _buildLoadingListCard()
-              : _buildLoadingGridCard();
+              : _buildLoadingGridCard();*/
         }
 
         // 에러 발생
@@ -363,7 +418,7 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
           memCacheWidth: (width * 2).round(),
           maxWidthDiskCache: (width * 2).round(),
           fit: BoxFit.cover,
-          placeholder: (context, url) => Shimmer.fromColors(
+          /* placeholder: (context, url) => Shimmer.fromColors(
             baseColor: Colors.grey.shade800,
             highlightColor: Colors.grey.shade700,
             period: const Duration(milliseconds: 1500),
@@ -375,7 +430,7 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
                 borderRadius: BorderRadius.circular(borderRadius),
               ),
             ),
-          ),
+          ),*/
           errorWidget: (context, url, error) => Container(
             width: width,
             height: height,
@@ -454,13 +509,15 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
   }
 
   Widget _buildLoadingGridCard() {
+    // key를 사용하여 위젯 재사용, shimmer 애니메이션 연속성 유지
     return SizedBox(
+      key: ValueKey('loading_grid_${widget.categoryId}'),
       width: 168,
       height: double.infinity,
       child: Shimmer.fromColors(
         baseColor: Colors.grey.shade800,
         highlightColor: Colors.grey.shade700,
-        period: const Duration(milliseconds: 1500),
+        period: const Duration(milliseconds: 1000),
         child: Container(
           decoration: BoxDecoration(
             color: const Color(0xFF1C1C1C),
@@ -476,7 +533,9 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
   }
 
   Widget _buildLoadingListCard() {
+    // key를 사용하여 위젯 재사용, shimmer 애니메이션 연속성 유지
     return Shimmer.fromColors(
+      key: ValueKey('loading_list_${widget.categoryId}'),
       baseColor: Colors.grey.shade800,
       highlightColor: Colors.grey.shade700,
       period: const Duration(milliseconds: 1500),
