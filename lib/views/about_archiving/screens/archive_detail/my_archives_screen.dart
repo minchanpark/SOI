@@ -237,39 +237,28 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
     // 최소 2개, 최대 6개의 Shimmer 표시
     final shimmerCount = itemCount == 0 ? 6 : itemCount.clamp(1, 6);
 
-    return SingleChildScrollView(
+    return GridView.builder(
+      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: EdgeInsets.only(left: 22.w, right: 20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: (168.w / 229.h),
-                mainAxisSpacing: 15.h,
-                crossAxisSpacing: 15.w,
-              ),
-              itemCount: shimmerCount,
-              itemBuilder: (context, index) {
-                return Shimmer.fromColors(
-                  baseColor: Colors.grey[800]!,
-                  highlightColor: Colors.grey[700]!,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: (168.w / 229.h),
+        mainAxisSpacing: 15.h,
+        crossAxisSpacing: 15.w,
       ),
+      itemCount: shimmerCount,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[800]!,
+          highlightColor: Colors.grey[700]!,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -277,63 +266,49 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
     CategorySearchController searchController,
     List userCategories,
   ) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: EdgeInsets.only(left: 22.w, right: 20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GridView.builder(
-              key: ValueKey(
-                'my_grid_${userCategories.length}_${searchController.searchQuery}',
-              ),
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: (168 / 229),
-                mainAxisSpacing: 15.sp,
-                crossAxisSpacing: 15.sp,
-              ),
-              itemCount: userCategories.length,
-              itemBuilder: (context, index) {
-                final category = userCategories[index];
-                final categoryId = category.id;
-
-                // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
-                final displayName = uID != null && _categoryController != null
-                    ? _categoryController!.getCategoryDisplayName(
-                        category,
-                        uID!,
-                      )
-                    : category.name;
-
-                return ArchiveCardWidget(
-                  key: ValueKey('my_archive_card_$categoryId'),
-                  categoryId: categoryId,
-                  layoutMode: ArchiveLayoutMode.grid,
-                  isEditMode: widget.isEditMode,
-                  isEditing:
-                      widget.isEditMode &&
-                      widget.editingCategoryId == categoryId,
-                  editingController:
-                      widget.isEditMode &&
-                          widget.editingCategoryId == categoryId
-                      ? widget.editingController
-                      : null,
-                  onStartEdit: () {
-                    if (widget.onStartEdit != null) {
-                      widget.onStartEdit!(categoryId, displayName);
-                    }
-                  },
-                );
-              },
-            ),
-            SizedBox(height: 20.h),
-          ],
-        ),
+    return GridView.builder(
+      key: ValueKey(
+        'my_grid_${userCategories.length}_${searchController.searchQuery}',
       ),
+      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: (168 / 229),
+        mainAxisSpacing: 15.sp,
+        crossAxisSpacing: 15.sp,
+      ),
+      itemCount: userCategories.length,
+      itemBuilder: (context, index) {
+        final category = userCategories[index];
+        final categoryId = category.id;
+
+        // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
+        final displayName = uID != null && _categoryController != null
+            ? _categoryController!.getCategoryDisplayName(
+                category,
+                uID!,
+              )
+            : category.name;
+
+        return ArchiveCardWidget(
+          key: ValueKey('my_archive_card_$categoryId'),
+          categoryId: categoryId,
+          layoutMode: ArchiveLayoutMode.grid,
+          isEditMode: widget.isEditMode,
+          isEditing:
+              widget.isEditMode && widget.editingCategoryId == categoryId,
+          editingController:
+              widget.isEditMode && widget.editingCategoryId == categoryId
+                  ? widget.editingController
+                  : null,
+          onStartEdit: () {
+            if (widget.onStartEdit != null) {
+              widget.onStartEdit!(categoryId, displayName);
+            }
+          },
+        );
+      },
     );
   }
 

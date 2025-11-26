@@ -321,10 +321,9 @@ class CategoryController extends ChangeNotifier {
   /// Map 형태로 스트림 반환
   Stream<List<Map<String, dynamic>>> streamUserCategoriesAsMap(String userId) {
     return streamUserCategories(userId).map(
-      (categories) =>
-          categories
-              .map((category) => category.toFirestore()..['id'] = category.id)
-              .toList(),
+      (categories) => categories
+          .map((category) => category.toFirestore()..['id'] = category.id)
+          .toList(),
     );
   }
 
