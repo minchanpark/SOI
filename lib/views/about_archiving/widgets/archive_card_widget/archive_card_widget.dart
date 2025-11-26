@@ -456,7 +456,7 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
   Widget _buildLoadingGridCard() {
     return SizedBox(
       width: 168,
-      height: 229,
+      height: double.infinity,
       child: Shimmer.fromColors(
         baseColor: Colors.grey.shade800,
         highlightColor: Colors.grey.shade700,

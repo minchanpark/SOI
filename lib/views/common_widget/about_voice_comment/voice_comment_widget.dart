@@ -923,8 +923,8 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
             )
           : Container(
               decoration: BoxDecoration(
-                color: Colors.orange[700],
                 shape: BoxShape.circle,
+                color: Color(0xffd9d9d9),
               ),
               child: const Icon(Icons.person, color: Colors.white, size: 14),
             ),
