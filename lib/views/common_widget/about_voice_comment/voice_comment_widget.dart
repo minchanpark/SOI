@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api_firebase/controllers/auth_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
 /// 음성 댓글 전용 위젯
@@ -862,16 +863,36 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 프로필 아바타 위젯 생성
   /// profileImageUrl이 있으면 CachedNetworkImage 사용, 없으면 기본 아이콘 표시
   Widget _buildProfileAvatar() {
-    // debugPrint("Building profile avatar with URL: ${widget.profileImageUrl}");
+    return Consumer<AuthController>(
+      builder: (context, authController, _) {
+        final currentUserId = authController.currentUser?.uid;
+        if (currentUserId == null) {
+          return _buildAvatarFromUrl(widget.profileImageUrl);
+        }
+
+        return StreamBuilder<String>(
+          stream: authController.getUserProfileImageUrlStream(currentUserId),
+          builder: (context, snapshot) {
+            final streamUrl = snapshot.data;
+            final resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
+                ? streamUrl
+                : widget.profileImageUrl;
+            return _buildAvatarFromUrl(resolvedUrl);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAvatarFromUrl(String? imageUrl) {
     return Container(
       width: 54,
       height: 54,
       decoration: const BoxDecoration(shape: BoxShape.circle),
-      child:
-          widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+      child: imageUrl != null && imageUrl.isNotEmpty
           ? ClipOval(
               child: CachedNetworkImage(
-                imageUrl: widget.profileImageUrl!,
+                imageUrl: imageUrl,
                 width: 54,
                 height: 54,
                 memCacheWidth: (54 * 2).round(),
@@ -882,11 +903,6 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
                     decoration: BoxDecoration(
                       color: Colors.grey[700],
                       shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 14,
                     ),
                   );
                 },
