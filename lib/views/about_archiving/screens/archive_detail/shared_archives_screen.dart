@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
+//import 'package:shimmer/shimmer.dart';
 import '../../../../api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/controllers/category_controller.dart';
 import '../../../../api_firebase/controllers/category_search_controller.dart';
@@ -111,12 +111,12 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
           // categoryController를 저장하여 _buildGridView와 _buildListView에서 사용
           _categoryController = categoryControllerParam;
 
-          // ✅ Stream 사용으로 실시간 업데이트
+          // Stream 사용으로 실시간 업데이트
           return StreamBuilder<List<dynamic>>(
             stream: _categoryController!.streamUserCategories(nickName!),
             builder: (context, snapshot) {
               // 로딩 중일 때
-              if (snapshot.connectionState == ConnectionState.waiting ||
+              /*if (snapshot.connectionState == ConnectionState.waiting ||
                   !snapshot.hasData) {
                 // 이전에 카테고리가 있었으면 shimmer 표시
                 if (_previousCategoryCount > 0) {
@@ -124,7 +124,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
                 }
                 // 처음 로딩이면 아무것도 표시하지 않음
                 return const SizedBox.shrink();
-              }
+              }*/
 
               // 에러가 있을 때
               if (snapshot.hasError) {
@@ -236,7 +236,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
     );
   }
 
-  Widget _buildShimmerGrid(int itemCount) {
+  /* Widget _buildShimmerGrid(int itemCount) {
     // 최소 2개, 최대 6개의 Shimmer 표시
     final shimmerCount = itemCount == 0 ? 6 : itemCount.clamp(1, 6);
 
@@ -263,7 +263,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
         );
       },
     );
-  }
+  }*/
 
   Widget _buildGridView(
     CategorySearchController searchController,
@@ -288,10 +288,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
         // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
         final displayName = nickName != null && _categoryController != null
-            ? _categoryController!.getCategoryDisplayName(
-                category,
-                nickName!,
-              )
+            ? _categoryController!.getCategoryDisplayName(category, nickName!)
             : category.name;
 
         return ArchiveCardWidget(
@@ -303,8 +300,8 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
               widget.isEditMode && widget.editingCategoryId == categoryId,
           editingController:
               widget.isEditMode && widget.editingCategoryId == categoryId
-                  ? widget.editingController
-                  : null,
+              ? widget.editingController
+              : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
               widget.onStartEdit!(categoryId, displayName);

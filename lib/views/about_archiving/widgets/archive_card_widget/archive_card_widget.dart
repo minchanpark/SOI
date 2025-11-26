@@ -49,8 +49,6 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
   @override
   void initState() {
     super.initState();
-    // Lazy Loading: initState에서 스트림을 생성하지 않음
-    // 화면에 보일 때 _initializeStreamIfNeeded()가 호출됨
   }
 
   /// 화면에 보일 때만 스트림 초기화 (Lazy Loading)
@@ -91,11 +89,11 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
   /// 카드 콘텐츠 빌드 (shimmer를 한 번만 표시)
   Widget _buildCardContent() {
     // 아직 화면에 보이지 않았거나 스트림이 없으면 shimmer 표시
-    /* if (!_hasBeenVisible || _categoryStream == null) {
+    if (!_hasBeenVisible || _categoryStream == null) {
       return widget.layoutMode == ArchiveLayoutMode.list
           ? _buildLoadingListCard()
           : _buildLoadingGridCard();
-    }*/
+    }
 
     // 화면에 보였으면 실제 스트림 구독
     return StreamBuilder<CategoryDataModel?>(
@@ -110,10 +108,6 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
               if (mounted) setState(() => _hasLoadedData = true);
             });
           }
-          // 데이터 로드 전까지 shimmer 유지
-          /* return widget.layoutMode == ArchiveLayoutMode.list
-              ? _buildLoadingListCard()
-              : _buildLoadingGridCard();*/
         }
 
         // 에러 발생
@@ -216,115 +210,16 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
             SizedBox(height: (16.87).h),
             Padding(
               padding: EdgeInsets.only(left: 14),
-              child: ArchiveProfileRowWidget(mates: category.mates),
+              child: ArchiveProfileRowWidget(
+                mates: category.mates,
+                profileImages: category.mateProfileImages,
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
-  // 리스트 형태로 보여주는 카테고리는 일단 보여주지 않는 걸로
-  /* Widget _buildListLayout(BuildContext context, CategoryDataModel category) {
-    final userId = AuthController().getUserId;
-    final hasNewPhoto =
-        userId != null ? category.hasNewPhotoForUser(userId) : false;
-
-    return Container(
-      height: 99,
-      key: ValueKey('list_${category.id}'),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1C),
-        borderRadius: BorderRadius.circular(6.61),
-        border: Border.all(
-          color:
-              hasNewPhoto
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : Colors.transparent,
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap:
-            widget.isEditMode
-                ? null
-                : () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => CategoryPhotosScreen(category: category),
-                    ),
-                  );
-                },
-        child: Padding(
-          padding: EdgeInsets.only(left: 7.w),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 74.w,
-                height: 74.w,
-                child: Stack(
-                  children: [
-                    _buildCategoryImage(
-                      category,
-                      width: (80.92).w,
-                      height: 81.h,
-                      borderRadius: (3.65),
-                    ),
-                    _buildPinnedBadge(category, top: 6.h, left: 6.w),
-                    _buildNewBadge(category, top: 4.h, right: 4.w),
-                  ],
-                ),
-              ),
-              SizedBox(width: (12.08).w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(top: 12.h),
-                            child: _buildTitleWidget(
-                              context,
-                              category,
-                              fontSize: 14.sp,
-                            ),
-                          ),
-                          Spacer(),
-                          Padding(
-                            padding: EdgeInsets.only(top: 12.h),
-                            child: _buildPopupMenu(category),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 10.h, right: 10.w),
-                      child: Row(
-                        children: [
-                          Spacer(),
-                          ArchiveProfileRowWidget(mates: category.mates),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }*/
 
   Widget _buildTitleWidget(
     BuildContext context,
@@ -418,19 +313,7 @@ class _ArchiveCardWidgetState extends State<ArchiveCardWidget> {
           memCacheWidth: (width * 2).round(),
           maxWidthDiskCache: (width * 2).round(),
           fit: BoxFit.cover,
-          /* placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: Colors.grey.shade800,
-            highlightColor: Colors.grey.shade700,
-            period: const Duration(milliseconds: 1500),
-            child: Container(
-              width: width,
-              height: height,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: BorderRadius.circular(borderRadius),
-              ),
-            ),
-          ),*/
+
           errorWidget: (context, url, error) => Container(
             width: width,
             height: height,

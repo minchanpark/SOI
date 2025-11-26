@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
+//import 'package:shimmer/shimmer.dart';
 import 'package:soi/api_firebase/controllers/category_search_controller.dart';
-
 import '../../../../api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/controllers/category_controller.dart';
 import '../../../../theme/theme.dart';
@@ -151,7 +150,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
             stream: _categoryController!.streamUserCategories(nickName!),
             builder: (context, snapshot) {
               // 로딩 중일 때
-              if (snapshot.connectionState == ConnectionState.waiting ||
+              /* if (snapshot.connectionState == ConnectionState.waiting ||
                   !snapshot.hasData) {
                 // 이전에 카테고리가 있었으면 shimmer 표시
                 if (_previousCategoryCount > 0) {
@@ -159,7 +158,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
                 }
                 // 처음 로딩이면 아무것도 표시하지 않음
                 return const SizedBox.shrink();
-              }
+              }*/
 
               // 에러가 있을 때
               if (snapshot.hasError) {
@@ -268,7 +267,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     );
   }
 
-  Widget _buildShimmerGrid(int itemCount) {
+  /* Widget _buildShimmerGrid(int itemCount) {
     // 최소 2개, 최대 6개의 Shimmer 표시
     final shimmerCount = itemCount == 0 ? 6 : itemCount.clamp(1, 6);
 
@@ -295,7 +294,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
         );
       },
     );
-  }
+  }*/
 
   Widget _buildGridView(
     CategorySearchController searchController,
@@ -321,10 +320,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
         // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
         final userId = _authController?.getUserId;
         final displayName = userId != null && _categoryController != null
-            ? _categoryController!.getCategoryDisplayName(
-                category,
-                userId,
-              )
+            ? _categoryController!.getCategoryDisplayName(category, userId)
             : category.name;
 
         return ArchiveCardWidget(
@@ -336,8 +332,8 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
               widget.isEditMode && widget.editingCategoryId == categoryId,
           editingController:
               widget.isEditMode && widget.editingCategoryId == categoryId
-                  ? widget.editingController
-                  : null,
+              ? widget.editingController
+              : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
               widget.onStartEdit!(categoryId, displayName);

@@ -18,6 +18,9 @@ class CategoryDataModel {
   final Map<String, DateTime>? userLastViewedAt; // 사용자별 마지막 확인 시간
   final bool isPendingForCurrentUser; // 현재 사용자에게 보류 상태인지 여부
 
+  // 멤버 프로필 이미지 (로딩 최적화용 - userId: profileImageUrl)
+  final Map<String, String>? mateProfileImages;
+
   CategoryDataModel({
     required this.id,
     required this.name,
@@ -30,6 +33,7 @@ class CategoryDataModel {
     this.lastPhotoUploadedAt,
     this.userLastViewedAt,
     this.isPendingForCurrentUser = false,
+    this.mateProfileImages,
   });
 
   // Firestore에서 데이터를 가져올 때 사용
@@ -43,28 +47,24 @@ class CategoryDataModel {
       mates: (data['mates'] as List).cast<String>(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       categoryPhotoUrl: data['categoryPhotoUrl'],
-      customNames:
-          data['customNames'] != null
-              ? Map<String, String>.from(data['customNames'])
-              : null,
-      userPinnedStatus:
-          data['userPinnedStatus'] != null
-              ? Map<String, bool>.from(data['userPinnedStatus'])
-              : null,
+      customNames: data['customNames'] != null
+          ? Map<String, String>.from(data['customNames'])
+          : null,
+      userPinnedStatus: data['userPinnedStatus'] != null
+          ? Map<String, bool>.from(data['userPinnedStatus'])
+          : null,
       lastPhotoUploadedBy: data['lastPhotoUploadedBy'],
-      lastPhotoUploadedAt:
-          data['lastPhotoUploadedAt'] != null
-              ? (data['lastPhotoUploadedAt'] as Timestamp).toDate()
-              : null,
-      userLastViewedAt:
-          data['userLastViewedAt'] != null
-              ? Map<String, DateTime>.from(
-                (data['userLastViewedAt'] as Map).map(
-                  (key, value) =>
-                      MapEntry(key.toString(), (value as Timestamp).toDate()),
-                ),
-              )
-              : null,
+      lastPhotoUploadedAt: data['lastPhotoUploadedAt'] != null
+          ? (data['lastPhotoUploadedAt'] as Timestamp).toDate()
+          : null,
+      userLastViewedAt: data['userLastViewedAt'] != null
+          ? Map<String, DateTime>.from(
+              (data['userLastViewedAt'] as Map).map(
+                (key, value) =>
+                    MapEntry(key.toString(), (value as Timestamp).toDate()),
+              ),
+            )
+          : null,
       isPendingForCurrentUser: false,
     );
   }
@@ -79,10 +79,9 @@ class CategoryDataModel {
       'customNames': customNames,
       'userPinnedStatus': userPinnedStatus,
       'lastPhotoUploadedBy': lastPhotoUploadedBy,
-      'lastPhotoUploadedAt':
-          lastPhotoUploadedAt != null
-              ? Timestamp.fromDate(lastPhotoUploadedAt!)
-              : null,
+      'lastPhotoUploadedAt': lastPhotoUploadedAt != null
+          ? Timestamp.fromDate(lastPhotoUploadedAt!)
+          : null,
       'userLastViewedAt': userLastViewedAt?.map(
         (key, value) => MapEntry(key, Timestamp.fromDate(value)),
       ),
@@ -103,6 +102,7 @@ class CategoryDataModel {
     DateTime? lastPhotoUploadedAt,
     Map<String, DateTime>? userLastViewedAt,
     bool? isPendingForCurrentUser,
+    Map<String, String>? mateProfileImages,
   }) {
     return CategoryDataModel(
       id: id ?? this.id,
@@ -117,6 +117,7 @@ class CategoryDataModel {
       userLastViewedAt: userLastViewedAt ?? this.userLastViewedAt,
       isPendingForCurrentUser:
           isPendingForCurrentUser ?? this.isPendingForCurrentUser,
+      mateProfileImages: mateProfileImages ?? this.mateProfileImages,
     );
   }
 
