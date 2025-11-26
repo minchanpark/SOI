@@ -529,7 +529,9 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget>
           imageUrl: profileImageUrl,
           size: _avatarSize,
           showBorder: true,
-          opacity: 0.8,
+
+          // 사용자에게 보이지 않게 (위치 데이터만 유지)
+          opacity: 0.0,
         ),
       ),
     );

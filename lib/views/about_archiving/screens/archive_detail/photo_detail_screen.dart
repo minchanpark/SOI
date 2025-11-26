@@ -236,33 +236,54 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
               });
             },
             onProfileImageDragged: (photoId, absolutePosition) {
+              // pending이 있으면 새 댓글용 프로필 배치이므로 기존 댓글 ID 불필요
+              final hasPending = _pendingVoiceComments[photoId] != null;
               String? latestCommentId;
-              final list = _photoComments[photoId];
-              if (list != null) {
-                final userComments = list
-                    .where((comment) => comment.recorderUser == currentUserId)
-                    .toList();
-                if (userComments.isNotEmpty) {
-                  latestCommentId = userComments.last.id;
+
+              // pending이 없을 때만 기존 댓글 위치 업데이트 대상(commentId)을 찾음
+              // **pending이 있으면 새 댓글용이므로 기존 댓글을 건드리지 않음**
+              if (!hasPending) {
+                final list = _photoComments[photoId];
+                if (list != null) {
+                  final userComments = list
+                      .where((comment) => comment.recorderUser == currentUserId)
+                      .toList();
+                  if (userComments.isNotEmpty) {
+                    latestCommentId = userComments.last.id;
+                  }
                 }
               }
+
+              // latestCommentId:
+              // - pending 있음 → null (새 댓글용 프로필 배치)
+              // - pending 없음 → 마지막 댓글 ID (기존 댓글 위치 수정)
+              //   - pending이 없는 경우는 거의 없음. 대부분 새 댓글 작성 중이기 때문.
+              //   - 하지만, 만약을 대비해 처리 로직을 분리함.
               _onProfileImageDragged(
                 photoId,
                 absolutePosition,
                 commentId: latestCommentId,
               );
             },
+
+            // 저장 요청: Optimistic UI 패턴으로 즉시 UI에 프로필 표시 후
+            // 백그라운드에서 Firestore 저장 수행
             onSaveRequested: _onSaveRequested,
+
+            // 저장 완료 후 상태 정리 (active 모드 해제, pending 제거)
             onSaveCompleted: _onSaveCompleted,
+
+            // 사진 삭제 (소프트 삭제)
+            // 영구 삭제가 아님 --> 소프트 삭제 처리 후 필요 시 복구 가능
             onDeletePressed: () => _deletePhoto(photo),
-            onLikePressed: _onLikePressed,
           );
         },
       ),
     );
   }
 
-  // ================= Logic =================
+  /// 페이지 변경 시 현재 사진 인덱스를 업데이트하고, 오디오 정지 및 새 사진의 데이터 로드 수행.
+  /// 프로필 이미지 새로고침, 음성 댓글 구독, 댓글 로드를 포함한 작업 처리.
   void _onPageChanged(int index) {
     final newPhotoId = widget.photos[index].id;
     setState(() {
@@ -275,6 +296,8 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     _loadCommentsForPhoto(newPhotoId);
   }
 
+  // 사진에 대한 댓글 로드
+  // 해당 사진에 태그 되어있는 모든 댓글을 불러와 상태에 반영
   Future<void> _loadCommentsForPhoto(String photoId) async {
     try {
       final controller = CommentRecordController();
@@ -289,10 +312,16 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     }
   }
 
+  // AuthController 변경 시 처리
+  // 프로필 이미지 새로고침 및 음성 댓글 구독 갱신
   void _onAuthControllerChanged() {
     if (!mounted) return;
     setState(() => _profileImageRefreshKey++);
+
+    // 프로필 이미지 새로고침
     _loadUserProfileImage();
+
+    // 음성 댓글 구독 갱신
     _subscribeToVoiceCommentsForCurrentPhoto();
   }
 
@@ -325,12 +354,18 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     }
   }
 
+  // 현재 사진에 대한 음성 댓글 실시간 구독 설정
+  // 댓글이 추가/수정/삭제될 때마다 상태를 업데이트
   void _subscribeToVoiceCommentsForCurrentPhoto() {
     final photoId = widget.photos[_currentIndex].id;
     try {
       _commentStreams[photoId]?.cancel();
       final currentUserId = _authController?.currentUser?.uid;
+
       if (currentUserId == null) return;
+
+      // 실시간 스트림 구독 설정
+      // 댓글이 변경될 때마다 _handleCommentsUpdate 호출
       _commentStreams[photoId] = CommentRecordController()
           .getCommentRecordsStream(photoId)
           .listen(
@@ -338,10 +373,12 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                 _handleCommentsUpdate(photoId, currentUserId, comments),
           );
     } catch (e) {
-      debugPrint('❌ 실시간 댓글 구독 실패($photoId): $e');
+      debugPrint('실시간 댓글 구독 실패($photoId): $e');
     }
   }
 
+  // 댓글 목록이 변경될 때 상태 업데이트 처리
+  // 특정 사진에 대한 댓글이 추가/수정/삭제될 때마다 호출됩니다.
   void _handleCommentsUpdate(
     String photoId,
     String currentUserId,
@@ -381,6 +418,9 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     });
   }
 
+  // 프로필 이미지 드래그 시 위치 업데이트 처리
+  // pending이 있으면 새 댓글용 프로필 배치
+  // pending이 없으면 기존 댓글 위치 수정
   void _onProfileImageDragged(
     String photoId,
     Offset absolutePosition, {
@@ -392,14 +432,18 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
       imageSize,
     );
 
-    // Store position in pending comment object (not in photoId-based Map)
     final pending = _pendingVoiceComments[photoId];
+
+    // pending이 null이 아닌 경우, 기존 댓글 위치를 업데이트함.
     if (pending != null) {
       _pendingVoiceComments[photoId] = pending.copyWith(
         relativePosition: relativePosition,
       );
+      return;
     }
 
+    // pending이 null인 경우, 기존 댓글 위치 업데이트
+    // pending이 null이란 것은 새로운 태그가 생성되었음을 의미하기 때문.
     if (commentId != null && commentId.isNotEmpty) {
       _updateProfilePositionInFirestore(photoId, commentId, relativePosition);
     }
@@ -425,7 +469,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
         _commentPositions[commentId] = relativePosition;
       }
     } catch (e) {
-      debugPrint('❌ 프로필 위치 업데이트 실패: $e');
+      debugPrint('프로필 위치 업데이트 실패: $e');
     }
   }
 
@@ -434,7 +478,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     try {
       await _getAudioController.toggleAudio(photo.audioUrl);
     } catch (e) {
-      debugPrint('❌ 오디오 토글 실패: $e');
+      debugPrint('오디오 토글 실패: $e');
     }
   }
 
@@ -450,7 +494,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
       final userId = _authController?.currentUser?.uid;
       if (userId == null) return;
 
-      // 1. 텍스트 댓글을 pending 상태로 저장
+      // 텍스트 댓글을 pending 상태로 저장
       final autoPosition = _generateAutoProfilePosition(photoId);
       final currentUserProfileImageUrl = await _authController!
           .getUserProfileImageUrlWithCache(userId);
@@ -459,20 +503,23 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
         id: 'pending_text',
         text: text,
         type: CommentType.text,
-        audioUrl: '', // 텍스트 댓글은 오디오 없음
-        waveformData: [], // 텍스트 댓글은 파형 데이터 없음
-        duration: 0, // 텍스트 댓글은 duration 없음
+
+        // 텍스트 댓글은 오디오 없음
+        audioUrl: '',
+
+        // 텍스트 댓글은 파형 데이터 없음
+        waveformData: [],
+
+        // 텍스트 댓글은 duration 없음
+        duration: 0,
         recorderUser: userId,
         photoId: photoId,
         profileImageUrl: currentUserProfileImageUrl,
         createdAt: DateTime.now(),
         relativePosition: autoPosition,
       );
-      // Position stored in pending comment object above
 
-      debugPrint('✅ 텍스트 댓글 임시 저장 완료');
-
-      // 2. pending 상태 업데이트
+      // pending 상태 업데이트
       if (mounted) {
         setState(() {
           _pendingTextComments[photoId] = true;
@@ -480,7 +527,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ 텍스트 댓글 임시 저장 실패: $e');
+      debugPrint('텍스트 댓글 임시 저장 실패: $e');
     }
   }
 
@@ -508,11 +555,13 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
         photoId: photoId,
         waveformData: waveformData,
         duration: duration,
-        profileImageUrl: currentUserProfileImageUrl, // 현재 사용자 프로필 이미지 사용
+
+        // 현재 사용자 프로필 이미지 사용
+        profileImageUrl: currentUserProfileImageUrl,
         createdAt: DateTime.now(),
         relativePosition: autoPosition,
       );
-      // Position stored in pending comment object above
+
       if (mounted) {
         setState(() {
           _voiceCommentSavedStates[photoId] = false;
@@ -530,23 +579,75 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
       throw StateError('임시 댓글이 없습니다. photoId: $photoId');
     }
 
-    try {
-      final userId = _authController?.currentUser?.uid;
-      if (userId == null) {
-        throw StateError('로그인된 사용자를 찾을 수 없습니다.');
-      }
+    final userId = _authController?.currentUser?.uid;
+    if (userId == null) {
+      throw StateError('로그인된 사용자를 찾을 수 없습니다.');
+    }
 
+    // 즉시 UI에 반영할 임시 댓글 생성
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final relativePosition =
+        pending.relativePosition ?? _generateAutoProfilePosition(photoId);
+
+    final tempComment = CommentRecordModel(
+      id: tempId,
+      audioUrl: pending.audioUrl,
+      photoId: photoId,
+      recorderUser: userId,
+      waveformData: pending.waveformData,
+      duration: pending.duration,
+      profileImageUrl: pending.profileImageUrl,
+      createdAt: DateTime.now(),
+      relativePosition: relativePosition,
+      text: pending.text,
+      type: pending.type,
+    );
+
+    // 임시 댓글을 현재 댓글 목록에 추가하여 UI에 즉시 반영
+    final existingComments = List<CommentRecordModel>.from(
+      _photoComments[photoId] ?? [],
+    );
+    existingComments.add(tempComment);
+
+    setState(() {
+      _photoComments[photoId] = existingComments;
+      _commentPositions[tempId] = relativePosition;
+      _voiceCommentSavedStates[photoId] = true;
+      _savedCommentIds[photoId] = [
+        ...(_savedCommentIds[photoId] ?? []),
+        tempId,
+      ];
+      _pendingVoiceComments.remove(photoId);
+      _pendingTextComments.remove(photoId);
+      _voiceCommentActiveStates[photoId] = false;
+    });
+
+    // 백그라운드에서 Firestore 저장
+    _saveCommentInBackground(
+      photoId: photoId,
+      tempId: tempId,
+      pending: pending,
+      userId: userId,
+      relativePosition: relativePosition,
+    );
+  }
+
+  // 백그라운드에서 댓글을 Firestore에 저장하고, 성공 시 임시 ID를 실제 ID로 교체
+  Future<void> _saveCommentInBackground({
+    required String photoId,
+    required String tempId,
+    required CommentRecordModel pending,
+    required String userId,
+    required Offset relativePosition,
+  }) async {
+    try {
       final currentUserProfileImageUrl = await _authController!
           .getUserProfileImageUrlWithCache(userId);
 
-      // Use position from pending comment (not from photoId-based Map)
-      final relativePosition =
-          pending.relativePosition ?? _generateAutoProfilePosition(photoId);
-
       final controller = CommentRecordController();
 
-      // 텍스트 댓글인지 음성 댓글인지 확인
-      final comment = pending.type == CommentType.text
+      // Firestore에 저장
+      final savedComment = pending.type == CommentType.text
           ? await controller.createTextComment(
               text: pending.text ?? '',
               photoId: photoId,
@@ -564,46 +665,75 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
               relativePosition: relativePosition,
             );
 
-      if (comment == null) {
+      if (savedComment == null) {
+        // 저장 실패 시 롤백
+        _rollbackOptimisticComment(photoId, tempId);
         if (mounted) {
           controller.showErrorToUser(context);
         }
-        throw Exception('댓글 저장에 실패했습니다. photoId: $photoId');
+        return;
       }
 
-      _commentPositions[comment.id] =
-          comment.relativePosition ?? relativePosition;
-      _voiceCommentSavedStates[photoId] = true;
-
-      final existingIds = _savedCommentIds[photoId] ?? const <String>[];
-      final updatedIds = <String>[
-        ...existingIds.where((id) => id != comment.id),
-        comment.id,
-      ];
-
-      void applyUpdates() {
-        _savedCommentIds[photoId] = updatedIds;
-
-        // 텍스트 댓글 pending 상태 제거
-        // 음성 댓글도 동일하게 제거
-        _pendingVoiceComments.remove(photoId);
-        _pendingTextComments.remove(photoId);
-
-        /// 추가: 저장 직후 다시 아이콘 모드로 돌려주기
-        _voiceCommentActiveStates[photoId] = false;
-      }
-
+      // 저장 성공: 임시 ID를 실제 ID로 교체
       if (mounted) {
-        setState(applyUpdates);
-      } else {
-        applyUpdates();
+        setState(() {
+          // 임시 댓글을 실제 댓글로 교체
+          final comments = _photoComments[photoId] ?? [];
+          final index = comments.indexWhere((c) => c.id == tempId);
+          if (index != -1) {
+            comments[index] = savedComment;
+            _photoComments[photoId] = comments;
+          }
+
+          // 위치 정보 업데이트
+          _commentPositions.remove(tempId);
+          _commentPositions[savedComment.id] =
+              savedComment.relativePosition ?? relativePosition;
+
+          // savedCommentIds 업데이트
+          final ids = _savedCommentIds[photoId] ?? [];
+          final idIndex = ids.indexOf(tempId);
+          if (idIndex != -1) {
+            ids[idIndex] = savedComment.id;
+            _savedCommentIds[photoId] = ids;
+          }
+        });
       }
 
+      // 실시간 스트림과 동기화를 위해 댓글 다시 로드
       unawaited(_loadCommentsForPhoto(photoId));
     } catch (e) {
-      debugPrint('❌ 댓글 저장 실패(사용자 요청): $e');
-      rethrow;
+      debugPrint('댓글 백그라운드 저장 실패: $e');
+      _rollbackOptimisticComment(photoId, tempId);
     }
+  }
+
+  /// Optimistic UI 롤백: 저장 실패 시 임시 댓글 제거
+  void _rollbackOptimisticComment(String photoId, String tempId) {
+    if (!mounted) return;
+
+    setState(() {
+      // 임시 댓글 제거
+      final comments = _photoComments[photoId] ?? [];
+      comments.removeWhere((c) => c.id == tempId);
+      _photoComments[photoId] = comments;
+
+      // 위치 정보 제거
+      _commentPositions.remove(tempId);
+
+      // savedCommentIds에서 제거
+      final ids = _savedCommentIds[photoId] ?? [];
+      ids.remove(tempId);
+      if (ids.isEmpty) {
+        _savedCommentIds.remove(photoId);
+        _voiceCommentSavedStates[photoId] = false;
+      } else {
+        _savedCommentIds[photoId] = ids;
+      }
+    });
+
+    // 사용자에게 에러 알림
+    _showSnackBar('댓글 저장에 실패했습니다. 다시 시도해주세요.', backgroundColor: Colors.red);
   }
 
   void _onSaveCompleted(String photoId) {
@@ -611,7 +741,9 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     setState(() {
       _voiceCommentActiveStates[photoId] = false;
       _pendingVoiceComments.remove(photoId);
-      _pendingTextComments.remove(photoId); // 텍스트 댓글 pending 상태 제거
+
+      // 텍스트 댓글 pending 상태 제거
+      _pendingTextComments.remove(photoId);
     });
   }
 
@@ -710,8 +842,6 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     return false;
   }
 
-  void _onLikePressed() {}
-
   Future<void> _deletePhoto(MediaDataModel photo) async {
     try {
       final auth = _getAuthController;
@@ -724,7 +854,9 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
         categoryId: widget.categoryId,
         photoId: photo.id,
         userId: currentUserId,
-        permanentDelete: false, // 소프트 삭제로 변경
+
+        // 소프트 삭제로 변경
+        permanentDelete: false,
       );
       if (!mounted) return;
       if (success) {

@@ -443,16 +443,6 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
                     throw Exception('사진 삭제 중 오류 발생: $e');
                   }
                 },
-                onLikePressed: () {
-                  // TODO: 좋아요 토글 구현 (서비스/컨트롤러 추가 필요)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('좋아요 기능 준비 중입니다.'),
-                      duration: Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
               );
             },
           ),

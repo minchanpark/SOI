@@ -41,7 +41,6 @@ class PhotoCardWidgetCommon extends StatefulWidget {
   final Future<void> Function(String) onSaveRequested; // 프로필 배치 저장 콜백
   final Function(String) onSaveCompleted;
   final VoidCallback onDeletePressed;
-  final VoidCallback onLikePressed;
 
   const PhotoCardWidgetCommon({
     super.key,
@@ -69,7 +68,6 @@ class PhotoCardWidgetCommon extends StatefulWidget {
     required this.onSaveRequested,
     required this.onSaveCompleted,
     required this.onDeletePressed,
-    required this.onLikePressed,
   });
 
   @override
@@ -131,7 +129,6 @@ class _PhotoCardWidgetCommonState extends State<PhotoCardWidgetCommon> {
                 userNames: widget.userNames,
                 isCurrentUserPhoto: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
-                onLikePressed: widget.onLikePressed,
               ),
               SizedBox(height: 10.h),
 

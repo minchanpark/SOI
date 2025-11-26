@@ -9,6 +9,9 @@ import '../../../utils/format_utils.dart';
 import '../abput_photo/user_display_widget.dart';
 import 'reaction_row_widget.dart';
 
+/// 음성 댓글 행 위젯
+/// 다양한 댓글 유형(음성, 텍스트, 이모지 리액션)을 처리합니다
+/// listview 등에서 개별 댓글을 표시하는 데 사용됩니다.
 class VoiceCommentRow extends StatelessWidget {
   final CommentRecordModel comment;
   final bool isHighlighted; // 하이라이트 여부

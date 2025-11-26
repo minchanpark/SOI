@@ -113,7 +113,6 @@ class FeedPageBuilder extends StatelessWidget {
           onSaveCompleted: onSaveCompleted,
           onDeletePressed: () =>
               _handleDelete(context, index, categoryId, photo),
-          onLikePressed: onLikePressed,
         );
       },
     );
