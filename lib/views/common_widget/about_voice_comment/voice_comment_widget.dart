@@ -862,6 +862,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 프로필 아바타 위젯 생성
   /// profileImageUrl이 있으면 CachedNetworkImage 사용, 없으면 기본 아이콘 표시
   Widget _buildProfileAvatar() {
+    // debugPrint("Building profile avatar with URL: ${widget.profileImageUrl}");
     return Container(
       width: 54,
       height: 54,
