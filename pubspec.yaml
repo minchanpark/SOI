@@ -105,11 +105,12 @@ dev_dependencies:
   build_runner: ^2.10.1
   json_serializable: ^6.11.1
   copy_with_extension_gen: ^10.0.1
+  flutter_launcher_icons: ^0.14.4
 
-#flutter_launcher_icons:
-#  android: "launcher_icon"
-#  ios: true
-#  image_path: "assets/app_icon.png"
+flutter_launcher_icons:
+  #android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/dependencies
@@ -127,6 +128,7 @@ flutter:
     - assets/fonts/PretendardVariable.ttf
     - assets/notification.png
     - assets/app_launch_video/SOI.mp4
+    - assets/icon/icon.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

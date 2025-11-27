@@ -5,27 +5,19 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000227">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000266">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.00172">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001885">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa --release" time="323.439428">
+      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa --release" time="7.802195">
         
-      </testcase>
-    
-      
-      <testcase classname="fastlane.lanes" name="3: increment_build_number" time="0.245224">
-        
-      </testcase>
-    
-      
-      <testcase classname="fastlane.lanes" name="4: pilot" time="610.108441">
+          <failure message="/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/actions/actions_helper.rb:67:in `execute_action'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/fast_file.rb:224:in `sh'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/fast_file.rb:216:in `sh'&#10;Fastfile:24:in `block (2 levels) in parsing_binding'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/lane.rb:41:in `call'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/runner.rb:49:in `block in execute'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/runner.rb:45:in `chdir'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/runner.rb:45:in `execute'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/lane_manager.rb:46:in `cruise_lane'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/command_line_handler.rb:34:in `handle'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/commands_generator.rb:110:in `block (2 levels) in run'&#10;/Library/Ruby/Gems/2.6.0/gems/commander-4.6.0/lib/commander/command.rb:187:in `call'&#10;/Library/Ruby/Gems/2.6.0/gems/commander-4.6.0/lib/commander/command.rb:157:in `run'&#10;/Library/Ruby/Gems/2.6.0/gems/commander-4.6.0/lib/commander/runner.rb:444:in `run_active_command'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane_core/lib/fastlane_core/ui/fastlane_runner.rb:124:in `run!'&#10;/Library/Ruby/Gems/2.6.0/gems/commander-4.6.0/lib/commander/delegates.rb:18:in `run!'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/commands_generator.rb:363:in `run'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/commands_generator.rb:43:in `start'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/fastlane/lib/fastlane/cli_tools_distributor.rb:123:in `take_off'&#10;/Library/Ruby/Gems/2.6.0/gems/fastlane-2.229.1/bin/fastlane:23:in `&lt;top (required)&gt;'&#10;/usr/local/bin/fastlane:23:in `load'&#10;/usr/local/bin/fastlane:23:in `&lt;top (required)&gt;'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli/exec.rb:74:in `load'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli/exec.rb:74:in `kernel_load'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli/exec.rb:28:in `run'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli.rb:463:in `exec'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/vendor/thor/lib/thor/command.rb:27:in `run'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/vendor/thor/lib/thor/invocation.rb:126:in `invoke_command'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/vendor/thor/lib/thor.rb:387:in `dispatch'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli.rb:27:in `dispatch'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/vendor/thor/lib/thor/base.rb:466:in `start'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/cli.rb:18:in `start'&#10;/Library/Ruby/Gems/2.6.0/gems/bundler-1.17.2/exe/bundle:30:in `block in &lt;top (required)&gt;'&#10;/System/Library/Frameworks/Ruby.framework/Versions/2.6/usr/lib/ruby/2.6.0/bundler/friendly_errors.rb:124:in `with_friendly_errors'&#10;/Library/Ruby/Gems/2.6.0/gems/bundler-1.17.2/exe/bundle:22:in `&lt;top (required)&gt;'&#10;/usr/bin/bundle:23:in `load'&#10;/usr/bin/bundle:23:in `&lt;main&gt;'&#10;&#10;Exit status of command 'cd .. &amp;&amp; flutter build ipa --release' was 1 instead of 0.&#10;Changing current working directory to: /Users/minchanpark/Documents/SOI&#10;Archiving com.newdawn.soi-project...&#10;Updating project for Xcode compatibility.&#10;Upgrading project.pbxproj&#10;Upgrading Runner.xcscheme&#10;Automatically signing iOS for device deployment using specified development team in Xcode project: ZNNY3727TQ&#10;Warning: CocoaPods is installed but broken. Skipping pod install.&#10;  You appear to have CocoaPods installed but it is not working.&#10;  This can happen if the version of Ruby that CocoaPods was installed with is different from the one being used to invoke it.&#10;  This can usually be fixed by re-installing CocoaPods.&#10;For re-installation instructions, see https://guides.cocoapods.org/using/getting-started.html#installation&#10;&#10;CocoaPods not installed or not in valid state.&#10;" />
         
       </testcase>
     

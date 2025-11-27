@@ -1,159 +1,184 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>BGTaskSchedulerPermittedIdentifiers</key>
-		<array>
-			<string>com.newdawn.soiapp.refresh</string>
-			<string>com.newdawn.soiapp.processing</string>
-		</array>
-		<key>CADisableMinimumFrameDurationOnPhone</key>
-		<true/>
-		<key>CFBundleDevelopmentRegion</key>
-		<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>CFBundleDisplayName</key>
-		<string>SOI</string>
-		<key>CFBundleExecutable</key>
-		<string>$(EXECUTABLE_NAME)</string>
-		<key>CFBundleIdentifier</key>
-		<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-		<key>CFBundleInfoDictionaryVersion</key>
-		<string>6.0</string>
-		<key>CFBundleName</key>
-		<string>soi_app</string>
-		<key>CFBundlePackageType</key>
-		<string>APPL</string>
-		<key>CFBundleShortVersionString</key>
-		<string>$(FLUTTER_BUILD_NAME)</string>
-		<key>CFBundleSignature</key>
-		<string>????</string>
-		<key>CFBundleURLTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLName</key>
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.newdawn.soiapp.refresh</string>
+		<string>com.newdawn.soiapp.processing</string>
+	</array>
+
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SOI</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>soi_app</string>
+
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
 				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-					<string>app-1-1074708164096-ios-f6a0558949723c8c4d32e5</string>
-				</array>
-			</dict>
-			<dict>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-				<key>CFBundleURLName</key>
-				<string>soi.deeplink</string>
-				<key>CFBundleURLSchemes</key>
-				<array>
-					<string>soi</string>
-				</array>
-			</dict>
-		</array>
-		<key>CFBundleVersion</key>
-		<string>32</string>
-		<key>branch_key</key>
-		<dict>
-			<key>live</key>
-			<string>key_live_YOUR_LIVE_KEY_HERE</string>
-			<key>test</key>
-			<string>key_test_YOUR_TEST_KEY_HERE</string>
+				<string>app-1-1074708164096-ios-f6a0558949723c8c4d32e5</string>
+			</array>
 		</dict>
-		<key>branch_use_test_instance</key>
-		<true/>
-		<key>FirebaseAppDelegateProxyEnabled</key>
-		<true/>
-		<key>FirebaseAuthCAPTCHAFallbackEnabled</key>
-		<false/>
-		<key>FirebaseAuthReCAPTCHABypassEnabled</key>
-		<true/>
-		<key>LSRequiresIPhoneOS</key>
-		<true/>
-		<key>NSAppTransportSecurity</key>
 		<dict>
-			<key>NSAllowsArbitraryLoads</key>
-			<true/>
-			<key>NSExceptionDomains</key>
-			<dict>
-				<key>googleapis.com</key>
-				<dict>
-					<key>NSExceptionAllowsInsecureHTTPLoads</key>
-					<true/>
-					<key>NSExceptionMinimumTLSVersion</key>
-					<string>TLSv1.0</string>
-				</dict>
-				<key>www.google.com</key>
-				<dict>
-					<key>NSExceptionAllowsInsecureHTTPLoads</key>
-					<true/>
-					<key>NSExceptionMinimumTLSVersion</key>
-					<string>TLSv1.0</string>
-				</dict>
-				<key>www.gstatic.com</key>
-				<dict>
-					<key>NSExceptionAllowsInsecureHTTPLoads</key>
-					<true/>
-					<key>NSExceptionMinimumTLSVersion</key>
-					<string>TLSv1.0</string>
-				</dict>
-				<key>NSAppTransportSecurity</key>
-				<dict>
-  					<key>NSAllowsArbitraryLoads</key>
-  					<true/>
-				</dict>
-			</dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>soi.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>soi</string>
+			</array>
 		</dict>
-		<key>NSCameraUsageDescription</key>
-		<string>SOI는 친구들과 순간을 공유하기 위해 카메라 접근 권한이 필요합니다. 사진 촬영, 동영상 녹화, 음성 메모가 포함된 사진 등 다양한 콘텐츠를 생성하여 친구들과 공유할 수 있습니다. 카메라는 사용자가 직접 촬영 기능을 사용할 때만 활성화됩니다.</string>
-		<key>NSContactsUsageDescription</key>
-		<string>SOI는 연락처에 저장된 친구들을 쉽게 찾고 초대하기 위해 연락처 접근 권한이 필요합니다. 전화번호를 기반으로 이미 SOI를 사용 중인 친구를 자동으로 찾아주며, 아직 가입하지 않은 친구에게는 초대 메시지를 보낼 수 있습니다. 연락처 정보는 친구 찾기 목적으로만 사용되며, 서버에 저장되지 않습니다.</string>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>SOI는 동영상 촬영 시 오디오를 녹음하고, 사진에 음성 메모를 추가하기 위해 마이크 접근 권한이 필요합니다. 음성이 포함된 콘텐츠를 통해 친구들과 더욱 생동감 있게 소통할 수 있습니다. 마이크는 사용자가 동영상을 촬영하거나 음성 녹음 기능을 사용할 때만 활성화됩니다.</string>
-		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>SOI는 사진에 촬영 위치 정보를 자동으로 태그하거나, 지역 기반 콘텐츠를 제공하기 위해 위치 정보 접근 권한이 필요할 수 있습니다. 위치 정보는 앱 사용 중에만 수집되며, 사용자가 원하지 않을 경우 설정에서 언제든지 비활성화할 수 있습니다. 수집된 위치 정보는 서비스 개선 목적으로만 사용됩니다.</string>
-		<key>NSPhotoLibraryAddUsageDescription</key>
-		<string>SOI에서 촬영하거나 편집한 사진과 동영상을 기기의 사진 라이브러리에 저장하기 위해 접근 권한이 필요합니다. 저장된 콘텐츠는 언제든지 다시 확인하거나 다른 앱을 통해 공유할 수 있습니다. 저장 기능은 사용자가 직접 저장 버튼을 누를 때만 실행됩니다.</string>
-		<key>NSPhotoLibraryUsageDescription</key>
-		<string>SOI는 기기에 저장된 사진과 동영상을 선택하여 친구들과 공유하거나, 프로필 사진을 설정하기 위해 사진 라이브러리 접근 권한이 필요합니다. 사용자가 선택한 사진만 업로드되며, 전체 사진 라이브러리에 무단으로 접근하지 않습니다. iOS 14 이상에서는 선택한 사진에만 제한적으로 접근할 수 있습니다.</string>
-		<key>FlutterDeepLinkingEnabled</key>
-		<false/>
-		<key>UIApplicationSupportsIndirectInputEvents</key>
-		<true/>
-		<key>UIBackgroundModes</key>
-		<array>
-			<string>remote-notification</string>
-			<string>fetch</string>
-			<string>processing</string>
-		</array>
-		<key>UILaunchStoryboardName</key>
-		<string>LaunchScreen</string>
-		<key>UIMainStoryboardFile</key>
-		<string>Main</string>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>io.flutter.embedded_views_preview</key>
-		<true/>
-		<key>LSApplicationQueriesSchemes</key>
-		<array>
-			<string>http</string>
-			<string>https</string>
-		</array>
-	<key>UIStatusBarHidden</key>
-	
+	</array>
+
+	<key>CFBundleVersion</key>
+	<string>34</string>
+
+	<key>branch_key</key>
+	<dict>
+		<key>live</key>
+		<string>key_live_YOUR_LIVE_KEY_HERE</string>
+		<key>test</key>
+		<string>key_test_YOUR_TEST_KEY_HERE</string>
+	</dict>
+
+	<key>branch_use_test_instance</key>
+	<true/>
+
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+	<key>FirebaseAuthCAPTCHAFallbackEnabled</key>
 	<false/>
+	<key>FirebaseAuthReCAPTCHABypassEnabled</key>
+	<true/>
+
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>googleapis.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+			<key>www.google.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+			<key>www.gstatic.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+		</dict>
+	</dict>
+
+	<key>NSCameraUsageDescription</key>
+	<string>SOI는 친구들과 순간을 공유하기 위해 카메라 접근 권한이 필요합니다...</string>
+
+	<key>NSContactsUsageDescription</key>
+	<string>SOI는 연락처에 저장된 친구들을 쉽게 찾고 초대하기 위해 연락처 접근 권한이 필요합니다...</string>
+
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SOI는 동영상 촬영 시 오디오를 녹음하고...</string>
+
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SOI는 사진에 촬영 위치 정보를...</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SOI에서 촬영하거나 편집한 사진과 동영상을...</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SOI는 기기에 저장된 사진과 동영상을...</string>
+
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<key>io.flutter.embedded_views_preview</key>
+	<true/>
+
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>http</string>
+		<string>https</string>
+	</array>
+
+	<key>UIStatusBarHidden</key>
+	<false/>
+
 	<key>FLTEnableWideGamut</key>
+	<false/>
+
+	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
 </plist>
