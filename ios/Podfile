@@ -1,7 +1,5 @@
-# Uncomment this line to define a global platform for your project
 platform :ios, '15.0'
 
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -28,9 +26,14 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  # 🔥 중요 1: 동적 프레임워크가 아니라 "static" 으로
+  use_frameworks! :linkage => :static
+
+  # 🔥 중요 2: modular headers (Firebase 쪽이 이 조합에서 안정적)
+  use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
