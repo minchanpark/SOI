@@ -463,16 +463,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       unawaited(
         _categoryController
             .createCategory(
-          name: categoryName,
-          mates: mates,
-          mateProfileImages: mateProfileImages.isNotEmpty
-              ? mateProfileImages
-              : null,
-        )
+              name: categoryName,
+              mates: mates,
+              mateProfileImages: mateProfileImages.isNotEmpty
+                  ? mateProfileImages
+                  : null,
+            )
             .catchError((error, stackTrace) {
-          debugPrint('카테고리 생성 중 오류: $error');
-          _showSnackBar('카테고리 생성 중 오류가 발생했습니다');
-        }),
+              debugPrint('카테고리 생성 중 오류: $error');
+              _showSnackBar('카테고리 생성 중 오류가 발생했습니다');
+            }),
       );
     } catch (e) {
       _showSnackBar('카테고리 생성 중 오류가 발생했습니다');
@@ -514,21 +514,23 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       _clearImageCache();
       await _audioController.stopAudio();
       await _audioController.stopRealtimeAudio();
-      _audioController.clearCurrentRecording();
-      await Future.delayed(const Duration(milliseconds: 500));
 
-      // 선택된 모든 카테고리에 업로드
-      for (int i = 0; i < categoryIds.length; i++) {
-        final categoryId = categoryIds[i];
+      // 중요: 업로드 데이터를 먼저 추출한 후에 clearCurrentRecording 호출
+      final uploadDataList = <Map<String, dynamic>>[];
+      for (final categoryId in categoryIds) {
         final uploadData = _extractUploadData(categoryId);
-        if (uploadData == null) continue;
-
-        // 마지막 업로드가 아니면 await로 순차 진행
-        if (i == categoryIds.length - 1) {
-          unawaited(_executeUploadWithExtractedData(uploadData));
-        } else {
-          _executeUploadWithExtractedData(uploadData);
+        if (uploadData != null) {
+          uploadDataList.add(uploadData);
         }
+      }
+
+      // 데이터 추출 후 녹음 정리
+      _audioController.clearCurrentRecording();
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // 모든 카테고리에 순차적으로 업로드 (완료 대기)
+      for (final uploadData in uploadDataList) {
+        await _executeUploadWithExtractedData(uploadData);
       }
 
       _clearImageCache();
@@ -537,6 +539,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       if (!mounted) return;
       _navigateToHome();
     } catch (e) {
+      debugPrint('업로드 중 오류 발생: $e');
       _clearImageCache();
       if (!mounted) return;
       LoadingPopupWidget.hide(context);
