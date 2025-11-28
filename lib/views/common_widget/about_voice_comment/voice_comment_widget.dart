@@ -297,6 +297,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     _audioController = Provider.of<AudioController>(context, listen: false);
 
     _recorderController = RecorderController()
+      ..overrideAudioSession = false
       ..androidEncoder = AndroidEncoder.aac
       ..androidOutputFormat = AndroidOutputFormat.mpeg4
       ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC

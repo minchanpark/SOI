@@ -66,6 +66,9 @@ class CategoryDataModel {
             )
           : null,
       isPendingForCurrentUser: false,
+      mateProfileImages: data['mateProfileImages'] != null
+          ? Map<String, String>.from(data['mateProfileImages'])
+          : null,
     );
   }
 
@@ -85,6 +88,7 @@ class CategoryDataModel {
       'userLastViewedAt': userLastViewedAt?.map(
         (key, value) => MapEntry(key, Timestamp.fromDate(value)),
       ),
+      'mateProfileImages': mateProfileImages,
       // isPendingForCurrentUser는 파생 필드이므로 저장하지 않음
     };
   }

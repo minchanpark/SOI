@@ -100,15 +100,15 @@ class FriendService {
       return {};
     }
 
-    // 자기 자신 제거
-    final filteredIds = targetUserIds.where((id) => id != baseUserId).toList();
-    if (filteredIds.isEmpty) {
+    // 자기 자신 및 중복 제거 (LinkedHashSet 기반이라 입력 순서 유지)
+    final sanitizedIds = {...targetUserIds}..remove(baseUserId);
+    if (sanitizedIds.isEmpty) {
       return {};
     }
 
     return await _friendRepository.areBatchMutualFriends(
       baseUserId,
-      filteredIds,
+      sanitizedIds.toList(growable: false),
     );
   }
 

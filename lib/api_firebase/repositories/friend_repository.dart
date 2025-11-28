@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/friend_model.dart';
 
@@ -239,12 +240,11 @@ class FriendRepository {
     }
 
     try {
-      final doc =
-          await _usersCollection
-              .doc(currentUid)
-              .collection('friends')
-              .doc(friendUid)
-              .get();
+      final doc = await _usersCollection
+          .doc(currentUid)
+          .collection('friends')
+          .doc(friendUid)
+          .get();
 
       if (!doc.exists) {
         return null;
@@ -264,12 +264,11 @@ class FriendRepository {
     }
 
     try {
-      final doc =
-          await _usersCollection
-              .doc(currentUid)
-              .collection('friends')
-              .doc(friendUid)
-              .get();
+      final doc = await _usersCollection
+          .doc(currentUid)
+          .collection('friends')
+          .doc(friendUid)
+          .get();
 
       if (!doc.exists) {
         return false;
@@ -284,41 +283,60 @@ class FriendRepository {
 
   /// 두 사용자 ID가 서로를 친구로 가지고 있는지 확인
   Future<bool> areUsersMutualFriends(String userA, String userB) async {
+    if (userA.isEmpty || userB.isEmpty) return false;
+
     try {
-      final userAFriendDoc =
-          await _usersCollection
-              .doc(userA)
-              .collection('friends')
-              .doc(userB)
-              .get();
-      if (!userAFriendDoc.exists) {
-        debugPrint('$userA의 친구 목록에 $userB 없음');
-        return false;
-      }
-      final userAFriend = FriendModel.fromFirestore(userAFriendDoc);
-      if (userAFriend.status != FriendStatus.active) {
-        debugPrint('$userA → $userB 상태: ${userAFriend.status}');
+      // 병렬로 양방향 친구 관계 확인 (최적화)
+      final [userAFriendDoc, userBFriendDoc] = await Future.wait([
+        _usersCollection
+            .doc(userA)
+            .collection('friends')
+            .doc(userB)
+            .get(),
+        _usersCollection
+            .doc(userB)
+            .collection('friends')
+            .doc(userA)
+            .get(),
+      ]);
+
+      // data()로 직접 접근 (객체 생성 오버헤드 제거)
+      final userAData = userAFriendDoc.data();
+      final userBData = userBFriendDoc.data();
+
+      // userA → userB 확인
+      if (userAData == null) {
+        if (kDebugMode) {
+          debugPrint('$userA의 친구 목록에 $userB 없음');
+        }
         return false;
       }
 
-      final userBFriendDoc =
-          await _usersCollection
-              .doc(userB)
-              .collection('friends')
-              .doc(userA)
-              .get();
-      if (!userBFriendDoc.exists) {
-        debugPrint('$userB의 친구 목록에 $userA 없음');
+      if (userAData['status'] != 'active') {
+        if (kDebugMode) {
+          debugPrint('$userA → $userB 상태: ${userAData['status']}');
+        }
         return false;
       }
-      final userBFriend = FriendModel.fromFirestore(userBFriendDoc);
-      final result = userBFriend.status == FriendStatus.active;
-      if (!result) {
-        debugPrint('$userB → $userA 상태: ${userBFriend.status}');
+
+      // userB → userA 확인
+      if (userBData == null) {
+        if (kDebugMode) {
+          debugPrint('$userB의 친구 목록에 $userA 없음');
+        }
+        return false;
       }
+
+      final result = userBData['status'] == 'active';
+      if (!result && kDebugMode) {
+        debugPrint('$userB → $userA 상태: ${userBData['status']}');
+      }
+
       return result;
     } catch (e) {
-      debugPrint('areUsersMutualFriends 에러: $e');
+      if (kDebugMode) {
+        debugPrint('areUsersMutualFriends 에러: $e');
+      }
       return false;
     }
   }
@@ -333,14 +351,12 @@ class FriendRepository {
     }
 
     try {
-      final startTime = DateTime.now();
-
       // 모든 쿼리를 병렬로 실행
       final results = await Future.wait(
         targetUserIds.map((targetId) async {
           try {
             // baseUser → target 확인 & target → baseUser 확인을 병렬로
-            final checkResults = await Future.wait([
+            final [baseToTargetDoc, targetToBaseDoc] = await Future.wait([
               _usersCollection
                   .doc(baseUserId)
                   .collection('friends')
@@ -353,40 +369,34 @@ class FriendRepository {
                   .get(),
             ]);
 
-            final baseToTargetDoc = checkResults[0];
-            final targetToBaseDoc = checkResults[1];
+            // data()로 직접 접근 (객체 생성 오버헤드 제거)
+            final baseData = baseToTargetDoc.data();
+            final targetData = targetToBaseDoc.data();
 
-            // 양쪽 모두 존재하고 active 상태인지 확인
-            if (!baseToTargetDoc.exists || !targetToBaseDoc.exists) {
+            // 양쪽 모두 존재하고 active 상태인지 확인 (최적화: status만 체크)
+            if (baseData == null || targetData == null) {
               return MapEntry(targetId, false);
             }
 
-            final baseToTarget = FriendModel.fromFirestore(baseToTargetDoc);
-            final targetToBase = FriendModel.fromFirestore(targetToBaseDoc);
-
-            final isMutualFriend =
-                baseToTarget.status == FriendStatus.active &&
-                targetToBase.status == FriendStatus.active;
-
-            return MapEntry(targetId, isMutualFriend);
+            return MapEntry(
+              targetId,
+              baseData['status'] == 'active' &&
+                  targetData['status'] == 'active',
+            );
           } catch (e) {
-            debugPrint('    ⚠️ $baseUserId ←→ $targetId 확인 실패: $e');
+            if (kDebugMode) {
+              debugPrint('친구 관계 확인 실패 ($baseUserId <-> $targetId): $e');
+            }
             return MapEntry(targetId, false);
           }
         }),
       );
 
-      final resultMap = Map<String, bool>.fromEntries(results);
-      final duration = DateTime.now().difference(startTime).inMilliseconds;
-      final friendCount = resultMap.values.where((v) => v).length;
-
-      debugPrint(
-        '⚡ 배치 친구 확인 완료: ${targetUserIds.length}명 중 ${friendCount}명 친구 (${duration}ms)',
-      );
-
-      return resultMap;
+      return Map<String, bool>.fromEntries(results);
     } catch (e) {
-      debugPrint('areBatchMutualFriends 에러: $e');
+      if (kDebugMode) {
+        debugPrint('areBatchMutualFriends 에러: $e');
+      }
       return {for (var id in targetUserIds) id: false};
     }
   }
@@ -398,22 +408,35 @@ class FriendRepository {
       return [];
     }
 
+    // 빈 검색어 처리 (최적화)
+    final trimmedQuery = query.trim();
+
     try {
       // Firestore에서는 부분 검색이 제한적이므로 클라이언트에서 필터링
-      final snapshot =
-          await friendsCollection.where('status', isEqualTo: 'active').get();
+      final snapshot = await friendsCollection
+          .where('status', isEqualTo: 'active')
+          .get();
 
-      final friends =
-          snapshot.docs.map((doc) {
-            return FriendModel.fromFirestore(doc);
-          }).toList();
+      // 검색어가 비어있으면 모든 active 친구 반환
+      if (trimmedQuery.isEmpty) {
+        return snapshot.docs
+            .map((doc) => FriendModel.fromFirestore(doc))
+            .toList();
+      }
 
-      // 클라이언트 측 검색 필터링
-      final queryLower = query.toLowerCase();
-      return friends.where((friend) {
-        return friend.id.toLowerCase().contains(queryLower) ||
-            friend.name.toLowerCase().contains(queryLower);
-      }).toList();
+      // 문서 레벨에서 필터링 후 객체 생성 (최적화: 불필요한 객체 생성 방지)
+      final queryLower = trimmedQuery.toLowerCase();
+      return snapshot.docs
+          .where((doc) {
+            final data = doc.data();
+
+            final id = (data['id'] as String? ?? '').toLowerCase();
+            final name = (data['name'] as String? ?? '').toLowerCase();
+
+            return id.contains(queryLower) || name.contains(queryLower);
+          })
+          .map((doc) => FriendModel.fromFirestore(doc))
+          .toList();
     } catch (e) {
       throw Exception('친구 검색 실패: $e');
     }
@@ -427,8 +450,9 @@ class FriendRepository {
     }
 
     try {
-      final snapshot =
-          await friendsCollection.where('status', isEqualTo: 'active').get();
+      final snapshot = await friendsCollection
+          .where('status', isEqualTo: 'active')
+          .get();
 
       return snapshot.docs.length;
     } catch (e) {
@@ -464,8 +488,10 @@ class FriendRepository {
 
     try {
       // 내 친구 목록(= 내가 가진 friends 서브컬렉션)에서 친구 UID 들 수집
-      final myFriendsSnapshot =
-          await _usersCollection.doc(currentUid).collection('friends').get();
+      final myFriendsSnapshot = await _usersCollection
+          .doc(currentUid)
+          .collection('friends')
+          .get();
 
       if (myFriendsSnapshot.docs.isEmpty) return;
 
@@ -563,12 +589,11 @@ class FriendRepository {
     String targetId,
   ) async {
     try {
-      final doc =
-          await _usersCollection
-              .doc(targetId) // target 사용자의
-              .collection('friends') // friends 컬렉션에서
-              .doc(requesterId) // requester에 대한 친구 정보 조회
-              .get();
+      final doc = await _usersCollection
+          .doc(targetId) // target 사용자의
+          .collection('friends') // friends 컬렉션에서
+          .doc(requesterId) // requester에 대한 친구 정보 조회
+          .get();
 
       return doc.exists ? FriendModel.fromFirestore(doc) : null;
     } catch (e) {
@@ -584,12 +609,11 @@ class FriendRepository {
     }
 
     try {
-      final snapshot =
-          await _usersCollection
-              .doc(userId)
-              .collection('friends')
-              .where('status', isEqualTo: FriendStatus.active.value)
-              .get();
+      final snapshot = await _usersCollection
+          .doc(userId)
+          .collection('friends')
+          .where('status', isEqualTo: FriendStatus.active.value)
+          .get();
 
       return snapshot.docs.map((doc) => doc.id).toSet();
     } catch (e) {
@@ -606,12 +630,11 @@ class FriendRepository {
     }
 
     try {
-      final snapshot =
-          await _usersCollection
-              .doc(currentUid)
-              .collection('friends')
-              .where('status', isEqualTo: 'blocked')
-              .get();
+      final snapshot = await _usersCollection
+          .doc(currentUid)
+          .collection('friends')
+          .where('status', isEqualTo: 'blocked')
+          .get();
 
       return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {

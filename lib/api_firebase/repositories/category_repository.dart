@@ -12,28 +12,25 @@ class CategoryRepository {
 
   // ==================== Firestore 관련 ====================
 
-  /// 사용자의 카테고리 목록을 스트림으로 가져오기
+  /// 사용자의 카테고리 목록을 스트림으로 가져오기 (병렬 처리 최적화)
   Stream<List<CategoryDataModel>> getUserCategoriesStream(String userId) {
     return _firestore
         .collection('categories')
         .where('mates', arrayContains: userId)
         .snapshots()
         .asyncMap((querySnapshot) async {
-          final categories = <CategoryDataModel>[];
-
-          for (final doc in querySnapshot.docs) {
+          // 병렬로 모든 카테고리의 커버 사진을 가져오기
+          final categoryFutures = querySnapshot.docs.map((doc) async {
             final data = doc.data();
-
-            // 사용자가 설정한 커버 사진이 있는지 확인
             String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
-            // 커버 사진이 없다면 가장 최근 사진을 가져오기
+            // 커버 사진이 없는 경우에만 최신 사진 쿼리
             if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
               final photosSnapshot = await _firestore
                   .collection('categories')
                   .doc(doc.id)
                   .collection('photos')
-                  .where('unactive', isEqualTo: false) // 비활성화된 사진 제외
+                  .where('unactive', isEqualTo: false)
                   .orderBy('createdAt', descending: true)
                   .limit(1)
                   .get();
@@ -44,15 +41,14 @@ class CategoryRepository {
               }
             }
 
-            final category = CategoryDataModel.fromFirestore(
+            return CategoryDataModel.fromFirestore(
               data,
               doc.id,
             ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
+          }).toList();
 
-            categories.add(category);
-          }
-
-          return categories;
+          // 모든 쿼리를 병렬로 실행
+          return await Future.wait(categoryFutures);
         });
   }
 
@@ -87,63 +83,18 @@ class CategoryRepository {
             } else {}
           }
 
-          // 멤버 프로필 이미지 조회 (최대 3명만 - UI에서 표시하는 수)
-          final mates = (data['mates'] as List?)?.cast<String>() ?? [];
-          final displayMates = mates.take(3).toList();
-          final mateProfileImages = await _fetchMateProfileImages(displayMates);
-
-          final result = CategoryDataModel.fromFirestore(data, doc.id).copyWith(
-            categoryPhotoUrl: categoryPhotoUrl,
-            mateProfileImages: mateProfileImages,
-          );
+          // mateProfileImages는 fromFirestore()에서 이미 파싱되므로
+          // 별도의 Firestore 쿼리 없이 바로 사용
+          final result = CategoryDataModel.fromFirestore(
+            data,
+            doc.id,
+          ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
 
           return result;
         });
   }
 
-  /// 여러 사용자의 프로필 이미지를 한 번에 조회
-  Future<Map<String, String>> _fetchMateProfileImages(
-    List<String> userIds,
-  ) async {
-    if (userIds.isEmpty) return {};
-
-    final profileImages = <String, String>{};
-
-    try {
-      // Firestore에서 여러 사용자 문서를 병렬로 조회
-      final futures = userIds.map((userId) async {
-        try {
-          final userDoc = await _firestore
-              .collection('users')
-              .doc(userId)
-              .get();
-          if (userDoc.exists) {
-            final data = userDoc.data();
-            // 두 가지 필드명 지원 (기존 호환성)
-            return MapEntry(
-              userId,
-              data?['profileImageUrl'] ?? data?['profile_image'] ?? '',
-            );
-          }
-          return MapEntry(userId, '');
-        } catch (e) {
-          debugPrint('프로필 이미지 조회 실패 - UserId: $userId, Error: $e');
-          return MapEntry(userId, '');
-        }
-      });
-
-      final results = await Future.wait(futures);
-      for (final entry in results) {
-        profileImages[entry.key] = entry.value;
-      }
-    } catch (e) {
-      debugPrint('멤버 프로필 이미지 일괄 조회 실패: $e');
-    }
-
-    return profileImages;
-  }
-
-  /// 사용자의 카테고리 목록을 한 번만 가져오기
+  /// 사용자의 카테고리 목록을 한 번만 가져오기 (병렬 처리 최적화)
   Future<List<CategoryDataModel>> getUserCategories(String userId) async {
     // Firebase Auth UID로 카테고리 검색
     var querySnapshot = await _firestore
@@ -151,58 +102,18 @@ class CategoryRepository {
         .where('mates', arrayContains: userId)
         .get();
 
-    // 쿼리 결과가 있으면 각 문서의 mates 배열을 확인
-    if (querySnapshot.docs.isNotEmpty) {
-      // 문서의 mates 배열 확인 완료
-    }
-
-    // 만약 UID로 찾은 결과가 없다면, 사용자 닉네임으로도 검색해보기
-    if (querySnapshot.docs.isEmpty) {
-      try {
-        // 사용자 문서에서 닉네임 가져오기
-        final userDoc = await _firestore.collection('users').doc(userId).get();
-
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          // 사용자 문서 데이터 확인
-          final nickName = userData['id'] as String?; // 'id' 필드에 닉네임이 저장됨
-
-          if (nickName != null && nickName.isNotEmpty) {
-            querySnapshot = await _firestore
-                .collection('categories')
-                .where('mates', arrayContains: nickName)
-                .get();
-
-            // 닉네임 검색 결과도 확인
-            if (querySnapshot.docs.isNotEmpty) {
-              // 문서의 mates 배열 확인 완료
-            }
-          } else {
-            // 닉네임이 없거나 비어있는 경우
-            debugPrint('사용자 닉네임이 없습니다.');
-          }
-        }
-      } catch (e) {
-        // 사용자 문서가 없거나 닉네임을 찾을 수 없는 경우
-        debugPrint('사용자 닉네임을 가져오는 중 오류 발생: $e');
-      }
-    }
-
-    final categories = <CategoryDataModel>[];
-
-    for (final doc in querySnapshot.docs) {
+    // 병렬로 모든 카테고리의 커버 사진을 가져오기
+    final categoryFutures = querySnapshot.docs.map((doc) async {
       final data = doc.data();
-
-      // 사용자가 설정한 커버 사진이 있는지 확인
       String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
-      // 커버 사진이 없다면 가장 최근 사진을 가져오기
+      // 커버 사진이 없는 경우에만 최신 사진 쿼리
       if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
         final photosSnapshot = await _firestore
             .collection('categories')
             .doc(doc.id)
             .collection('photos')
-            .where('unactive', isEqualTo: false) // 비활성화된 사진 제외
+            .where('unactive', isEqualTo: false)
             .orderBy('createdAt', descending: true)
             .limit(1)
             .get();
@@ -213,15 +124,14 @@ class CategoryRepository {
         }
       }
 
-      final category = CategoryDataModel.fromFirestore(
+      return CategoryDataModel.fromFirestore(
         data,
         doc.id,
       ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
+    }).toList();
 
-      categories.add(category);
-    }
-
-    return categories;
+    // 모든 쿼리를 병렬로 실행 (N개 카테고리 → 1번의 병렬 호출)
+    return await Future.wait(categoryFutures);
   }
 
   /// 카테고리 생성
@@ -284,30 +194,34 @@ class CategoryRepository {
     await batch.commit();
   }
 
-  /// 특정 카테고리 정보 가져오기
+  /// 특정 카테고리 정보 가져오기 (최적화: 커버 사진 있으면 추가 쿼리 스킵)
   Future<CategoryDataModel?> getCategory(String categoryId) async {
     final doc = await _firestore.collection('categories').doc(categoryId).get();
 
     if (!doc.exists || doc.data() == null) return null;
 
-    // 첫 번째 사진 URL과 사진 개수를 가져오기
-    final photosSnapshot = await _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .where('unactive', isEqualTo: false) // 비활성화된 사진 제외
-        .orderBy('createdAt', descending: true)
-        .limit(1)
-        .get();
+    final data = doc.data()!;
+    String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
-    String? categoryPhotoUrl;
-    if (photosSnapshot.docs.isNotEmpty) {
-      categoryPhotoUrl =
-          photosSnapshot.docs.first.data()['imageUrl'] as String?;
+    // 커버 사진이 없는 경우에만 최신 사진 쿼리
+    if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
+      final photosSnapshot = await _firestore
+          .collection('categories')
+          .doc(categoryId)
+          .collection('photos')
+          .where('unactive', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (photosSnapshot.docs.isNotEmpty) {
+        categoryPhotoUrl =
+            photosSnapshot.docs.first.data()['imageUrl'] as String?;
+      }
     }
 
     return CategoryDataModel.fromFirestore(
-      doc.data()!,
+      data,
       doc.id,
     ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
   }
@@ -336,22 +250,6 @@ class CategoryRepository {
         .collection('photos')
         .doc(photoId)
         .delete();
-  }
-
-  /// 카테고리의 사진들 가져오기
-  Future<List<Map<String, dynamic>>> getCategoryPhotos(
-    String categoryId,
-  ) async {
-    final querySnapshot = await _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .orderBy('createdAt', descending: true)
-        .get();
-
-    return querySnapshot.docs
-        .map((doc) => {'id': doc.id, ...doc.data()})
-        .toList();
   }
 
   // ==================== Storage 관련 ====================
@@ -498,8 +396,41 @@ class CategoryRepository {
         'mates': FieldValue.arrayRemove([uid]),
       });
     } catch (e) {
-      debugPrint('❌ 카테고리에서 사용자 제거 실패: $e');
+      debugPrint('카테고리에서 사용자 제거 실패: $e');
       rethrow;
+    }
+  }
+
+  /// 사용자의 프로필 이미지가 변경될 때, 해당 사용자가 속한 모든 카테고리의 mateProfileImages 업데이트
+  Future<void> updateUserProfileImageInCategories({
+    required String userId,
+    required String newProfileImageUrl,
+  }) async {
+    try {
+      // 사용자가 속한 모든 카테고리 조회
+      final querySnapshot = await _firestore
+          .collection('categories')
+          .where('mates', arrayContains: userId)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        debugPrint('프로필 이미지 업데이트: 사용자가 속한 카테고리가 없습니다.');
+        return;
+      }
+
+      // Batch를 사용하여 여러 카테고리를 한 번에 업데이트
+      final batch = _firestore.batch();
+
+      for (final doc in querySnapshot.docs) {
+        batch.update(doc.reference, {
+          'mateProfileImages.$userId': newProfileImageUrl,
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      debugPrint('카테고리 프로필 이미지 업데이트 실패: $e');
+      // 실패해도 프로필 업데이트 자체는 성공했으므로 rethrow하지 않음
     }
   }
 }

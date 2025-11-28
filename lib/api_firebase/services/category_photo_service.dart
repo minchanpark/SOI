@@ -91,24 +91,6 @@ class CategoryPhotoService {
     }
   }
 
-  /// 카테고리 사진 목록 가져오기 (차단 필터링 포함)
-  Future<List<Map<String, dynamic>>> getPhotos(String categoryId) async {
-    try {
-      if (categoryId.isEmpty) return [];
-
-      final allPhotos = await _repository.getCategoryPhotos(categoryId);
-      final blockedByMe = await friendService.getBlockedUsers();
-
-      return allPhotos.where((photo) {
-        final photoUserId = photo['userId'] as String?;
-        return photoUserId == null || !blockedByMe.contains(photoUserId);
-      }).toList();
-    } catch (e) {
-      debugPrint('getPhotos 에러: $e');
-      return [];
-    }
-  }
-
   /// 카테고리 사진 스트림 (차단 필터링 포함)
   Stream<List<Map<String, dynamic>>> getPhotosStream(String categoryId) {
     return _repository.getCategoryPhotosStream(categoryId).asyncMap((

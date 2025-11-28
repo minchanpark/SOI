@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/category_invite_repository.dart';
@@ -43,7 +44,9 @@ class CategoryInviteService {
   }) async {
     final otherMates = allMates.where((m) => m != targetUserId).toList();
     if (otherMates.isEmpty) {
-      debugPrint('   비교할 멤버 없음');
+      if (kDebugMode) {
+        debugPrint('   비교할 멤버 없음');
+      }
       return [];
     }
 
@@ -53,16 +56,13 @@ class CategoryInviteService {
       otherMates,
     );
 
-    final nonFriendIds = <String>[];
-    for (final mateId in otherMates) {
-      final isFriend = friendshipResults[mateId] ?? false;
+    // 함수형 프로그래밍으로 친구가 아닌 ID 필터링 (최적화)
+    final nonFriendIds = friendshipResults.entries
+        .where((entry) => !entry.value)
+        .map((entry) => entry.key)
+        .toList();
 
-      if (!isFriend) {
-        nonFriendIds.add(mateId);
-      }
-    }
-
-    if (nonFriendIds.isNotEmpty) {
+    if (kDebugMode && nonFriendIds.isNotEmpty) {
       debugPrint('친구 아닌 멤버: $nonFriendIds');
     }
 
@@ -79,8 +79,9 @@ class CategoryInviteService {
       return [];
     }
 
-    final existingMateIds =
-        category.mates.where((mateId) => mateId != invitedUserId).toSet();
+    final existingMateIds = category.mates
+        .where((mateId) => mateId != invitedUserId)
+        .toSet();
 
     if (existingMateIds.isEmpty) {
       debugPrint('비교할 기존 멤버가 없음');
@@ -98,7 +99,6 @@ class CategoryInviteService {
       final isFriend = friendshipResults[mateId] ?? false;
 
       if (!isFriend) {
-        debugPrint('결과: $invitedUserId ←→ $mateId 상호 친구 아님');
         nonFriendIds.add(mateId);
       }
     }
@@ -125,12 +125,12 @@ class CategoryInviteService {
       categoryId: category.id,
       invitedUserId: invitedUserId,
     );
-    debugPrint("기존 친구가 아닌 멤버 확인: ${existingInvite?.blockedMateIds}");
-    debugPrint("친구가 아닌 멤버 IDs: $blockedMateIds");
 
     if (existingInvite != null) {
-      final updatedBlockedMates =
-          {...existingInvite.blockedMateIds, ...blockedMateIds}.toList();
+      final updatedBlockedMates = {
+        ...existingInvite.blockedMateIds,
+        ...blockedMateIds,
+      }.toList();
 
       await _inviteRepository.updateInvite(existingInvite.id, {
         'blockedMateIds': updatedBlockedMates,
@@ -192,7 +192,7 @@ class CategoryInviteService {
 
       // mates에 없으면 추가 (일반적으로는 이미 있어야 함)
       if (!category.mates.contains(userId)) {
-        debugPrint('⚠️ mates에 없어서 추가: $userId');
+        debugPrint('mates에 없어서 추가: $userId');
         await _repository.addUidToCategory(
           categoryId: invite.categoryId,
           uid: userId,

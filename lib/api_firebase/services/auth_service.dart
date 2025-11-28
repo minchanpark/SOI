@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../repositories/auth_repository.dart';
+import '../repositories/category_repository.dart';
 import '../models/auth_model.dart';
 import '../models/auth_result.dart';
 import 'firebase_deeplink_service.dart';
@@ -12,6 +13,7 @@ import 'firebase_deeplink_service.dart';
 // Repository를 사용해서 실제 비즈니스 규칙을 적용
 class AuthService {
   final AuthRepository _repository = AuthRepository();
+  final CategoryRepository _categoryRepository = CategoryRepository();
 
   // ==================== 현재 사용자 정보 ====================
 
@@ -162,12 +164,11 @@ class AuthService {
         name: name,
         phone: formattedPhone,
         birthDate: birthDate,
-        createdAt:
-            existingUser == null
-                ? now
-                : (existingUser.data() as Map<String, dynamic>)['createdAt']
-                        ?.toDate() ??
-                    now,
+        createdAt: existingUser == null
+            ? now
+            : (existingUser.data() as Map<String, dynamic>)['createdAt']
+                      ?.toDate() ??
+                  now,
         lastLogin: now,
       );
 
@@ -319,6 +320,12 @@ class AuthService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      // 사용자가 속한 모든 카테고리의 mateProfileImages 업데이트
+      await _categoryRepository.updateUserProfileImageInCategories(
+        userId: currentUser.uid,
+        newProfileImageUrl: downloadUrl,
+      );
+
       return AuthResult.success(downloadUrl);
     } catch (e) {
       // debugPrint('프로필 이미지 업데이트 오류: $e');
@@ -347,6 +354,12 @@ class AuthService {
         'profile_image': downloadUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // 사용자가 속한 모든 카테고리의 mateProfileImages 업데이트
+      await _categoryRepository.updateUserProfileImageInCategories(
+        userId: currentUser.uid,
+        newProfileImageUrl: downloadUrl,
+      );
 
       return AuthResult.success(downloadUrl);
     } catch (e) {

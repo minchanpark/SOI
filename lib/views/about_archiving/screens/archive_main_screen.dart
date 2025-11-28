@@ -852,15 +852,23 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
 
   // 카테고리 생성 처리 함수
   Future<void> _createNewCategory() async {
-    if (_categoryNameController.text.trim().isEmpty) {
+    final categoryName = _categoryNameController.text.trim();
+    if (categoryName.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(_snackBarComponenet('카테고리 이름을 입력해주세요'));
       return;
     }
 
+    // UI 즉시 닫기 (사용자 체감 속도 향상)
+    final selectedFriendsCopy = List<SelectedFriendModel>.from(
+      _selectedFriends,
+    );
+    Navigator.pop(context);
+    _categoryNameController.clear();
+    setState(() => _selectedFriends = []);
+
     try {
-      // Provider에서 컨트롤러들 가져오기
       final authController = Provider.of<AuthController>(
         context,
         listen: false,
@@ -869,65 +877,71 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
         context,
         listen: false,
       );
-
-      // 현재 사용자 정보 가져오기
-      final String? userId = authController.getUserId;
+      final userId = authController.getUserId;
 
       if (userId == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(_snackBarComponenet('로그인이 필요합니다. 다시 로그인해주세요.'));
+        _showSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
         return;
       }
 
-      print('[ArchiveMainScreen] 카테고리 생성 시작');
-      print(
-        '[ArchiveMainScreen] 카테고리 이름: ${_categoryNameController.text.trim()}',
+      // mates 리스트 준비 (현재 사용자 + 선택된 친구들)
+      final mates = [userId, ...selectedFriendsCopy.map((f) => f.uid)];
+
+      // 프로필 이미지 맵 수집
+      final mateProfileImages = await _collectMateProfileImages(
+        authController: authController,
+        userId: userId,
+        friends: selectedFriendsCopy,
       );
-      print('[ArchiveMainScreen] 현재 사용자 ID: $userId');
-      print('[ArchiveMainScreen] 선택된 친구 수: ${_selectedFriends.length}');
 
-      // 메이트 리스트 준비 (현재 사용자 + 선택된 친구들)
-      // 중요: mates 필드에는 Firebase Auth UID를 사용해야 함
-      List<String> mates = [userId];
-
-      // 선택된 친구들의 UID 추가
-      for (final friend in _selectedFriends) {
-        if (!mates.contains(friend.uid)) {
-          mates.add(friend.uid);
-        }
-      }
-
-      print('[ArchiveMainScreen] 최종 멤버 목록: $mates');
-
-      // 카테고리 생성
       await categoryController.createCategory(
-        name: _categoryNameController.text.trim(),
+        name: categoryName,
         mates: mates,
+        mateProfileImages: mateProfileImages.isNotEmpty
+            ? mateProfileImages
+            : null,
       );
 
-      print('[ArchiveMainScreen] 카테고리 생성 완료');
-
-      // bottom sheet 닫기
-      Navigator.pop(context);
-      _categoryNameController.clear();
-
-      // 선택된 친구들 초기화
-      setState(() {
-        _selectedFriends = [];
-      });
-
-      print('[ArchiveMainScreen] UI 상태 초기화 완료');
-
-      // 성공 메시지 표시
-      ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
-
-      print('[ArchiveMainScreen] 성공 메시지 표시 완료');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
+      }
     } catch (e) {
-      print('[ArchiveMainScreen] 카테고리 생성 오류: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(_snackBarComponenet('카테고리 생성에 실패했습니다'));
+      debugPrint('[ArchiveMainScreen] 카테고리 생성 오류: $e');
+      _showSnackBar('카테고리 생성에 실패했습니다');
+    }
+  }
+
+  /// 프로필 이미지 맵 수집 (현재 사용자 + 친구들)
+  Future<Map<String, String>> _collectMateProfileImages({
+    required AuthController authController,
+    required String userId,
+    required List<SelectedFriendModel> friends,
+  }) async {
+    final images = <String, String>{};
+
+    // 현재 사용자 프로필 이미지 (캐시 우선)
+    try {
+      final userImage = await authController.getUserProfileImageUrlWithCache(
+        userId,
+      );
+      if (userImage.isNotEmpty) images[userId] = userImage;
+    } catch (e) {
+      debugPrint('[ArchiveMainScreen] 현재 사용자 프로필 이미지 가져오기 실패: $e');
+    }
+
+    // 선택된 친구들의 프로필 이미지 (이미 메모리에 있음)
+    for (final friend in friends) {
+      if (friend.profileImageUrl?.isNotEmpty == true) {
+        images[friend.uid] = friend.profileImageUrl!;
+      }
+    }
+
+    return images;
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(_snackBarComponenet(message));
     }
   }
 

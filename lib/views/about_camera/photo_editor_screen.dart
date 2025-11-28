@@ -421,43 +421,69 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<void> _createNewCategory(
     List<SelectedFriendModel> selectedFriends,
   ) async {
-    if (_categoryNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('카테고리 이름을 입력해주세요')));
+    final categoryName = _categoryNameController.text.trim();
+    if (categoryName.isEmpty) {
+      _showSnackBar('카테고리 이름을 입력해주세요');
       return;
     }
 
+    final userId = _authController.getUserId;
+    if (userId == null) {
+      _showSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    // UI 즉시 업데이트 (사용자 체감 속도 향상)
+    setState(() {
+      _showAddCategoryUI = false;
+      _categoryNameController.clear();
+    });
+
     try {
-      final userId = _authController.getUserId;
-      if (userId == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('로그인이 필요합니다. 다시 로그인해주세요.')));
-        return;
+      final mates = [userId, ...selectedFriends.map((f) => f.uid)];
+
+      // 프로필 이미지 맵 수집 (캐시 우선 사용)
+      final mateProfileImages = <String, String>{};
+
+      try {
+        final userImage = await _authController.getUserProfileImageUrlWithCache(
+          userId,
+        );
+        if (userImage.isNotEmpty) mateProfileImages[userId] = userImage;
+      } catch (e) {
+        debugPrint('현재 사용자 프로필 이미지 가져오기 실패: $e');
       }
 
-      List<String> mates = [userId, ...selectedFriends.map((f) => f.uid)];
+      for (final friend in selectedFriends) {
+        if (friend.profileImageUrl?.isNotEmpty == true) {
+          mateProfileImages[friend.uid] = friend.profileImageUrl!;
+        }
+      }
 
-      await _categoryController.createCategory(
-        name: _categoryNameController.text.trim(),
-        mates: mates,
+      unawaited(
+        _categoryController
+            .createCategory(
+          name: categoryName,
+          mates: mates,
+          mateProfileImages: mateProfileImages.isNotEmpty
+              ? mateProfileImages
+              : null,
+        )
+            .catchError((error, stackTrace) {
+          debugPrint('카테고리 생성 중 오류: $error');
+          _showSnackBar('카테고리 생성 중 오류가 발생했습니다');
+        }),
       );
-
-      _categoriesLoaded = false;
-      await _loadUserCategories(forceReload: true);
-
-      if (!mounted) return;
-      setState(() {
-        _showAddCategoryUI = false;
-        _categoryNameController.clear();
-      });
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('카테고리 생성 중 오류가 발생했습니다')));
+      _showSnackBar('카테고리 생성 중 오류가 발생했습니다');
     }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ========== 업로드 및 화면 전환 관련 메서드들 ==========

@@ -103,6 +103,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
   // ========== 초기화 메서드들 ==========
   void _initializeAudioControllers() {
     recorderController = RecorderController()
+      ..overrideAudioSession = false
       ..androidEncoder = AndroidEncoder.aac
       ..androidOutputFormat = AndroidOutputFormat.mpeg4
       ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC

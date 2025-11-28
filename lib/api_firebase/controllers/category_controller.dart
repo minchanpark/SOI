@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../services/category_service.dart';
 import '../models/category_data_model.dart';
@@ -76,16 +78,24 @@ class CategoryController extends ChangeNotifier {
   Future<void> createCategory({
     required String name,
     required List<String> mates,
+    Map<String, String>? mateProfileImages,
   }) async {
     await _executeWithLoading(() async {
       final result = await _categoryService.createCategory(
         name: name,
         mates: mates,
+        mateProfileImages: mateProfileImages,
       );
       if (result.isSuccess) {
         invalidateCache();
+        // 백그라운드에서 캐시 갱신 (UI 차단 없음, 스트림이 자동 업데이트)
         if (mates.isNotEmpty) {
-          await loadUserCategories(mates.first, forceReload: true);
+          unawaited(
+            loadUserCategories(
+              mates.first,
+              forceReload: true,
+            ),
+          );
         }
       } else {
         _error = result.error;
@@ -202,30 +212,6 @@ class CategoryController extends ChangeNotifier {
     _userCategories.sort((a, b) => _compareCategoriesForUser(a, b, userId));
   }
 
-  // ==================== 사진 관리 ====================
-
-  /// 카테고리 사진 조회
-  Future<List<Map<String, dynamic>>> getCategoryPhotos(
-    String categoryId,
-  ) async {
-    return await _categoryService.getCategoryPhotos(categoryId);
-  }
-
-  /// 사진 문서 ID 조회
-  Future<String?> getPhotoDocumentId(String categoryId, String imageUrl) async {
-    try {
-      final photos = await getCategoryPhotos(categoryId);
-      for (final photo in photos) {
-        if (photo['imageUrl'] == imageUrl) {
-          return photo['id'] as String?;
-        }
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   // ==================== UI 상태 관리 ====================
 
   void addSelectedName(String name) {
@@ -291,27 +277,28 @@ class CategoryController extends ChangeNotifier {
     });
   }
 
-  /// 카테고리 프로필 이미지 조회
+  /// 카테고리 프로필 이미지 조회 (병렬 처리 최적화)
   Future<List<String>> getCategoryProfileImages(
     List<String> mates,
     dynamic authController,
   ) async {
     try {
-      final profileImages = <String>[];
-      for (final mateUid in mates) {
-        try {
-          final profileUrl = await authController.getUserProfileImageUrlById(
-            mateUid,
-          );
-          if (profileUrl != null && profileUrl.isNotEmpty) {
-            profileImages.add(profileUrl);
+      // 병렬로 모든 프로필 이미지 조회
+      final results = await Future.wait(
+        mates.map((mateUid) async {
+          try {
+            return await authController.getUserProfileImageUrlById(mateUid);
+          } catch (e) {
+            debugPrint('사용자 $mateUid의 프로필 이미지 로딩 실패: $e');
+            return null;
           }
-        } catch (e) {
-          debugPrint('사용자 $mateUid의 프로필 이미지 로딩 실패: $e');
-          continue;
-        }
-      }
-      return profileImages;
+        }),
+      );
+
+      return results
+          .where((url) => url != null && url.isNotEmpty)
+          .cast<String>()
+          .toList();
     } catch (e) {
       debugPrint('카테고리 프로필 이미지 로딩 전체 실패: $e');
       return [];
