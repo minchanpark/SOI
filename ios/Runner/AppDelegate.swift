@@ -7,7 +7,10 @@ import AVFoundation
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  
+
+  // ✅ audioRecorder를 strong reference로 유지
+  private var audioRecorder: NativeAudioRecorder?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -164,12 +167,19 @@ extension AppDelegate {
   
   private func configureMethodChannels() {
     guard let messenger = self.registrar(forPlugin: "native_recorder")?.messenger() else { return }
-    
+
     let audioChannel = FlutterMethodChannel(name: "native_recorder", binaryMessenger: messenger)
-    let audioRecorder = NativeAudioRecorder()
-    
-    audioChannel.setMethodCallHandler { [weak audioRecorder] (call, result) in
-      guard let audioRecorder = audioRecorder else { return }
+
+    // ✅ 프로퍼티에 저장하여 생명주기 동안 유지
+    self.audioRecorder = NativeAudioRecorder()
+
+    // ✅ weak self 사용 (weak audioRecorder 대신)
+    audioChannel.setMethodCallHandler { [weak self] (call, result) in
+      guard let self = self else { return }
+      guard let audioRecorder = self.audioRecorder else {
+        result(FlutterError(code: "NO_RECORDER", message: "Audio recorder not initialized", details: nil))
+        return
+      }
       self.handleAudioRecorderMethodCall(call, result: result, recorder: audioRecorder)
     }
   }

@@ -61,7 +61,7 @@ class NativeAudioRecorder: NSObject, AVAudioRecorderDelegate {
     /// - Parameter result: 중지된 파일의 경로(String?)를 Flutter로 전달하는 콜백입니다.
     func stopRecording(result: @escaping FlutterResult) {
         print("🎤 [Native] 녹음 중지 요청")
-        
+
         // 녹음 중이 아니면 즉시 반환
         guard let recorder = audioRecorder, recorder.isRecording else {
             print("⚠️ [Native] 녹음 중이 아님 - 이미 중지됨")
@@ -71,31 +71,33 @@ class NativeAudioRecorder: NSObject, AVAudioRecorderDelegate {
             result(filePath)
             return
         }
-        
+
         // 파일 경로를 미리 저장
         let filePath = recorder.url.path
-        
+
         // 녹음기를 중지합니다.
         recorder.stop()
         print("🎤 [Native] AVAudioRecorder.stop() 호출됨")
-        
+
         // 리소스를 정리합니다.
         audioRecorder = nil
         recordingStartTime = nil
-        
-        // ✅ 녹음 중지 후 약간의 지연을 두고 오디오 세션을 비활성화
-        // Xcode 업데이트 후 타이밍 이슈 해결을 위해 비동기로 처리
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            do {
-                // notifyOthersOnDeactivation 옵션으로 다른 앱에 알림
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                print("✅ [Native] 오디오 세션 비활성화 성공")
-            } catch {
-                // 오디오 세션 비활성화 실패는 치명적이지 않으므로 경고만 출력
-                print("⚠️ [Native] 오디오 세션 비활성화 실패 (무시 가능): \(error.localizedDescription)")
-            }
+
+        // ✅ 동기적 대기 - 파일 finalization 시간 확보
+        // AVAudioRecorder가 파일을 완전히 기록하고 닫을 시간을 줍니다
+        Thread.sleep(forTimeInterval: 0.15)  // 150ms
+
+        // ✅ 오디오 세션 비활성화 (result 반환 전에 완료)
+        do {
+            // notifyOthersOnDeactivation 옵션으로 다른 앱에 알림
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ [Native] 오디오 세션 비활성화 성공")
+        } catch {
+            // 오디오 세션 비활성화 실패는 치명적이지 않으므로 경고만 출력
+            print("⚠️ [Native] 오디오 세션 비활성화 실패 (무시 가능): \(error.localizedDescription)")
         }
-        
+
+        // ✅ 모든 작업 완료 후 Flutter로 콜백 반환
         print("✅ [Native] 녹음 중지 완료. 파일: \(filePath)")
         result(filePath)
     }

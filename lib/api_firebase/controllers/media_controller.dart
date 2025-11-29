@@ -163,6 +163,9 @@ class PhotoController extends ChangeNotifier {
     Duration? duration,
     String? caption,
     bool isFromCamera = false, // 카메라 촬영 여부 (기본값: 갤러리)
+    File? audioFile,
+    List<double>? waveformData,
+    Duration? audioDuration,
   }) async {
     try {
       _isUploading = true;
@@ -174,6 +177,11 @@ class PhotoController extends ChangeNotifier {
         throw Exception('비디오 파일이 존재하지 않습니다.');
       }
 
+      if (audioFile != null && !await audioFile.exists()) {
+        debugPrint('PhotoController: 비디오용 오디오 파일 없음: ${audioFile.path}');
+        audioFile = null;
+      }
+
       final result = await _photoService.uploadVideo(
         videoFile: videoFile,
         thumbnailFile: thumbnailFile,
@@ -183,6 +191,9 @@ class PhotoController extends ChangeNotifier {
         duration: duration,
         caption: caption,
         isFromCamera: isFromCamera,
+        audioFile: audioFile,
+        waveformData: waveformData,
+        audioDuration: audioDuration,
       );
 
       _isUploading = false;

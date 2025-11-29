@@ -886,7 +886,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
   }
 
   Future<void> _stopAudio() async {
-    await _getAudioController.stopAudio();
+    await _getAudioController.stopRealtimeAudio();
   }
 
   void _showSnackBar(String message, {Color? backgroundColor}) {

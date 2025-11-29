@@ -3,17 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
-import '../../api_firebase/services/camera_service.dart';
-import '../../api_firebase/controllers/notification_controller.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/controllers/notification_controller.dart';
+import '../../api_firebase/services/camera_service.dart';
 import 'widgets/circular_video_progress_indicator.dart';
 import 'widgets/camera_app_bar.dart';
 import 'widgets/camera_preview_container.dart';
 import 'widgets/camera_zoom_controls.dart';
 import 'widgets/gallery_thumbnail.dart';
 import 'photo_editor_screen.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 enum _PendingVideoAction { none, stop, cancel }
 
@@ -26,6 +27,14 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+  static const List<String> _videoFileExtensions = [
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.mkv',
+    '.m4v',
+  ];
+
   // Swift와 통신할 플랫폼 채널
   final CameraService _cameraService = CameraService();
 
@@ -615,33 +624,36 @@ class _CameraScreenState extends State<CameraScreen>
                     child: InkWell(
                       onTap: () async {
                         try {
-                          // Service를 통해 갤러리에서 미디어 선택 (에러 핸들링 개선)
-                          final result = await _cameraService
+                          final XFile? pickedMedia = await _cameraService
                               .pickMediaFromGallery();
-                          if (result != null && result.isNotEmpty && mounted) {
-                            // 선택한 미디어가 비디오인지 확인
-                            final isVideo =
-                                result.toLowerCase().endsWith('.mp4') ||
-                                result.toLowerCase().endsWith('.mov') ||
-                                result.toLowerCase().endsWith('.avi') ||
-                                result.toLowerCase().endsWith('.mkv') ||
-                                result.toLowerCase().endsWith('.m4v');
-
-                            // 갤러리에서 선택한 경우
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PhotoEditorScreen(
-                                  filePath: result,
-                                  isVideo: isVideo,
-                                  isFromCamera: false, // 갤러리에서 가져온 것
-                                ),
-                              ),
-                            );
-                          } else {
-                            // 사용자가 선택을 취소한 경우
+                          if (pickedMedia == null || !mounted) {
                             return;
                           }
+
+                          final String? mimeType = await pickedMedia.mimeType;
+                          final String normalizedPath = pickedMedia.path
+                              .toLowerCase();
+                          final String normalizedName = pickedMedia.name
+                              .toLowerCase();
+
+                          final bool isVideo =
+                              (mimeType?.startsWith('video/') ?? false) ||
+                              _videoFileExtensions.any(
+                                (ext) =>
+                                    normalizedPath.endsWith(ext) ||
+                                    normalizedName.endsWith(ext),
+                              );
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PhotoEditorScreen(
+                                filePath: pickedMedia.path,
+                                isVideo: isVideo,
+                                isFromCamera: false,
+                              ),
+                            ),
+                          );
                         } catch (e) {
                           _showSnackBar('갤러리에서 미디어를 선택할 수 없습니다');
                         }

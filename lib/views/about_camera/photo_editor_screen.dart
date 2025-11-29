@@ -256,7 +256,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     if (mounted) setState(() {});
   }
 
-  // 카테고리 리스트에서 카테고리 정보들을 로드하는 메서드
   Future<void> _loadUserCategories({bool forceReload = false}) async {
     if (!forceReload && _categoriesLoaded) return;
 
@@ -422,45 +421,43 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<void> _createNewCategory(
     List<SelectedFriendModel> selectedFriends,
   ) async {
-    final trimmedName = _categoryNameController.text.trim();
-    if (trimmedName.isEmpty) {
+    if (_categoryNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('카테고리 이름을 입력해주세요')));
       return;
     }
 
-    final userId = _authController.getUserId;
-    if (userId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('로그인이 필요합니다. 다시 로그인해주세요.')));
-      return;
-    }
+    try {
+      final userId = _authController.getUserId;
+      if (userId == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('로그인이 필요합니다. 다시 로그인해주세요.')));
+        return;
+      }
 
-    final mates = <String>[userId, ...selectedFriends.map((f) => f.uid)];
+      List<String> mates = [userId, ...selectedFriends.map((f) => f.uid)];
 
-    if (mounted) {
+      await _categoryController.createCategory(
+        name: _categoryNameController.text.trim(),
+        mates: mates,
+      );
+
+      _categoriesLoaded = false;
+      await _loadUserCategories(forceReload: true);
+
+      if (!mounted) return;
       setState(() {
         _showAddCategoryUI = false;
         _categoryNameController.clear();
       });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('카테고리 생성 중 오류가 발생했습니다')));
     }
-
-    unawaited(
-      _categoryController
-          .createCategory(name: trimmedName, mates: mates)
-          .then((_) async {
-            _categoriesLoaded = false;
-            await _loadUserCategories(forceReload: true);
-          })
-          .catchError((error, stackTrace) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('카테고리 생성 중 오류가 발생했습니다')));
-          }),
-    );
   }
 
   // ========== 업로드 및 화면 전환 관련 메서드들 ==========
@@ -470,6 +467,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     try {
       if (await file.exists()) {
         await file.delete();
+        debugPrint('임시 파일 삭제: $path');
       }
     } catch (e) {
       debugPrint('임시 파일 삭제 실패: $e');
@@ -480,31 +478,26 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   bool get isVideoFromCamera => widget.isVideo == true && widget.isFromCamera;
   bool get isVideoFromGallery => widget.isVideo == true && !widget.isFromCamera;
 
-  // 업로드 후 홈 화면으로 이동
   Future<void> _uploadThenNavigate(List<String> categoryIds) async {
+    if (!mounted) return;
+    LoadingPopupWidget.show(
+      context,
+      message: '${categoryIds.length}개 카테고리에 미디어를 업로드하고 있습니다.\n잠시만 기다려주세요',
+    );
     try {
-      // 이미지 캐시가 남아있으면 깨끗하게 정리
       _clearImageCache();
-
-      // 오디오 정지
       await _audioController.stopRealtimeAudio();
-
-      final uploadDataList = <Map<String, dynamic>>[];
-
-      for (final categoryId in categoryIds) {
-        final uploadData = _extractUploadData(categoryId);
-        if (uploadData != null) {
-          uploadDataList.add(uploadData);
-        }
-      }
-
       _audioController.clearCurrentRecording();
       await Future.delayed(const Duration(milliseconds: 500));
 
       // 선택된 모든 카테고리에 업로드
-      for (int i = 0; i < uploadDataList.length; i++) {
-        final uploadData = uploadDataList[i];
-        if (i == uploadDataList.length - 1) {
+      for (int i = 0; i < categoryIds.length; i++) {
+        final categoryId = categoryIds[i];
+        final uploadData = _extractUploadData(categoryId);
+        if (uploadData == null) continue;
+
+        // 마지막 업로드가 아니면 await로 순차 진행
+        if (i == categoryIds.length - 1) {
           unawaited(_executeUploadWithExtractedData(uploadData));
         } else {
           _executeUploadWithExtractedData(uploadData);
@@ -538,9 +531,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       'filePath': filePath,
       'userId': userId,
       'isVideo': isVideo,
-      'audioPath': _recordedAudioPath ?? _audioController.currentRecordingPath,
-      'waveformData': _recordedWaveformData,
-      'audioDuration': _audioController.recordingDuration,
+      'audioPath': isVideo
+          ? null
+          : _recordedAudioPath ?? _audioController.currentRecordingPath,
+      'waveformData': isVideo ? null : _recordedWaveformData,
       'caption': _captionController.text.trim().isNotEmpty
           ? _captionController.text.trim()
           : null,
@@ -554,13 +548,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     final filePath = data['filePath'] as String;
     final userId = data['userId'] as String;
     final audioPath = data['audioPath'] as String?;
-    final List<double>? waveformData = (data['waveformData'] as List<dynamic>?)
-        ?.map((e) => (e as num).toDouble())
-        .toList();
-    final audioDurationSeconds = data['audioDuration'] as int?;
-    final audioDuration = audioDurationSeconds != null
-        ? Duration(seconds: audioDurationSeconds)
-        : null;
+    final waveformData = data['waveformData'] as List<double>? ?? const [];
     final isVideo = data['isVideo'] as bool? ?? false;
     final mediaFile = File(filePath);
 
@@ -569,7 +557,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
 
     File? audioFile;
-    if (audioPath != null && audioPath.isNotEmpty) {
+    if (!isVideo && audioPath != null && audioPath.isNotEmpty) {
       audioFile = File(audioPath);
       if (!await audioFile.exists()) {
         audioFile = null;
@@ -613,11 +601,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
           duration: videoDuration,
           caption: data['caption'] as String?,
           isFromCamera: widget.isFromCamera,
-          audioFile: audioFile,
-          waveformData: waveformData != null && waveformData.isNotEmpty
-              ? waveformData
-              : null,
-          audioDuration: audioDuration,
         );
 
         // 업로드 후 썸네일 임시 파일 삭제
@@ -628,17 +611,15 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
             debugPrint('썸네일 임시 파일 삭제 실패: $e');
           }
         }
-      } else if (audioFile != null) {
+      } else if (audioFile != null && waveformData.isNotEmpty) {
         await _photoController.uploadPhotoWithAudio(
           imageFilePath: mediaFile.path,
           audioFilePath: audioFile.path,
           userID: userId,
           userIds: [userId],
           categoryId: categoryId,
-          waveformData: waveformData != null && waveformData.isNotEmpty
-              ? waveformData
-              : null,
-          duration: audioDuration,
+          waveformData: waveformData,
+          duration: Duration(seconds: _audioController.recordingDuration),
         );
       } else {
         await _photoController.uploadPhoto(
@@ -778,16 +759,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
               },
               child: DraggableScrollableSheet(
                 controller: _draggableScrollController,
-                initialChildSize: math.max(
-                  _hasLockedSheetExtent
-                      ? _kLockedSheetExtent
-                      : _initialChildSize,
-                  _kLockedSheetExtent,
-                ),
-                minChildSize: math.max(
-                  _hasLockedSheetExtent ? _kLockedSheetExtent : _minChildSize,
-                  _kLockedSheetExtent,
-                ),
+                initialChildSize: _initialChildSize,
+                minChildSize: _minChildSize,
                 maxChildSize: _kMaxSheetExtent,
                 expand: false,
                 builder: (context, scrollController) {
@@ -930,7 +903,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   @override
   void dispose() {
     _isDisposing = true;
-
     _audioController.stopRealtimeAudio();
     SchedulerBinding.instance.addPostFrameCallback((_) {
       _audioController.clearCurrentRecording();

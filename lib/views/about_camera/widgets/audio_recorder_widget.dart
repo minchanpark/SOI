@@ -1,10 +1,8 @@
 import 'dart:async';
-
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-
 import '../../../api_firebase/controllers/audio_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
@@ -18,13 +16,15 @@ enum RecordingState {
 /// 사진 편집 시 음성 메모를 녹음하고 재생하는 기능을 제공합니다.
 /// 편집 모드 전용 위젯입니다.
 class AudioRecorderWidget extends StatefulWidget {
-  // 기본 콜백들
-
   // 녹음이 완료되었을 때 호출되는 콜백
   final Function(String?, List<double>?)? onRecordingCompleted;
 
   // 녹음이 최종적으로 완료되었을 때 호출되는 콜백
-  final Function(String audioFilePath, List<double> waveformData, int duration)?
+  final Function(
+    String audioFilePath,
+    List<double> waveformData,
+    Duration duration,
+  )?
   onRecordingFinished;
 
   // 녹음이 취소되었을 때 호출되는 콜백
@@ -147,7 +147,6 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
       // 오디오 컨트롤러 상태 모니터링 시작
       _startAudioControllerListener();
-      debugPrint('녹음 시작 완료 - 상태: $_currentState');
     } catch (e) {
       debugPrint('녹음 시작 오류: $e');
       // 에러 발생 시 위젯을 제거하여 텍스트 필드로 돌아감
@@ -157,6 +156,15 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
   Future<void> _stopAndPreparePlayback() async {
     try {
+      // 중복 정지 방지
+      if (!_audioController.isRecording) {
+        debugPrint('이미 녹음이 중지되었습니다');
+        return;
+      }
+
+      // 리스너 즉시 중지
+      _stopAudioControllerListener();
+
       debugPrint('녹음 정지 및 재생 준비 시작...');
 
       List<double> waveformData = List<double>.from(
@@ -167,6 +175,12 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
         waveformData = waveformData.map((value) => value.abs()).toList();
       }
 
+      // 순차적으로 중지: 먼저 waveform controller
+      if (recorderController.isRecording) {
+        await recorderController.stop();
+      }
+
+      // 그 다음 native recorder (이제 동기적으로 처리됨)
       await _audioController.stopRecordingSimple();
 
       if (_audioController.currentRecordingPath != null &&
@@ -193,21 +207,34 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
         }
       }
 
+      final recordingPath = _audioController.currentRecordingPath;
+      final recordingDuration = Duration(
+        seconds: _audioController.recordingDuration,
+      );
+
       setState(() {
         _previousState = _currentState;
         _currentState = RecordingState.recorded;
-        _recordedFilePath = _audioController.currentRecordingPath;
+        _recordedFilePath = recordingPath;
         _waveformData = waveformData;
       });
 
       if (widget.onRecordingCompleted != null) {
-        widget.onRecordingCompleted!(
-          _audioController.currentRecordingPath,
+        widget.onRecordingCompleted!(recordingPath, waveformData);
+      }
+
+      if (widget.onRecordingFinished != null &&
+          recordingPath != null &&
+          recordingPath.isNotEmpty) {
+        widget.onRecordingFinished!(
+          recordingPath,
           waveformData,
+          recordingDuration,
         );
       }
     } catch (e) {
       debugPrint('녹음 정지 오류: $e');
+      _stopAudioControllerListener(); // 에러 시에도 정리
     }
   }
 
@@ -361,13 +388,11 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
       if (widget.onRecordingCompleted != null) {
         widget.onRecordingCompleted!(_recordedFilePath, waveformData);
       }
-      if (widget.onRecordingFinished != null &&
-          _recordedFilePath != null &&
-          waveformData.isNotEmpty) {
+      if (widget.onRecordingFinished != null && _recordedFilePath != null) {
         widget.onRecordingFinished!(
           _recordedFilePath!,
           waveformData,
-          _audioController.recordingDuration,
+          Duration(seconds: _audioController.recordingDuration),
         );
       }
     } catch (e) {

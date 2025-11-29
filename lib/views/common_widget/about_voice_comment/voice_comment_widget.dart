@@ -332,6 +332,14 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 파형 데이터를 추출하고 PlayerController를 준비
   Future<void> _stopAndPreparePlayback() async {
     try {
+      // ✅ 중복 정지 방지
+      if (!_audioController.isRecording) {
+        debugPrint('⚠️ 이미 녹음이 중지되었습니다');
+        return;
+      }
+
+      debugPrint('녹음 정지 및 재생 준비 시작...');
+
       // 파형 데이터 추출
       List<double> waveformData = List<double>.from(
         _recorderController.waveData,
@@ -340,8 +348,12 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         waveformData = waveformData.map((value) => value.abs()).toList();
       }
 
-      // 녹음 중지
-      await _recorderController.stop();
+      // ✅ 순차적으로 중지: 먼저 waveform controller
+      if (_recorderController.isRecording) {
+        await _recorderController.stop();
+      }
+
+      // ✅ 그 다음 native recorder (이제 동기적으로 처리됨)
       await _audioController.stopRecordingSimple();
 
       final filePath = _audioController.currentRecordingPath;

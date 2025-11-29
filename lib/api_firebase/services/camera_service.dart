@@ -224,10 +224,10 @@ class CameraService {
   }
 
   // 갤러리에서 미디어(이미지/비디오)를 선택하는 함수
-  Future<String?> pickMediaFromGallery() async {
+  Future<XFile?> pickMediaFromGallery() async {
     try {
       final XFile? mediaFile = await _imagePicker.pickMedia();
-      return mediaFile?.path;
+      return mediaFile;
     } catch (e) {
       return null;
     }

@@ -59,15 +59,17 @@ class CategoryRepository {
         .doc(categoryId)
         .snapshots()
         .asyncMap((doc) async {
-          if (!doc.exists || doc.data() == null) return null;
+          // 조기 반환: 문서가 없으면 null
+          if (!doc.exists) return null;
 
-          final data = doc.data()!;
+          final data = doc.data();
+          if (data == null) return null;
 
           // 사용자가 설정한 커버 사진이 있는지 확인
           String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
-          // 커버 사진이 없다면 가장 최근 사진을 가져오기
-          if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
+          // 커버 사진이 없다면 가장 최근 사진을 가져오기 (최적화: 조건 간소화)
+          if (categoryPhotoUrl?.isEmpty ?? true) {
             final photosSnapshot = await _firestore
                 .collection('categories')
                 .doc(categoryId)
@@ -80,18 +82,17 @@ class CategoryRepository {
             if (photosSnapshot.docs.isNotEmpty) {
               categoryPhotoUrl =
                   photosSnapshot.docs.first.data()['imageUrl'] as String?;
-            } else {}
+            }
           }
 
           // mateProfileImages는 fromFirestore()에서 이미 파싱되므로
           // 별도의 Firestore 쿼리 없이 바로 사용
-          final result = CategoryDataModel.fromFirestore(
+          return CategoryDataModel.fromFirestore(
             data,
             doc.id,
           ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
-
-          return result;
-        });
+        })
+        .distinct(); // 중복 이벤트 필터링으로 불필요한 재렌더링 방지
   }
 
   /// 사용자의 카테고리 목록을 한 번만 가져오기 (병렬 처리 최적화)

@@ -198,6 +198,9 @@ class PhotoService {
     Duration? duration,
     String? caption,
     bool isFromCamera = false, // 카메라 촬영 여부 (기본값: 갤러리)
+    File? audioFile,
+    List<double>? waveformData,
+    Duration? audioDuration,
   }) async {
     try {
       final validationResult = _validateVideoUpload(
@@ -233,20 +236,57 @@ class PhotoService {
       // 썸네일이 없으면 비디오 URL을 대신 사용 (UI에서 처리)
       final fallbackThumbnailUrl = thumbnailUrl ?? videoUrl;
 
+      String audioUrl = '';
+      List<double>? finalWaveformData;
+      Duration? audioTrackDuration = audioDuration;
+
+      if (audioFile != null) {
+        final uploadedAudioUrl = await _audioRepository
+            .uploadAudioToSupabaseStorage(
+              audioFile: audioFile,
+              categoryId: categoryId,
+              userId: userId,
+            );
+
+        if (uploadedAudioUrl == null) {
+          return PhotoUploadResult.failure('오디오 업로드에 실패했습니다.');
+        }
+
+        audioUrl = uploadedAudioUrl;
+
+        if (waveformData != null && waveformData.isNotEmpty) {
+          finalWaveformData = waveformData;
+        } else {
+          finalWaveformData = await _audioService.extractWaveformData(
+            audioFile.path,
+          );
+        }
+
+        if (audioTrackDuration == null) {
+          final audioSeconds = await _audioRepository.getAudioDurationAccurate(
+            audioFile.path,
+          );
+          audioTrackDuration = Duration(seconds: audioSeconds.round());
+        }
+      }
+
       final videoData = MediaDataModel(
         id: '',
         imageUrl: fallbackThumbnailUrl, // 카테고리 표지에 사용될 URL
-        audioUrl: '',
+        audioUrl: audioUrl,
         userID: userId,
         userIds: userIds,
         categoryId: categoryId,
         createdAt: DateTime.now(),
-        duration: duration ?? Duration.zero,
+        duration: audioUrl.isNotEmpty
+            ? (audioTrackDuration ?? Duration.zero)
+            : (duration ?? Duration.zero),
         caption: caption,
         isVideo: true,
         videoUrl: videoUrl,
         thumbnailUrl: fallbackThumbnailUrl, // 썸네일 URL (없으면 비디오 URL)
         isFromCamera: isFromCamera, // 카메라 촬영 여부
+        waveformData: finalWaveformData,
       );
 
       final videoId = await _photoRepository.saveVideoToFirestore(

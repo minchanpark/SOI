@@ -285,7 +285,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       context,
       listen: false,
     );
-    audioController.stopAudio();
+    audioController.stopRealtimeAudio();
 
     // 2. 음성 댓글 오디오 중지
     final commentAudioController = Provider.of<CommentAudioController>(

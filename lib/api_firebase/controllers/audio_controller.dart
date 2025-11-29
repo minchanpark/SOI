@@ -201,32 +201,40 @@ class AudioController extends ChangeNotifier {
 
   /// 간단한 네이티브 녹음 중지 (UI용)
   Future<void> stopRecordingSimple() async {
+    // ✅ 가장 먼저 타이머 중지 (try 블록 밖에서)
+    _stopRecordingTimer();
+
     try {
       _isLoading = true;
       notifyListeners();
 
-      // 타이머 및 구독 정리
-      _stopRecordingTimer();
+      debugPrint('🎤 [Flutter] 네이티브 녹음 중지 시작...');
 
-      // debugPrint('네이티브 간단 녹음 중지...');
       final result = await _audioService.stopRecordingSimple();
 
-      _isLoading = false;
       _isRecording = false;
+      _isLoading = false;
 
       if (result.isSuccess) {
         _currentRecordingPath = result.data ?? '';
+        debugPrint('✅ [Flutter] 녹음 중지 성공: $_currentRecordingPath');
       } else {
         _error = result.error;
-        debugPrint('네이티브 간단 녹음 중지 실패: ${result.error}');
+        debugPrint('❌ [Flutter] 녹음 중지 실패: ${result.error}');
       }
 
       notifyListeners();
     } catch (e) {
-      _isLoading = false;
+      debugPrint('❌ [Flutter] 녹음 중지 예외: $e');
+
       _isRecording = false;
+      _isLoading = false;
       _error = e.toString();
+
       notifyListeners();
+    } finally {
+      // ✅ 추가 안전장치: 어떤 경우에도 타이머 중지 보장
+      _stopRecordingTimer();
     }
   }
 
@@ -383,9 +391,9 @@ class AudioController extends ChangeNotifier {
   }
 
   /// 오디오 정지 - UI용 간편 메서드
-  Future<void> stopAudio() async {
+  /*Future<void> stopAudio() async {
     await stopRealtimeAudio();
-  }
+  }*/
 
   /// 실시간 리스너 정리
   void _disposeRealtimeListeners() {

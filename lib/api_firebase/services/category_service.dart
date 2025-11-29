@@ -79,6 +79,7 @@ class CategoryService {
   // ==================== 카테고리 관리 ====================
 
   /// 카테고리 목록 스트림 (차단 및 pending 필터링)
+
   Stream<List<CategoryDataModel>> getUserCategoriesStream(String userId) {
     if (userId.isEmpty) return Stream.value([]);
 
@@ -89,21 +90,20 @@ class CategoryService {
         categories,
       );
 
-      final activeCategoriesWithPending = <CategoryDataModel>[];
+      // 모든 pending invite 체크를 병렬로 실행
+      final results = await Future.wait(
+        filteredCategories.map((category) async {
+          final pendingInvite = await categoryInviteRepository
+              .getPendingInviteForCategory(
+                categoryId: category.id,
+                invitedUserId: userId,
+              );
+          return pendingInvite == null ? category : null;
+        }),
+      );
 
-      for (final category in filteredCategories) {
-        final pendingInvite = await categoryInviteRepository
-            .getPendingInviteForCategory(
-              categoryId: category.id,
-              invitedUserId: userId,
-            );
-
-        if (pendingInvite == null) {
-          activeCategoriesWithPending.add(category);
-        }
-      }
-
-      return activeCategoriesWithPending;
+      // null이 아닌 카테고리만 필터링 (pending이 없는 active 카테고리)
+      return results.whereType<CategoryDataModel>().toList();
     });
   }
 
@@ -178,8 +178,9 @@ class CategoryService {
       }
 
       // 생성자와 멤버 간 친구 관계 확인 (병렬 처리)
-      final otherMates =
-          sanitizedMates.where((m) => m != currentUserId).toList();
+      final otherMates = sanitizedMates
+          .where((m) => m != currentUserId)
+          .toList();
       final pendingMateFutures = <String, Future<List<String>>>{};
 
       if (otherMates.isEmpty) {
