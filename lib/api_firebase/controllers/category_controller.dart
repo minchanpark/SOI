@@ -57,7 +57,7 @@ class CategoryController extends ChangeNotifier {
   /// 카테고리 스트림
   Stream<List<CategoryDataModel>> streamUserCategories(String userId) {
     return _categoryService.getUserCategoriesStream(userId).map((categories) {
-      categories.sort((a, b) => _compareCategoriesForUser(a, b, userId));
+      _sortCategoriesOptimized(categories, userId);
       return categories;
     });
   }
@@ -191,6 +191,7 @@ class CategoryController extends ChangeNotifier {
     }
   }
 
+  // 로컬 상태에서 카테고리 고정 상태 업데이트
   void _updateLocalPinStatus(int index, String userId, bool isPinned) {
     final currentStatus = Map<String, bool>.from(
       _userCategories[index].userPinnedStatus ?? {},
@@ -199,7 +200,8 @@ class CategoryController extends ChangeNotifier {
     _userCategories[index] = _userCategories[index].copyWith(
       userPinnedStatus: currentStatus,
     );
-    _userCategories.sort((a, b) => _compareCategoriesForUser(a, b, userId));
+    // 최적화된 정렬 메소드 사용
+    _sortCategoriesOptimized(_userCategories, userId);
   }
 
   // ==================== UI 상태 관리 ====================
@@ -285,31 +287,6 @@ class CategoryController extends ChangeNotifier {
     }
   }
 
-  /// Map 형태로 스트림 반환
-  Stream<List<Map<String, dynamic>>> streamUserCategoriesAsMap(String userId) {
-    return streamUserCategories(userId).map(
-      (categories) => categories
-          .map((category) => category.toFirestore()..['id'] = category.id)
-          .toList(),
-    );
-  }
-
-  /// 상세 정보 포함 스트림
-  Stream<List<Map<String, dynamic>>> streamUserCategoriesWithDetails(
-    String userId,
-    dynamic authController,
-  ) {
-    return streamUserCategories(userId).asyncMap((categories) async {
-      List<Map<String, dynamic>> categoriesWithDetails = [];
-      for (final category in categories) {
-        final categoryMap = category.toFirestore();
-        categoryMap['id'] = category.id;
-        categoriesWithDetails.add(categoryMap);
-      }
-      return categoriesWithDetails;
-    });
-  }
-
   /// 사용자 조회 시간 업데이트
   Future<void> updateUserViewTime({
     required String categoryId,
@@ -343,45 +320,64 @@ class CategoryController extends ChangeNotifier {
     }
   }
 
-  /// 사용자별 카테고리 정렬
+  /// 사용자별 카테고리 정렬 (레거시 호환)
   void _sortCategoriesForUser(String userId) {
-    _userCategories.sort((a, b) => _compareCategoriesForUser(a, b, userId));
+    _sortCategoriesOptimized(_userCategories, userId);
   }
 
-  /// 카테고리 비교 로직
-  int _compareCategoriesForUser(
-    CategoryDataModel a,
-    CategoryDataModel b,
+  /// 최적화된 카테고리 정렬 (Schwartzian Transform)
+  /// 정렬 키를 사전 계산하여 각 카테고리당 O(1) 비교 보장
+  void _sortCategoriesOptimized(
+    List<CategoryDataModel> categories,
     String userId,
   ) {
-    final aIsPinned = a.isPinnedForUser(userId);
-    final bIsPinned = b.isPinnedForUser(userId);
-    final aHasNewPhoto = a.hasNewPhotoForUser(userId);
-    final bHasNewPhoto = b.hasNewPhotoForUser(userId);
+    if (categories.length <= 1) return;
 
-    // 1순위: 고정
-    if (aIsPinned && !bIsPinned) return -1;
-    if (!aIsPinned && bIsPinned) return 1;
-
-    // 2순위: 새 사진
-    if (aIsPinned == bIsPinned) {
-      if (aHasNewPhoto && !bHasNewPhoto) return -1;
-      if (!aHasNewPhoto && bHasNewPhoto) return 1;
+    // 1단계: 정렬 키 사전 계산 - O(n)
+    // 각 카테고리당 isPinnedForUser, hasNewPhotoForUser를 정확히 1번만 호출
+    final sortKeys =
+        <
+          String,
+          ({bool isPinned, bool hasNew, DateTime? lastUpload, DateTime created})
+        >{};
+    for (final cat in categories) {
+      sortKeys[cat.id] = (
+        isPinned: cat.isPinnedForUser(userId),
+        hasNew: cat.hasNewPhotoForUser(userId),
+        lastUpload: cat.lastPhotoUploadedAt,
+        created: cat.createdAt,
+      );
     }
 
-    // 3순위: 최신 사진 업로드 시간
-    if (aIsPinned == bIsPinned && aHasNewPhoto == bHasNewPhoto) {
-      if (a.lastPhotoUploadedAt != null && b.lastPhotoUploadedAt != null) {
-        return b.lastPhotoUploadedAt!.compareTo(a.lastPhotoUploadedAt!);
-      } else if (a.lastPhotoUploadedAt != null) {
-        return -1;
-      } else if (b.lastPhotoUploadedAt != null) {
-        return 1;
-      } else {
-        return b.createdAt.compareTo(a.createdAt);
+    // 2단계: 캐시된 키로 정렬 - O(n log n), 각 비교는 O(1)
+    categories.sort((a, b) {
+      final keyA = sortKeys[a.id]!;
+      final keyB = sortKeys[b.id]!;
+
+      // 1순위: 고정
+      if (keyA.isPinned && !keyB.isPinned) return -1;
+      if (!keyA.isPinned && keyB.isPinned) return 1;
+
+      // 2순위: 새 사진
+      if (keyA.isPinned == keyB.isPinned) {
+        if (keyA.hasNew && !keyB.hasNew) return -1;
+        if (!keyA.hasNew && keyB.hasNew) return 1;
       }
-    }
 
-    return 0;
+      // 3순위: 최신 사진 업로드 시간
+      if (keyA.isPinned == keyB.isPinned && keyA.hasNew == keyB.hasNew) {
+        if (keyA.lastUpload != null && keyB.lastUpload != null) {
+          return keyB.lastUpload!.compareTo(keyA.lastUpload!);
+        } else if (keyA.lastUpload != null) {
+          return -1;
+        } else if (keyB.lastUpload != null) {
+          return 1;
+        } else {
+          return keyB.created.compareTo(keyA.created);
+        }
+      }
+
+      return 0;
+    });
   }
 }

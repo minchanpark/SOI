@@ -8,94 +8,69 @@ import '../models/category_data_model.dart';
 /// Firebase에서 category 관련 데이터를 가져오고, 저장하고, 업데이트하고 삭제하는 등의 로직들
 class CategoryRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Map<String, String?> _categoryCoverCache = {};
+  final Map<String, Stream<List<CategoryDataModel>>>
+  _userCategoriesStreamCache = {};
 
   // ==================== Firestore 관련 ====================
 
-  /// 사용자의 카테고리 목록을 스트림으로 가져오기 (병렬 처리 최적화)
+  /// 사용자의 카테고리 목록을 스트림으로 가져오기 (실시간 반응형)
   Stream<List<CategoryDataModel>> getUserCategoriesStream(String userId) {
-    return _firestore
+    final cachedStream = _userCategoriesStreamCache[userId];
+    if (cachedStream != null) return cachedStream;
+
+    final stream = _firestore
         .collection('categories')
         .where('mates', arrayContains: userId)
         .snapshots()
-        .asyncMap((querySnapshot) async {
-          // 병렬로 모든 카테고리의 커버 사진을 가져오기
-          final categoryFutures = querySnapshot.docs.map((doc) async {
+        .map((querySnapshot) {
+          // categoryPhotoUrl은 문서에 저장된 값을 직접 사용
+          // photos 서브컬렉션 조회를 제거하여 실시간 업데이트 보장
+          return querySnapshot.docs.map((doc) {
             final data = doc.data();
-            String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
-
-            // 커버 사진이 없는 경우에만 최신 사진 쿼리
-            if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
-              final photosSnapshot = await _firestore
-                  .collection('categories')
-                  .doc(doc.id)
-                  .collection('photos')
-                  .where('unactive', isEqualTo: false)
-                  .orderBy('createdAt', descending: true)
-                  .limit(1)
-                  .get();
-
-              if (photosSnapshot.docs.isNotEmpty) {
-                categoryPhotoUrl =
-                    photosSnapshot.docs.first.data()['imageUrl'] as String?;
-              }
-            }
+            final categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
             return CategoryDataModel.fromFirestore(
               data,
               doc.id,
             ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
           }).toList();
-
-          // 모든 쿼리를 병렬로 실행
-          return await Future.wait(categoryFutures);
-        });
-  }
-
-  /// 단일 카테고리 실시간 스트림 (프로필 이미지 포함)
-  Stream<CategoryDataModel?> getCategoryStream(String categoryId) {
-    return _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .snapshots()
-        .asyncMap((doc) async {
-          // 조기 반환: 문서가 없으면 null
-          if (!doc.exists) return null;
-
-          final data = doc.data();
-          if (data == null) return null;
-
-          // 사용자가 설정한 커버 사진이 있는지 확인
-          String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
-
-          // 커버 사진이 없다면 가장 최근 사진을 가져오기 (최적화: 조건 간소화)
-          if (categoryPhotoUrl?.isEmpty ?? true) {
-            final photosSnapshot = await _firestore
-                .collection('categories')
-                .doc(categoryId)
-                .collection('photos')
-                .where('unactive', isEqualTo: false) // 비활성화된 사진 제외
-                .orderBy('createdAt', descending: true)
-                .limit(1)
-                .get();
-
-            if (photosSnapshot.docs.isNotEmpty) {
-              categoryPhotoUrl =
-                  photosSnapshot.docs.first.data()['imageUrl'] as String?;
-            }
-          }
-
-          // mateProfileImages는 fromFirestore()에서 이미 파싱되므로
-          // 별도의 Firestore 쿼리 없이 바로 사용
-          return CategoryDataModel.fromFirestore(
-            data,
-            doc.id,
-          ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
         })
-        .distinct(); // 중복 이벤트 필터링으로 불필요한 재렌더링 방지
+        // 동일한 Firestore 쿼리를 재사용해 매번 O(1)에 가깝게 반환
+        .asBroadcastStream(
+          onCancel: (_) {
+            _userCategoriesStreamCache.remove(userId);
+          },
+        );
+
+    _userCategoriesStreamCache[userId] = stream;
+    return stream;
   }
 
-  /// 사용자의 카테고리 목록을 한 번만 가져오기 (병렬 처리 최적화)
+  /// 단일 카테고리 실시간 스트림 (실시간 반응형)
+  Stream<CategoryDataModel?> getCategoryStream(String categoryId) {
+    return _firestore.collection('categories').doc(categoryId).snapshots().map((
+      doc,
+    ) {
+      // 조기 반환: 문서가 없으면 null
+      if (!doc.exists) return null;
+
+      final data = doc.data();
+      if (data == null) return null;
+
+      // categoryPhotoUrl은 문서에 저장된 값을 직접 사용
+      // photos 서브컬렉션 조회를 제거하여 실시간 업데이트 보장
+      final categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
+
+      // mateProfileImages는 fromFirestore()에서 이미 파싱되므로
+      // 별도의 Firestore 쿼리 없이 바로 사용
+      return CategoryDataModel.fromFirestore(
+        data,
+        doc.id,
+      ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
+    });
+  }
+
+  /// 사용자의 카테고리 목록을 한 번만 가져오기 (단순화)
   Future<List<CategoryDataModel>> getUserCategories(String userId) async {
     // Firebase Auth UID로 카테고리 검색
     var querySnapshot = await _firestore
@@ -103,36 +78,16 @@ class CategoryRepository {
         .where('mates', arrayContains: userId)
         .get();
 
-    // 병렬로 모든 카테고리의 커버 사진을 가져오기
-    final categoryFutures = querySnapshot.docs.map((doc) async {
+    // categoryPhotoUrl은 문서에 저장된 값을 직접 사용
+    return querySnapshot.docs.map((doc) {
       final data = doc.data();
-      String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
-
-      // 커버 사진이 없는 경우에만 최신 사진 쿼리
-      if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
-        final photosSnapshot = await _firestore
-            .collection('categories')
-            .doc(doc.id)
-            .collection('photos')
-            .where('unactive', isEqualTo: false)
-            .orderBy('createdAt', descending: true)
-            .limit(1)
-            .get();
-
-        if (photosSnapshot.docs.isNotEmpty) {
-          categoryPhotoUrl =
-              photosSnapshot.docs.first.data()['imageUrl'] as String?;
-        }
-      }
+      final categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
       return CategoryDataModel.fromFirestore(
         data,
         doc.id,
       ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
     }).toList();
-
-    // 모든 쿼리를 병렬로 실행 (N개 카테고리 → 1번의 병렬 호출)
-    return await Future.wait(categoryFutures);
   }
 
   /// 카테고리 생성
@@ -225,7 +180,7 @@ class CategoryRepository {
     await categoryRef.delete();
   }
 
-  /// 특정 카테고리 정보 가져오기 (최적화: 커버 사진 있으면 추가 쿼리 스킵)
+  /// 특정 카테고리 정보 가져오기 (단순화)
   Future<CategoryDataModel?> getCategory(String categoryId) async {
     final docRef = _firestore.collection('categories').doc(categoryId);
     final doc = await docRef.get();
@@ -233,28 +188,7 @@ class CategoryRepository {
     if (!doc.exists || doc.data() == null) return null;
 
     final data = doc.data()!;
-    String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
-
-    if (categoryPhotoUrl != null && categoryPhotoUrl.isNotEmpty) {
-      _categoryCoverCache[categoryId] = categoryPhotoUrl;
-    } else {
-      if (_categoryCoverCache.containsKey(categoryId)) {
-        categoryPhotoUrl = _categoryCoverCache[categoryId];
-      } else {
-        final photosSnapshot = await docRef
-            .collection('photos')
-            .where('unactive', isEqualTo: false)
-            .orderBy('createdAt', descending: true)
-            .limit(1)
-            .get();
-
-        if (photosSnapshot.docs.isNotEmpty) {
-          categoryPhotoUrl =
-              photosSnapshot.docs.first.data()['imageUrl'] as String?;
-        }
-        _categoryCoverCache[categoryId] = categoryPhotoUrl;
-      }
-    }
+    final categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
     return CategoryDataModel.fromFirestore(
       data,

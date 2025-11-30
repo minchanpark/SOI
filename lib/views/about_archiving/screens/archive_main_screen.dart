@@ -241,6 +241,8 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // opaque: 빈 영역에서도 탭 이벤트를 감지
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         // 편집 모드일 때 바깥 부분 클릭 시 편집 모드 해제
         if (_isEditMode) {

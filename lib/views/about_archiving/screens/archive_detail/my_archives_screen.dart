@@ -38,6 +38,7 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
   String? uID;
   // 카테고리별 프로필 이미지 캐시
   final Map<String, List<String>> _categoryProfileImages = {};
+  final Map<String, List<String>> _categoryMatesCache = {}; // mates 변경 감지용
   CategoryController? _categoryController; // CategoryController 참조 저장
   bool _isInitialLoad = true;
   int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
@@ -60,8 +61,21 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
 
   // 카테고리에 대한 프로필 이미지를 가져오는 함수
   Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    if (_categoryProfileImages.containsKey(categoryId)) {
+    // mates가 변경되었는지 확인
+    final cachedMates = _categoryMatesCache[categoryId];
+    final matesChanged = cachedMates == null ||
+        cachedMates.length != mates.length ||
+        !cachedMates.every((mate) => mates.contains(mate));
+
+    // 캐시가 있고 mates가 변경되지 않았으면 재로드 불필요
+    if (_categoryProfileImages.containsKey(categoryId) && !matesChanged) {
       return;
+    }
+
+    // mates가 변경되었으면 캐시 무효화
+    if (matesChanged) {
+      _categoryProfileImages.remove(categoryId);
+      _categoryMatesCache[categoryId] = List.from(mates);
     }
 
     // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
@@ -82,12 +96,14 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
           if (!mounted) return;
           setState(() {
             _categoryProfileImages[categoryId] = profileImages;
+            _categoryMatesCache[categoryId] = List.from(mates);
           });
         })
         .catchError((_) {
           if (!mounted) return;
           setState(() {
             _categoryProfileImages[categoryId] = [];
+            _categoryMatesCache[categoryId] = List.from(mates);
           });
         })
         .whenComplete(() {

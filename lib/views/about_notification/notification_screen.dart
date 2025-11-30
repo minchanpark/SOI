@@ -428,9 +428,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
 
       if (targetPhoto != null) {
-        debugPrint('✅ 특정 사진을 직접 찾았습니다: ${targetPhoto.id}');
+        debugPrint('특정 사진을 직접 찾았습니다: ${targetPhoto.id}');
       } else {
-        debugPrint('❌ 특정 사진을 직접 찾지 못했습니다');
+        debugPrint('특정 사진을 직접 찾지 못했습니다');
       }
 
       // 2단계: 스트림으로 재시도하며 사진 목록 가져오기
@@ -448,7 +448,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
           initialIndex = photos.indexWhere((photo) => photo.id == photoId);
 
           if (initialIndex != -1) {
-            debugPrint('✅ Stream에서 사진을 찾았습니다: $photoId (인덱스: $initialIndex)');
             break;
           }
         }

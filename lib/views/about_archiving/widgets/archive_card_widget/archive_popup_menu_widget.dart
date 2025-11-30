@@ -234,9 +234,12 @@ class _ArchivePopupMenuWidgetState extends State<ArchivePopupMenuWidget>
   }
 
   /// 메뉴 액션 처리
-  void _handleMenuAction(String action) {
-    // 메뉴 먼저 닫기
-    _closeMenu();
+  Future<void> _handleMenuAction(String action) async {
+    // 메뉴 먼저 닫기 (완료될 때까지 대기)
+    await _closeMenu();
+
+    // 위젯이 언마운트되었으면 중단
+    if (!mounted) return;
 
     // 액션 처리
     switch (action) {

@@ -79,7 +79,6 @@ class CategoryService {
   // ==================== 카테고리 관리 ====================
 
   /// 카테고리 목록 스트림 (차단 및 pending 필터링)
-
   Stream<List<CategoryDataModel>> getUserCategoriesStream(String userId) {
     if (userId.isEmpty) return Stream.value([]);
 

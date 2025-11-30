@@ -33,6 +33,7 @@ class _CategoryPhotosScreenState extends State<CategoryPhotosScreen> {
     _updateUserViewTime();
   }
 
+  // 카테고리 내 사진 확인 시간을 업데이트
   void _updateUserViewTime() async {
     final authController = Provider.of<AuthController>(context, listen: false);
     final categoryController = Provider.of<CategoryController>(
