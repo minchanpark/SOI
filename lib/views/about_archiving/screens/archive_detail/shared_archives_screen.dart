@@ -37,6 +37,8 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
   CategoryController? _categoryController; // CategoryController 참조 저장
   bool _isInitialLoad = true;
   int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
+  final Map<String, Future<void>> _profileImageLoaders = {};
+  AuthController? _authController; // AuthController 참조 저장
 
   @override
   void initState() {
@@ -61,34 +63,42 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
   // 카테고리에 대한 프로필 이미지를 가져오는 함수
   Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    // Skip if already loaded
     if (_categoryProfileImages.containsKey(categoryId)) {
       return;
     }
 
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final categoryController = Provider.of<CategoryController>(
-      context,
-      listen: false,
-    );
-
-    try {
-      final profileImages = await categoryController.getCategoryProfileImages(
-        mates,
-        authController,
-      );
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = profileImages;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = [];
-        });
-      }
+    // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
+    final existingLoader = _profileImageLoaders[categoryId];
+    if (existingLoader != null) {
+      return existingLoader;
     }
+
+    final authController = _authController;
+    final categoryController = _categoryController;
+    if (authController == null || categoryController == null) {
+      return;
+    }
+
+    final loader = categoryController
+        .getCategoryProfileImages(mates, authController)
+        .then((profileImages) {
+          if (!mounted) return;
+          setState(() {
+            _categoryProfileImages[categoryId] = profileImages;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() {
+            _categoryProfileImages[categoryId] = [];
+          });
+        })
+        .whenComplete(() {
+          _profileImageLoaders.remove(categoryId);
+        });
+
+    _profileImageLoaders[categoryId] = loader;
+    return loader;
   }
 
   @override
@@ -151,7 +161,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
                   )
                   .toList();
 
-              // ✅ 카테고리 개수 저장 (다음 로딩 시 사용)
+              // 카테고리 개수 저장 (다음 로딩 시 사용)
               if (sharedCategories.isNotEmpty &&
                   _previousCategoryCount != sharedCategories.length) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {

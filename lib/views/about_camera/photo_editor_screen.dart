@@ -323,11 +323,19 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
-  void _animateSheetTo(double size, {bool lockExtent = false}) {
+  void _animateSheetTo(double size, {bool lockExtent = false, int retryCount = 0}) {
     if (!mounted || _isDisposing) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || _isDisposing || !_draggableScrollController.isAttached) {
+      if (!mounted || _isDisposing) return;
+
+      // Controller가 attach될 때까지 재시도 (최대 50번)
+      if (!_draggableScrollController.isAttached) {
+        if (retryCount < 50) {
+          _animateSheetTo(size, lockExtent: lockExtent, retryCount: retryCount + 1);
+        } else {
+          debugPrint('DraggableScrollableController attach 실패 (최대 재시도 횟수 초과)');
+        }
         return;
       }
 
@@ -339,9 +347,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
       // 애니메이션 완료 후 lockExtent 처리
       if (lockExtent && !_hasLockedSheetExtent && mounted) {
-        _minChildSize = size;
-        _initialChildSize = size;
-        _hasLockedSheetExtent = true;
+        setState(() {
+          _minChildSize = size;
+          _initialChildSize = size;
+          _hasLockedSheetExtent = true;
+        });
       }
     });
   }

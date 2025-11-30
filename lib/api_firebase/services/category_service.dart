@@ -405,31 +405,6 @@ class CategoryService {
     required String userId,
   }) => inviteService.declineInvite(inviteId: inviteId, userId: userId);
 
-  // 사진 관련
-  Future<AuthResult> addPhotoToCategory({
-    required String categoryId,
-    required File imageFile,
-    String? description,
-  }) => photoService.addPhoto(
-    categoryId: categoryId,
-    imageFile: imageFile,
-    description: description,
-  );
-
-  Future<AuthResult> removePhotoFromCategory({
-    required String categoryId,
-    required String photoId,
-    required String imageUrl,
-  }) => photoService.removePhoto(
-    categoryId: categoryId,
-    photoId: photoId,
-    imageUrl: imageUrl,
-  );
-
-  Stream<List<Map<String, dynamic>>> getCategoryPhotosStream(
-    String categoryId,
-  ) => photoService.getPhotosStream(categoryId);
-
   Future<AuthResult> updateCoverPhotoFromGallery({
     required String categoryId,
     required File imageFile,

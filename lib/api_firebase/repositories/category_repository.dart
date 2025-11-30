@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/category_data_model.dart';
@@ -8,7 +8,7 @@ import '../models/category_data_model.dart';
 /// Firebase에서 category 관련 데이터를 가져오고, 저장하고, 업데이트하고 삭제하는 등의 로직들
 class CategoryRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final Map<String, String?> _categoryCoverCache = {};
 
   // ==================== Firestore 관련 ====================
 
@@ -148,7 +148,23 @@ class CategoryRepository {
     String categoryId,
     Map<String, dynamic> data,
   ) async {
-    await _firestore.collection('categories').doc(categoryId).update(data);
+    if (data.isEmpty) return;
+
+    // 값이 null이거나 빈 문자열인 항목은 제외
+    // sanitizedEntries란, null 또는 빈 문자열이 아닌 항목들의 Iterable<MapEntry<String, dynamic>>
+    // 이를 통해 Firestore에 불필요한 빈 값이 저장되는 것을 방지
+    final sanitizedEntries = data.entries.where((entry) {
+      final value = entry.value;
+      if (value is String) {
+        return value.trim().isNotEmpty;
+      }
+      return value != null;
+    });
+
+    if (sanitizedEntries.isEmpty) return;
+
+    final docRef = _firestore.collection('categories').doc(categoryId);
+    await docRef.update(Map<String, dynamic>.fromEntries(sanitizedEntries));
   }
 
   /// 사용자별 커스텀 이름 업데이트
@@ -175,49 +191,68 @@ class CategoryRepository {
 
   /// 카테고리 삭제
   Future<void> deleteCategory(String categoryId) async {
-    // 카테고리와 관련된 모든 사진도 삭제
-    final photosSnapshot = await _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .get();
+    final categoryRef = _firestore.collection('categories').doc(categoryId);
+    const int batchSize = 300; // Firestore batch limit은 500 (docs)
 
-    final batch = _firestore.batch();
+    // 사진들을 배치로 삭제
+    // 배치로 삭제한다는 것은 한 번에 여러 문서를 모아서 삭제하는 것을 의미
+    Future<int> deletePhotosBatch() async {
+      final photosSnapshot = await categoryRef
+          .collection('photos')
+          .limit(batchSize)
+          .get();
 
-    // 사진 문서들 삭제
-    for (final doc in photosSnapshot.docs) {
-      batch.delete(doc.reference);
+      if (photosSnapshot.docs.isEmpty) {
+        return 0;
+      }
+      // Batch 삭제 수행
+      // Firestore의 batch 기능을 사용하여 여러 문서를 한 번에 삭제
+      // 이렇게 하면 네트워크 호출 횟수를 줄이고 성능을 향상시킬 수 있음
+      final batch = _firestore.batch();
+      for (final doc in photosSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      // batch.commit()를 호출하여 실제로 삭제 작업을 수행
+      await batch.commit();
+      return photosSnapshot.docs.length;
     }
 
-    // 카테고리 문서 삭제
-    batch.delete(_firestore.collection('categories').doc(categoryId));
+    int deleted;
+    do {
+      deleted = await deletePhotosBatch();
+    } while (deleted == batchSize);
 
-    await batch.commit();
+    await categoryRef.delete();
   }
 
   /// 특정 카테고리 정보 가져오기 (최적화: 커버 사진 있으면 추가 쿼리 스킵)
   Future<CategoryDataModel?> getCategory(String categoryId) async {
-    final doc = await _firestore.collection('categories').doc(categoryId).get();
+    final docRef = _firestore.collection('categories').doc(categoryId);
+    final doc = await docRef.get();
 
     if (!doc.exists || doc.data() == null) return null;
 
     final data = doc.data()!;
     String? categoryPhotoUrl = data['categoryPhotoUrl'] as String?;
 
-    // 커버 사진이 없는 경우에만 최신 사진 쿼리
-    if (categoryPhotoUrl == null || categoryPhotoUrl.isEmpty) {
-      final photosSnapshot = await _firestore
-          .collection('categories')
-          .doc(categoryId)
-          .collection('photos')
-          .where('unactive', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
+    if (categoryPhotoUrl != null && categoryPhotoUrl.isNotEmpty) {
+      _categoryCoverCache[categoryId] = categoryPhotoUrl;
+    } else {
+      if (_categoryCoverCache.containsKey(categoryId)) {
+        categoryPhotoUrl = _categoryCoverCache[categoryId];
+      } else {
+        final photosSnapshot = await docRef
+            .collection('photos')
+            .where('unactive', isEqualTo: false)
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
 
-      if (photosSnapshot.docs.isNotEmpty) {
-        categoryPhotoUrl =
-            photosSnapshot.docs.first.data()['imageUrl'] as String?;
+        if (photosSnapshot.docs.isNotEmpty) {
+          categoryPhotoUrl =
+              photosSnapshot.docs.first.data()['imageUrl'] as String?;
+        }
+        _categoryCoverCache[categoryId] = categoryPhotoUrl;
       }
     }
 
@@ -225,60 +260,6 @@ class CategoryRepository {
       data,
       doc.id,
     ).copyWith(categoryPhotoUrl: categoryPhotoUrl);
-  }
-
-  /// 카테고리에게 사진 추가
-  Future<String> addPhotoToCategory(
-    String categoryId,
-    Map<String, dynamic> photoData,
-  ) async {
-    final docRef = await _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .add(photoData);
-    return docRef.id;
-  }
-
-  /// 카테고리에서 사진 삭제
-  Future<void> removePhotoFromCategory(
-    String categoryId,
-    String photoId,
-  ) async {
-    await _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .doc(photoId)
-        .delete();
-  }
-
-  // ==================== Storage 관련 ====================
-
-  /// 이미지 업로드
-  Future<String> uploadImage(String categoryId, File imageFile) async {
-    final fileName =
-        'category_${categoryId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final ref = _storage
-        .ref()
-        .child('categories')
-        .child(categoryId)
-        .child(fileName);
-
-    final uploadTask = ref.putFile(imageFile);
-    final snapshot = await uploadTask.whenComplete(() => null);
-
-    return await snapshot.ref.getDownloadURL();
-  }
-
-  /// 이미지 삭제
-  Future<void> deleteImage(String imageUrl) async {
-    try {
-      final ref = _storage.refFromURL(imageUrl);
-      await ref.delete();
-    } catch (e) {
-      throw Exception('이미지 삭제에 실패했습니다.');
-    }
   }
 
   // ==================== 기존 호환성 메서드 ====================
@@ -314,36 +295,6 @@ class CategoryRepository {
     return publicUrl;
   }
 
-  /// 카테고리 사진 스트림 (Map 형태로 반환)
-  Stream<List<Map<String, dynamic>>> getCategoryPhotosStream(
-    String categoryId,
-  ) {
-    return _firestore
-        .collection('categories')
-        .doc(categoryId)
-        .collection('photos')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs.map((doc) {
-            final data = doc.data();
-            data['id'] = doc.id;
-            return data;
-          }).toList(),
-        );
-  }
-
-  /// 카테고리에 사용자 추가 (닉네임으로)
-  Future<void> addUserToCategory({
-    required String categoryId,
-    required String nickName,
-  }) async {
-    await _firestore.collection('categories').doc(categoryId).update({
-      'mates': FieldValue.arrayUnion([nickName]),
-    });
-  }
-
-  /// 카테고리에 사용자 추가 (UID로)
   /// 카테고리에 사용자 추가 (UID로)
   Future<void> addUidToCategory({
     required String categoryId,

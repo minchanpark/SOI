@@ -299,8 +299,8 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     
     private func waitForSessionToStart(completion: @escaping (Result<Void, Error>) -> Void) {
         if captureSession.isRunning {
-            // 세션이 실행 중이어도 비디오/오디오 출력이 완전히 준비될 때까지 충분한 시간 대기
-            sessionQueue.asyncAfter(deadline: .now() + 1.0) {
+            // 세션이 실행 중이면 최소한의 대기로 즉시 프리뷰 표시 (1.0s → 0.1s)
+            sessionQueue.asyncAfter(deadline: .now() + 0.1) {
                 completion(.success(()))
             }
         } else {
@@ -312,8 +312,8 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
             func checkSession() {
                 attempts += 1
                 if self.captureSession.isRunning {
-                    // 세션 시작 후 비디오/오디오 출력이 안정화될 때까지 충분한 시간 대기
-                    self.sessionQueue.asyncAfter(deadline: .now() + 1.0) {
+                    // 최소한의 대기로 즉시 프리뷰 표시 (1.0s → 0.1s)
+                    self.sessionQueue.asyncAfter(deadline: .now() + 0.1) {
                         completion(.success(()))
                     }
                 } else if attempts < maxAttempts {

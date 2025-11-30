@@ -40,6 +40,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
   CategoryController? _categoryController; // CategoryController 참조 저장
   bool _isInitialLoad = true; // 초기 로딩 상태 추적
   int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
+  final Map<String, Future<void>> _profileImageLoaders = {};
 
   @override
   void initState() {
@@ -86,40 +87,47 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     if (mounted) {
       setState(() {
         _categoryProfileImages.clear(); // 모든 프로필 이미지 캐시 무효화
+        _profileImageLoaders.clear();
       });
     }
   }
 
   // 카테고리에 대한 프로필 이미지를 가져오는 함수
   Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    // 이미 로드된 경우에도 AuthController 변경에 의해 캐시가 무효화되면 다시 로드
     if (_categoryProfileImages.containsKey(categoryId)) {
       return;
     }
 
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final categoryController = Provider.of<CategoryController>(
-      context,
-      listen: false,
-    );
-
-    try {
-      final profileImages = await categoryController.getCategoryProfileImages(
-        mates,
-        authController,
-      );
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = profileImages;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = [];
-        });
-      }
+    // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
+    final existingLoader = _profileImageLoaders[categoryId];
+    if (existingLoader != null) {
+      return existingLoader;
     }
+
+    final authController = _authController;
+    final categoryController = _categoryController;
+    if (authController == null || categoryController == null) {
+      return;
+    }
+
+    final loader = categoryController
+        .getCategoryProfileImages(mates, authController)
+        .then((profileImages) {
+      if (!mounted) return;
+      setState(() {
+        _categoryProfileImages[categoryId] = profileImages;
+      });
+    }).catchError((_) {
+      if (!mounted) return;
+      setState(() {
+        _categoryProfileImages[categoryId] = [];
+      });
+    }).whenComplete(() {
+      _profileImageLoaders.remove(categoryId);
+    });
+
+    _profileImageLoaders[categoryId] = loader;
+    return loader;
   }
 
   @override

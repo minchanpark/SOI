@@ -41,6 +41,8 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
   CategoryController? _categoryController; // CategoryController 참조 저장
   bool _isInitialLoad = true;
   int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
+  final Map<String, Future<void>> _profileImageLoaders = {};
+  AuthController? _authController; // AuthController 참조 저장
 
   @override
   void initState() {
@@ -62,29 +64,38 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
       return;
     }
 
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final categoryController = Provider.of<CategoryController>(
-      context,
-      listen: false,
-    );
-
-    try {
-      final profileImages = await categoryController.getCategoryProfileImages(
-        mates,
-        authController,
-      );
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = profileImages;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _categoryProfileImages[categoryId] = [];
-        });
-      }
+    // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
+    final existingLoader = _profileImageLoaders[categoryId];
+    if (existingLoader != null) {
+      return existingLoader;
     }
+
+    final authController = _authController;
+    final categoryController = _categoryController;
+    if (authController == null || categoryController == null) {
+      return;
+    }
+
+    final loader = categoryController
+        .getCategoryProfileImages(mates, authController)
+        .then((profileImages) {
+          if (!mounted) return;
+          setState(() {
+            _categoryProfileImages[categoryId] = profileImages;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() {
+            _categoryProfileImages[categoryId] = [];
+          });
+        })
+        .whenComplete(() {
+          _profileImageLoaders.remove(categoryId);
+        });
+
+    _profileImageLoaders[categoryId] = loader;
+    return loader;
   }
 
   @override

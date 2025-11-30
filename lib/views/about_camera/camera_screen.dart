@@ -50,6 +50,7 @@ class _CameraScreenState extends State<CameraScreen>
   List<Map<String, dynamic>> zoomLevels = [
     {'label': '1x', 'value': 1.0}, // 기본값
   ];
+  bool _zoomLevelsFetchInProgress = false;
 
   // 카메라 초기화 Future 추가
   Future<void>? _cameraInitialization;
@@ -119,61 +120,100 @@ class _CameraScreenState extends State<CameraScreen>
 
   // 비동기 카메라 초기화
   Future<void> _initializeCameraAsync() async {
-    if (!_isInitialized && mounted) {
-      try {
+    if (_isInitialized || !mounted) {
+      return;
+    }
+
+    try {
+      final bool alreadyActive = _cameraService.isSessionActive;
+
+      if (!alreadyActive) {
         // 세션만 우선 활성화하여 화면을 즉시 표시
         await _cameraService.activateSession();
+      }
 
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _isInitialized = true;
-            _supportsLiveSwitch = _cameraService.supportsLiveSwitch;
-          });
-        }
+      if (!mounted) {
+        return;
+      }
 
-        // 갤러리 첫 이미지를 microtask로 가져온다.
-        // 다른 작업과 상관없이 실행되도록 한다.
-        Future.microtask(() => _loadFirstGalleryImage());
+      setState(() {
+        _isLoading = false;
+        _isInitialized = true;
+        _supportsLiveSwitch = _cameraService.supportsLiveSwitch;
+      });
 
-        // 디바이스별 사용 가능한 줌 레벨을 가져온다.
-        Future.microtask(() => _loadAvailableZoomLevels());
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      // 갤러리 및 줌 레벨 로딩을 동시에 비동기 실행하여 O(1) 초기화 유지
+      unawaited(
+        Future.wait([
+          _loadFirstGalleryImage(),
+          _loadAvailableZoomLevels(),
+        ]),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
   // 디바이스별 사용 가능한 줌 레벨 로드
   Future<void> _loadAvailableZoomLevels() async {
-    try {
-      final availableLevels = await _cameraService.getAvailableZoomLevels();
-
-      if (mounted) {
-        setState(() {
-          zoomLevels = availableLevels.map((level) {
-            if (level == 0.5) {
-              return {'label': '.5x', 'value': level};
-            } else if (level == 1.0) {
-              return {'label': '1x', 'value': level};
-            } else if (level == 2.0) {
-              return {'label': '2x', 'value': level};
-            } else if (level == 3.0) {
-              return {'label': '3x', 'value': level};
-            } else {
-              return {'label': '${level.toStringAsFixed(1)}x', 'value': level};
-            }
-          }).toList();
-        });
-      }
-    } catch (_) {
-      // 줌 레벨 로드 실패 시 기본값 유지
+    if (!mounted) {
       return;
     }
+
+    final cachedLevels = _cameraService.availableZoomLevels;
+    if (cachedLevels.isNotEmpty) {
+      _applyZoomLevels(cachedLevels);
+      // 이미 네이티브 값이 준비된 경우 즉시 종료
+      if (cachedLevels.length > 1) {
+        return;
+      }
+    }
+
+    if (_zoomLevelsFetchInProgress) {
+      return;
+    }
+
+    _zoomLevelsFetchInProgress = true;
+
+    // 비동기로 네이티브 줌 레벨을 갱신해 UI 응답성을 유지
+    unawaited(_refreshZoomLevels());
+  }
+
+  Future<void> _refreshZoomLevels() async {
+    try {
+      final availableLevels = await _cameraService.getAvailableZoomLevels();
+      _applyZoomLevels(availableLevels);
+    } catch (_) {
+      // 줌 레벨 로드 실패 시 기본값 유지
+    } finally {
+      _zoomLevelsFetchInProgress = false;
+    }
+  }
+
+  void _applyZoomLevels(List<double> availableLevels) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      zoomLevels = availableLevels.map((level) {
+        if (level == 0.5) {
+          return {'label': '.5x', 'value': level};
+        } else if (level == 1.0) {
+          return {'label': '1x', 'value': level};
+        } else if (level == 2.0) {
+          return {'label': '2x', 'value': level};
+        } else if (level == 3.0) {
+          return {'label': '3x', 'value': level};
+        } else {
+          return {'label': '${level.toStringAsFixed(1)}x', 'value': level};
+        }
+      }).toList();
+    });
   }
 
   // 알림 초기화 - 사용자 ID로 알림 구독 시작
@@ -258,7 +298,6 @@ class _CameraScreenState extends State<CameraScreen>
         });
       }
     } catch (e) {
-      // Gallery image loading failed with error: $e
       if (mounted) {
         setState(() {
           _galleryError = '갤러리 접근 실패';
@@ -340,6 +379,10 @@ class _CameraScreenState extends State<CameraScreen>
 
   // cameraservice에 사진 촬영 요청
   Future<void> _takePicture() async {
+    if (_isNavigatingToEditor) {
+      return;
+    }
+
     try {
       // iOS에서 오디오 세션 충돌 방지를 위한 사전 처리
       if (Theme.of(context).platform == TargetPlatform.iOS) {
@@ -349,15 +392,15 @@ class _CameraScreenState extends State<CameraScreen>
 
       final String result = await _cameraService.takePicture();
 
-      if (result.isEmpty) {
+      if (result.isEmpty || !mounted) {
         return;
       }
       final fileImage = FileImage(File(result));
-      await precacheImage(fileImage, context).catchError((_) {});
 
-      if (!mounted) {
-        return;
-      }
+      // 무거운 이미지 디코딩은 백그라운드에서 수행하여 UI 응답성 확보
+      unawaited(precacheImage(fileImage, context).catchError((_) {}));
+
+      _isNavigatingToEditor = true;
 
       // 즉시 편집 화면으로 이동 (갤러리 새로고침과 독립적)
       Navigator.push(
@@ -366,7 +409,16 @@ class _CameraScreenState extends State<CameraScreen>
           builder: (context) =>
               PhotoEditorScreen(filePath: result, initialImage: fileImage),
         ),
-      );
+      ).whenComplete(() {
+        if (mounted) {
+          setState(() {
+            _isNavigatingToEditor = false;
+          });
+        } else {
+          _isNavigatingToEditor = false;
+        }
+      });
+
       // 사진 촬영 후 갤러리 미리보기 새로고침 (백그라운드에서)
       Future.microtask(() => _loadFirstGalleryImage());
     } on PlatformException catch (e) {
@@ -605,7 +657,7 @@ class _CameraScreenState extends State<CameraScreen>
             CameraPreviewContainer(
               initialization: _cameraInitialization,
               isLoading: _isLoading,
-              cameraView: _cameraService.getCameraView(),
+              cameraView: _cameraService.buildCameraView(),
               showZoomControls: zoomLevels.isNotEmpty && !_isVideoRecording,
               zoomControls: zoomControls,
               isVideoRecording: _isVideoRecording,
@@ -630,7 +682,7 @@ class _CameraScreenState extends State<CameraScreen>
                             return;
                           }
 
-                          final String? mimeType = await pickedMedia.mimeType;
+                          final String? mimeType = pickedMedia.mimeType;
                           final String normalizedPath = pickedMedia.path
                               .toLowerCase();
                           final String normalizedName = pickedMedia.name

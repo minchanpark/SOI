@@ -67,11 +67,6 @@ class CategoryController extends ChangeNotifier {
     return _categoryService.getCategoryStream(categoryId);
   }
 
-  /// 카테고리 사진 스트림
-  Stream<List<Map<String, dynamic>>> getPhotosStream(String categoryId) {
-    return _categoryService.getCategoryPhotosStream(categoryId);
-  }
-
   // ==================== 카테고리 CRUD ====================
 
   /// 카테고리 생성
@@ -90,12 +85,7 @@ class CategoryController extends ChangeNotifier {
         invalidateCache();
         // 백그라운드에서 캐시 갱신 (UI 차단 없음, 스트림이 자동 업데이트)
         if (mates.isNotEmpty) {
-          unawaited(
-            loadUserCategories(
-              mates.first,
-              forceReload: true,
-            ),
-          );
+          unawaited(loadUserCategories(mates.first, forceReload: true));
         }
       } else {
         _error = result.error;
@@ -265,16 +255,6 @@ class CategoryController extends ChangeNotifier {
     } catch (e) {
       return '오류 발생';
     }
-  }
-
-  /// 첫 번째 사진 URL 스트림
-  Stream<String?> getFirstPhotoUrlStream(String categoryId) {
-    return getPhotosStream(categoryId).map((photos) {
-      if (photos.isNotEmpty) {
-        return photos.first['image'] as String?;
-      }
-      return null;
-    });
   }
 
   /// 카테고리 프로필 이미지 조회 (병렬 처리 최적화)

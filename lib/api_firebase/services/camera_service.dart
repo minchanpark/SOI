@@ -36,6 +36,16 @@ class CameraService {
   String? _latestGalleryImagePath;
   bool _isLoadingGalleryImage = false;
 
+  // 갤러리 첫 이미지 캐싱 (O(1) 최적화)
+  AssetEntity? _cachedFirstGalleryImage;
+  DateTime? _firstGalleryImageCacheTime;
+  static const Duration _galleryCacheDuration = Duration(seconds: 5);
+
+  // 권한 상태 캐싱
+  PermissionState? _cachedPermissionState;
+  DateTime? _permissionCacheTime;
+  static const Duration _permissionCacheDuration = Duration(seconds: 10);
+
   // 오디오 녹음 상태 관리
   final bool _isRecording = false;
   String? _currentRecordingPath;
@@ -145,23 +155,58 @@ class CameraService {
     await loadLatestGalleryImage();
   }
 
-  // 개선된 갤러리 첫 번째 이미지 로딩 (권한 처리 포함)
+  // O(1) 최적화된 갤러리 첫 번째 이미지 로딩 (캐싱 적용)
   Future<AssetEntity?> getFirstGalleryImage() async {
     try {
-      // 1. 갤러리 접근 권한 요청
-      final PermissionState ps = await PhotoManager.requestPermissionExtend();
-      if (!ps.hasAccess) {
+      // 캐시 유효성 체크 - O(1) 반환
+      if (_cachedFirstGalleryImage != null &&
+          _firstGalleryImageCacheTime != null &&
+          DateTime.now().difference(_firstGalleryImageCacheTime!) <
+              _galleryCacheDuration) {
+        return _cachedFirstGalleryImage;
+      }
+
+      // 1. 갤러리 접근 권한 체크 (캐싱 적용)
+
+      // 권한상태를 저장하는 변수
+      PermissionState permissionState;
+
+      // 권한 캐시 확인
+      // _cachedPermissionState != null: 이전에 권한 허용이 되어있는 지 확인. 권한 허용 캐시를 체크
+      // _permissionCacheTime != null: 캐시된 시간이 있는지 확인
+      // DateTime.now().difference(...) < _permissionCacheDuration: 캐시된 시간이 유효한지 확인
+      // _cachedPermissionState!.hasAccess: 캐시된 권한 상태가 실제로 접근 권한이 있는지 확인
+      if (_cachedPermissionState != null &&
+          _permissionCacheTime != null &&
+          DateTime.now().difference(_permissionCacheTime!) <
+              _permissionCacheDuration &&
+          _cachedPermissionState!.hasAccess) {
+        // 권한 캐시 히트 - O(1)
+        // 이미 권한이 허용된 상태이므로 바로 사용가능
+        permissionState = _cachedPermissionState!;
+      } else {
+        // 권한 캐시 미스 - 네이티브 호출
+        // 권한 요청 시 네이티브 호출이 발생하므로 캐싱 무효화 가능성 있음
+        permissionState = await PhotoManager.requestPermissionExtend();
+
+        // 권한이 있을 때만 캐싱 (거부 상태는 사용자가 변경할 수 있으므로 캐싱 안 함)
+        // 갤러리 권한을 가지고 있으면, 캐시를 갱신한다.
+        if (permissionState.hasAccess) {
+          _cachedPermissionState = permissionState;
+          _permissionCacheTime = DateTime.now();
+        }
+      }
+
+      if (!permissionState.hasAccess) {
         return null;
       }
 
-      // 2. 갤러리 경로 가져오기
+      // 2. 갤러리 경로 가져오기 (이미지만 조회)
       final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
         onlyAll: true,
-        filterOption: FilterOptionGroup(
-          imageOption: const FilterOption(
-            sizeConstraint: SizeConstraint(ignoreSize: true),
-          ),
-        ),
+
+        // 이미지만 조회하여 필터링 오버헤드 제거
+        type: RequestType.image,
       );
 
       if (paths.isEmpty) {
@@ -178,10 +223,20 @@ class CameraService {
         return null;
       }
 
+      // 결과 캐싱
+      _cachedFirstGalleryImage = assets.first;
+      _firstGalleryImageCacheTime = DateTime.now();
+
       return assets.first;
     } catch (e) {
       return null;
     }
+  }
+
+  // 갤러리 캐시 무효화 (새 사진/비디오 촬영 시 호출)
+  void _invalidateGalleryCache() {
+    _cachedFirstGalleryImage = null;
+    _firstGalleryImageCacheTime = null;
   }
 
   // AssetEntity를 File로 변환
@@ -194,35 +249,6 @@ class CameraService {
     }
   }
 
-  // 갤러리의 첫 번째 사진을 골라서 반환하는 함수 (레거시 - 호환성용)
-  // 이 함수는 갤러리에서 첫 번째 사진의 경로를 가져옵니다.
-  // 만약 갤러리가 비어있다면 null을 반환합니다.
-  @Deprecated('Use loadLatestGalleryImage() instead for better performance')
-  Future<String?> pickFirstImageFromGallery() async {
-    try {
-      final List<AssetPathEntity> paths = await PhotoManager.getAssetPathList(
-        onlyAll: true,
-        filterOption: filter,
-      );
-
-      if (paths.isNotEmpty) {
-        final List<AssetEntity> assets = await paths.first.getAssetListPaged(
-          page: 0,
-          size: 1,
-        );
-
-        if (assets.isNotEmpty) {
-          // 실제 파일 경로 반환
-          final File? file = await assets.first.file;
-          return file?.path;
-        }
-      }
-    } catch (e) {
-      return null;
-    }
-    return null;
-  }
-
   // 갤러리에서 미디어(이미지/비디오)를 선택하는 함수
   Future<XFile?> pickMediaFromGallery() async {
     try {
@@ -233,20 +259,15 @@ class CameraService {
     }
   }
 
-  Widget getCameraView() {
-    return _buildCameraView();
-  }
-
-  Widget _buildCameraView() {
+  Widget buildCameraView() {
     // 플랫폼에 따라 다른 카메라 프리뷰 위젯 생성
     if (Platform.isAndroid) {
       return AndroidView(
         viewType: 'com.soi.camera',
         onPlatformViewCreated: (int id) {
           // 안드로이드 카메라 뷰 생성됨
-
-          // 카메라 뷰 생성 후 충분한 시간을 두고 최적화 실행
-          Future.delayed(Duration(milliseconds: 800), () {
+          // 최소한의 지연으로 즉시 최적화 실행 (800ms → 10ms)
+          Future.delayed(Duration(milliseconds: 10), () {
             optimizeCamera();
           });
         },
@@ -263,6 +284,8 @@ class CameraService {
         viewType: 'com.soi.camera/preview',
         onPlatformViewCreated: (int id) {
           // iOS 카메라 뷰 생성됨
+          // iOS도 동일하게 빠른 최적화 적용 (800ms → 10ms)
+          optimizeCamera();
         },
         creationParams: <String, dynamic>{
           'useSRGBColorSpace': true,
@@ -283,8 +306,6 @@ class CameraService {
   Future<void> activateSession() async {
     await _ensureCapabilitiesLoaded();
     try {
-      // 카메라 세션 활성화 시작
-
       // 안전한 세션 상태 확인
       bool needsReactivation = false;
 
@@ -297,8 +318,6 @@ class CameraService {
       } catch (e) {
         if (e.toString().contains('unimplemented') ||
             e.toString().contains('MissingPluginException')) {
-          // 네이티브 isSessionActive 메서드 미구현 - 기본 로직 사용
-
           needsReactivation = !_isSessionActive;
         } else {
           needsReactivation = true;
@@ -307,8 +326,8 @@ class CameraService {
 
       // 재활성화가 필요한 경우에만 실행
       if (needsReactivation) {
-        // SurfaceProvider 준비를 위한 지연
-        await Future.delayed(Duration(milliseconds: 200));
+        // SurfaceProvider 준비를 위한 최소 지연 (200ms → 10ms)
+        // await Future.delayed(Duration(milliseconds: 10));
 
         await _cameraChannel.invokeMethod('resumeCamera');
         _isSessionActive = true;
@@ -450,11 +469,11 @@ class CameraService {
   // 개선된 카메라 초기화 (타이밍 이슈 해결)
   Future<bool> initCamera() async {
     try {
-      // SurfaceProvider 준비 확인을 위한 재시도 로직
+      // SurfaceProvider 준비 확인을 위한 재시도 로직 (최적화: 500ms → 200ms)
       bool result = false;
       int retryCount = 0;
       const maxRetries = 3;
-      const retryDelay = Duration(milliseconds: 500);
+      const retryDelay = Duration(milliseconds: 200);
 
       while (!result && retryCount < maxRetries) {
         try {
@@ -503,6 +522,8 @@ class CameraService {
       final String result = await _cameraChannel.invokeMethod('takePicture');
 
       if (result.isNotEmpty) {
+        // 캐시 무효화 (새 사진 추가됨)
+        _invalidateGalleryCache();
         // 갤러리 미리보기 새로고침 (비동기)
         Future.microtask(() => refreshGalleryPreview());
 
@@ -565,6 +586,8 @@ class CameraService {
       _isVideoRecording = false;
 
       if (path != null && path.isNotEmpty) {
+        // 캐시 무효화 (새 비디오 추가됨)
+        _invalidateGalleryCache();
         _currentVideoPath = path;
         return path;
       }

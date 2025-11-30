@@ -3,12 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		04079F2D2D938E570076F318 /* SwiftCameraPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04079F2C2D938E570076F318 /* SwiftCameraPlugin.swift */; };
-		041BEDBE2D9451FF0053C294 /* CameraViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 041BEDBD2D9451FF0053C294 /* CameraViewController.swift */; };
 		04677C5D2E127BFA00AA3B7E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 04677C5C2E127BFA00AA3B7E /* GoogleService-Info.plist */; };
 		04A31F3E2DAA0FC20065EC94 /* SwiftAudioConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A31F3D2DAA0FC20065EC94 /* SwiftAudioConverter.swift */; };
 		04A31F3F2DAA0FC30065EC95 /* NativeAudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A31F3E2DAA0FC30065EC95 /* NativeAudioRecorder.swift */; };
@@ -58,7 +57,6 @@
 
 /* Begin PBXFileReference section */
 		04079F2C2D938E570076F318 /* SwiftCameraPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftCameraPlugin.swift; sourceTree = "<group>"; };
-		041BEDBD2D9451FF0053C294 /* CameraViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewController.swift; sourceTree = "<group>"; };
 		045543A22DAF9C0B0034CE48 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		04677C5C2E127BFA00AA3B7E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		04A31F3D2DAA0FC20065EC94 /* SwiftAudioConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftAudioConverter.swift; sourceTree = "<group>"; };
@@ -89,39 +87,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7948B2792E534A92000BF9E0 /* SOI */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = SOI;
-			sourceTree = "<group>";
-		};
-		7948B2892E534A94000BF9E0 /* SOITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = SOITests;
-			sourceTree = "<group>";
-		};
-		7948B2932E534A94000BF9E0 /* SOIUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = SOIUITests;
-			sourceTree = "<group>";
-		};
+		7948B2792E534A92000BF9E0 /* SOI */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SOI; sourceTree = "<group>"; };
+		7948B2892E534A94000BF9E0 /* SOITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SOITests; sourceTree = "<group>"; };
+		7948B2932E534A94000BF9E0 /* SOIUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SOIUITests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,7 +177,6 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				04079F2C2D938E570076F318 /* SwiftCameraPlugin.swift */,
-				041BEDBD2D9451FF0053C294 /* CameraViewController.swift */,
 				04A31F3D2DAA0FC20065EC94 /* SwiftAudioConverter.swift */,
 				04A31F3E2DAA0FC30065EC95 /* NativeAudioRecorder.swift */,
 				04677C5C2E127BFA00AA3B7E /* GoogleService-Info.plist */,
@@ -384,9 +351,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -446,7 +417,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				04079F2D2D938E570076F318 /* SwiftCameraPlugin.swift in Sources */,
-				041BEDBE2D9451FF0053C294 /* CameraViewController.swift in Sources */,
 				04A31F3E2DAA0FC20065EC94 /* SwiftAudioConverter.swift in Sources */,
 				04A31F3F2DAA0FC30065EC95 /* NativeAudioRecorder.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
