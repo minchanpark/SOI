@@ -324,8 +324,6 @@ class AuthController extends ChangeNotifier {
           // Stream 업데이트 - 이미 활성화된 Stream이 있다면 자동으로 Firestore가 업데이트할 것
           // 하지만 즉시 반영을 위해 캐시를 업데이트
         }
-
-        debugPrint('프로필 이미지 파일 업로드 성공');
         return true;
       } else {
         debugPrint('프로필 이미지 파일 업로드 실패: ${result.error}');

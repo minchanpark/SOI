@@ -103,12 +103,11 @@ class AuthRepository {
 
   // 전화번호로 사용자 검색
   Future<DocumentSnapshot?> findUserByPhone(String phone) async {
-    final query =
-        await _firestore
-            .collection('users')
-            .where('phone', isEqualTo: phone)
-            .limit(1)
-            .get();
+    final query = await _firestore
+        .collection('users')
+        .where('phone', isEqualTo: phone)
+        .limit(1)
+        .get();
 
     return query.docs.isNotEmpty ? query.docs.first : null;
   }
@@ -328,11 +327,10 @@ class AuthRepository {
       }
 
       // 3. 사용자가 멤버인 모든 카테고리에서 제거
-      final categoriesSnapshot =
-          await _firestore
-              .collection('categories')
-              .where('mates', arrayContains: uid)
-              .get();
+      final categoriesSnapshot = await _firestore
+          .collection('categories')
+          .where('mates', arrayContains: uid)
+          .get();
 
       for (var categoryDoc in categoriesSnapshot.docs) {
         final categoryData = categoryDoc.data();
@@ -340,8 +338,9 @@ class AuthRepository {
         mates.remove(uid);
 
         if (mates.isEmpty) {
-          final photosSnapshot =
-              await categoryDoc.reference.collection('photos').get();
+          final photosSnapshot = await categoryDoc.reference
+              .collection('photos')
+              .get();
 
           for (final photoDoc in photosSnapshot.docs) {
             await _deletePhotoDocumentWithAssets(photoDoc);
@@ -380,11 +379,10 @@ class AuthRepository {
 
   Future<void> _deleteUserReactions(String uid) async {
     try {
-      final snap =
-          await _firestore
-              .collectionGroup('reactions')
-              .where('uid', isEqualTo: uid)
-              .get();
+      final snap = await _firestore
+          .collectionGroup('reactions')
+          .where('uid', isEqualTo: uid)
+          .get();
       if (snap.docs.isEmpty) return;
 
       // 배치 삭제 (최대 500개씩)
@@ -405,11 +403,10 @@ class AuthRepository {
 
   Future<void> _deleteUserCommentRecords(String uid) async {
     try {
-      final snap =
-          await _firestore
-              .collection('comment_records')
-              .where('recorderUser', isEqualTo: uid)
-              .get();
+      final snap = await _firestore
+          .collection('comment_records')
+          .where('recorderUser', isEqualTo: uid)
+          .get();
       for (final doc in snap.docs) {
         final data = doc.data();
         final audioUrl = data['audioUrl'] as String?;
@@ -423,11 +420,10 @@ class AuthRepository {
 
   Future<void> _deleteUserAudios(String uid) async {
     try {
-      final snap =
-          await _firestore
-              .collection('audios')
-              .where('userId', isEqualTo: uid)
-              .get();
+      final snap = await _firestore
+          .collection('audios')
+          .where('userId', isEqualTo: uid)
+          .get();
       for (final doc in snap.docs) {
         final data = doc.data();
         final url = data['firebaseUrl'] as String?; // supabase URL일 수도 있음
@@ -441,11 +437,10 @@ class AuthRepository {
 
   Future<void> _deleteUserPhotos(String uid) async {
     try {
-      final snap =
-          await _firestore
-              .collectionGroup('photos')
-              .where('userID', isEqualTo: uid)
-              .get();
+      final snap = await _firestore
+          .collectionGroup('photos')
+          .where('userID', isEqualTo: uid)
+          .get();
 
       for (final doc in snap.docs) {
         await _deletePhotoDocumentWithAssets(doc);
@@ -461,11 +456,10 @@ class AuthRepository {
     final audioUrl = data['audioUrl'] as String?;
 
     try {
-      final commentsSnap =
-          await _firestore
-              .collection('comment_records')
-              .where('photoId', isEqualTo: doc.id)
-              .get();
+      final commentsSnap = await _firestore
+          .collection('comment_records')
+          .where('photoId', isEqualTo: doc.id)
+          .get();
       for (final c in commentsSnap.docs) {
         final cAudio = c.data()['audioUrl'] as String?;
         if (cAudio != null && cAudio.isNotEmpty) {
@@ -488,21 +482,19 @@ class AuthRepository {
   Future<void> _deleteUserNotifications(String uid) async {
     try {
       // 수신자 기준 알림 삭제
-      final recv =
-          await _firestore
-              .collection('notifications')
-              .where('recipientUserId', isEqualTo: uid)
-              .get();
+      final recv = await _firestore
+          .collection('notifications')
+          .where('recipientUserId', isEqualTo: uid)
+          .get();
       for (final d in recv.docs) {
         await d.reference.delete();
       }
 
       // 발신자 기준 알림 삭제
-      final sent =
-          await _firestore
-              .collection('notifications')
-              .where('actorUserId', isEqualTo: uid)
-              .get();
+      final sent = await _firestore
+          .collection('notifications')
+          .where('actorUserId', isEqualTo: uid)
+          .get();
       for (final d in sent.docs) {
         await d.reference.delete();
       }
@@ -580,11 +572,10 @@ class AuthRepository {
   // ID 중복 확인
   Future<bool> isIdDuplicate(String id) async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('id', isEqualTo: id)
-              .get();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('id', isEqualTo: id)
+          .get();
       return querySnapshot.docs.isNotEmpty;
     } catch (e) {
       debugPrint('Error checking ID duplicate in Firestore: $e');
@@ -596,11 +587,10 @@ class AuthRepository {
   Future<void> deactivateUserPhotos(String userId) async {
     try {
       // collectionGroup을 사용하여 모든 카테고리의 photos 서브컬렉션에서 해당 사용자의 사진 찾기
-      final photosSnapshot =
-          await _firestore
-              .collectionGroup('photos')
-              .where('userID', isEqualTo: userId)
-              .get();
+      final photosSnapshot = await _firestore
+          .collectionGroup('photos')
+          .where('userID', isEqualTo: userId)
+          .get();
 
       // 배치 업데이트로 성능 최적화
       WriteBatch batch = _firestore.batch();
@@ -622,10 +612,8 @@ class AuthRepository {
       if (operationCount > 0) {
         await batch.commit();
       }
-
-      debugPrint('✅ 사용자 $userId의 ${photosSnapshot.docs.length}개 사진을 비활성화했습니다.');
     } catch (e) {
-      debugPrint('❌ 사용자 사진 비활성화 실패: $e');
+      debugPrint('사용자 사진 비활성화 실패: $e');
       rethrow;
     }
   }
@@ -633,11 +621,10 @@ class AuthRepository {
   // 사용자가 올린 모든 사진의 unactive 필드를 false로 설정 (활성화)
   Future<void> activateUserPhotos(String userId) async {
     try {
-      final photosSnapshot =
-          await _firestore
-              .collectionGroup('photos')
-              .where('userID', isEqualTo: userId)
-              .get();
+      final photosSnapshot = await _firestore
+          .collectionGroup('photos')
+          .where('userID', isEqualTo: userId)
+          .get();
 
       WriteBatch batch = _firestore.batch();
       int operationCount = 0;
@@ -656,10 +643,8 @@ class AuthRepository {
       if (operationCount > 0) {
         await batch.commit();
       }
-
-      debugPrint('✅ 사용자 $userId의 ${photosSnapshot.docs.length}개 사진을 활성화했습니다.');
     } catch (e) {
-      debugPrint('❌ 사용자 사진 활성화 실패: $e');
+      debugPrint('사용자 사진 활성화 실패: $e');
       rethrow;
     }
   }
@@ -674,10 +659,8 @@ class AuthRepository {
         'isDeactivated': isDeactivated,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-
-      debugPrint('✅ 사용자 $userId 비활성화 상태를 $isDeactivated로 업데이트했습니다.');
     } catch (e) {
-      debugPrint('❌ 사용자 비활성화 상태 업데이트 실패: $e');
+      debugPrint('사용자 비활성화 상태 업데이트 실패: $e');
       rethrow;
     }
   }

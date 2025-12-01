@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/friend_controller.dart';
 import '../../api_firebase/models/friend_model.dart';
 
+/// 친구 목록 화면
+/// 친구 검색 및 친구 선택 기능 포함
 class FriendListScreen extends StatefulWidget {
   final String? categoryId;
 
@@ -94,7 +96,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
             children: [
               // 검색 바
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
+                padding: EdgeInsets.only(left: 20.w, right: 20.w),
                 child: Container(
                   width: double.infinity,
                   height: 47,
@@ -102,12 +104,15 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     color: const Color(0xff1c1c1c),
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  padding: EdgeInsets.only(top: 1.h),
                   child: TextField(
                     controller: _searchController,
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
+
                       fontSize: 16.sp,
                     ),
+                    cursorColor: Colors.white,
                     decoration: InputDecoration(
                       hintText: '친구 검색하기',
                       hintStyle: TextStyle(
@@ -364,88 +369,92 @@ class _FriendListScreenState extends State<FriendListScreen> {
         ),
       ),
       child: Container(
-        width: 173.w,
-        height: 88.h,
-
+        width: 173.sp,
+        height: 88.sp,
         decoration: BoxDecoration(
-          color: Color(0xff363636),
+          color: Color(0xff323232),
           borderRadius: BorderRadius.circular(9.14),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            InkWell(
-              onTap: () {
-                debugPrint("친구 삭제");
-                _showDeleteFriendModal(
-                  profileImageUrl,
-                  friendName,
-                  friendUserId,
-                );
-                final controller = _menuControllers[friendUserId];
-                if (controller != null && controller.isOpen) {
-                  controller.close();
-                }
-              },
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-
-                children: [
-                  SizedBox(width: 13.96.w),
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 1.h),
-                    child: Image.asset(
-                      'assets/trash_bin.png',
-                      width: (11.16).sp,
-                      height: (12.56).sp,
+            Padding(
+              padding: EdgeInsets.only(bottom: 4.h),
+              child: InkWell(
+                onTap: () {
+                  debugPrint("친구 삭제");
+                  _showDeleteFriendModal(
+                    profileImageUrl,
+                    friendName,
+                    friendUserId,
+                  );
+                  final controller = _menuControllers[friendUserId];
+                  if (controller != null && controller.isOpen) {
+                    controller.close();
+                  }
+                },
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(width: 13.96.w),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 1.h),
+                      child: Image.asset(
+                        'assets/trash_bin.png',
+                        width: (11.16).sp,
+                        height: (12.56).sp,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    '친구 삭제',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15.3517.sp,
-                      fontFamily: "Pretendard",
+                    SizedBox(width: 8.w),
+                    Text(
+                      '친구 삭제',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15.3517.sp,
+                        fontFamily: "Pretendard",
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Divider(color: Color(0xff5a5a5a), thickness: 1.sp),
-            InkWell(
-              onTap: () {
-                _showBlockFriendModal(
-                  profileImageUrl,
-                  friendName,
-                  friendUserId,
-                );
+            Padding(
+              padding: EdgeInsets.only(top: 4.h),
+              child: InkWell(
+                onTap: () {
+                  _showBlockFriendModal(
+                    profileImageUrl,
+                    friendName,
+                    friendUserId,
+                  );
 
-                debugPrint("차단");
-                final controller = _menuControllers[friendUserId];
-                if (controller != null && controller.isOpen) {
-                  controller.close();
-                }
-              },
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(width: 13.96.w),
-                  Image.asset(
-                    'assets/block.png',
-                    width: 11.16.sp,
-                    height: 12.56.sp,
-                  ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    '차단',
-                    style: TextStyle(
-                      color: Color(0xfff40202),
-                      fontSize: 15.3517.sp,
-                      fontFamily: "Pretendard",
+                  debugPrint("차단");
+                  final controller = _menuControllers[friendUserId];
+                  if (controller != null && controller.isOpen) {
+                    controller.close();
+                  }
+                },
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(width: 11.57.w),
+                    Image.asset(
+                      'assets/block.png',
+                      width: 16.sp,
+                      height: 16.sp,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 6.w),
+                    Text(
+                      '차단',
+                      style: TextStyle(
+                        color: Color(0xfff40202),
+                        fontSize: 15.3517.sp,
+                        fontFamily: "Pretendard",
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

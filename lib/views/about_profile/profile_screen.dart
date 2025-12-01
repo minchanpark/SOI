@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api_firebase/controllers/friend_controller.dart';
 import '../../api_firebase/models/auth_model.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -169,6 +170,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _performLogout() async {
     try {
       final authController = context.read<AuthController>();
+      final friendController = context.read<FriendController>();
+
+      // FriendController 상태 초기화 (새 사용자 로그인 시 새로운 데이터 로드를 위해)
+      await friendController.reset();
+
       await authController.signOut();
 
       if (mounted) {

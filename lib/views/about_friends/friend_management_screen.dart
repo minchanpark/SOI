@@ -31,7 +31,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
     with AutomaticKeepAliveClientMixin {
   List<Contact> _contacts = [];
 
-  // ✅ 백그라운드 로딩을 위한 상태 변수들 추가
+  // 백그라운드 로딩을 위한 상태 변수들 추가
   bool _isInitializing = false;
   bool _hasInitialized = false;
 
@@ -45,7 +45,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
   @override
   void initState() {
     super.initState();
-    // ✅ 화면을 즉시 표시하고 백그라운드에서 초기화 시작
+    // 화면을 즉시 표시하고 백그라운드에서 초기화 시작
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeControllers();
       // 페이지 진입 시 동기화 재개
@@ -127,9 +127,8 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
       if (friendController.isInitialized) return;
 
       await friendController.initialize();
-      // debugPrint('FriendController 초기화 완료');
     } catch (e) {
-      // debugPrint('FriendController 초기화 실패: $e');
+      debugPrint('FriendController 초기화 실패: $e');
     }
   }
 
@@ -153,38 +152,37 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
     }
   }
 
-  /// ✅ 백그라운드에서 연락처 권한 및 초기화 처리 (화면 전환 지연 방지)
+  /// 백그라운드에서 연락처 권한 및 초기화 처리 (화면 전환 지연 방지)
+  /// 최적화: 캐시 기반 조기 반환으로 반복 호출 시 O(1) 속도 달성
   Future<void> _initializeContactPermissionInBackground() async {
+    // 1. 조기 반환: 이미 초기화됨 - O(1)
     if (_hasInitialized) return;
 
-    setState(() {
-      _isInitializing = true;
-    });
+    // 2. null 체크 먼저 수행 - O(1)
+    final controller = _contactController;
+    if (!mounted || controller == null) return;
+
+    // 3. 캐시된 권한 상태 확인 - O(1)
+    // 이미 동기화가 활성화되어 있고 연락처가 로드되어 있으면 스킵
+    if (controller.contactSyncEnabled && _contacts.isNotEmpty) {
+      _hasInitialized = true;
+      return;
+    }
+
+    // 4. UI 상태 업데이트 (한 번만)
+    setState(() => _isInitializing = true);
 
     try {
-      if (!mounted || _contactController == null) return;
+      // 5. 권한 확인 (비동기 I/O - 불가피)
+      final result = await controller.initializeContactPermission();
 
-      // ✅ 1단계: 권한 확인 (빠른 처리)
-      final result = await _contactController!.initializeContactPermission();
-
-      // ✅ 2단계: 권한이 허용된 경우에만 연락처 로드 (느린 처리)
-      if (result.isEnabled &&
-          mounted &&
-          _contactController!.isActivelySyncing) {
-        try {
-          _contacts = await _contactController!.getContacts(
-            forceRefresh: false,
-          );
-
-          if (mounted) {
-            setState(() {});
-          }
-        } catch (e) {
-          // debugPrint('연락처 로드 실패: $e');
-        }
+      // 6. 마운트 체크 후 연락처 로드
+      if (result.isEnabled && mounted && controller.isActivelySyncing) {
+        // 캐시 우선 사용 (forceRefresh: false)
+        _contacts = await controller.getContacts(forceRefresh: false);
       }
 
-      // ✅ 3단계: 초기화 완료 및 메시지 표시
+      // 7. 최종 상태 업데이트 (한 번에 처리)
       if (mounted) {
         setState(() {
           _isInitializing = false;

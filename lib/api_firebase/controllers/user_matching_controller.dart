@@ -192,12 +192,11 @@ class UserMatchingController extends ChangeNotifier {
   /// Returns: UserSearchModel 또는 null
   Future<List<UserSearchModel>?> searchUserById(String userId) async {
     try {
-      // debugPrint('ID로 사용자 검색 시작: $userId');
       final result = await _userMatchingService.searchUserById(userId);
-      // debugPrint('ID 검색 결과: ${result}');
+
       return result;
     } catch (e) {
-      // debugPrint('ID로 사용자 검색 실패: $e');
+      debugPrint('ID로 사용자 검색 실패: $e');
       _setError('사용자 검색 실패: $e');
       return null;
     }
@@ -334,7 +333,7 @@ class UserMatchingController extends ChangeNotifier {
     try {
       return await _userMatchingService.findUserForContact(contact);
     } catch (e) {
-      // debugPrint('연락처 사용자 찾기 실패: $e');
+      debugPrint('연락처 사용자 찾기 실패: $e');
       return null;
     }
   }

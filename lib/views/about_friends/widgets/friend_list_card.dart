@@ -3,10 +3,27 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../../api_firebase/controllers/friend_controller.dart';
 
-class FriendListCard extends StatelessWidget {
+class FriendListCard extends StatefulWidget {
   final double scale;
 
   const FriendListCard({super.key, required this.scale});
+
+  @override
+  State<FriendListCard> createState() => _FriendListCardState();
+}
+
+class _FriendListCardState extends State<FriendListCard> {
+  @override
+  void initState() {
+    super.initState();
+    // FriendController 초기화 확인
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final friendController = context.read<FriendController>();
+      if (!friendController.isInitialized) {
+        friendController.initialize();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,30 +133,33 @@ class FriendListCard extends StatelessWidget {
                       ),
 
                       // 더보기 링크 (친구가 10명 이상일 때)
-                      GestureDetector(
-                        onTap: () {
-                          // 친구 목록 전체 화면으로 이동
-                          Navigator.pushNamed(context, '/friend_list');
-                        },
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add, size: (18).sp),
-                                SizedBox(width: (8).w),
-                                Text(
-                                  '더보기',
-                                  style: TextStyle(
-                                    color: const Color(0xffd9d9d9),
-                                    fontSize: (16).sp,
-                                    decoration: TextDecoration.underline,
+                      //if (friends.length >= 10)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            // 친구 목록 전체 화면으로 이동
+                            Navigator.pushNamed(context, '/friend_list');
+                          },
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add, size: (18).sp),
+                                  SizedBox(width: (8).w),
+                                  Text(
+                                    '더보기',
+                                    style: TextStyle(
+                                      color: const Color(0xffd9d9d9),
+                                      fontSize: (16).sp,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: (12).h),
-                          ],
+                                ],
+                              ),
+                              SizedBox(height: (12).h),
+                            ],
+                          ),
                         ),
                       ),
                     ],

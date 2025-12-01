@@ -46,6 +46,7 @@ dependencies:
   firebase_auth: ^6.0.1
   connectivity_plus: ^6.0.5
   permission_handler: ^12.0.0+1
+  rxdart: ^0.28.0
   fluentui_system_icons: ^1.1.273
   flutter_screenutil: ^5.9.0
   cached_network_image: ^3.4.1

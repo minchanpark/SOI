@@ -10,7 +10,7 @@ import '../../api_firebase/models/user_search_model.dart';
 import '../../api_firebase/controllers/user_matching_controller.dart';
 import '../../api_firebase/controllers/friend_request_controller.dart';
 
-/// ID로 친구를 검색/추가하는 전체 화면 플로우
+/// ID로 친구 추가 화면
 /// 기존 다이얼로그(AddByIdDialog)를 대체하며
 /// UserMatchingController / FriendRequestController 의 기존 비즈니스 로직을 재사용한다.
 class AddFriendByIdScreen extends StatefulWidget {
@@ -28,6 +28,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
   bool _isSearching = false;
   List<UserSearchModel> _results = [];
   Map<String, String> _friendshipStatus = {};
+  final Map<String, _CachedSearchResult> _searchCache = {};
   final Set<String> _sending = {}; // 요청 버튼 로딩 대상
 
   @override
@@ -51,7 +52,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     if (query.isEmpty) {
       setState(() {
         _results = [];
-        _friendshipStatus.clear();
+        _friendshipStatus = {};
         _isSearching = false;
       });
       return;
@@ -62,6 +63,16 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
   }
 
   Future<void> _performSearch(String query) async {
+    final cached = _searchCache[query];
+    if (cached != null) {
+      setState(() {
+        _results = cached.results;
+        _friendshipStatus = cached.status;
+        _isSearching = false;
+      });
+      return;
+    }
+
     final userMatchingController = Provider.of<UserMatchingController>(
       context,
       listen: false,
@@ -83,12 +94,17 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
             .getBatchFriendshipStatus(list.map((e) => e.uid).toList());
         _friendshipStatus = statusMap;
       } else {
-        _friendshipStatus.clear();
+        _friendshipStatus = {};
       }
+
+      _searchCache[query] = _CachedSearchResult(
+        _results,
+        _friendshipStatus,
+      );
     } catch (e) {
       // 실패 시 결과 비우기 (UI는 '없는 아이디' 메시지 그대로 활용)
       _results = [];
-      _friendshipStatus.clear();
+      _friendshipStatus = {};
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
@@ -175,24 +191,21 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
       child: Container(
-        height: 44.h,
+        height: 44,
         decoration: BoxDecoration(
           color: const Color(0xff1c1c1c),
           borderRadius: BorderRadius.circular(8 * scale),
         ),
         child: Row(
           children: [
-            SizedBox(width: 12.w),
-            Icon(Icons.search, color: const Color(0xffd9d9d9), size: 20.sp),
-            SizedBox(width: 8.w),
+            SizedBox(width: 12),
+            Icon(Icons.search, color: const Color(0xffd9d9d9), size: 20),
+            SizedBox(width: 8),
             Expanded(
               child: TextField(
                 controller: _textController,
                 focusNode: _focusNode,
-                style: TextStyle(
-                  color: const Color(0xfff9f9f9),
-                  fontSize: 15.sp,
-                ),
+                style: TextStyle(color: const Color(0xfff9f9f9), fontSize: 15),
                 cursorColor: const Color(0xfff9f9f9),
                 decoration: InputDecoration(
                   hintText: '친구 아이디 찾기',
@@ -204,7 +217,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                   ),
                   border: InputBorder.none,
                   isDense: true,
-                  contentPadding: EdgeInsets.only(bottom: 2.h),
+                  contentPadding: EdgeInsets.only(bottom: 2),
                 ),
                 textInputAction: TextInputAction.search,
                 onSubmitted: (v) => _performSearch(v.trim()),
@@ -222,7 +235,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                   _textController.clear();
                   setState(() {
                     _results = [];
-                    _friendshipStatus.clear();
+                    _friendshipStatus = {};
                   });
                 },
               ),
@@ -441,4 +454,12 @@ class _UserResultTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 메모이제이션된 검색 결과 구조체
+class _CachedSearchResult {
+  _CachedSearchResult(this.results, this.status);
+
+  final List<UserSearchModel> results;
+  final Map<String, String> status;
 }

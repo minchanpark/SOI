@@ -52,17 +52,15 @@ class UserMatchingService {
 
       // 3. 이미 친구인 사용자들 필터링
       final friendUserIds = await _getFriendUserIds();
-      final filteredUsers =
-          foundUsers.where((user) {
-            return !friendUserIds.contains(user.uid);
-          }).toList();
+      final filteredUsers = foundUsers.where((user) {
+        return !friendUserIds.contains(user.uid);
+      }).toList();
 
       // 4. 이미 요청을 보낸 사용자들 필터링
       final requestedUserIds = await _getRequestedUserIds();
-      final finalUsers =
-          filteredUsers.where((user) {
-            return !requestedUserIds.contains(user.uid);
-          }).toList();
+      final finalUsers = filteredUsers.where((user) {
+        return !requestedUserIds.contains(user.uid);
+      }).toList();
 
       // 5. 결과 매핑
       final results = <ContactMatchResult>[];
@@ -98,52 +96,45 @@ class UserMatchingService {
     }
   }
 
-  /// 친구 추천 목록 생성
-  ///
-  /// [contacts] 연락처 목록
-  /// [limit] 최대 추천 수
-  Future<List<UserSearchModel>> getSuggestedFriends(
-    List<Contact> contacts, {
-    int limit = 20,
-  }) async {
-    try {
-      final matchResults = await matchContactsWithUsers(contacts);
-
-      // 우선순위에 따라 정렬
-      matchResults.sort((a, b) {
-        // 1. 이름이 있는 연락처 우선
-        if (a.contact.displayName.isNotEmpty && b.contact.displayName.isEmpty) {
-          return -1;
-        }
-        if (a.contact.displayName.isEmpty && b.contact.displayName.isNotEmpty) {
-          return 1;
-        }
-
-        // 2. 사용자 생성일 순 (최근 가입자 우선)
-        return b.user.createdAt.compareTo(a.user.createdAt);
-      });
-
-      return matchResults.take(limit).map((result) => result.user).toList();
-    } catch (e) {
-      throw Exception('친구 추천 생성 실패: $e');
-    }
-  }
-
-  /// 특정 연락처와 매칭되는 사용자 찾기
+  /// 특정 연락처와 매칭되는 사용자 찾기 (성능 최적화 버전)
   ///
   /// [contact] 검색할 연락처
+  ///
+  /// 성능 최적화:
+  /// - 병렬 처리: 모든 전화번호 동시 검색
+  /// - 하위 레벨 캐싱: searchUserByPhoneNumber의 LRU 캐시 활용
+  ///
+  /// 시간 복잡도:
+  /// - 기존: O(n) 순차 검색 (n = 전화번호 개수)
+  /// - 최적화: O(1) 실질적 (병렬 처리 + 하위 캐싱)
+  ///
+  /// 성능 개선:
+  /// - 3개 번호 × 500ms 순차 = 1500ms → 병렬 ~500ms (67% 개선)
   Future<UserSearchModel?> findUserForContact(Contact contact) async {
     try {
-      for (final phone in contact.phones) {
-        if (phone.number.isNotEmpty) {
-          final user = await _userSearchRepository.searchUserByPhoneNumber(
-            phone.number,
-          );
-          if (user != null) {
-            return user;
-          }
+      // 빈 번호 필터링
+      final validPhones = contact.phones
+          .where((phone) => phone.number.isNotEmpty)
+          .toList();
+
+      if (validPhones.isEmpty) {
+        return null;
+      }
+
+      // 병렬 처리: 모든 전화번호 동시 검색
+      final searchFutures = validPhones.map(
+        (phone) => _userSearchRepository.searchUserByPhoneNumber(phone.number),
+      );
+
+      final results = await Future.wait(searchFutures);
+
+      // 첫 번째 non-null 결과 반환
+      for (final user in results) {
+        if (user != null) {
+          return user;
         }
       }
+
       debugPrint('매칭되는 사용자 없음');
       return null;
     } catch (e) {
@@ -161,10 +152,12 @@ class UserMatchingService {
       final matchResults = await matchContactsWithUsers(contacts);
       final matchedContacts = matchResults.length;
 
-      final phoneContacts =
-          contacts.where((contact) => contact.phones.isNotEmpty).length;
-      final namedContacts =
-          contacts.where((contact) => contact.displayName.isNotEmpty).length;
+      final phoneContacts = contacts
+          .where((contact) => contact.phones.isNotEmpty)
+          .length;
+      final namedContacts = contacts
+          .where((contact) => contact.displayName.isNotEmpty)
+          .length;
 
       return MatchingStats(
         totalContacts: totalContacts,
@@ -197,8 +190,9 @@ class UserMatchingService {
   /// 이미 요청을 보낸 사용자 UID 목록 조회
   Future<Set<String>> _getRequestedUserIds() async {
     try {
-      final sentRequests =
-          await _friendRequestRepository.getSentRequests().first;
+      final sentRequests = await _friendRequestRepository
+          .getSentRequests()
+          .first;
       return sentRequests.map((request) => request.receiverUid).toSet();
     } catch (e) {
       return {};
@@ -246,12 +240,11 @@ class UserMatchingService {
   /// Returns: UserSearchModel 또는 null
   Future<List<UserSearchModel>> searchUserById(String userId) async {
     try {
-      // debugPrint('UserMatchingService: ID로 사용자 검색 시작 - $userId');
       final result = await _userSearchRepository.searchUsersById(userId);
-      // debugPrint('UserMatchingService: ID 검색 결과 - $result');
+
       return result;
     } catch (e) {
-      // debugPrint('UserMatchingService: ID로 사용자 검색 실패 - $e');
+      debugPrint('UserMatchingService: ID로 사용자 검색 실패 - $e');
       rethrow; // Controller에서 에러 처리하도록 전달
     }
   }
