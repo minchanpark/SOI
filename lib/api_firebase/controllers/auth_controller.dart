@@ -154,10 +154,12 @@ class AuthController extends ChangeNotifier {
   Future<void> verifyPhoneNumber(
     String phoneNumber,
     Function(String, int?) onCodeSent,
-    Function(String) codeAutoRetrievalTimeout,
-  ) async {
+    Function(String) codeAutoRetrievalTimeout, {
+    VoidCallback? onVerificationCompleted,
+    void Function(String code, String message)? onVerificationFailed,
+  }) async {
     try {
-      await _authService.verifyPhoneNumber(
+      final result = await _authService.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         onCodeSent: (String verificationId, int? token) {
           _verificationId = verificationId;
@@ -165,7 +167,13 @@ class AuthController extends ChangeNotifier {
           onCodeSent(verificationId, token);
         },
         onTimeout: codeAutoRetrievalTimeout,
+        onVerificationCompleted: onVerificationCompleted,
+        onVerificationFailed: onVerificationFailed,
       );
+
+      if (!result.isSuccess) {
+        throw Exception(result.error ?? '전화번호 인증에 실패했습니다.');
+      }
     } catch (e) {
       rethrow;
     }

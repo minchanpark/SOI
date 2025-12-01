@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:solar_icons/solar_icons.dart';
 import 'package:provider/provider.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
+import 'package:soi/api/controller/api_auth_controller.dart' as api;
+import 'package:solar_icons/solar_icons.dart';
 import '../../theme/theme.dart';
+import 'widgets/common/continue_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,72 +17,69 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final PageController _pageController = PageController();
-  late AuthController _authController;
+
+  // REST API 서비스
+  late final api.ApiAuthController _apiAuthController;
+
+  // 전화번호 입력 컨트롤러
+  final TextEditingController _phoneController = TextEditingController();
+
+  // 인증번호 입력 컨트롤러
+  final TextEditingController _codeController = TextEditingController();
+
+  // 전화번호 입력 상태
+  final ValueNotifier<bool> _hasPhone = ValueNotifier<bool>(false);
+
+  // 인증번호 입력 상태
+  final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
 
   String phoneNumber = '';
-  String smsCode = '';
 
   // 현재 페이지 인덱스
   int currentPage = 0;
 
-  // 사용자가 존재하는지 여부 및 상태 관리
-  bool userExists = false;
-  bool isVerified = false;
-  bool isCheckingUser = false;
-
-  // 인증번호 입력 상태를 관리하는 ValueNotifier
-  final ValueNotifier<bool> hasCode = ValueNotifier<bool>(false);
-
-  // 인증번호 입력 컨트롤러
-  final TextEditingController controller = TextEditingController();
-
-  // 자동 인증을 위한 Timer
-  Timer? _autoVerifyTimer;
+  // 로딩 상태
+  bool _isSendingCode = false;
+  bool _isVerifying = false;
 
   @override
   void initState() {
     super.initState();
-    // Provider에서 AuthController를 가져오기
+    // Provider에서 AuthService 가져오기
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _authController = Provider.of<AuthController>(context, listen: false);
-      });
+      _apiAuthController = Provider.of<api.ApiAuthController>(
+        context,
+        listen: false,
+      );
     });
-    // debugPrint('AuthController 초기화 완료');
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    hasCode.dispose();
-    controller.dispose();
-    _autoVerifyTimer?.cancel(); // Timer 정리
+    _phoneController.dispose();
+    _codeController.dispose();
+    _hasPhone.dispose();
+    _hasCode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Provider에서 AuthViewModel을 가져옴
-    if (!mounted) return Container(); // 안전 검사
+    if (!mounted) return Container();
 
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      resizeToAvoidBottomInset: false, // 키보드가 올라와도 화면 크기 변경 안함
-
+      resizeToAvoidBottomInset: false,
       body: PageView(
         controller: _pageController,
-        physics: NeverScrollableScrollPhysics(), // 스와이프로 페이지 전환 비활성화
+        physics: NeverScrollableScrollPhysics(),
         onPageChanged: (index) {
           setState(() {
             currentPage = index;
           });
         },
-        children: [
-          // 1. 전화번호 입력 페이지
-          _buildPhoneNumberPage(),
-          // 2. 인증번호 입력 페이지
-          _buildSmsCodePage(),
-        ],
+        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
       ),
     );
   }
@@ -90,26 +88,21 @@ class _LoginScreenState extends State<LoginScreen> {
   // 1. 전화번호 입력 페이지
   // -------------------------
   Widget _buildPhoneNumberPage() {
-    final controller = TextEditingController();
-    // 전화번호 입력 여부를 확인하는 상태 변수
-    final ValueNotifier<bool> hasPhone = ValueNotifier<bool>(false);
-
-    // 키보드 높이는 버튼 위치에만 사용
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Stack(
       children: [
+        // 뒤로가기 버튼
         Positioned(
           top: 60.h,
           left: 20.w,
           child: IconButton(
-            onPressed: () {
-              Navigator.of(context).maybePop();
-            },
+            onPressed: () => Navigator.of(context).maybePop(),
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
-        // 입력 필드들을 화면 중앙에 고정
+
+        // 입력 필드
         Positioned(
           top: 0.35.sh,
           left: 0,
@@ -136,8 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 alignment: Alignment.center,
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     SizedBox(width: 17.w),
                     Icon(
@@ -148,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(width: 10.w),
                     Expanded(
                       child: TextField(
-                        controller: controller,
+                        controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         textAlign: TextAlign.start,
                         cursorHeight: 16.h,
@@ -175,8 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         onChanged: (value) {
-                          // 전화번호 입력 여부에 따라 버튼 표시 상태 변경
-                          hasPhone.value = value.isNotEmpty;
+                          _hasPhone.value = value.isNotEmpty;
                         },
                       ),
                     ),
@@ -187,53 +177,18 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
 
-        // 버튼을 하단에 위치 (키보드 높이에 따라 조정)
+        // 계속하기 버튼
         Positioned(
           bottom: keyboardHeight > 0 ? keyboardHeight + 20.h : 50.h,
           left: 0,
           right: 0,
           child: ValueListenableBuilder<bool>(
-            valueListenable: hasPhone,
+            valueListenable: _hasPhone,
             builder: (context, hasPhoneValue, child) {
-              return Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xffffffff),
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26.9),
-                    ),
-                  ),
-                  onPressed: () {
-                    // 전화번호 저장
-                    phoneNumber = controller.text;
-                    // 인증번호 받기 로직 실행
-                    _authController.verifyPhoneNumber(
-                      phoneNumber,
-                      (verificationId, resendToken) {
-                        // 성공적으로 인증번호 전송되면 다음 페이지로
-                        _goToNextPage();
-                      },
-                      (verificationId) {
-                        // 타임아웃 등 처리
-                      },
-                    );
-                  },
-                  child: Container(
-                    width: 349.w,
-                    height: 59.h,
-                    alignment: Alignment.center,
-                    child: Text(
-                      '계속하기',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 20.sp,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
+              return ContinueButton(
+                isEnabled: hasPhoneValue && !_isSendingCode,
+                text: _isSendingCode ? '전송 중...' : '계속하기',
+                onPressed: () => _sendSmsCode(),
               );
             },
           ),
@@ -246,11 +201,11 @@ class _LoginScreenState extends State<LoginScreen> {
   // 2. 인증번호 입력 페이지
   // -------------------------
   Widget _buildSmsCodePage() {
-    final ValueNotifier<bool> hasCode = ValueNotifier<bool>(false);
-    final controller = TextEditingController();
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Stack(
       children: [
+        // 뒤로가기 버튼
         Positioned(
           top: 60.h,
           left: 20.w,
@@ -264,8 +219,12 @@ class _LoginScreenState extends State<LoginScreen> {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
-        Align(
-          alignment: Alignment.center,
+
+        // 입력 필드
+        Positioned(
+          top: 0.35.sh,
+          left: 0,
+          right: 0,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -290,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 padding: EdgeInsets.only(bottom: 7.h),
                 child: TextField(
-                  controller: controller,
+                  controller: _codeController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   textAlignVertical: TextAlignVertical.center,
@@ -313,43 +272,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onChanged: (value) {
-                    // 인증번호 입력 여부에 따라 상태 변경
-                    hasCode.value = value.isNotEmpty;
-
-                    // 인증 완료 후, 사용자가 인증번호를 변경하면 상태 초기화
-                    if (isVerified) {
-                      setState(() {
-                        isVerified = false;
-                      });
-                    }
-
-                    // 기존 타이머 취소
-                    _autoVerifyTimer?.cancel();
-
-                    // 인증번호가 입력되면 2초 후 자동 인증 시작
-                    if (value.isNotEmpty && value.length >= 6) {
-                      _autoVerifyTimer = Timer(Duration(seconds: 2), () {
-                        _performAutoVerification(value);
-                      });
-                    }
+                    // 6자리 이상 입력 시 버튼 활성화
+                    _hasCode.value = value.length >= 6;
                   },
                 ),
               ),
 
-              // Updated the TextButton to use a custom underline implementation
+              // 인증번호 다시 받기
               TextButton(
-                onPressed: () {
-                  // 인증번호 재전송 로직
-                  _authController.verifyPhoneNumber(phoneNumber, (
-                    verificationId,
-                    resendToken,
-                  ) {
-                    // 재전송 성공 시 처리
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('인증번호가 재전송되었습니다.')));
-                  }, (verificationId) {});
-                },
+                onPressed: () => _resendSmsCode(),
                 child: RichText(
                   text: TextSpan(
                     text: '인증번호 다시 받기',
@@ -358,7 +289,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontSize: 12,
                       fontFamily: 'Pretendard Variable',
                       fontWeight: FontWeight.w500,
-
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -367,76 +297,186 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
+
+        // 계속하기 버튼
+        Positioned(
+          bottom: keyboardHeight > 0 ? keyboardHeight + 20.h : 50.h,
+          left: 0,
+          right: 0,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _hasCode,
+            builder: (context, hasCodeValue, child) {
+              return ContinueButton(
+                isEnabled: hasCodeValue && !_isVerifying,
+                text: _isVerifying ? '인증 중...' : '계속하기',
+                onPressed: () => _verifyAndLogin(),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 
-  // 자동 인증 수행 함수
-  void _performAutoVerification(String code) async {
-    if (isCheckingUser) return; // 이미 인증 중이면 중복 실행 방지
+  // -------------------------
+  // 전화번호 정규화
+  // -------------------------
+  /// "010-6784-1110" → "1067841110"
+  /// "+82-10-6784-1110" → "1067841110"
+  String _normalizePhoneNumber(String phone) {
+    // 숫자만 추출
+    String digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // +82 국가번호로 시작하면 82 제거
+    if (digits.startsWith('82')) {
+      digits = digits.substring(2);
+    }
+
+    // 맨 앞의 0 제거 (010 → 10)
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+
+    return digits;
+  }
+
+  // -------------------------
+  // SMS 인증번호 발송
+  // -------------------------
+  Future<void> _sendSmsCode() async {
+    if (_isSendingCode) return;
 
     setState(() {
-      isCheckingUser = true;
+      _isSendingCode = true;
     });
 
-    // SMS 코드 저장
-    smsCode = code;
+    // 전화번호 정규화 후 저장
+    phoneNumber = _normalizePhoneNumber(_phoneController.text);
 
     try {
-      // SMS 코드로 로그인 시도
-      await _authController.signInWithSmsCode(smsCode, () async {
-        // 인증 성공 후, 사용자 정보 확인
-        final currentUser = _authController.currentUser;
+      final success = await _apiAuthController.requestSmsVerification(
+        phoneNumber,
+      );
 
-        if (currentUser != null) {
-          // 사용자 정보가 Firestore에 있는지 확인 (기존 사용자인지 확인)
-          final userInfo = await _authController.getUserInfo(currentUser.uid);
-          final userExists = userInfo != null;
-
-          setState(() {
-            isCheckingUser = false;
-            isVerified = true;
-            this.userExists = userExists;
-          });
-
-          if (userExists) {
-            // ✅ 기존 사용자: 완전한 로그인 상태 저장
-            await _authController.saveLoginState(
-              userId: currentUser.uid,
-              phoneNumber: phoneNumber,
-            );
-
-            // 홈 화면으로 이동
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/home_navigation_screen',
-              (route) => false,
-            );
-          } else {
-            // 새로운 사용자: 회원가입 진행 상태만 저장 (signInWithSmsCodeAndSave 사용)
-            _authController.signInWithSmsCodeAndSave(smsCode, phoneNumber, () {
-              // UI 업데이트를 위해 setState 호출
-              setState(() {});
-            });
-          }
-        }
-      });
+      if (success) {
+        debugPrint('SMS 인증번호 발송 성공');
+        _goToNextPage();
+      } else {
+        _showErrorSnackBar('인증번호 발송에 실패했습니다.');
+      }
     } catch (e) {
-      setState(() {
-        isCheckingUser = false;
-      });
-      // 에러 처리
-      debugPrint('로그인 오류: $e');
+      debugPrint('SMS 발송 오류: $e');
+      _showErrorSnackBar('인증번호 발송 중 오류가 발생했습니다.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
     }
   }
 
   // -------------------------
-  // 다음 페이지로 이동
+  // SMS 인증번호 재발송
+  // -------------------------
+  Future<void> _resendSmsCode() async {
+    try {
+      final success = await _apiAuthController.requestSmsVerification(
+        phoneNumber,
+      );
+
+      if (success) {
+        _showSnackBar('인증번호가 재전송되었습니다.');
+      } else {
+        _showErrorSnackBar('인증번호 재전송에 실패했습니다.');
+      }
+    } catch (e) {
+      debugPrint('SMS 재발송 오류: $e');
+      _showErrorSnackBar('인증번호 재전송 중 오류가 발생했습니다.');
+    }
+  }
+
+  // -------------------------
+  // 인증 및 로그인
+  // -------------------------
+  Future<void> _verifyAndLogin() async {
+    if (_isVerifying) return;
+
+    setState(() {
+      _isVerifying = true;
+    });
+
+    final code = _codeController.text;
+
+    try {
+      // 1. SMS 코드 인증 확인
+      final isValid = await _apiAuthController.verifySmsCode(phoneNumber, code);
+
+      if (!isValid) {
+        _showErrorSnackBar('인증번호가 올바르지 않습니다.');
+        return;
+      }
+
+      debugPrint('SMS 인증 성공');
+
+      // 2. 로그인 시도
+      debugPrint("로그인 시도: $phoneNumber");
+      final user = await _apiAuthController.login(phoneNumber);
+
+      if (user != null) {
+        // 기존 회원 - 홈으로 이동
+        debugPrint('로그인 성공: \${user.userId}');
+        _goHomePage();
+      } else {
+        // 신규 회원 - 회원가입 페이지로 이동
+        debugPrint('신규 회원 - 회원가입 필요');
+        if (mounted) {
+          Navigator.pushNamed(context, '/auth');
+        }
+      }
+    } catch (e) {
+      debugPrint('인증/로그인 오류: $e');
+      _showErrorSnackBar('인증에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
+    }
+  }
+
+  // -------------------------
+  // 유틸리티 메서드
   // -------------------------
   void _goToNextPage() {
     _pageController.nextPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  void _goHomePage() {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/home_navigation_screen',
+      (route) => false,
+    );
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
   }
 }

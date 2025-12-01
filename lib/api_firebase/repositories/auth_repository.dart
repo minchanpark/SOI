@@ -28,6 +28,8 @@ class AuthRepository {
     required String phoneNumber,
     required Function(String, int?) onCodeSent,
     required Function(String) onTimeout,
+    VoidCallback? onVerificationCompleted,
+    Function(String code, String message)? onVerificationFailed,
   }) async {
     try {
       // reCAPTCHA 우회를 위한 강화된 설정
@@ -42,11 +44,13 @@ class AuthRepository {
           // Android에서 SMS 자동 감지 시 자동 로그인
           try {
             await _auth.signInWithCredential(credential);
+            onVerificationCompleted?.call();
           } catch (e) {
             debugPrint("❌ 자동 인증 실패: $e");
           }
         },
         verificationFailed: (FirebaseAuthException exception) {
+          onVerificationFailed?.call(exception.code, exception.message ?? '');
           // 특정 에러 코드 처리
           if (exception.code == 'invalid-phone-number') {
             throw Exception('유효하지 않은 전화번호입니다.');

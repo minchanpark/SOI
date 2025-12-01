@@ -1,0 +1,41 @@
+# OpenAPI Generator 설정 파일
+# Spring Boot API -> Flutter Dart 클라이언트 자동 생성
+
+# 생성할 클라이언트 타입
+generatorName: dart
+
+# 출력 디렉토리
+outputDir: ./generated
+
+# 입력 OpenAPI 스펙 파일
+inputSpec: ./openapi.yaml
+
+# Dart 클라이언트 추가 옵션
+additionalProperties:
+  # 패키지 이름
+  pubName: soi_api_client
+
+  # 패키지 버전
+  pubVersion: 1.0.0
+
+  # 패키지 설명
+  pubDescription: "SOI API Client generated from Spring Boot API"
+
+  # Nullable 필드 지원
+  nullableFields: true
+
+  # Enum 확장 사용
+  useEnumExtension: true
+
+  # 날짜/시간 직렬화 형식
+  dateLibrary: core
+
+  # 소스 폴더
+  sourceFolder: ""
+
+  # Dart 3.x 지원 (더 나은 null safety)
+  nullSafe: true
+
+  # Dio 사용 (더 나은 HTTP 클라이언트)
+  # 참고: dart-dio generator 사용 시 multipart 처리가 더 안정적
+  # serializationLibrary: json_serializable

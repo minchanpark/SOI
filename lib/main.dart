@@ -32,6 +32,8 @@ import 'api_firebase/repositories/user_search_repository.dart';
 import 'api_firebase/services/friend_request_service.dart';
 import 'api_firebase/services/friend_service.dart';
 import 'api_firebase/services/user_matching_service.dart';
+// New API Services (Backend REST API)
+import 'api/api.dart' as api;
 import 'firebase_options.dart';
 import 'utils/app_route_observer.dart';
 import 'views/about_archiving/screens/archive_detail/all_archives_screen.dart';
@@ -82,6 +84,9 @@ void main() async {
 
   // Supabase 초기화
   await _initSupabase();
+
+  // REST API 클라이언트 초기화
+  api.SoiApiClient.instance.initialize();
 
   _configureErrorHandling();
 
@@ -202,6 +207,16 @@ class MyApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider(create: (_) => NotificationController()),
+        // ============================================
+        // New Backend API Services (REST API)
+        // ============================================
+        Provider<api.AuthService>(create: (_) => api.AuthService()),
+        Provider<api.UserService>(create: (_) => api.UserService()),
+        Provider<api.CategoryService>(create: (_) => api.CategoryService()),
+        Provider<api.PostService>(create: (_) => api.PostService()),
+        Provider<api.FriendService>(create: (_) => api.FriendService()),
+        Provider<api.CommentService>(create: (_) => api.CommentService()),
+        Provider<api.MediaService>(create: (_) => api.MediaService()),
       ],
       child: ScreenUtilInit(
         designSize: const Size(393, 852),

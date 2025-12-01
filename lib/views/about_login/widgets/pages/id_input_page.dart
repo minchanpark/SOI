@@ -68,9 +68,9 @@ class IdInputPage extends StatelessWidget {
                     // 아이디 중복 체크 결과 메시지
                     (errorMessage != null)
                         ? ValidationMessage(
-                          message: errorMessage!,
-                          isSuccess: errorMessage == '사용 가능한 아이디입니다.',
-                        )
+                            message: errorMessage!,
+                            isSuccess: errorMessage == '사용 가능한 아이디입니다.',
+                          )
                         : SizedBox(height: 20),
                     SizedBox(height: 130.h),
                   ],

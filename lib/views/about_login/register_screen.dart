@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:provider/provider.dart';
+import 'package:soi/api/api.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_final_screen.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'widgets/common/continue_button.dart';
 import 'widgets/pages/friend_add_and_share_page.dart';
 import 'widgets/pages/name_input_page.dart';
@@ -23,16 +22,17 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // 페이지 컨트롤러
   final PageController _pageController = PageController();
-
-  // AuthController 인스턴스 late로 선언하고 나중에 초기화
-  late final AuthController _authController;
+  final UserService _userService = UserService();
+  final AuthService _authService = AuthService();
 
   // 자동 인증을 위한 Timer
   Timer? _autoVerifyTimer;
 
-  // 인증 상태 관리
+  // Firebase Phone Auth를 위한 변수
+
+  // 사용자가 존재하는지 여부 및 상태 관리
+  bool userExists = false;
   bool isVerified = false;
   bool isCheckingUser = false;
 
@@ -77,10 +77,6 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
-
-    // AuthController 인스턴스 가져오기
-    _authController = Provider.of<AuthController>(context, listen: false);
-
     // 컨트롤러 및 상태 초기화
     nameController = TextEditingController();
     monthController = TextEditingController();
@@ -91,6 +87,8 @@ class _AuthScreenState extends State<AuthScreen> {
     idController = TextEditingController();
     pageReady = List.generate(8, (_) => ValueNotifier<bool>(false));
 
+    // UserService는 이미 초기화됨
+
     // ID 컨트롤러 리스너 추가
     idController.addListener(() {
       if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
@@ -98,12 +96,16 @@ class _AuthScreenState extends State<AuthScreen> {
         final id = idController.text.trim();
         if (id.isNotEmpty) {
           try {
-            final isAvailable = await _authController.checkIdDuplicate(id);
-            setState(() {
-              idErrorMessage = isAvailable
-                  ? '사용 가능한 아이디입니다.'
-                  : '이미 사용 중인 아이디입니다.';
-            });
+            final result = await _userService.checkUserIdAvailable(id);
+            if (result == true) {
+              setState(() {
+                idErrorMessage = '사용 가능한 아이디입니다.';
+              });
+            } else {
+              setState(() {
+                idErrorMessage = '이미 사용 중인 아이디입니다.';
+              });
+            }
           } catch (e) {
             setState(() {
               idErrorMessage = '중복 확인 중 오류가 발생했습니다.';
@@ -189,6 +191,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   });
                 },
               ),
+
               // 3. 전화번호 입력 페이지
               PhoneInputPage(
                 controller: phoneController,
@@ -202,7 +205,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 controller: smsController,
                 onChanged: (value) {
                   // 인증번호 입력 여부에 따라 상태 변경
-                  pageReady[3].value = value.isNotEmpty;
+                  pageReady[3].value = value.length >= 6;
 
                   // 인증 완료 후, 사용자가 인증번호를 변경하면 상태 초기화
                   if (isVerified) {
@@ -210,39 +213,26 @@ class _AuthScreenState extends State<AuthScreen> {
                       isVerified = false;
                     });
                   }
-
-                  // 기존 타이머 취소
-                  _autoVerifyTimer?.cancel();
-
-                  // 인증번호가 입력되면 2초 후 자동 인증 시작
-                  if (value.isNotEmpty && value.length >= 6) {
-                    _autoVerifyTimer = Timer(Duration(seconds: 2), () {
-                      _performAutoVerification(value);
-                    });
-                  }
                 },
                 onResendPressed: () async {
-                  if (phoneNumber.isEmpty) {
-                    Fluttertoast.showToast(
-                      msg: '전화번호를 먼저 입력해주세요.',
-                      backgroundColor: Colors.red,
-                      textColor: Colors.white,
-                    );
-                    return;
+                  String formattedPhone = phoneNumber;
+                  if (phoneNumber.startsWith('0')) {
+                    formattedPhone = '+82${phoneNumber.substring(1)}';
+                  } else if (!phoneNumber.startsWith('+')) {
+                    formattedPhone = '+82$phoneNumber';
                   }
+
                   try {
-                    await _authController.verifyPhoneNumber(phoneNumber, (
-                      verificationId,
-                      resendToken,
-                    ) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('인증번호가 재전송되었습니다.')),
-                      );
-                    }, (verificationId) {});
+                    await _authService
+                        .sendSmsVerification(formattedPhone)
+                        .onError((error, stackTrace) {
+                          throw Exception('SMS 재전송 실패: $error');
+                        });
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('인증번호 재전송에 실패했습니다.')),
+                      SnackBar(content: Text('인증번호 재전송 중 오류가 발생했습니다.')),
                     );
+                    debugPrint('재전송 예외: $e');
                   }
                 },
                 pageController: _pageController,
@@ -283,10 +273,12 @@ class _AuthScreenState extends State<AuthScreen> {
                 onToggleAll: (bool value) {
                   setState(() {
                     agreeAll = value;
+
                     // 전체 동의 시 모든 개별 항목도 함께 변경
                     agreeServiceTerms = value;
                     agreePrivacyTerms = value;
                     agreeMarketingInfo = value;
+
                     // 약관 페이지 준비 상태 업데이트 (필수 약관이 모두 체크되었는지 확인)
                     pageReady[5].value = agreeServiceTerms && agreePrivacyTerms;
                   });
@@ -321,7 +313,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 onImageSelected: (String? imagePath) {
                   setState(() {
                     profileImagePath = imagePath;
-                    pageReady[6].value = true; // 이미지 선택은 선택사항이므로 항상 true
+
+                    // 이미지 선택은 선택사항이므로 항상 true
+                    pageReady[6].value = true;
                   });
                 },
                 pageController: _pageController,
@@ -336,124 +330,122 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
 
           // 공통 Continue 버튼
-          (currentPage == 3)
-              ? SizedBox()
-              : Positioned(
-                  bottom: MediaQuery.of(context).viewInsets.bottom > 0
-                      ? MediaQuery.of(context).viewInsets.bottom + 20.h
-                      : 30.h,
-                  left: 0,
-                  right: 0,
-                  child: ValueListenableBuilder<bool>(
-                    valueListenable: pageReady[currentPage],
-                    builder: (context, ready, child) {
-                      final bool isEnabled =
-                          ready &&
-                          (currentPage != 4 ||
-                              idErrorMessage == null ||
-                              idErrorMessage == '사용 가능한 아이디입니다.');
+          Positioned(
+            bottom: MediaQuery.of(context).viewInsets.bottom > 0
+                ? MediaQuery.of(context).viewInsets.bottom + 20.h
+                : 30.h,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: pageReady[currentPage],
+              builder: (context, ready, child) {
+                final bool isEnabled =
+                    ready &&
+                    (currentPage != 4 ||
+                        idErrorMessage == null ||
+                        idErrorMessage == '사용 가능한 아이디입니다.');
 
-                      return ContinueButton(
-                        isEnabled: isEnabled,
-                        onPressed: isEnabled
-                            ? () async {
-                                FocusScope.of(context).unfocus();
-                                switch (currentPage) {
-                                  case 0: // 이름
-                                    name = nameController.text;
-                                    _pageController.nextPage(
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    break;
-                                  case 1: // 생년월일
-                                    _pageController.nextPage(
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    break;
-                                  case 2: // 전화번호
-                                    phoneNumber = phoneController.text;
-                                    if (phoneNumber.isEmpty) {
-                                      Fluttertoast.showToast(
-                                        msg: '전화번호를 입력해주세요.',
-                                        backgroundColor: Colors.red,
-                                        textColor: Colors.white,
-                                      );
-                                      break;
-                                    }
-                                    try {
-                                      await _authController.verifyPhoneNumber(
-                                        phoneNumber,
-                                        (verificationId, resendToken) {
-                                          _pageController.nextPage(
-                                            duration: Duration(
-                                              milliseconds: 300,
-                                            ),
-                                            curve: Curves.easeInOut,
-                                          );
-                                        },
-                                        (verificationId) {},
-                                      );
-                                    } catch (e) {
-                                      Fluttertoast.showToast(
-                                        msg: 'SMS 발송에 실패했습니다.',
-                                        backgroundColor: Colors.red,
-                                        textColor: Colors.white,
-                                      );
-                                    }
-                                    break;
-                                  case 3: // 인증코드
-                                    smsCode = smsController.text;
-                                    _performAutoVerification(smsCode);
-                                    break;
-                                  case 4: // 아이디
-                                    id = idController.text;
-                                    // ID 저장 후 다음 페이지로 이동
-                                    _pageController.nextPage(
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    break;
-                                  case 5: // 약관동의
-                                    _pageController.nextPage(
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    break;
-                                  // 여기서 프로필 설정 페이지로 넘어가야함
-                                  case 6:
-                                    _pageController.nextPage(
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                    );
-                                    break;
-                                  case 7:
-                                    _navigateToAuthFinal();
-                                    break;
-                                }
+                return ContinueButton(
+                  isEnabled: isEnabled,
+                  onPressed: isEnabled
+                      ? () async {
+                          FocusScope.of(context).unfocus();
+                          switch (currentPage) {
+                            case 0: // 이름
+                              name = nameController.text;
+                              _pageController.nextPage(
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                              break;
+                            case 1: // 생년월일
+                              _pageController.nextPage(
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                              break;
+                            case 2: // 전화번호
+                              phoneNumber = phoneController.text;
+
+                              // 전화번호 형식을 국제 형식으로 변환 (+82)
+                              String formattedPhone = phoneNumber;
+                              if (phoneNumber.startsWith('0')) {
+                                formattedPhone =
+                                    '+82${phoneNumber.substring(1)}';
+                              } else if (!phoneNumber.startsWith('+')) {
+                                formattedPhone = '+82$phoneNumber';
                               }
-                            : null,
-                      );
-                    },
-                  ),
-                ),
+
+                              try {
+                                bool isSuccess = await _authService
+                                    .sendSmsVerification(formattedPhone);
+                                if (isSuccess) {
+                                  _pageController.nextPage(
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                } else {
+                                  Fluttertoast.showToast(
+                                    msg: 'SMS 발송에 실패했습니다. 다시 시도해주세요.',
+                                    backgroundColor: Colors.red,
+                                    textColor: Colors.white,
+                                  );
+                                }
+                              } catch (e) {
+                                Fluttertoast.showToast(
+                                  msg: 'SMS 발송 중 오류가 발생했습니다.',
+                                  backgroundColor: Colors.red,
+                                  textColor: Colors.white,
+                                );
+                                debugPrint('SMS 발송 예외: $e');
+                              }
+                              break;
+                            case 3: // 인증코드
+                              smsCode = smsController.text;
+
+                              // 버튼 클릭시 인증 확인 수행
+                              if (smsCode.length >= 6) {
+                                await _performManualVerification(smsCode);
+                              }
+                              break;
+                            case 4: // 아이디
+                              id = idController.text;
+                              // ID 저장 후 다음 페이지로 이동
+                              _pageController.nextPage(
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                              break;
+                            case 5: // 약관동의
+                              _pageController.nextPage(
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                              break;
+                            // 여기서 프로필 설정 페이지로 넘어가야함
+                            case 6:
+                              _pageController.nextPage(
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                              break;
+                            case 7:
+                              _navigateToAuthFinal();
+                              break;
+                          }
+                        }
+                      : null,
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // 자동 인증 수행 함수
-  void _performAutoVerification(String code) async {
+  Future<void> _performManualVerification(String code) async {
     if (isCheckingUser) return;
-    if (phoneNumber.isEmpty) {
-      Fluttertoast.showToast(
-        msg: '전화번호를 먼저 입력해주세요.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
-    }
 
     setState(() {
       isCheckingUser = true;
@@ -462,31 +454,49 @@ class _AuthScreenState extends State<AuthScreen> {
     smsCode = code;
 
     try {
-      await _authController.signInWithSmsCode(code, () async {
-        setState(() {
-          isCheckingUser = false;
-          isVerified = true;
-        });
+      await _authService
+          .verifySmsCode(
+            phoneNumber.startsWith('0')
+                ? '+82${phoneNumber.substring(1)}'
+                : (phoneNumber.startsWith('+')
+                      ? phoneNumber
+                      : '+82$phoneNumber'),
+            smsCode,
+          )
+          .then((_) {
+            if (!mounted) return;
+            setState(() {
+              isCheckingUser = false;
+              isVerified = true;
+            });
 
-        FocusScope.of(context).unfocus();
-        _pageController.nextPage(
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      });
+            Fluttertoast.showToast(
+              msg: '인증이 완료되었습니다.',
+              backgroundColor: Colors.green,
+              textColor: Colors.white,
+            );
 
-      await _authController.signInWithSmsCodeAndSave(code, phoneNumber, () {});
+            FocusScope.of(context).unfocus();
+            _pageController.nextPage(
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isCheckingUser = false;
         isVerified = false;
       });
 
+      final errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
       Fluttertoast.showToast(
-        msg: '인증에 실패했습니다. 다시 시도해주세요.',
+        msg: errorMessage.isNotEmpty ? errorMessage : '인증 확인 중 오류가 발생했습니다.',
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );
+
+      debugPrint('인증 확인 중 예외: $e');
     }
   }
 
@@ -495,52 +505,26 @@ class _AuthScreenState extends State<AuthScreen> {
     agreeAll = agreeServiceTerms && agreePrivacyTerms && agreeMarketingInfo;
   }
 
-  void _navigateToAuthFinal() async {
-    final currentUser = _authController.currentUser;
-    if (currentUser == null) {
-      Fluttertoast.showToast(
-        msg: '인증을 먼저 완료해주세요.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    try {
-      await _authController.createUserInFirestore(
-        currentUser,
-        id,
-        name,
-        phoneNumber,
-        birthDate,
-      );
-
-      if (profileImagePath != null && profileImagePath!.isNotEmpty) {
-        try {
-          await _authController.uploadProfileImageFromPath(profileImagePath!);
-        } catch (e) {
-          debugPrint('프로필 이미지 업로드 실패: $e');
-        }
-      }
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AuthFinalScreen(
-            id: id,
-            name: name,
-            phone: phoneNumber,
-            birthDate: birthDate,
-            profileImagePath: profileImagePath,
-          ),
+  void _navigateToAuthFinal() {
+    // 회원가입 데이터를 AuthFinalScreen으로 전달
+    // 실제 회원가입은 onboarding 완료 후 수행
+    debugPrint(
+      "회원가입 데이터 전달: id=$id, name=$name, phone=$phoneNumber, birthDate=$birthDate, profileImagePath=$profileImagePath, agreeServiceTerms=$agreeServiceTerms, agreePrivacyTerms=$agreePrivacyTerms, agreeMarketingInfo=$agreeMarketingInfo",
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AuthFinalScreen(
+          id: id,
+          name: name,
+          phone: phoneNumber,
+          birthDate: birthDate,
+          profileImagePath: profileImagePath,
+          agreeServiceTerms: agreeServiceTerms,
+          agreePrivacyTerms: agreePrivacyTerms,
+          agreeMarketingInfo: agreeMarketingInfo,
         ),
-      );
-    } catch (e) {
-      Fluttertoast.showToast(
-        msg: '회원가입 처리 중 오류가 발생했습니다.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    }
+      ),
+    );
   }
 }

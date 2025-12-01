@@ -1429,6 +1429,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  soi_api_client:
+    dependency: "direct main"
+    description:
+      path: "api/generated"
+      relative: true
+    source: path
+    version: "1.0.0"
   solar_icons:
     dependency: "direct main"
     description:

@@ -139,36 +139,35 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
                         color: Color(0xFFD9D9D9),
                       ),
                       child: ClipOval(
-                        child:
-                            _profileImagePath != null
-                                ? Image.file(
-                                  File(_profileImagePath!),
-                                  width: 96,
-                                  height: 96,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 96,
-                                      height: 96,
-                                      color: const Color(0xFFD9D9D9),
-                                      child: Icon(
-                                        Icons.person,
-                                        size: 48.sp,
-                                        color: Colors.white,
-                                      ),
-                                    );
-                                  },
-                                )
-                                : Container(
-                                  width: 96,
-                                  height: 96,
-                                  color: const Color(0xFFD9D9D9),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 48.sp,
-                                    color: Colors.white,
-                                  ),
+                        child: _profileImagePath != null
+                            ? Image.file(
+                                File(_profileImagePath!),
+                                width: 96,
+                                height: 96,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 96,
+                                    height: 96,
+                                    color: const Color(0xFFD9D9D9),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 48.sp,
+                                      color: Colors.white,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                width: 96,
+                                height: 96,
+                                color: const Color(0xFFD9D9D9),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 48.sp,
+                                  color: Colors.white,
                                 ),
+                              ),
                       ),
                     ),
                   ),

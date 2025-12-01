@@ -82,6 +82,8 @@ class AuthService {
     required String phoneNumber,
     required Function(String, int?) onCodeSent,
     required Function(String) onTimeout,
+    VoidCallback? onVerificationCompleted,
+    void Function(String code, String message)? onVerificationFailed,
   }) async {
     try {
       final formattedPhone = _formatPhoneNumber(phoneNumber);
@@ -90,6 +92,8 @@ class AuthService {
         phoneNumber: formattedPhone,
         onCodeSent: onCodeSent,
         onTimeout: onTimeout,
+        onVerificationCompleted: onVerificationCompleted,
+        onVerificationFailed: onVerificationFailed,
       );
 
       return AuthResult.success();

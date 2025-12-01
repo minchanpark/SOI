@@ -8,6 +8,9 @@ class AuthFinalScreen extends StatelessWidget {
   final String? phone;
   final String? birthDate;
   final String? profileImagePath; // 프로필 이미지 경로 추가
+  final bool? agreeServiceTerms;
+  final bool? agreePrivacyTerms;
+  final bool? agreeMarketingInfo;
 
   const AuthFinalScreen({
     super.key,
@@ -16,11 +19,14 @@ class AuthFinalScreen extends StatelessWidget {
     this.phone,
     this.birthDate,
     this.profileImagePath,
+    this.agreeServiceTerms,
+    this.agreePrivacyTerms,
+    this.agreeMarketingInfo,
   });
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Navigator arguments에서 사용자 정보 가져오기
+    // Navigator arguments에서 사용자 정보 가져오기
     final arguments =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
@@ -31,6 +37,12 @@ class AuthFinalScreen extends StatelessWidget {
     final String finalBirthDate = birthDate ?? arguments?['birthDate'] ?? '';
     final String? finalProfileImagePath =
         profileImagePath ?? (arguments?['profileImagePath'] as String?);
+    final bool finalAgreeServiceTerms =
+        agreeServiceTerms ?? arguments?['agreeServiceTerms'] ?? false;
+    final bool finalAgreePrivacyTerms =
+        agreePrivacyTerms ?? arguments?['agreePrivacyTerms'] ?? false;
+    final bool finalAgreeMarketingInfo =
+        agreeMarketingInfo ?? arguments?['agreeMarketingInfo'] ?? false;
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
 
@@ -76,10 +88,9 @@ class AuthFinalScreen extends StatelessWidget {
           // 버튼을 하단에 고정 위치
           Padding(
             padding: EdgeInsets.only(
-              bottom:
-                  MediaQuery.of(context).viewInsets.bottom > 0
-                      ? MediaQuery.of(context).viewInsets.bottom + 20.h
-                      : 30.h,
+              bottom: MediaQuery.of(context).viewInsets.bottom > 0
+                  ? MediaQuery.of(context).viewInsets.bottom + 20.h
+                  : 30.h,
               left: 22.w,
               right: 22.w,
             ),
@@ -95,6 +106,9 @@ class AuthFinalScreen extends StatelessWidget {
                     'phone': finalPhone,
                     'birthDate': finalBirthDate,
                     'profileImagePath': finalProfileImagePath,
+                    'agreeServiceTerms': finalAgreeServiceTerms,
+                    'agreePrivacyTerms': finalAgreePrivacyTerms,
+                    'agreeMarketingInfo': finalAgreeMarketingInfo,
                   },
                 );
               },

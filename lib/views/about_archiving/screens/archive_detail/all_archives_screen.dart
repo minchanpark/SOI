@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-//import 'package:shimmer/shimmer.dart';
 import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 import '../../../../api_firebase/controllers/auth_controller.dart';
 import '../../../../api_firebase/controllers/category_controller.dart';
@@ -36,12 +35,10 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     with AutomaticKeepAliveClientMixin {
   String? nickName;
   final Map<String, List<String>> _categoryProfileImages = {};
-  final Map<String, List<String>> _categoryMatesCache = {}; // mates 변경 감지용
   AuthController? _authController; // AuthController 참조 저장
   CategoryController? _categoryController; // CategoryController 참조 저장
   bool _isInitialLoad = true; // 초기 로딩 상태 추적
   int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
-  final Map<String, Future<void>> _profileImageLoaders = {};
 
   @override
   void initState() {
@@ -88,62 +85,40 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     if (mounted) {
       setState(() {
         _categoryProfileImages.clear(); // 모든 프로필 이미지 캐시 무효화
-        _profileImageLoaders.clear();
       });
     }
   }
 
   // 카테고리에 대한 프로필 이미지를 가져오는 함수
   Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    // mates가 변경되었는지 확인
-    final cachedMates = _categoryMatesCache[categoryId];
-    final matesChanged = cachedMates == null ||
-        cachedMates.length != mates.length ||
-        !cachedMates.every((mate) => mates.contains(mate));
-
-    // 캐시가 있고 mates가 변경되지 않았으면 재로드 불필요
-    if (_categoryProfileImages.containsKey(categoryId) && !matesChanged) {
+    // 이미 로드된 경우에도 AuthController 변경에 의해 캐시가 무효화되면 다시 로드
+    if (_categoryProfileImages.containsKey(categoryId)) {
       return;
     }
 
-    // mates가 변경되었으면 캐시 무효화
-    if (matesChanged) {
-      _categoryProfileImages.remove(categoryId);
-      _categoryMatesCache[categoryId] = List.from(mates);
+    final authController = Provider.of<AuthController>(context, listen: false);
+    final categoryController = Provider.of<CategoryController>(
+      context,
+      listen: false,
+    );
+
+    try {
+      final profileImages = await categoryController.getCategoryProfileImages(
+        mates,
+        authController,
+      );
+      if (mounted) {
+        setState(() {
+          _categoryProfileImages[categoryId] = profileImages;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _categoryProfileImages[categoryId] = [];
+        });
+      }
     }
-
-    // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
-    final existingLoader = _profileImageLoaders[categoryId];
-    if (existingLoader != null) {
-      return existingLoader;
-    }
-
-    final authController = _authController;
-    final categoryController = _categoryController;
-    if (authController == null || categoryController == null) {
-      return;
-    }
-
-    final loader = categoryController
-        .getCategoryProfileImages(mates, authController)
-        .then((profileImages) {
-      if (!mounted) return;
-      setState(() {
-        _categoryProfileImages[categoryId] = profileImages;
-        _categoryMatesCache[categoryId] = List.from(mates);
-      });
-    }).catchError((_) {
-      if (!mounted) return;
-      setState(() {
-        _categoryProfileImages[categoryId] = [];
-        _categoryMatesCache[categoryId] = List.from(mates);
-      });
-    }).whenComplete(() {
-      _profileImageLoaders.remove(categoryId);
-    });
-
-    _profileImageLoaders[categoryId] = loader;
-    return loader;
   }
 
   @override
