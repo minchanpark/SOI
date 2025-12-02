@@ -40,7 +40,7 @@ abstract class CommentController extends ChangeNotifier {
   /// - [postId]: 게시물 ID
   /// - [userId]: 작성자 ID
   /// - [text]: 텍스트 내용 (선택)
-  /// - [audioUrl]: 음성 파일 URL (선택, 음성 댓글인 경우)
+  /// - [audioKey]: 음성 파일 URL (선택, 음성 댓글인 경우)
   /// - [waveformData]: 음성 파형 데이터 (선택)
   /// - [duration]: 음성 길이 (선택)
   ///
@@ -52,6 +52,8 @@ abstract class CommentController extends ChangeNotifier {
     String? audioKey,
     String? waveformData,
     int? duration,
+    double? locationX,
+    double? locationY,
   });
 
   /// 텍스트 댓글 생성 (편의 메서드)
@@ -59,13 +61,15 @@ abstract class CommentController extends ChangeNotifier {
   /// Parameters:
   /// - [postId]: 게시물 ID
   /// - [userId]: 작성자 ID
-  /// - [content]: 텍스트 내용
+  /// - [text]: 텍스트 내용
   ///
   /// Returns: 생성 성공 여부
   Future<bool> createTextComment({
     required int postId,
     required int userId,
-    required String content,
+    required String text,
+    double? locationX,
+    double? locationY,
   });
 
   /// 음성 댓글 생성 (편의 메서드)
@@ -76,6 +80,8 @@ abstract class CommentController extends ChangeNotifier {
   /// - [audioKey]: 음성 파일 키
   /// - [waveformData]: 음성 파형 데이터 (선택)
   /// - [duration]: 음성 길이 (선택)
+  /// - [locationX]: 위치 X 좌표 (선택)
+  /// - [locationY]: 위치 Y 좌표 (선택)
   ///
   /// Returns: 생성 성공 여부
   Future<bool> createAudioComment({
@@ -84,6 +90,8 @@ abstract class CommentController extends ChangeNotifier {
     required String audioKey,
     String? waveformData,
     int? duration,
+    double? locationX,
+    double? locationY,
   });
 
   // ============================================

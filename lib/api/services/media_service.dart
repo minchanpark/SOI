@@ -27,18 +27,16 @@ enum MediaType {
 /// 미디어 사용 용도
 ///
 /// 미디어 파일의 사용 용도입니다.
+/// 서버 API 스펙: USER_PROFILE, CATEGORY_PROFILE, POST
 enum MediaUsageType {
-  /// 게시물 이미지
-  postImage('POST_IMAGE'),
+  /// 사용자 프로필 이미지
+  userProfile('USER_PROFILE'),
 
-  /// 게시물 오디오 (음성메모)
-  postAudio('POST_AUDIO'),
+  /// 카테고리 프로필 이미지
+  categoryProfile('CATEGORY_PROFILE'),
 
-  /// 프로필 이미지
-  profileImage('PROFILE_IMAGE'),
-
-  /// 댓글 오디오
-  commentAudio('COMMENT_AUDIO');
+  /// 게시물 관련 (이미지, 오디오, 댓글 오디오 등)
+  post('POST');
 
   final String value;
   const MediaUsageType(this.value);
@@ -179,7 +177,7 @@ class MediaService {
     final keys = await uploadMedia(
       files: [file],
       types: [MediaType.image],
-      usageTypes: [MediaUsageType.postImage],
+      usageTypes: [MediaUsageType.post],
       userId: userId,
       refId: refId,
     );
@@ -197,7 +195,7 @@ class MediaService {
     final keys = await uploadMedia(
       files: [file],
       types: [MediaType.audio],
-      usageTypes: [MediaUsageType.postAudio],
+      usageTypes: [MediaUsageType.post],
       userId: userId,
       refId: refId,
     );
@@ -212,7 +210,7 @@ class MediaService {
     final keys = await uploadMedia(
       files: [file],
       types: [MediaType.image],
-      usageTypes: [MediaUsageType.profileImage],
+      usageTypes: [MediaUsageType.userProfile],
       userId: userId,
       refId: userId, // 프로필은 userId를 refId로 사용
     );
@@ -230,7 +228,7 @@ class MediaService {
     final keys = await uploadMedia(
       files: [file],
       types: [MediaType.audio],
-      usageTypes: [MediaUsageType.commentAudio],
+      usageTypes: [MediaUsageType.post],
       userId: userId,
       refId: postId,
     );

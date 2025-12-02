@@ -8,10 +8,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/api_comment_audio_controller.dart';
 import '../../../utils/position_converter.dart';
 import 'api_photo_card_widget.dart';
 import 'api_audio_control_widget.dart';
+import 'api_voice_comment_list_sheet.dart';
 
 /// API 기반 사진 표시 위젯
 ///
@@ -54,7 +55,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
 
   // 선택된 댓글 관련 상태
   String? _selectedCommentId;
-  Offset? _selectedCommentPosition;
+  //Offset? _selectedCommentPosition;
   bool _showActionOverlay = false;
   bool _isShowingComments = false;
   bool _isCaptionExpanded = false;
@@ -161,11 +162,21 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     if (!_isShowingComments) return [];
 
     final comments = widget.postComments[widget.post.id] ?? [];
-    final commentsWithPosition = comments.where((c) => c.hasLocation).toList();
+    // 텍스트/오디오 댓글만 필터링 (sheet와 동일한 필터)
+    final filteredComments = comments
+        .where((c) => c.type == CommentType.text || c.type == CommentType.audio)
+        .toList();
+    final commentsWithPosition = filteredComments
+        .where((c) => c.hasLocation)
+        .toList();
 
     final actualImageSize = Size(_imageWidth.w, _imageHeight.h);
 
     return commentsWithPosition.map((comment) {
+      // filteredComments에서의 인덱스 찾기 (sheet와 동일한 인덱스)
+      final indexInFiltered = filteredComments.indexOf(comment);
+      final commentId = '${indexInFiltered}_${comment.hashCode}';
+
       final relativePosition = Offset(
         comment.locationX ?? 0.5,
         comment.locationY ?? 0.5,
@@ -175,27 +186,39 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         actualImageSize,
       );
 
-      final isSelected =
-          _selectedCommentId == '${widget.post.id}_${comment.hashCode}';
+      final isSelected = _selectedCommentId == commentId;
 
       return Positioned(
         left: absolutePosition.dx - _avatarRadius,
         top: absolutePosition.dy - _avatarRadius,
         child: GestureDetector(
-          onTap: () {
-            // 음성 댓글이면 재생
-            if (comment.isAudio && comment.audioUrl != null) {
-              final audioController = Provider.of<AudioController>(
-                context,
-                listen: false,
+          onTap: () async {
+            // 댓글 클릭 시 sheet 열기 (해당 댓글로 스크롤)
+            if (!mounted) return;
+            try {
+              await showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (sheetContext) => ChangeNotifierProvider(
+                  create: (_) => ApiCommentAudioController(),
+                  child: SizedBox(
+                    height: 480.h,
+                    child: ApiVoiceCommentListSheet(
+                      postId: widget.post.id,
+                      comments: filteredComments,
+                      selectedCommentId: commentId,
+                    ),
+                  ),
+                ),
               );
-              audioController.toggleAudio(comment.audioUrl!);
+            } catch (e) {
+              debugPrint('댓글 팝업 표시 실패: $e');
             }
           },
           onLongPress: () {
             setState(() {
-              _selectedCommentId = '${widget.post.id}_${comment.hashCode}';
-              _selectedCommentPosition = absolutePosition;
+              _selectedCommentId = commentId;
               _showActionOverlay = true;
             });
           },
@@ -253,148 +276,175 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   Widget build(BuildContext context) {
     final waveformData = _parseWaveformData(widget.post.waveformData);
 
-    return GestureDetector(
-      onTap: () {
-        if (_showActionOverlay) {
-          setState(() {
-            _showActionOverlay = false;
-            _selectedCommentId = null;
-          });
-        } else {
-          widget.onToggleAudio(widget.post);
-        }
-      },
-      child: Center(
-        child: SizedBox(
-          width: _imageWidth.w,
-          height: _imageHeight.h,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // 사진/비디오 표시
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.r),
-                child: widget.post.hasImage
-                    ? CachedNetworkImage(
-                        imageUrl: widget.post.imageUrl!,
-                        width: _imageWidth.w,
-                        height: _imageHeight.h,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[800]!,
-                          highlightColor: Colors.grey[600]!,
-                          child: Container(
-                            width: _imageWidth.w,
-                            height: _imageHeight.h,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          width: _imageWidth.w,
-                          height: _imageHeight.h,
-                          color: Colors.grey[800],
-                          child: Icon(
-                            Icons.broken_image,
-                            color: Colors.grey[600],
-                            size: 50.w,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: _imageWidth.w,
-                        height: _imageHeight.h,
-                        color: Colors.grey[800],
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey[600],
-                          size: 50.w,
-                        ),
-                      ),
-              ),
+    return Center(
+      child: SizedBox(
+        width: _imageWidth.w,
+        height: _imageHeight.h,
+        // DragTarget으로 감싸서 프로필 이미지 드롭 지원
+        child: Builder(
+          builder: (builderContext) {
+            return DragTarget<String>(
+              onWillAcceptWithDetails: (details) {
+                return details.data.isNotEmpty;
+              },
+              onAcceptWithDetails: (details) {
+                // 드롭된 좌표를 사진 내 상대 좌표로 변환
+                final RenderBox renderBox =
+                    builderContext.findRenderObject() as RenderBox;
+                final localPosition = renderBox.globalToLocal(details.offset);
 
-              // 카테고리 라벨 (Archive가 아닌 경우)
-              if (!widget.isArchive)
-                Positioned(
-                  top: 12.h,
-                  left: 12.w,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 4.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Text(
-                      widget.categoryName,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
+                // 프로필 크기(64)의 반지름만큼 보정하여 중심점으로 조정
+                final adjustedPosition = Offset(
+                  localPosition.dx + 32,
+                  localPosition.dy + 32,
+                );
 
-              // 오디오 컨트롤 (오디오가 있는 경우)
-              if (widget.post.hasAudio)
-                Positioned(
-                  bottom: 12.h,
-                  left: 12.w,
-                  right: 12.w,
-                  child: ApiAudioControlWidget(
-                    post: widget.post,
-                    waveformData: waveformData,
-                  ),
-                ),
-
-              // 캡션 표시 (있는 경우)
-              if (widget.post.content != null &&
-                  widget.post.content!.isNotEmpty)
-                Positioned(
-                  bottom: widget.post.hasAudio ? 70.h : 12.h,
-                  left: 12.w,
-                  right: 12.w,
-                  child: GestureDetector(
-                    onTap: () {
+                widget.onProfileImageDragged(widget.post.id, adjustedPosition);
+              },
+              builder: (context, candidateData, rejectedData) {
+                return GestureDetector(
+                  onTap: () {
+                    if (_showActionOverlay) {
                       setState(() {
-                        _isCaptionExpanded = !_isCaptionExpanded;
+                        _showActionOverlay = false;
+                        _selectedCommentId = null;
                       });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                    } else {
+                      widget.onToggleAudio(widget.post);
+                    }
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 사진/비디오 표시
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(8.r),
+                        child: widget.post.hasImage
+                            ? CachedNetworkImage(
+                                imageUrl: widget.post.imageUrl!,
+                                width: _imageWidth.w,
+                                height: _imageHeight.h,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    Shimmer.fromColors(
+                                      baseColor: Colors.grey[800]!,
+                                      highlightColor: Colors.grey[600]!,
+                                      child: Container(
+                                        width: _imageWidth.w,
+                                        height: _imageHeight.h,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                errorWidget: (context, url, error) => Container(
+                                  width: _imageWidth.w,
+                                  height: _imageHeight.h,
+                                  color: Colors.grey[800],
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey[600],
+                                    size: 50.w,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                width: _imageWidth.w,
+                                height: _imageHeight.h,
+                                color: Colors.grey[800],
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  color: Colors.grey[600],
+                                  size: 50.w,
+                                ),
+                              ),
                       ),
-                      child: Text(
-                        widget.post.content!,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.sp,
-                          fontFamily: 'Pretendard',
+
+                      // 카테고리 라벨 (Archive가 아닌 경우)
+                      if (!widget.isArchive)
+                        Positioned(
+                          top: 12.h,
+                          left: 12.w,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              widget.categoryName,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.sp,
+                                fontFamily: 'Pretendard',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
                         ),
-                        maxLines: _isCaptionExpanded ? null : 2,
-                        overflow: _isCaptionExpanded
-                            ? TextOverflow.visible
-                            : TextOverflow.ellipsis,
-                      ),
-                    ),
+
+                      // 오디오 컨트롤 (오디오가 있는 경우)
+                      if (widget.post.hasAudio)
+                        Positioned(
+                          bottom: 12.h,
+                          left: 12.w,
+                          right: 12.w,
+                          child: ApiAudioControlWidget(
+                            post: widget.post,
+                            waveformData: waveformData,
+                          ),
+                        ),
+
+                      // 캡션 표시 (있는 경우)
+                      if (widget.post.content != null &&
+                          widget.post.content!.isNotEmpty)
+                        Positioned(
+                          bottom: widget.post.hasAudio ? 70.h : 12.h,
+                          left: 12.w,
+                          right: 12.w,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isCaptionExpanded = !_isCaptionExpanded;
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 6.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                widget.post.content!,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13.sp,
+                                  fontFamily: 'Pretendard',
+                                ),
+                                maxLines: _isCaptionExpanded ? null : 2,
+                                overflow: _isCaptionExpanded
+                                    ? TextOverflow.visible
+                                    : TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // 댓글 아바타들
+                      ..._buildCommentAvatars(),
+
+                      // Pending 마커
+                      if (_buildPendingMarker() != null) _buildPendingMarker()!,
+                    ],
                   ),
-                ),
-
-              // 댓글 아바타들
-              ..._buildCommentAvatars(),
-
-              // Pending 마커
-              if (_buildPendingMarker() != null) _buildPendingMarker()!,
-            ],
-          ),
+                );
+              },
+            );
+          },
         ),
       ),
     );

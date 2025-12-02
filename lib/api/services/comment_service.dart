@@ -20,7 +20,7 @@ import '../models/models.dart';
 /// await commentService.createComment(
 ///   postId: 1,
 ///   userId: 1,
-///   content: '좋은 사진이네요!',
+///   text: '좋은 사진이네요!',
 /// );
 ///
 /// // 댓글 조회
@@ -44,7 +44,7 @@ class CommentService {
   /// Parameters:
   /// - [postId]: 게시물 ID
   /// - [userId]: 작성자 ID
-  /// - [content]: 댓글 내용 (텍스트)
+  /// - [text]: 댓글 내용 (텍스트)
   /// - [audioFileKey]: 음성 파일 키 (선택, 음성 댓글인 경우)
   /// - [waveformData]: 음성 파형 데이터 (선택)
   /// - [duration]: 음성 길이 (선택)
@@ -61,19 +61,45 @@ class CommentService {
     String? audioKey,
     String? waveformData,
     int? duration,
-    String? content,
+    double? locationX,
+    double? locationY,
+    CommentType? type,
   }) async {
     try {
+      final commentTypeEnum = _toCommentTypeEnum(type);
+
       final dto = CommentReqDto(
         postId: postId,
         userId: userId,
-        text: text,
-        audioKey: audioKey,
-        waveformData: waveformData,
-        duration: duration,
+        text: text ?? '',
+        audioKey: audioKey ?? '',
+        waveformData: waveformData ?? '',
+        duration: duration ?? 0,
+        locationX: locationX ?? 0.0,
+        locationY: locationY ?? 0.0,
+        emojiId: 0,
+        commentType: commentTypeEnum,
+      );
+
+      debugPrint('=== 댓글 생성 요청 ===');
+      debugPrint('postId: $postId, userId: $userId');
+      debugPrint('commentType: ${commentTypeEnum.value}');
+      debugPrint('audioKey: $audioKey');
+      debugPrint('text: $text');
+      debugPrint('waveformData type: ${waveformData.runtimeType}');
+      debugPrint('waveformData value: $waveformData');
+      debugPrint(
+        'waveformData first 50 chars: ${waveformData?.substring(0, waveformData.length > 50 ? 50 : waveformData.length)}',
+      );
+
+      final jsonMap = dto.toJson();
+      debugPrint('DTO JSON map: $jsonMap');
+      debugPrint(
+        'waveformData in JSON type: ${jsonMap['waveformData'].runtimeType}',
       );
 
       final response = await _commentApi.create2(dto);
+      debugPrint("댓글 생성 응답: $response");
 
       if (response == null) {
         throw const DataValidationException(message: '댓글 생성 응답이 없습니다.');
@@ -98,9 +124,21 @@ class CommentService {
   Future<bool> createTextComment({
     required int postId,
     required int userId,
-    required String content,
+    required String text,
+    double? locationX,
+    double? locationY,
   }) async {
-    return createComment(postId: postId, userId: userId, content: content);
+    return createComment(
+      postId: postId,
+      userId: userId,
+      text: text,
+      locationX: locationX,
+      locationY: locationY,
+      audioKey: "",
+      waveformData: "",
+      duration: 0,
+      type: CommentType.text,
+    );
   }
 
   /// 음성 댓글 생성 (편의 메서드)
@@ -110,6 +148,8 @@ class CommentService {
     required String audioKey,
     String? waveformData,
     int? duration,
+    double? locationX,
+    double? locationY,
   }) async {
     return createComment(
       postId: postId,
@@ -117,6 +157,10 @@ class CommentService {
       audioKey: audioKey,
       waveformData: waveformData,
       duration: duration,
+      locationX: locationX,
+      locationY: locationY,
+      text: "",
+      type: CommentType.audio,
     );
   }
 
@@ -167,8 +211,22 @@ class CommentService {
   // 에러 핸들링 헬퍼
   // ============================================
 
+  /// CommentType을 API DTO enum으로 변환
+  CommentReqDtoCommentTypeEnum _toCommentTypeEnum(CommentType? type) {
+    switch (type) {
+      case CommentType.text:
+        return CommentReqDtoCommentTypeEnum.TEXT;
+      case CommentType.audio:
+        return CommentReqDtoCommentTypeEnum.AUDIO;
+      case CommentType.emoji:
+        return CommentReqDtoCommentTypeEnum.EMOJI;
+      default:
+        return CommentReqDtoCommentTypeEnum.TEXT;
+    }
+  }
+
   SoiApiException _handleApiException(ApiException e) {
-    debugPrint('🔴 API Error [${e.code}]: ${e.message}');
+    debugPrint('API Error [${e.code}]: ${e.message}');
 
     switch (e.code) {
       case 400:

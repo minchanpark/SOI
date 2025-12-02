@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +12,7 @@ import '../../../../api/models/user.dart' as api_user;
 import '../../../../api/controller/api_user_controller.dart';
 import '../../../../api/controller/api_comment_controller.dart';
 import '../../../../api/controller/api_post_controller.dart';
+import '../../../../api/controller/api_media_controller.dart';
 import '../../../../api_firebase/controllers/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../about_share/share_screen.dart';
@@ -356,10 +358,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   Future<void> _onTextCommentCreated(int postId, String text) async {
     try {
-      final userId = _userController?.currentUser?.userId;
+      final userId = _userController?.currentUser?.id;
       if (userId == null) return;
 
-      final autoPosition = _generateAutoProfilePosition(postId);
       final currentUserProfileImageUrl =
           _userController?.currentUser?.profileImageUrl;
 
@@ -371,7 +372,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         duration: null,
         recorderUserId: userId,
         profileImageUrl: currentUserProfileImageUrl,
-        relativePosition: autoPosition,
+        relativePosition: null, // 사용자가 드래그로 위치 지정
       );
 
       if (mounted) {
@@ -392,12 +393,11 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     int duration,
   ) async {
     try {
-      final userId = _userController?.currentUser?.userId;
+      final userId = _userController?.currentUser?.id;
       if (userId == null) return;
 
       final currentUserProfileImageUrl =
           _userController?.currentUser?.profileImageUrl;
-      final autoPosition = _generateAutoProfilePosition(postId);
 
       _pendingVoiceComments[postId] = PendingApiVoiceComment(
         audioPath: audioPath,
@@ -405,7 +405,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         duration: duration,
         recorderUserId: userId,
         profileImageUrl: currentUserProfileImageUrl,
-        relativePosition: autoPosition,
+        relativePosition: null, // 사용자가 드래그로 위치 지정
       );
 
       if (mounted) {
@@ -430,8 +430,23 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       throw StateError('로그인된 사용자를 찾을 수 없습니다.');
     }
 
-    // TODO: API를 통해 댓글 저장
-    // 현재는 UI 업데이트만 수행
+    // 위치가 지정되지 않은 경우 자동 위치 할당 (fallback)
+    final finalPosition =
+        pending.relativePosition ?? _generateAutoProfilePosition(postId);
+
+    // 백그라운드 저장을 위해 pending 데이터 복사
+    final pendingCopy = PendingApiVoiceComment(
+      audioPath: pending.audioPath,
+      waveformData: pending.waveformData,
+      duration: pending.duration,
+      text: pending.text,
+      isTextComment: pending.isTextComment,
+      relativePosition: finalPosition,
+      recorderUserId: pending.recorderUserId,
+      profileImageUrl: pending.profileImageUrl,
+    );
+
+    // UI 먼저 업데이트 (낙관적 업데이트)
     setState(() {
       _voiceCommentSavedStates[postId] = true;
       _pendingVoiceComments.remove(postId);
@@ -439,8 +454,91 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       _voiceCommentActiveStates[postId] = false;
     });
 
-    // 댓글 다시 로드
-    unawaited(_loadCommentsForPost(postId));
+    // 백그라운드에서 API 호출하여 댓글 저장
+    unawaited(_saveCommentToServer(postId, userId, pendingCopy));
+  }
+
+  /// 백그라운드에서 댓글을 서버에 저장
+  Future<void> _saveCommentToServer(
+    int postId,
+    int userId,
+    PendingApiVoiceComment pending,
+  ) async {
+    try {
+      final commentController = Provider.of<ApiCommentController>(
+        context,
+        listen: false,
+      );
+
+      bool success = false;
+
+      // 텍스트 댓글 저장 부분
+      if (pending.isTextComment && pending.text != null) {
+        // 텍스트 댓글 저장
+        success = await commentController.createTextComment(
+          postId: postId,
+          userId: userId,
+          text: pending.text!,
+          locationX: pending.relativePosition?.dx,
+          locationY: pending.relativePosition?.dy,
+        );
+      }
+      // 음성 댓글 저장 부분
+      else if (pending.audioPath != null) {
+        // 음성 댓글 저장
+        final mediaController = Provider.of<ApiMediaController>(
+          context,
+          listen: false,
+        );
+
+        final audioFile = File(pending.audioPath!);
+        final multipartFile = await mediaController.fileToMultipart(audioFile);
+        final audioKey = await mediaController.uploadCommentAudio(
+          file: multipartFile,
+          userId: userId,
+          postId: postId,
+        );
+
+        if (audioKey == null) {
+          debugPrint('오디오 업로드 실패: audioKey is null');
+          _showSnackBar('음성 업로드에 실패했습니다.', backgroundColor: Colors.red);
+          return;
+        }
+
+        // 댓글 생성
+        String? waveformJson;
+        if (pending.waveformData != null) {
+          // 소수점 4자리로 반올림하여 문자열 길이 줄이기 (서버 제한 대응)
+          final roundedWaveform = pending.waveformData!
+              .map((v) => double.parse(v.toStringAsFixed(4)))
+              .toList();
+          waveformJson = jsonEncode(roundedWaveform);
+        }
+
+        // 오디오 댓글 생성
+        success = await commentController.createAudioComment(
+          postId: postId,
+          userId: userId,
+          audioKey: audioKey,
+          waveformData: waveformJson,
+          duration: pending.duration,
+          locationX: pending.relativePosition?.dx,
+          locationY: pending.relativePosition?.dy,
+        );
+      }
+
+      if (success) {
+        // 댓글 목록 새로고침
+        await _loadCommentsForPost(postId);
+      } else {
+        _showSnackBar('댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
+      }
+    } catch (e) {
+      debugPrint('댓글 저장 실패: $e');
+      if (mounted) {
+        _showSnackBar('댓글 저장 중 오류가 발생했습니다.', backgroundColor: Colors.red);
+      }
+    }
   }
 
   void _onSaveCompleted(int postId) {

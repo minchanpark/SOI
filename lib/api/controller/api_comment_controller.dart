@@ -50,6 +50,8 @@ class ApiCommentController extends CommentController {
     String? audioKey,
     String? waveformData,
     int? duration,
+    double? locationX,
+    double? locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -62,6 +64,8 @@ class ApiCommentController extends CommentController {
         audioKey: audioKey,
         waveformData: waveformData,
         duration: duration,
+        locationX: locationX,
+        locationY: locationY,
       );
       _setLoading(false);
       return result;
@@ -76,7 +80,9 @@ class ApiCommentController extends CommentController {
   Future<bool> createTextComment({
     required int postId,
     required int userId,
-    required String content,
+    required String text,
+    double? locationX,
+    double? locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -85,7 +91,9 @@ class ApiCommentController extends CommentController {
       final result = await _commentService.createTextComment(
         postId: postId,
         userId: userId,
-        content: content,
+        text: text,
+        locationX: locationX,
+        locationY: locationY,
       );
       _setLoading(false);
       return result;
@@ -103,6 +111,8 @@ class ApiCommentController extends CommentController {
     required String audioKey,
     String? waveformData,
     int? duration,
+    double? locationX,
+    double? locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -114,6 +124,8 @@ class ApiCommentController extends CommentController {
         audioKey: audioKey,
         waveformData: waveformData,
         duration: duration,
+        locationX: locationX,
+        locationY: locationY,
       );
       _setLoading(false);
       return result;

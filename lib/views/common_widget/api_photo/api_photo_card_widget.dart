@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
+import '../../../api/controller/api_comment_audio_controller.dart';
 import 'api_photo_display_widget.dart';
 import 'api_user_info_widget.dart';
 import 'api_voice_recording_widget.dart';
+import 'api_voice_comment_list_sheet.dart';
 
 /// API 기반 사진 카드 위젯
 ///
@@ -121,6 +124,31 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 userNames: widget.userNames,
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
+                onLikePressed: () {
+                  // TODO: 이모지 선택 기능 구현
+                  debugPrint('이모지 버튼 클릭: postId=${widget.post.id}');
+                },
+                onCommentPressed: () {
+                  // 댓글 리스트 Bottom Sheet 표시
+                  final comments = widget.postComments[widget.post.id] ?? [];
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (ctx) {
+                      return ChangeNotifierProvider(
+                        create: (_) => ApiCommentAudioController(),
+                        child: SizedBox(
+                          height: 480.h,
+                          child: ApiVoiceCommentListSheet(
+                            postId: widget.post.id,
+                            comments: comments,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
               SizedBox(height: 10.h),
 
@@ -169,7 +197,7 @@ class PendingApiVoiceComment {
   final String? text;
   final bool isTextComment;
   final Offset? relativePosition;
-  final String? recorderUserId;
+  final int? recorderUserId;
   final String? profileImageUrl;
 
   const PendingApiVoiceComment({
@@ -183,25 +211,16 @@ class PendingApiVoiceComment {
     this.profileImageUrl,
   });
 
-  PendingApiVoiceComment copyWith({
-    String? audioPath,
-    List<double>? waveformData,
-    int? duration,
-    String? text,
-    bool? isTextComment,
-    Offset? relativePosition,
-    String? recorderUserId,
-    String? profileImageUrl,
-  }) {
+  PendingApiVoiceComment copyWith({Offset? relativePosition}) {
     return PendingApiVoiceComment(
-      audioPath: audioPath ?? this.audioPath,
-      waveformData: waveformData ?? this.waveformData,
-      duration: duration ?? this.duration,
-      text: text ?? this.text,
-      isTextComment: isTextComment ?? this.isTextComment,
+      audioPath: audioPath,
+      waveformData: waveformData,
+      duration: duration,
+      text: text,
+      isTextComment: isTextComment,
       relativePosition: relativePosition ?? this.relativePosition,
-      recorderUserId: recorderUserId ?? this.recorderUserId,
-      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      recorderUserId: recorderUserId,
+      profileImageUrl: profileImageUrl,
     );
   }
 }

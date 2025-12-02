@@ -94,6 +94,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     // Placing 모드로 시작해야 하는 경우 (텍스트 댓글용)
     if (widget.startInPlacingMode) {
       _currentState = VoiceCommentState.placing;
+      _initializeControllers(); // 컨트롤러 초기화 (dispose에서 필요)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _currentState == VoiceCommentState.placing) {
           _holdParentScroll();
@@ -267,7 +268,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         );
       }
     } catch (e) {
-      debugPrint('❌ 녹음 중지 오류: $e');
+      debugPrint('녹음 중지 오류: $e');
     }
   }
 
@@ -286,7 +287,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
       widget.onRecordingDeleted?.call();
     } catch (e) {
-      debugPrint('❌ 녹음 삭제 오류: $e');
+      debugPrint('녹음 삭제 오류: $e');
     }
   }
   // ============================================================

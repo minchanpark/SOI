@@ -14,7 +14,9 @@ class ApiUserInfoWidget extends StatelessWidget {
   final bool isCurrentUserPost;
   final VoidCallback? onDeletePressed;
   final VoidCallback? onLikePressed;
+  final VoidCallback? onCommentPressed;
   final bool isLiked;
+  final String? selectedEmoji;
 
   const ApiUserInfoWidget({
     super.key,
@@ -23,7 +25,9 @@ class ApiUserInfoWidget extends StatelessWidget {
     this.isCurrentUserPost = false,
     this.onDeletePressed,
     this.onLikePressed,
+    this.onCommentPressed,
     this.isLiked = false,
+    this.selectedEmoji,
   });
 
   @override
@@ -64,21 +68,50 @@ class ApiUserInfoWidget extends StatelessWidget {
           ),
         ),
 
-        // 좋아요 버튼 (추후 API 버전으로 구현 예정)
-        // SizedBox(
-        //   height: 50.h,
-        //   child: ApiEmojiButton(postId: post.id, categoryId: categoryId),
-        // ),
+        // 좋아요(이모지) 버튼
+        SizedBox(
+          height: 50.h,
+          child: GestureDetector(
+            onTap: onLikePressed,
+            child: Container(
+              width: 33.w,
+              height: 33.h,
+              decoration: BoxDecoration(
+                color: const Color(0xFF323232),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: selectedEmoji != null
+                  ? Padding(
+                      padding: EdgeInsets.only(top: 1.h),
+                      child: Text(
+                        selectedEmoji!,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: (25.38).sp,
+                          fontFamily: 'Pretendard Variable',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/like_icon.png',
+                      width: (25.38).w,
+                      height: (25.38).h,
+                    ),
+            ),
+          ),
+        ),
 
-        // 댓글 버튼 (추후 API 버전으로 구현 예정)
-        // IconButton(
-        //   onPressed: () { ... },
-        //   icon: Image.asset(
-        //     'assets/comment_icon.png',
-        //     width: (31.7).w,
-        //     height: (31.7).h,
-        //   ),
-        // ),
+        // 댓글 버튼
+        IconButton(
+          onPressed: onCommentPressed,
+          icon: Image.asset(
+            'assets/comment_icon.png',
+            width: (31.7).w,
+            height: (31.7).h,
+          ),
+        ),
 
         // 더보기 (현재 사용자 소유 게시물일 때만)
         if (isCurrentUserPost) MoreMenuButton(onDeletePressed: onDeletePressed),
