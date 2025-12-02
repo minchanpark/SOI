@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 **userId** | **String** |  | [optional] 
 **phoneNum** | **String** |  | [optional] 
 **birthDate** | **String** |  | [optional] 
-**profileImage** | **String** |  | [optional] 
+**profileImageKey** | **String** |  | [optional] 
 **marketingAgreed** | **bool** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

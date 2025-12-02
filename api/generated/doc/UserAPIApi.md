@@ -449,11 +449,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **updateProfile**
-> ApiResponseDtoUserRespDto updateProfile(userId, profileImage)
+> ApiResponseDtoUserRespDto updateProfile(userId, profileImageKey)
 
 유저 프로필 업데이트
 
-유저의 프로필을 업데이트 합니다.
+유저의 프로필을 업데이트 합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
 
 ### Example
 ```dart
@@ -461,10 +461,10 @@ import 'package:soi_api_client/api.dart';
 
 final api_instance = UserAPIApi();
 final userId = 789; // int | 
-final profileImage = profileImage_example; // String | 
+final profileImageKey = profileImageKey_example; // String | 
 
 try {
-    final result = api_instance.updateProfile(userId, profileImage);
+    final result = api_instance.updateProfile(userId, profileImageKey);
     print(result);
 } catch (e) {
     print('Exception when calling UserAPIApi->updateProfile: $e\n');
@@ -476,7 +476,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **userId** | **int**|  | 
- **profileImage** | **String**|  | 
+ **profileImageKey** | **String**|  | [optional] 
 
 ### Return type
 

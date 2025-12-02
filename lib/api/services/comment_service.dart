@@ -58,7 +58,7 @@ class CommentService {
     required int postId,
     required int userId,
     String? text,
-    String? audioUrl,
+    String? audioKey,
     String? waveformData,
     int? duration,
     String? content,
@@ -68,7 +68,7 @@ class CommentService {
         postId: postId,
         userId: userId,
         text: text,
-        audioUrl: audioUrl,
+        audioKey: audioKey,
         waveformData: waveformData,
         duration: duration,
       );
@@ -107,14 +107,14 @@ class CommentService {
   Future<bool> createAudioComment({
     required int postId,
     required int userId,
-    required String audioUrl,
+    required String audioKey,
     String? waveformData,
     int? duration,
   }) async {
     return createComment(
       postId: postId,
       userId: userId,
-      audioUrl: audioUrl,
+      audioKey: audioKey,
       waveformData: waveformData,
       duration: duration,
     );

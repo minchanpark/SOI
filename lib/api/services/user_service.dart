@@ -171,7 +171,7 @@ class UserService {
     required String userId,
     required String phoneNum,
     required String birthDate,
-    String? profileImage,
+    String? profileImageKey,
     bool serviceAgreed = true,
     bool privacyPolicyAgreed = true,
     bool marketingAgreed = false,
@@ -182,7 +182,7 @@ class UserService {
         userId: userId,
         phoneNum: phoneNum,
         birthDate: birthDate,
-        profileImage: profileImage,
+        profileImageKey: profileImageKey,
         serviceAgreed: serviceAgreed,
         privacyPolicyAgreed: privacyPolicyAgreed,
         marketingAgreed: marketingAgreed,
@@ -357,7 +357,7 @@ class UserService {
   /// - [userId]: 변경할 아이디 (선택)
   /// - [phoneNum]: 변경할 전화번호 (선택)
   /// - [birthDate]: 변경할 생년월일 (선택)
-  /// - [profileImage]: 변경할 프로필 이미지 URL (선택)
+  /// - [profileImageKey]: 변경할 프로필 이미지 키 (선택)
   ///
   /// Returns: 수정된 사용자 정보 (User)
   Future<User> updateUser({
@@ -366,7 +366,7 @@ class UserService {
     String? userId,
     String? phoneNum,
     String? birthDate,
-    String? profileImage,
+    String? profileImageKey,
   }) async {
     try {
       final dto = UserUpdateReqDto(
@@ -375,7 +375,7 @@ class UserService {
         userId: userId,
         phoneNum: phoneNum,
         birthDate: birthDate,
-        profileImage: profileImage,
+        profileImageKey: profileImageKey,
       );
 
       final response = await _userApi.update1(dto);
@@ -410,10 +410,13 @@ class UserService {
   /// Returns: 수정된 사용자 정보 (User)
   Future<User> updateProfileImage({
     required int userId,
-    required String profileImage,
+    required String profileImageKey,
   }) async {
     try {
-      final response = await _userApi.updateProfile(userId, profileImage);
+      final response = await _userApi.updateProfile(
+        userId,
+        profileImageKey: profileImageKey,
+      );
 
       if (response == null) {
         throw const DataValidationException(message: '프로필 수정 응답이 없습니다.');

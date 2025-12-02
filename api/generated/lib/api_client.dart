@@ -192,6 +192,8 @@ class ApiClient {
           return ApiResponseDtoListCommentRespDto.fromJson(value);
         case 'ApiResponseDtoListFriendCheckRespDto':
           return ApiResponseDtoListFriendCheckRespDto.fromJson(value);
+        case 'ApiResponseDtoListNotificationRespDto':
+          return ApiResponseDtoListNotificationRespDto.fromJson(value);
         case 'ApiResponseDtoListPostRespDto':
           return ApiResponseDtoListPostRespDto.fromJson(value);
         case 'ApiResponseDtoListString':
@@ -202,6 +204,8 @@ class ApiClient {
           return ApiResponseDtoListUserRespDto.fromJson(value);
         case 'ApiResponseDtoLong':
           return ApiResponseDtoLong.fromJson(value);
+        case 'ApiResponseDtoNotificationGetAllRespDto':
+          return ApiResponseDtoNotificationGetAllRespDto.fromJson(value);
         case 'ApiResponseDtoObject':
           return ApiResponseDtoObject.fromJson(value);
         case 'ApiResponseDtoPostRespDto':
@@ -232,6 +236,10 @@ class ApiClient {
           return FriendRespDto.fromJson(value);
         case 'FriendUpdateRespDto':
           return FriendUpdateRespDto.fromJson(value);
+        case 'NotificationGetAllRespDto':
+          return NotificationGetAllRespDto.fromJson(value);
+        case 'NotificationRespDto':
+          return NotificationRespDto.fromJson(value);
         case 'PostCreateReqDto':
           return PostCreateReqDto.fromJson(value);
         case 'PostRespDto':

@@ -55,7 +55,7 @@ abstract class UserController extends ChangeNotifier {
   ///     userId: 사용자가 설정한 id
   ///     name: 사용자 이름
   ///     phoneNumber: 전화번호
-  ///     profileImage: 프로필 이미지 URL (없을 수 있음)
+  ///     profileImageUrl: 프로필 이미지 URL (없을 수 있음)
   ///     birthDate: 생년월일 (없을 수 있음)
   ///   - null: 로그인 실패
   Future<User?> login(String phoneNumber);
@@ -77,7 +77,7 @@ abstract class UserController extends ChangeNotifier {
   /// - [userId]: 사용자 아이디 (고유)
   /// - [phoneNum]: 전화번호
   /// - [birthDate]: 생년월일 (yyyy-MM-dd 형식)
-  /// - [profileImage]: 프로필 이미지 URL (선택)
+  /// - [profileImageKey]: 프로필 이미지 키 (선택)
   /// - [serviceAgreed]: 서비스 약관 동의 여부
   /// - [privacyPolicyAgreed]: 개인정보 처리방침 동의 여부
   /// - [marketingAgreed]: 마케팅 수신 동의 여부 (선택)
@@ -88,7 +88,7 @@ abstract class UserController extends ChangeNotifier {
     required String userId,
     required String phoneNum,
     required String birthDate,
-    String? profileImage,
+    String? profileImageKey,
     bool serviceAgreed = true,
     bool privacyPolicyAgreed = true,
     bool marketingAgreed = false,
@@ -137,15 +137,15 @@ abstract class UserController extends ChangeNotifier {
     String? userId,
     String? phoneNum,
     String? birthDate,
-    String? profileImage,
+    String? profileImageKey,
   });
 
   /// 프로필 이미지 수정
   ///
   /// Returns: 수정된 사용자 정보 (User)
-  Future<User?> updateProfileImage({
+  Future<User?> updateprofileImageUrl({
     required int userId,
-    required String profileImage,
+    required String profileImageKey,
   });
 
   // ============================================

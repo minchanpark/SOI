@@ -185,9 +185,9 @@ class _CategoryPhotosScreenState extends State<CategoryPhotosScreen> {
               return GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  crossAxisSpacing: 12.w, // 피그마 디자인에 맞춤: 수평 간격
-                  mainAxisSpacing: 15.h, // 피그마 디자인에 맞춤: 수직 간격
-                  childAspectRatio: 175 / 233, // 피그마 디자인 비율: 175x233
+                  crossAxisSpacing: 12.w,
+                  mainAxisSpacing: 15.h,
+                  childAspectRatio: 175 / 233,
                 ),
                 padding: EdgeInsets.only(
                   left: 15.w,
@@ -200,6 +200,8 @@ class _CategoryPhotosScreenState extends State<CategoryPhotosScreen> {
                 itemBuilder: (context, index) {
                   final photo = photos[index];
 
+                  // 사진 그리드 아이템 위젯 사용
+                  // PhotoGridItem 위젯에 필요한 매개변수 전달
                   return PhotoGridItem(
                     photo: photo,
                     allPhotos: photos,

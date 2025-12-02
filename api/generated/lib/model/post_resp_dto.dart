@@ -13,15 +13,24 @@ part of openapi.api;
 class PostRespDto {
   /// Returns a new [PostRespDto] instance.
   PostRespDto({
+    this.id,
     this.userId,
     this.content,
-    this.postFileKey,
-    this.audioFileKey,
+    this.postFileUrl,
+    this.audioFileUrl,
     this.waveformData,
     this.duration,
     this.isActive,
     this.createdAt,
   });
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? id;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -45,7 +54,7 @@ class PostRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? postFileKey;
+  String? postFileUrl;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -53,7 +62,7 @@ class PostRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? audioFileKey;
+  String? audioFileUrl;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -89,10 +98,11 @@ class PostRespDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostRespDto &&
+    other.id == id &&
     other.userId == userId &&
     other.content == content &&
-    other.postFileKey == postFileKey &&
-    other.audioFileKey == audioFileKey &&
+    other.postFileUrl == postFileUrl &&
+    other.audioFileUrl == audioFileUrl &&
     other.waveformData == waveformData &&
     other.duration == duration &&
     other.isActive == isActive &&
@@ -101,20 +111,26 @@ class PostRespDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (id == null ? 0 : id!.hashCode) +
     (userId == null ? 0 : userId!.hashCode) +
     (content == null ? 0 : content!.hashCode) +
-    (postFileKey == null ? 0 : postFileKey!.hashCode) +
-    (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
+    (postFileUrl == null ? 0 : postFileUrl!.hashCode) +
+    (audioFileUrl == null ? 0 : audioFileUrl!.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (isActive == null ? 0 : isActive!.hashCode) +
     (createdAt == null ? 0 : createdAt!.hashCode);
 
   @override
-  String toString() => 'PostRespDto[userId=$userId, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
+  String toString() => 'PostRespDto[id=$id, userId=$userId, content=$content, postFileUrl=$postFileUrl, audioFileUrl=$audioFileUrl, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+    if (this.id != null) {
+      json[r'id'] = this.id;
+    } else {
+      json[r'id'] = null;
+    }
     if (this.userId != null) {
       json[r'userId'] = this.userId;
     } else {
@@ -125,15 +141,15 @@ class PostRespDto {
     } else {
       json[r'content'] = null;
     }
-    if (this.postFileKey != null) {
-      json[r'postFileKey'] = this.postFileKey;
+    if (this.postFileUrl != null) {
+      json[r'postFileUrl'] = this.postFileUrl;
     } else {
-      json[r'postFileKey'] = null;
+      json[r'postFileUrl'] = null;
     }
-    if (this.audioFileKey != null) {
-      json[r'audioFileKey'] = this.audioFileKey;
+    if (this.audioFileUrl != null) {
+      json[r'audioFileUrl'] = this.audioFileUrl;
     } else {
-      json[r'audioFileKey'] = null;
+      json[r'audioFileUrl'] = null;
     }
     if (this.waveformData != null) {
       json[r'waveformData'] = this.waveformData;
@@ -177,10 +193,11 @@ class PostRespDto {
       }());
 
       return PostRespDto(
+        id: mapValueOfType<int>(json, r'id'),
         userId: mapValueOfType<String>(json, r'userId'),
         content: mapValueOfType<String>(json, r'content'),
-        postFileKey: mapValueOfType<String>(json, r'postFileKey'),
-        audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),
+        postFileUrl: mapValueOfType<String>(json, r'postFileUrl'),
+        audioFileUrl: mapValueOfType<String>(json, r'audioFileUrl'),
         waveformData: mapValueOfType<String>(json, r'waveformData'),
         duration: mapValueOfType<int>(json, r'duration'),
         isActive: mapValueOfType<bool>(json, r'is_active'),

@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **userId** | **String** |  | [optional] 
 **phoneNum** | **String** |  | [optional] 
 **birthDate** | **String** |  | [optional] 
-**profileImage** | **String** |  | [optional] 
+**profileImageKey** | **String** |  | [optional] 
 **serviceAgreed** | **bool** |  | [optional] 
 **privacyPolicyAgreed** | **bool** |  | [optional] 
 **marketingAgreed** | **bool** |  | [optional] 

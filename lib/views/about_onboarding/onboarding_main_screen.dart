@@ -127,7 +127,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
         userId: id,
         phoneNum: phone,
         birthDate: birthDate,
-        profileImage: profileImageKey,
+        profileImageKey: profileImageKey,
       );
 
       await _apiUserController.saveLoginState(

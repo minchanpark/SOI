@@ -15,7 +15,7 @@ class User {
   final String name;
 
   // 프로필 이미지 URL
-  final String? profileImage;
+  final String? profileImageUrl;
 
   // 생년월일 (YYYY-MM-DD 형식)
   final String? birthDate;
@@ -30,7 +30,7 @@ class User {
     required this.id,
     required this.userId,
     required this.name,
-    this.profileImage,
+    this.profileImageUrl,
     this.birthDate,
     required this.phoneNumber,
     this.active = false,
@@ -42,7 +42,7 @@ class User {
       id: dto.id ?? 0,
       userId: dto.userId ?? '',
       name: dto.name ?? '',
-      profileImage: dto.profileImage,
+      profileImageUrl: dto.profileImageUrl,
       birthDate: dto.birthDate,
       phoneNumber: dto.phoneNum ?? '',
     );
@@ -57,7 +57,7 @@ class User {
       id: dto.id ?? 0,
       userId: dto.userId ?? '',
       name: dto.name ?? '',
-      profileImage: dto.profileImage,
+      profileImageUrl: dto.profileImageUrl,
       birthDate: null,
       phoneNumber: '',
       active: dto.active ?? false,
@@ -70,7 +70,7 @@ class User {
       id: json['id'] as int? ?? 0,
       userId: json['userId'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      profileImage: json['profileImage'] as String?,
+      profileImageUrl: json['profileImageUrl'] as String?,
       birthDate: json['birthDate'] as String?,
       phoneNumber: json['phoneNum'] as String? ?? '',
     );
@@ -82,21 +82,22 @@ class User {
       'id': id,
       'userId': userId,
       'name': name,
-      'profileImage': profileImage,
+      'profileImageUrl': profileImageUrl,
       'birthDate': birthDate,
       'phoneNum': phoneNumber,
     };
   }
 
   /// 프로필 이미지 유무 확인
-  bool get hasProfileImage => profileImage != null && profileImage!.isNotEmpty;
+  bool get hasprofileImageUrl =>
+      profileImageUrl != null && profileImageUrl!.isNotEmpty;
 
   /// copyWith 메서드
   User copyWith({
     int? id,
     String? userId,
     String? name,
-    String? profileImage,
+    String? profileImageUrl,
     String? birthDate,
     String? phoneNumber,
   }) {
@@ -104,7 +105,7 @@ class User {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       name: name ?? this.name,
-      profileImage: profileImage ?? this.profileImage,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       birthDate: birthDate ?? this.birthDate,
       phoneNumber: phoneNumber ?? this.phoneNumber,
     );

@@ -10,7 +10,7 @@ All URIs are relative to *https://newdawnsoi.site*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create**](PostAPIApi.md#create) | **POST** /post/create | 게시물 추가
-[**delete**](PostAPIApi.md#delete) | **DELETE** /post/delete | 게시물 삭제
+[**delete1**](PostAPIApi.md#delete1) | **DELETE** /post/delete | 게시물 삭제
 [**findAllByUserId**](PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 메인페이지에 띄울 게시물 조회
 [**findByCategoryId**](PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
 [**showDetail**](PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
@@ -60,8 +60,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **delete**
-> ApiResponseDtoObject delete(postId)
+# **delete1**
+> ApiResponseDtoObject delete1(postId)
 
 게시물 삭제
 
@@ -75,10 +75,10 @@ final api_instance = PostAPIApi();
 final postId = 789; // int | 
 
 try {
-    final result = api_instance.delete(postId);
+    final result = api_instance.delete1(postId);
     print(result);
 } catch (e) {
-    print('Exception when calling PostAPIApi->delete: $e\n');
+    print('Exception when calling PostAPIApi->delete1: $e\n');
 }
 ```
 

@@ -49,7 +49,7 @@ abstract class CommentController extends ChangeNotifier {
     required int postId,
     required int userId,
     String? text,
-    String? audioUrl,
+    String? audioKey,
     String? waveformData,
     int? duration,
   });
@@ -73,7 +73,7 @@ abstract class CommentController extends ChangeNotifier {
   /// Parameters:
   /// - [postId]: 게시물 ID
   /// - [userId]: 작성자 ID
-  /// - [audioUrl]: 음성 파일 URL
+  /// - [audioKey]: 음성 파일 키
   /// - [waveformData]: 음성 파형 데이터 (선택)
   /// - [duration]: 음성 길이 (선택)
   ///
@@ -81,7 +81,7 @@ abstract class CommentController extends ChangeNotifier {
   Future<bool> createAudioComment({
     required int postId,
     required int userId,
-    required String audioUrl,
+    required String audioKey,
     String? waveformData,
     int? duration,
   });

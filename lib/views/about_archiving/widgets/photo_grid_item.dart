@@ -9,6 +9,8 @@ import '../../../api_firebase/models/photo_data_model.dart';
 import '../screens/archive_detail/photo_detail_screen.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
+/// 사진 그리드 아이템 위젯
+///
 class PhotoGridItem extends StatefulWidget {
   final MediaDataModel photo;
   final List<MediaDataModel> allPhotos;

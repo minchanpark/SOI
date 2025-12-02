@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **id** | **int** |  | [optional] 
 **userId** | **String** |  | [optional] 
 **name** | **String** |  | [optional] 
-**profileImage** | **String** |  | [optional] 
+**profileImageUrl** | **String** |  | [optional] 
 **birthDate** | **String** |  | [optional] 
 **phoneNum** | **String** |  | [optional] 
 

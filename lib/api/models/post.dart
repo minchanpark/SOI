@@ -4,7 +4,8 @@ import 'package:soi_api_client/api.dart';
 ///
 /// API의 PostRespDto를 앱 내부에서 사용하기 위한 모델입니다.
 class Post {
-  final String odid;
+  final int id;
+  final String userId;
   final String? content;
   final String? imageUrl;
   final String? audioUrl;
@@ -14,7 +15,8 @@ class Post {
   final DateTime? createdAt;
 
   const Post({
-    required this.odid,
+    required this.id,
+    required this.userId,
     this.content,
     this.imageUrl,
     this.audioUrl,
@@ -27,10 +29,11 @@ class Post {
   /// PostRespDto에서 Post 모델 생성
   factory Post.fromDto(PostRespDto dto) {
     return Post(
-      odid: dto.userId ?? '',
+      id: dto.id ?? 0,
+      userId: dto.userId ?? '',
       content: dto.content,
-      imageUrl: dto.postFileKey,
-      audioUrl: dto.audioFileKey,
+      imageUrl: dto.postFileUrl,
+      audioUrl: dto.audioFileUrl,
       waveformData: dto.waveformData,
       duration: dto.duration,
       isActive: dto.isActive ?? true,
@@ -41,9 +44,10 @@ class Post {
   /// JSON에서 Post 모델 생성
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
-      odid: json['userId'] as String? ?? '',
+      id: json['id'] as int? ?? 0,
+      userId: json['userId'] as String? ?? '',
       content: json['content'] as String?,
-      imageUrl: json['postFileKey'] as String?,
+      imageUrl: json['postFileUrl'] as String?,
       audioUrl: json['audioFileKey'] as String?,
       waveformData: json['waveformData'] as String?,
       duration: json['duration'] as int?,
@@ -57,10 +61,11 @@ class Post {
   /// Post 모델을 JSON으로 변환
   Map<String, dynamic> toJson() {
     return {
-      'userId': odid,
+      'id': id,
+      'userId': userId,
       'content': content,
-      'postFileKey': imageUrl,
-      'audioFileKey': audioUrl,
+      'postFileUrl': imageUrl,
+      'audioFileUrl': audioUrl,
       'waveformData': waveformData,
       'duration': duration,
       'isActive': isActive,
@@ -79,7 +84,8 @@ class Post {
 
   /// copyWith 메서드
   Post copyWith({
-    String? odid,
+    int? id,
+    String? userId,
     String? content,
     String? imageUrl,
     String? audioUrl,
@@ -89,10 +95,11 @@ class Post {
     DateTime? createdAt,
   }) {
     return Post(
-      odid: odid ?? this.odid,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
       content: content ?? this.content,
-      imageUrl: imageUrl ?? this.imageUrl,
-      audioUrl: audioUrl ?? this.audioUrl,
+      imageUrl: imageUrl,
+      audioUrl: audioUrl,
       waveformData: waveformData ?? this.waveformData,
       duration: duration ?? this.duration,
       isActive: isActive ?? this.isActive,
@@ -105,14 +112,14 @@ class Post {
       identical(this, other) ||
       other is Post &&
           runtimeType == other.runtimeType &&
-          odid == other.odid &&
+          userId == other.userId &&
           createdAt == other.createdAt;
 
   @override
-  int get hashCode => odid.hashCode ^ (createdAt?.hashCode ?? 0);
+  int get hashCode => userId.hashCode ^ (createdAt?.hashCode ?? 0);
 
   @override
   String toString() {
-    return 'Post{odid: $odid, hasImage: $hasImage, hasAudio: $hasAudio}';
+    return 'Post{userId: $userId, hasImage: $hasImage, hasAudio: $hasAudio}';
   }
 }

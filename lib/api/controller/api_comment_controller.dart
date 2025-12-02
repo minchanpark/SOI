@@ -47,7 +47,7 @@ class ApiCommentController extends CommentController {
     required int postId,
     required int userId,
     String? text,
-    String? audioUrl,
+    String? audioKey,
     String? waveformData,
     int? duration,
   }) async {
@@ -59,7 +59,7 @@ class ApiCommentController extends CommentController {
         postId: postId,
         userId: userId,
         text: text,
-        audioUrl: audioUrl,
+        audioKey: audioKey,
         waveformData: waveformData,
         duration: duration,
       );
@@ -100,7 +100,7 @@ class ApiCommentController extends CommentController {
   Future<bool> createAudioComment({
     required int postId,
     required int userId,
-    required String audioUrl,
+    required String audioKey,
     String? waveformData,
     int? duration,
   }) async {
@@ -111,7 +111,7 @@ class ApiCommentController extends CommentController {
       final result = await _commentService.createAudioComment(
         postId: postId,
         userId: userId,
-        audioUrl: audioUrl,
+        audioKey: audioKey,
         waveformData: waveformData,
         duration: duration,
       );

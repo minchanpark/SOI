@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **emojiId** | **int** |  | [optional] 
 **postId** | **int** |  | [optional] 
 **text** | **String** |  | [optional] 
-**audioUrl** | **String** |  | [optional] 
+**audioKey** | **String** |  | [optional] 
 **waveformData** | **String** |  | [optional] 
 **duration** | **int** |  | [optional] 
 **locationX** | **double** |  | [optional] 

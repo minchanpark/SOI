@@ -62,8 +62,11 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *APIApi* | [**getPresignedUrl**](doc//APIApi.md#getpresignedurl) | **GET** /media/get-url | Presigned URL 요청
 *APIApi* | [**uploadMedia**](doc//APIApi.md#uploadmedia) | **POST** /media/upload | 미디어 업로드
-*CategoryAPIApi* | [**categoryPinned**](doc//CategoryAPIApi.md#categorypinned) | **POST** /category/pinned | 카테고리 고정
+*CategoryAPIApi* | [**categoryPinned**](doc//CategoryAPIApi.md#categorypinned) | **POST** /category/set/pinned | 카테고리 고정
 *CategoryAPIApi* | [**create3**](doc//CategoryAPIApi.md#create3) | **POST** /category/create | 카테고리 추가
+*CategoryAPIApi* | [**customName**](doc//CategoryAPIApi.md#customname) | **POST** /category/set/name | 카테고리 이름수정
+*CategoryAPIApi* | [**customProfile**](doc//CategoryAPIApi.md#customprofile) | **POST** /category/set/profile | 카테고리 프로필 수정
+*CategoryAPIApi* | [**delete**](doc//CategoryAPIApi.md#delete) | **POST** /category/delete | 카테고리 나가기 (삭제)
 *CategoryAPIApi* | [**getCategories**](doc//CategoryAPIApi.md#getcategories) | **POST** /category/find | 유저가 속한 카테고리 리스트를 가져오는 API
 *CategoryAPIApi* | [**inviteResponse**](doc//CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
 *CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가
@@ -76,8 +79,10 @@ Class | Method | HTTP request | Description
 *FriendAPIApi* | [**getAllFriend1**](doc//FriendAPIApi.md#getallfriend1) | **GET** /friend/check-friend-relation | 연락처에 있는 친구들 관계확인
 *FriendAPIApi* | [**unBlockFriend**](doc//FriendAPIApi.md#unblockfriend) | **POST** /friend/unblock | 친구 차단 해제
 *FriendAPIApi* | [**update**](doc//FriendAPIApi.md#update) | **POST** /friend/update | 친구 상태 업데이트
+*NotificationAPIApi* | [**getAll**](doc//NotificationAPIApi.md#getall) | **POST** /notification/get-all | 알림 조회
+*NotificationAPIApi* | [**getFriend**](doc//NotificationAPIApi.md#getfriend) | **POST** /notification/get-friend | 친구관련 알림 조회
 *PostAPIApi* | [**create**](doc//PostAPIApi.md#create) | **POST** /post/create | 게시물 추가
-*PostAPIApi* | [**delete**](doc//PostAPIApi.md#delete) | **DELETE** /post/delete | 게시물 삭제
+*PostAPIApi* | [**delete1**](doc//PostAPIApi.md#delete1) | **DELETE** /post/delete | 게시물 삭제
 *PostAPIApi* | [**findAllByUserId**](doc//PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 메인페이지에 띄울 게시물 조회
 *PostAPIApi* | [**findByCategoryId**](doc//PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
 *PostAPIApi* | [**showDetail**](doc//PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
@@ -102,11 +107,13 @@ Class | Method | HTTP request | Description
  - [ApiResponseDtoListCategoryRespDto](doc//ApiResponseDtoListCategoryRespDto.md)
  - [ApiResponseDtoListCommentRespDto](doc//ApiResponseDtoListCommentRespDto.md)
  - [ApiResponseDtoListFriendCheckRespDto](doc//ApiResponseDtoListFriendCheckRespDto.md)
+ - [ApiResponseDtoListNotificationRespDto](doc//ApiResponseDtoListNotificationRespDto.md)
  - [ApiResponseDtoListPostRespDto](doc//ApiResponseDtoListPostRespDto.md)
  - [ApiResponseDtoListString](doc//ApiResponseDtoListString.md)
  - [ApiResponseDtoListUserFindRespDto](doc//ApiResponseDtoListUserFindRespDto.md)
  - [ApiResponseDtoListUserRespDto](doc//ApiResponseDtoListUserRespDto.md)
  - [ApiResponseDtoLong](doc//ApiResponseDtoLong.md)
+ - [ApiResponseDtoNotificationGetAllRespDto](doc//ApiResponseDtoNotificationGetAllRespDto.md)
  - [ApiResponseDtoObject](doc//ApiResponseDtoObject.md)
  - [ApiResponseDtoPostRespDto](doc//ApiResponseDtoPostRespDto.md)
  - [ApiResponseDtoUserRespDto](doc//ApiResponseDtoUserRespDto.md)
@@ -122,6 +129,8 @@ Class | Method | HTTP request | Description
  - [FriendReqDto](doc//FriendReqDto.md)
  - [FriendRespDto](doc//FriendRespDto.md)
  - [FriendUpdateRespDto](doc//FriendUpdateRespDto.md)
+ - [NotificationGetAllRespDto](doc//NotificationGetAllRespDto.md)
+ - [NotificationRespDto](doc//NotificationRespDto.md)
  - [PostCreateReqDto](doc//PostCreateReqDto.md)
  - [PostRespDto](doc//PostRespDto.md)
  - [PostUpdateReqDto](doc//PostUpdateReqDto.md)

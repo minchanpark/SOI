@@ -2,9 +2,9 @@ import 'package:soi_api_client/api.dart';
 
 /// 댓글 유형
 enum CommentType {
-  emoji,  // 이모지 댓글
-  text,   // 텍스트 댓글
-  audio,  // 음성 댓글
+  emoji, // 이모지 댓글
+  text, // 텍스트 댓글
+  audio, // 음성 댓글
 }
 
 /// 댓글 모델
@@ -15,7 +15,7 @@ class Comment {
   final String? text;
   final int? emojiId;
   final String? audioUrl;
-  final List<double> waveformData;
+  final String? waveformData;
   final int? duration;
   final double? locationX;
   final double? locationY;
@@ -26,7 +26,7 @@ class Comment {
     this.text,
     this.emojiId,
     this.audioUrl,
-    this.waveformData = const [],
+    this.waveformData,
     this.duration,
     this.locationX,
     this.locationY,
@@ -40,10 +40,7 @@ class Comment {
       text: dto.text,
       emojiId: dto.emojiId,
       audioUrl: dto.audioUrl,
-      waveformData: (dto.waveformdata as List<dynamic>?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [],
+      waveformData: dto.waveFormData,
       duration: dto.duration,
       locationX: dto.locationX,
       locationY: dto.locationY,
@@ -72,10 +69,7 @@ class Comment {
       text: json['text'] as String?,
       emojiId: json['emojiId'] as int?,
       audioUrl: json['audioUrl'] as String?,
-      waveformData: (json['waveformdata'] as List<dynamic>?)
-              ?.map((e) => (e as num).toDouble())
-              .toList() ??
-          [],
+      waveformData: (json['waveformdata'] as String?),
       duration: json['duration'] as int?,
       locationX: (json['locationX'] as num?)?.toDouble(),
       locationY: (json['locationY'] as num?)?.toDouble(),
@@ -133,7 +127,7 @@ class Comment {
     String? text,
     int? emojiId,
     String? audioUrl,
-    List<double>? waveformData,
+    String? waveformData,
     int? duration,
     double? locationX,
     double? locationY,

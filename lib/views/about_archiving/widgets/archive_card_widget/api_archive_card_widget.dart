@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../../api/models/category.dart';
+import '../../screens/archive_detail/api_category_photos_screen.dart';
 import 'api_archive_profile_row_widget.dart';
 import 'api_archive_popup_menu_widget.dart';
 
@@ -45,14 +46,12 @@ class ApiArchiveCardWidget extends StatelessWidget {
         onTap: isEditMode
             ? null
             : () {
-                // TODO: REST API 버전의 CategoryPhotosScreen으로 이동
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'profiles: ${category.usersProfile.length}, totalUserCount: ${category.totalUserCount}',
-                    ),
-                    duration: const Duration(seconds: 2),
+                // REST API 버전의 CategoryPhotosScreen으로 이동
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ApiCategoryPhotosScreen(category: category),
                   ),
                 );
               },

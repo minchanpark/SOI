@@ -16,7 +16,7 @@ class UserRespDto {
     this.id,
     this.userId,
     this.name,
-    this.profileImage,
+    this.profileImageUrl,
     this.birthDate,
     this.phoneNum,
   });
@@ -51,7 +51,7 @@ class UserRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageUrl;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -74,7 +74,7 @@ class UserRespDto {
     other.id == id &&
     other.userId == userId &&
     other.name == name &&
-    other.profileImage == profileImage &&
+    other.profileImageUrl == profileImageUrl &&
     other.birthDate == birthDate &&
     other.phoneNum == phoneNum;
 
@@ -84,12 +84,12 @@ class UserRespDto {
     (id == null ? 0 : id!.hashCode) +
     (userId == null ? 0 : userId!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (profileImageUrl == null ? 0 : profileImageUrl!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode);
 
   @override
-  String toString() => 'UserRespDto[id=$id, userId=$userId, name=$name, profileImage=$profileImage, birthDate=$birthDate, phoneNum=$phoneNum]';
+  String toString() => 'UserRespDto[id=$id, userId=$userId, name=$name, profileImageUrl=$profileImageUrl, birthDate=$birthDate, phoneNum=$phoneNum]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -108,10 +108,10 @@ class UserRespDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageUrl != null) {
+      json[r'profileImageUrl'] = this.profileImageUrl;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageUrl'] = null;
     }
     if (this.birthDate != null) {
       json[r'birthDate'] = this.birthDate;
@@ -148,7 +148,7 @@ class UserRespDto {
         id: mapValueOfType<int>(json, r'id'),
         userId: mapValueOfType<String>(json, r'userId'),
         name: mapValueOfType<String>(json, r'name'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        profileImageUrl: mapValueOfType<String>(json, r'profileImageUrl'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),
         phoneNum: mapValueOfType<String>(json, r'phoneNum'),
       );

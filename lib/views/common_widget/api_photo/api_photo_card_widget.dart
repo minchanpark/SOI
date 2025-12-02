@@ -1,0 +1,207 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../api/models/post.dart';
+import '../../../api/models/comment.dart';
+import 'api_photo_display_widget.dart';
+import 'api_user_info_widget.dart';
+import 'api_voice_recording_widget.dart';
+
+/// API 기반 사진 카드 위젯
+///
+/// Firebase 버전의 PhotoCardWidgetCommon과 동일한 디자인을 유지하면서
+/// Post 모델을 사용합니다.
+class ApiPhotoCardWidget extends StatefulWidget {
+  final Post post;
+  final String categoryName;
+  final int categoryId;
+  final int index;
+  final bool isOwner;
+  final bool isArchive;
+  final bool isCategory;
+
+  // 상태 관리 관련
+  final Map<int, List<Comment>> postComments;
+  final Map<String, String> userProfileImages;
+  final Map<String, bool> profileLoadingStates;
+  final Map<String, String> userNames;
+  final Map<int, bool> voiceCommentActiveStates;
+  final Map<int, bool> voiceCommentSavedStates;
+  final Map<int, bool>? pendingTextComments;
+  final Map<int, PendingApiVoiceComment> pendingVoiceComments;
+
+  // 콜백 함수들
+  final Function(Post) onToggleAudio;
+  final Function(int) onToggleVoiceComment;
+  final Function(int, String?, List<double>?, int?) onVoiceCommentCompleted;
+  final Function(int, String) onTextCommentCompleted;
+  final Function(int) onVoiceCommentDeleted;
+  final Function(int, Offset) onProfileImageDragged;
+  final Future<void> Function(int) onSaveRequested;
+  final Function(int) onSaveCompleted;
+  final VoidCallback onDeletePressed;
+
+  const ApiPhotoCardWidget({
+    super.key,
+    required this.post,
+    required this.categoryName,
+    required this.categoryId,
+    required this.index,
+    required this.isOwner,
+    this.isArchive = false,
+    this.isCategory = false,
+    required this.postComments,
+    required this.userProfileImages,
+    required this.profileLoadingStates,
+    required this.userNames,
+    required this.voiceCommentActiveStates,
+    required this.voiceCommentSavedStates,
+    this.pendingTextComments,
+    this.pendingVoiceComments = const {},
+    required this.onToggleAudio,
+    required this.onToggleVoiceComment,
+    required this.onVoiceCommentCompleted,
+    required this.onTextCommentCompleted,
+    required this.onVoiceCommentDeleted,
+    required this.onProfileImageDragged,
+    required this.onSaveRequested,
+    required this.onSaveCompleted,
+    required this.onDeletePressed,
+  });
+
+  @override
+  State<ApiPhotoCardWidget> createState() => _ApiPhotoCardWidgetState();
+}
+
+class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
+  bool _isTextFieldFocused = false;
+
+  void _handleTextCommentCreated(String text) async {
+    debugPrint(
+      '[ApiPhotoCard] 텍스트 댓글 생성: postId=${widget.post.id}, text=$text',
+    );
+    await widget.onTextCommentCompleted(widget.post.id, text);
+    widget.onToggleVoiceComment(widget.post.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isKeyboardVisible = _isTextFieldFocused;
+    final bottomPadding = isKeyboardVisible
+        ? 10.0
+        : (widget.isCategory ? 55.0 : 10.0);
+
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (!widget.isArchive) SizedBox(height: 90.h),
+
+              // 사진 표시 위젯
+              ApiPhotoDisplayWidget(
+                key: ValueKey(widget.post.id),
+                post: widget.post,
+                categoryName: widget.categoryName,
+                isArchive: widget.isArchive,
+                postComments: widget.postComments,
+                userProfileImages: widget.userProfileImages,
+                profileLoadingStates: widget.profileLoadingStates,
+                onProfileImageDragged: widget.onProfileImageDragged,
+                onToggleAudio: widget.onToggleAudio,
+                pendingVoiceComments: widget.pendingVoiceComments,
+              ),
+              SizedBox(height: 12.h),
+
+              // 사용자 정보 위젯 (아이디와 날짜)
+              ApiUserInfoWidget(
+                post: widget.post,
+                userNames: widget.userNames,
+                isCurrentUserPost: widget.isOwner,
+                onDeletePressed: widget.onDeletePressed,
+              ),
+              SizedBox(height: 10.h),
+
+              // 음성 녹음 위젯을 위한 공간 확보
+              SizedBox(height: 90.h),
+            ],
+          ),
+        ),
+
+        // 음성 녹음 위젯을 Stack 위에 배치
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: bottomPadding,
+          child: ApiVoiceRecordingWidget(
+            post: widget.post,
+            voiceCommentActiveStates: widget.voiceCommentActiveStates,
+            voiceCommentSavedStates: widget.voiceCommentSavedStates,
+            userProfileImages: widget.userProfileImages,
+            postComments: widget.postComments,
+            onToggleVoiceComment: widget.onToggleVoiceComment,
+            onVoiceCommentCompleted: widget.onVoiceCommentCompleted,
+            onVoiceCommentDeleted: widget.onVoiceCommentDeleted,
+            onProfileImageDragged: widget.onProfileImageDragged,
+            onSaveRequested: widget.onSaveRequested,
+            onSaveCompleted: widget.onSaveCompleted,
+            pendingTextComments: widget.pendingTextComments,
+            onTextFieldFocusChanged: (isFocused) {
+              setState(() {
+                _isTextFieldFocused = isFocused;
+              });
+            },
+            onTextCommentCreated: _handleTextCommentCreated,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// API 버전 Pending 음성 댓글 상태
+class PendingApiVoiceComment {
+  final String? audioPath;
+  final List<double>? waveformData;
+  final int? duration;
+  final String? text;
+  final bool isTextComment;
+  final Offset? relativePosition;
+  final String? recorderUserId;
+  final String? profileImageUrl;
+
+  const PendingApiVoiceComment({
+    this.audioPath,
+    this.waveformData,
+    this.duration,
+    this.text,
+    this.isTextComment = false,
+    this.relativePosition,
+    this.recorderUserId,
+    this.profileImageUrl,
+  });
+
+  PendingApiVoiceComment copyWith({
+    String? audioPath,
+    List<double>? waveformData,
+    int? duration,
+    String? text,
+    bool? isTextComment,
+    Offset? relativePosition,
+    String? recorderUserId,
+    String? profileImageUrl,
+  }) {
+    return PendingApiVoiceComment(
+      audioPath: audioPath ?? this.audioPath,
+      waveformData: waveformData ?? this.waveformData,
+      duration: duration ?? this.duration,
+      text: text ?? this.text,
+      isTextComment: isTextComment ?? this.isTextComment,
+      relativePosition: relativePosition ?? this.relativePosition,
+      recorderUserId: recorderUserId ?? this.recorderUserId,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+    );
+  }
+}

@@ -17,7 +17,7 @@ class UserCreateReqDto {
     this.userId,
     this.phoneNum,
     this.birthDate,
-    this.profileImage,
+    this.profileImageKey,
     this.serviceAgreed,
     this.privacyPolicyAgreed,
     this.marketingAgreed,
@@ -61,7 +61,7 @@ class UserCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -93,7 +93,7 @@ class UserCreateReqDto {
     other.userId == userId &&
     other.phoneNum == phoneNum &&
     other.birthDate == birthDate &&
-    other.profileImage == profileImage &&
+    other.profileImageKey == profileImageKey &&
     other.serviceAgreed == serviceAgreed &&
     other.privacyPolicyAgreed == privacyPolicyAgreed &&
     other.marketingAgreed == marketingAgreed;
@@ -105,13 +105,13 @@ class UserCreateReqDto {
     (userId == null ? 0 : userId!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
     (serviceAgreed == null ? 0 : serviceAgreed!.hashCode) +
     (privacyPolicyAgreed == null ? 0 : privacyPolicyAgreed!.hashCode) +
     (marketingAgreed == null ? 0 : marketingAgreed!.hashCode);
 
   @override
-  String toString() => 'UserCreateReqDto[name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImage=$profileImage, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
+  String toString() => 'UserCreateReqDto[name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -135,10 +135,10 @@ class UserCreateReqDto {
     } else {
       json[r'birthDate'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageKey != null) {
+      json[r'profileImageKey'] = this.profileImageKey;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageKey'] = null;
     }
     if (this.serviceAgreed != null) {
       json[r'serviceAgreed'] = this.serviceAgreed;
@@ -181,7 +181,7 @@ class UserCreateReqDto {
         userId: mapValueOfType<String>(json, r'userId'),
         phoneNum: mapValueOfType<String>(json, r'phoneNum'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),
         serviceAgreed: mapValueOfType<bool>(json, r'serviceAgreed'),
         privacyPolicyAgreed: mapValueOfType<bool>(json, r'privacyPolicyAgreed'),
         marketingAgreed: mapValueOfType<bool>(json, r'marketingAgreed'),

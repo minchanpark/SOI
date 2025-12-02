@@ -81,7 +81,7 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [int] postId (required):
-  Future<Response> deleteWithHttpInfo(int postId,) async {
+  Future<Response> delete1WithHttpInfo(int postId,) async {
     // ignore: prefer_const_declarations
     final path = r'/post/delete';
 
@@ -115,8 +115,8 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [int] postId (required):
-  Future<ApiResponseDtoObject?> delete(int postId,) async {
-    final response = await deleteWithHttpInfo(postId,);
+  Future<ApiResponseDtoObject?> delete1(int postId,) async {
+    final response = await delete1WithHttpInfo(postId,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

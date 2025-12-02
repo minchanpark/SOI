@@ -16,7 +16,7 @@ class UserFindRespDto {
     this.id,
     this.name,
     this.userId,
-    this.profileImage,
+    this.profileImageUrl,
     this.active,
   });
 
@@ -50,7 +50,7 @@ class UserFindRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageUrl;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -65,7 +65,7 @@ class UserFindRespDto {
     other.id == id &&
     other.name == name &&
     other.userId == userId &&
-    other.profileImage == profileImage &&
+    other.profileImageUrl == profileImageUrl &&
     other.active == active;
 
   @override
@@ -74,11 +74,11 @@ class UserFindRespDto {
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
     (userId == null ? 0 : userId!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (profileImageUrl == null ? 0 : profileImageUrl!.hashCode) +
     (active == null ? 0 : active!.hashCode);
 
   @override
-  String toString() => 'UserFindRespDto[id=$id, name=$name, userId=$userId, profileImage=$profileImage, active=$active]';
+  String toString() => 'UserFindRespDto[id=$id, name=$name, userId=$userId, profileImageUrl=$profileImageUrl, active=$active]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -97,10 +97,10 @@ class UserFindRespDto {
     } else {
       json[r'userId'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageUrl != null) {
+      json[r'profileImageUrl'] = this.profileImageUrl;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageUrl'] = null;
     }
     if (this.active != null) {
       json[r'active'] = this.active;
@@ -132,7 +132,7 @@ class UserFindRespDto {
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
         userId: mapValueOfType<String>(json, r'userId'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        profileImageUrl: mapValueOfType<String>(json, r'profileImageUrl'),
         active: mapValueOfType<bool>(json, r'active'),
       );
     }

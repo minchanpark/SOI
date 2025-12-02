@@ -142,7 +142,7 @@ class ApiUserController extends UserController {
     required String userId,
     required String phoneNum,
     required String birthDate,
-    String? profileImage,
+    String? profileImageKey,
     bool serviceAgreed = true,
     bool privacyPolicyAgreed = true,
     bool marketingAgreed = false,
@@ -156,7 +156,7 @@ class ApiUserController extends UserController {
         userId: userId,
         phoneNum: phoneNum,
         birthDate: birthDate,
-        profileImage: profileImage,
+        profileImageKey: profileImageKey,
         serviceAgreed: serviceAgreed,
         privacyPolicyAgreed: privacyPolicyAgreed,
         marketingAgreed: marketingAgreed,
@@ -253,7 +253,7 @@ class ApiUserController extends UserController {
     String? userId,
     String? phoneNum,
     String? birthDate,
-    String? profileImage,
+    String? profileImageKey,
   }) async {
     _setLoading(true);
     _clearError();
@@ -265,7 +265,7 @@ class ApiUserController extends UserController {
         userId: userId,
         phoneNum: phoneNum,
         birthDate: birthDate,
-        profileImage: profileImage,
+        profileImageKey: profileImageKey,
       );
       _setLoading(false);
       return user;
@@ -277,9 +277,9 @@ class ApiUserController extends UserController {
   }
 
   @override
-  Future<User?> updateProfileImage({
+  Future<User?> updateprofileImageUrl({
     required int userId,
-    required String profileImage,
+    required String profileImageKey,
   }) async {
     _setLoading(true);
     _clearError();
@@ -287,7 +287,7 @@ class ApiUserController extends UserController {
     try {
       final user = await _userService.updateProfileImage(
         userId: userId,
-        profileImage: profileImage,
+        profileImageKey: profileImageKey,
       );
       _setLoading(false);
       return user;

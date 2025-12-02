@@ -283,7 +283,7 @@ class PostService {
   /// - [ForbiddenException]: 삭제 권한 없음
   Future<bool> deletePost(int postId) async {
     try {
-      final response = await _postApi.delete(postId);
+      final response = await _postApi.delete1(postId);
 
       if (response == null) {
         throw const DataValidationException(message: '게시물 삭제 응답이 없습니다.');

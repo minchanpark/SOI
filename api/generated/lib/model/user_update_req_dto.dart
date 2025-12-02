@@ -18,7 +18,7 @@ class UserUpdateReqDto {
     this.userId,
     this.phoneNum,
     this.birthDate,
-    this.profileImage,
+    this.profileImageKey,
     this.marketingAgreed,
   });
 
@@ -68,7 +68,7 @@ class UserUpdateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -85,7 +85,7 @@ class UserUpdateReqDto {
     other.userId == userId &&
     other.phoneNum == phoneNum &&
     other.birthDate == birthDate &&
-    other.profileImage == profileImage &&
+    other.profileImageKey == profileImageKey &&
     other.marketingAgreed == marketingAgreed;
 
   @override
@@ -96,11 +96,11 @@ class UserUpdateReqDto {
     (userId == null ? 0 : userId!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
     (marketingAgreed == null ? 0 : marketingAgreed!.hashCode);
 
   @override
-  String toString() => 'UserUpdateReqDto[id=$id, name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImage=$profileImage, marketingAgreed=$marketingAgreed]';
+  String toString() => 'UserUpdateReqDto[id=$id, name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, marketingAgreed=$marketingAgreed]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -129,10 +129,10 @@ class UserUpdateReqDto {
     } else {
       json[r'birthDate'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageKey != null) {
+      json[r'profileImageKey'] = this.profileImageKey;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageKey'] = null;
     }
     if (this.marketingAgreed != null) {
       json[r'marketingAgreed'] = this.marketingAgreed;
@@ -166,7 +166,7 @@ class UserUpdateReqDto {
         userId: mapValueOfType<String>(json, r'userId'),
         phoneNum: mapValueOfType<String>(json, r'phoneNum'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),
         marketingAgreed: mapValueOfType<bool>(json, r'marketingAgreed'),
       );
     }

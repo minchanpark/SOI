@@ -582,7 +582,7 @@ class UserAPIApi {
 
   /// 유저 프로필 업데이트
   ///
-  /// 유저의 프로필을 업데이트 합니다.
+  /// 유저의 프로필을 업데이트 합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -590,8 +590,8 @@ class UserAPIApi {
   ///
   /// * [int] userId (required):
   ///
-  /// * [String] profileImage (required):
-  Future<Response> updateProfileWithHttpInfo(int userId, String profileImage,) async {
+  /// * [String] profileImageKey:
+  Future<Response> updateProfileWithHttpInfo(int userId, { String? profileImageKey, }) async {
     // ignore: prefer_const_declarations
     final path = r'/user/update-profile';
 
@@ -603,7 +603,9 @@ class UserAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'userId', userId));
-      queryParams.addAll(_queryParams('', 'profileImage', profileImage));
+    if (profileImageKey != null) {
+      queryParams.addAll(_queryParams('', 'profileImageKey', profileImageKey));
+    }
 
     const contentTypes = <String>[];
 
@@ -621,15 +623,15 @@ class UserAPIApi {
 
   /// 유저 프로필 업데이트
   ///
-  /// 유저의 프로필을 업데이트 합니다.
+  /// 유저의 프로필을 업데이트 합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
   ///
   /// Parameters:
   ///
   /// * [int] userId (required):
   ///
-  /// * [String] profileImage (required):
-  Future<ApiResponseDtoUserRespDto?> updateProfile(int userId, String profileImage,) async {
-    final response = await updateProfileWithHttpInfo(userId, profileImage,);
+  /// * [String] profileImageKey:
+  Future<ApiResponseDtoUserRespDto?> updateProfile(int userId, { String? profileImageKey, }) async {
+    final response = await updateProfileWithHttpInfo(userId,  profileImageKey: profileImageKey, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

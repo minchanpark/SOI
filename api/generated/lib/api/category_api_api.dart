@@ -29,7 +29,7 @@ class CategoryAPIApi {
   /// * [int] userId (required):
   Future<Response> categoryPinnedWithHttpInfo(int categoryId, int userId,) async {
     // ignore: prefer_const_declarations
-    final path = r'/category/pinned';
+    final path = r'/category/set/pinned';
 
     // ignore: prefer_final_locals
     Object? postBody;
@@ -130,6 +130,209 @@ class CategoryAPIApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoLong',) as ApiResponseDtoLong;
+    
+    }
+    return null;
+  }
+
+  /// 카테고리 이름수정
+  ///
+  /// 카테고리 아이디, 유저 아이디, 수정할 이름을 받아 카테고리 이름을 수정합니다. 커스텀한 이름을 삭제하길 원하면 name에 그냥 빈값 \"\" 을 넣으면 커스텀 이름이 삭제됩니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] name:
+  Future<Response> customNameWithHttpInfo(int categoryId, int userId, { String? name, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/category/set/name';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'categoryId', categoryId));
+      queryParams.addAll(_queryParams('', 'userId', userId));
+    if (name != null) {
+      queryParams.addAll(_queryParams('', 'name', name));
+    }
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 카테고리 이름수정
+  ///
+  /// 카테고리 아이디, 유저 아이디, 수정할 이름을 받아 카테고리 이름을 수정합니다. 커스텀한 이름을 삭제하길 원하면 name에 그냥 빈값 \"\" 을 넣으면 커스텀 이름이 삭제됩니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] name:
+  Future<ApiResponseDtoBoolean?> customName(int categoryId, int userId, { String? name, }) async {
+    final response = await customNameWithHttpInfo(categoryId, userId,  name: name, );
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoBoolean',) as ApiResponseDtoBoolean;
+    
+    }
+    return null;
+  }
+
+  /// 카테고리 프로필 수정
+  ///
+  /// 카테고리 아이디, 유저 아이디, 수정할 프로필 사진을 받아 프로필을 수정합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] profileImageKey:
+  Future<Response> customProfileWithHttpInfo(int categoryId, int userId, { String? profileImageKey, }) async {
+    // ignore: prefer_const_declarations
+    final path = r'/category/set/profile';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'categoryId', categoryId));
+      queryParams.addAll(_queryParams('', 'userId', userId));
+    if (profileImageKey != null) {
+      queryParams.addAll(_queryParams('', 'profileImageKey', profileImageKey));
+    }
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 카테고리 프로필 수정
+  ///
+  /// 카테고리 아이디, 유저 아이디, 수정할 프로필 사진을 받아 프로필을 수정합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] profileImageKey:
+  Future<ApiResponseDtoBoolean?> customProfile(int categoryId, int userId, { String? profileImageKey, }) async {
+    final response = await customProfileWithHttpInfo(categoryId, userId,  profileImageKey: profileImageKey, );
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoBoolean',) as ApiResponseDtoBoolean;
+    
+    }
+    return null;
+  }
+
+  /// 카테고리 나가기 (삭제)
+  ///
+  /// 카테고리를 나갑니다. (만약 카테고리에 속한 유저가 본인밖에 없으면 관련 데이터 다 삭제)
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [int] categoryId (required):
+  Future<Response> deleteWithHttpInfo(int userId, int categoryId,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/category/delete';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'categoryId', categoryId));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 카테고리 나가기 (삭제)
+  ///
+  /// 카테고리를 나갑니다. (만약 카테고리에 속한 유저가 본인밖에 없으면 관련 데이터 다 삭제)
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [int] categoryId (required):
+  Future<ApiResponseDtoObject?> delete(int userId, int categoryId,) async {
+    final response = await deleteWithHttpInfo(userId, categoryId,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoObject',) as ApiResponseDtoObject;
     
     }
     return null;

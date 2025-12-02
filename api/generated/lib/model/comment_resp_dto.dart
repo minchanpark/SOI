@@ -17,7 +17,7 @@ class CommentRespDto {
     this.text,
     this.emojiId,
     this.audioUrl,
-    this.waveformdata,
+    this.waveFormData,
     this.duration,
     this.locationX,
     this.locationY,
@@ -62,7 +62,7 @@ class CommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? waveformdata;
+  String? waveFormData;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -96,7 +96,7 @@ class CommentRespDto {
     other.text == text &&
     other.emojiId == emojiId &&
     other.audioUrl == audioUrl &&
-    other.waveformdata == waveformdata &&
+    other.waveFormData == waveFormData &&
     other.duration == duration &&
     other.locationX == locationX &&
     other.locationY == locationY &&
@@ -109,14 +109,14 @@ class CommentRespDto {
     (text == null ? 0 : text!.hashCode) +
     (emojiId == null ? 0 : emojiId!.hashCode) +
     (audioUrl == null ? 0 : audioUrl!.hashCode) +
-    (waveformdata == null ? 0 : waveformdata!.hashCode) +
+    (waveFormData == null ? 0 : waveFormData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (locationX == null ? 0 : locationX!.hashCode) +
     (locationY == null ? 0 : locationY!.hashCode) +
     (commentType == null ? 0 : commentType!.hashCode);
 
   @override
-  String toString() => 'CommentRespDto[userProfile=$userProfile, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveformdata=$waveformdata, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
+  String toString() => 'CommentRespDto[userProfile=$userProfile, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -140,10 +140,10 @@ class CommentRespDto {
     } else {
       json[r'audioUrl'] = null;
     }
-    if (this.waveformdata != null) {
-      json[r'waveformdata'] = this.waveformdata;
+    if (this.waveFormData != null) {
+      json[r'waveFormData'] = this.waveFormData;
     } else {
-      json[r'waveformdata'] = null;
+      json[r'waveFormData'] = null;
     }
     if (this.duration != null) {
       json[r'duration'] = this.duration;
@@ -191,7 +191,7 @@ class CommentRespDto {
         text: mapValueOfType<String>(json, r'text'),
         emojiId: mapValueOfType<int>(json, r'emojiId'),
         audioUrl: mapValueOfType<String>(json, r'audioUrl'),
-        waveformdata: mapValueOfType<String>(json, r'waveformdata'),
+        waveFormData: mapValueOfType<String>(json, r'waveFormData'),
         duration: mapValueOfType<int>(json, r'duration'),
         locationX: mapValueOfType<double>(json, r'locationX'),
         locationY: mapValueOfType<double>(json, r'locationY'),

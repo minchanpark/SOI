@@ -8,10 +8,11 @@ import 'package:soi_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**id** | **int** |  | [optional] 
 **userId** | **String** |  | [optional] 
 **content** | **String** |  | [optional] 
-**postFileKey** | **String** |  | [optional] 
-**audioFileKey** | **String** |  | [optional] 
+**postFileUrl** | **String** |  | [optional] 
+**audioFileUrl** | **String** |  | [optional] 
 **waveformData** | **String** |  | [optional] 
 **duration** | **int** |  | [optional] 
 **isActive** | **bool** |  | [optional] 
