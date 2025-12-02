@@ -2,11 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
+import 'package:soi/api/controller/api_media_controller.dart';
+import 'package:soi/api/controller/api_user_controller.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 
+/// 온보딩 메인 스크린
+/// 온보딩 화면들을 페이지 뷰로 보여주고,
+/// 마지막에 가입 완료 후 홈 화면으로 이동합니다.
 class OnboardingMainScreen extends StatefulWidget {
-  const OnboardingMainScreen({super.key});
+  final String? id;
+  final String? name;
+  final String? phone;
+  final String? birthDate;
+  final String? profileImagePath;
+  final bool? agreeServiceTerms;
+  final bool? agreePrivacyTerms;
+  final bool? agreeMarketingInfo;
+
+  const OnboardingMainScreen({
+    super.key,
+    this.id,
+    this.name,
+    this.phone,
+    this.birthDate,
+    this.profileImagePath,
+    this.agreeServiceTerms,
+    this.agreePrivacyTerms,
+    this.agreeMarketingInfo,
+  });
 
   @override
   State<OnboardingMainScreen> createState() => _OnboardingMainScreenState();
@@ -18,6 +42,11 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
   Map<String, dynamic>? _registrationData;
   bool _hasLoadedArguments = false;
   bool _isCompleting = false;
+
+  final ApiUserController _apiUserController = ApiUserController();
+  final ApiMediaController _apiMediaController = ApiMediaController();
+
+  String? profileImageKey;
 
   final List<_OnboardingContent> _contents = const [
     _OnboardingContent(
@@ -55,9 +84,12 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _apiUserController.dispose();
     super.dispose();
   }
 
+  /// 계속하기나 건너뛰기 버튼 눌렀을 때 호출
+  /// 가입정보를 서버에 저장함.
   Future<void> _completeOnboarding() async {
     if (_isCompleting) return;
 
@@ -78,31 +110,30 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     final String name = (registration['name'] as String?) ?? '';
     final String phone = (registration['phone'] as String?) ?? '';
     final String birthDate = (registration['birthDate'] as String?) ?? '';
-    final String? profileImagePath =
-        registration['profileImagePath'] as String?;
+    final MultipartFile profileImagePath = registration['profileImagePath'];
 
     setState(() {
       _isCompleting = true;
     });
 
     try {
-      await authController.createUserInFirestore(
-        user,
-        id,
-        name,
-        phone,
-        birthDate,
+      profileImageKey = await _apiMediaController.uploadProfileImage(
+        file: profileImagePath,
+        userId: _apiUserController.currentUser!.id,
       );
 
-      if (profileImagePath != null && profileImagePath.isNotEmpty) {
-        try {
-          await authController.uploadProfileImageFromPath(profileImagePath);
-        } catch (e) {
-          debugPrint('Failed to upload profile image: $e');
-        }
-      }
+      await _apiUserController.createUser(
+        name: name,
+        userId: id,
+        phoneNum: phone,
+        birthDate: birthDate,
+        profileImage: profileImageKey,
+      );
 
-      await authController.saveLoginState(userId: user.uid, phoneNumber: phone);
+      await _apiUserController.saveLoginState(
+        userId: _apiUserController.currentUser!.id,
+        phoneNumber: phone,
+      );
     } catch (e) {
       debugPrint('Failed to finalize onboarding: $e');
     }

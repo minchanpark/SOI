@@ -7,23 +7,6 @@ import '../api_client.dart';
 import '../api_exception.dart';
 import '../models/models.dart';
 
-/// 카테고리 필터 타입
-///
-/// 카테고리 조회 시 필터링 옵션입니다.
-enum CategoryFilter {
-  /// 전체 카테고리
-  all('ALL'),
-
-  /// 공개 카테고리 (그룹)
-  public_('PUBLIC'),
-
-  /// 비공개 카테고리 (개인)
-  private_('PRIVATE');
-
-  final String value;
-  const CategoryFilter(this.value);
-}
-
 /// 카테고리 초대 상태
 ///
 /// 카테고리 초대에 대한 응답 상태입니다.

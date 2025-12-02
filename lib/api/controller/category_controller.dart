@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:soi/api/models/category.dart';
-import 'package:soi/api/services/category_service.dart';
 
 /// 카테고리 컨트롤러 추상 클래스
 ///

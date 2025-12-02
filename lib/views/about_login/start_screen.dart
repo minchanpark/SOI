@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
+import '../../api/controller/api_user_controller.dart';
 import '../../theme/theme.dart';
 
 class StartScreen extends StatefulWidget {
@@ -107,11 +107,11 @@ class _StartScreenState extends State<StartScreen>
   /// 자동 로그인 체크
   Future<void> _checkAutoLogin() async {
     try {
-      final authController = Provider.of<AuthController>(
+      final userController = Provider.of<ApiUserController>(
         context,
         listen: false,
       );
-      final canAutoLogin = await authController.tryAutoLogin();
+      final canAutoLogin = await userController.tryAutoLogin();
 
       if (mounted) {
         if (canAutoLogin) {

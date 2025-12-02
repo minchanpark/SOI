@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+/// 프로필 이미지 선택 페이지
 class SelectProfileImagePage extends StatefulWidget {
   final ValueChanged<String?>? onImageSelected; // 이미지 경로 콜백 추가
   final PageController? pageController;

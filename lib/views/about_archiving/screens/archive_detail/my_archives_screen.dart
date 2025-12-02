@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-//import 'package:shimmer/shimmer.dart';
-
-import '../../../../api_firebase/controllers/auth_controller.dart';
-import '../../../../api_firebase/controllers/category_controller.dart';
-import '../../../../api_firebase/controllers/category_search_controller.dart';
+import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
+import '../../../../api/controller/api_category_controller.dart';
+import '../../../../api/controller/api_user_controller.dart';
+import '../../../../api/models/category.dart';
 import '../../../../theme/theme.dart';
-import '../../models/archive_layout_mode.dart';
-import '../../widgets/archive_card_widget/archive_card_widget.dart';
+import '../../widgets/archive_card_widget/api_archive_card_widget.dart';
 
-// 나의 아카이브 화면
-// 현재 사용자의 아카이브 목록을 표시
-// 아카이브를 클릭하면 아카이브 상세 화면으로 이동
+// 나의 아카이브 화면 (REST API 버전)
+// 현재 사용자가 생성한 카테고리만 표시
 class MyArchivesScreen extends StatefulWidget {
   final bool isEditMode;
   final String? editingCategoryId;
@@ -35,267 +32,190 @@ class MyArchivesScreen extends StatefulWidget {
 
 class _MyArchivesScreenState extends State<MyArchivesScreen>
     with AutomaticKeepAliveClientMixin {
-  String? uID;
-  // 카테고리별 프로필 이미지 캐시
-  final Map<String, List<String>> _categoryProfileImages = {};
-  final Map<String, List<String>> _categoryMatesCache = {}; // mates 변경 감지용
-  CategoryController? _categoryController; // CategoryController 참조 저장
+  int? _userId;
+  ApiUserController? _userController;
+  ApiCategoryController? _categoryController;
   bool _isInitialLoad = true;
-  int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
-  final Map<String, Future<void>> _profileImageLoaders = {};
-  AuthController? _authController; // AuthController 참조 저장
+  final String _searchQuery = ''; // 로컬 검색어
 
   @override
   void initState() {
     super.initState();
-    // 이메일이나 닉네임을 미리 가져와요.
-    final authController = Provider.of<AuthController>(context, listen: false);
-    authController.getIdFromFirestore().then((value) {
-      if (mounted) {
-        setState(() {
-          uID = value;
-        });
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
     });
   }
 
-  // 카테고리에 대한 프로필 이미지를 가져오는 함수
-  Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    // mates가 변경되었는지 확인
-    final cachedMates = _categoryMatesCache[categoryId];
-    final matesChanged = cachedMates == null ||
-        cachedMates.length != mates.length ||
-        !cachedMates.every((mate) => mates.contains(mate));
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _userController ??= Provider.of<ApiUserController>(context, listen: false);
+    _categoryController ??= Provider.of<ApiCategoryController>(
+      context,
+      listen: false,
+    );
+  }
 
-    // 캐시가 있고 mates가 변경되지 않았으면 재로드 불필요
-    if (_categoryProfileImages.containsKey(categoryId) && !matesChanged) {
-      return;
-    }
+  /// 데이터 로드
+  Future<void> _loadData() async {
+    final userController = Provider.of<ApiUserController>(
+      context,
+      listen: false,
+    );
+    final categoryController = Provider.of<ApiCategoryController>(
+      context,
+      listen: false,
+    );
 
-    // mates가 변경되었으면 캐시 무효화
-    if (matesChanged) {
-      _categoryProfileImages.remove(categoryId);
-      _categoryMatesCache[categoryId] = List.from(mates);
-    }
+    _userController = userController;
+    _categoryController = categoryController;
 
-    // 중복 호출을 피하기 위해 이미 로딩 중이면 해당 Future를 반환
-    final existingLoader = _profileImageLoaders[categoryId];
-    if (existingLoader != null) {
-      return existingLoader;
-    }
-
-    final authController = _authController;
-    final categoryController = _categoryController;
-    if (authController == null || categoryController == null) {
-      return;
-    }
-
-    final loader = categoryController
-        .getCategoryProfileImages(mates, authController)
-        .then((profileImages) {
-          if (!mounted) return;
-          setState(() {
-            _categoryProfileImages[categoryId] = profileImages;
-            _categoryMatesCache[categoryId] = List.from(mates);
-          });
-        })
-        .catchError((_) {
-          if (!mounted) return;
-          setState(() {
-            _categoryProfileImages[categoryId] = [];
-            _categoryMatesCache[categoryId] = List.from(mates);
-          });
-        })
-        .whenComplete(() {
-          _profileImageLoaders.remove(categoryId);
+    // 현재 로그인한 사용자 ID 가져오기
+    final currentUser = userController.currentUser;
+    if (currentUser != null) {
+      if (mounted) {
+        setState(() {
+          _userId = currentUser.id;
         });
+      }
+      // 카테고리 로드 (private 필터 - 내가 생성한 카테고리)
+      await categoryController.loadCategories(
+        currentUser.id,
+        filter: CategoryFilter.private_,
+      );
+      if (mounted) {
+        setState(() {
+          _isInitialLoad = false;
+        });
+      }
+    } else {
+      debugPrint('[MyArchivesScreen] 로그인된 사용자 없음');
+      if (mounted) {
+        setState(() {
+          _isInitialLoad = false;
+        });
+      }
+    }
+  }
 
-    _profileImageLoaders[categoryId] = loader;
-    return loader;
+  /// 새로고침
+  Future<void> _refresh() async {
+    if (_userId != null && _categoryController != null) {
+      await _categoryController!.loadCategories(
+        _userId!,
+        filter: CategoryFilter.private_,
+        forceReload: true,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    // 만약 닉네임을 아직 못 가져왔다면 로딩 중이에요.
-    if (uID == null) {
+
+    // 초기 로딩 중
+    if (_isInitialLoad) {
       return Scaffold(
         backgroundColor: AppTheme.lightTheme.colorScheme.surface,
         body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 3.0,
+          ),
         ),
       );
     }
 
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      body: Consumer2<CategorySearchController, CategoryController>(
-        builder: (context, searchController, categoryControllerParam, child) {
-          // categoryController를 저장하여 _buildGridView와 _buildListView에서 사용
-          _categoryController = categoryControllerParam;
+      body: Consumer<ApiCategoryController>(
+        builder: (context, categoryController, child) {
+          final categories = categoryController.privateCategories;
 
-          // Stream 사용으로 실시간 업데이트
-          return StreamBuilder<List<dynamic>>(
-            stream: _categoryController!.streamUserCategories(uID!),
-            builder: (context, snapshot) {
-              // 로딩 중일 때
-              /* if (snapshot.connectionState == ConnectionState.waiting ||
-                  !snapshot.hasData) {
-                // 이전에 카테고리가 있었으면 shimmer 표시
-                if (_previousCategoryCount > 0) {
-                  return _buildShimmerGrid(_previousCategoryCount);
-                }
-                // 처음 로딩이면 아무것도 표시하지 않음
-                return const SizedBox.shrink();
-              }*/
+          // 로딩 중
+          if (categoryController.isLoading && categories.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          }
 
-              // 에러가 생겼을 때
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.h),
-                    child: Text(
+          // 에러가 있을 때
+          if (categoryController.errorMessage != null && categories.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.h),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
                       '오류가 발생했습니다.',
                       style: TextStyle(color: Colors.white, fontSize: 16.sp),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                );
-              }
-
-              // 필터링된 카테고리 가져오기
-              final allCategories = snapshot.data ?? [];
-
-              // 사용자 카테고리만 필터링합니다.
-              final userCategories = allCategories
-                  .where(
-                    (category) =>
-                        category.mates.every((element) => element == uID),
-                  )
-                  .toList();
-
-              // ✅ 카테고리 개수 저장 (다음 로딩 시 사용)
-              if (userCategories.isNotEmpty &&
-                  _previousCategoryCount != userCategories.length) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _previousCategoryCount = userCategories.length;
-                    });
-                  }
-                });
-              }
-
-              // 모든 카테고리에 대해 프로필 이미지 로드 요청
-              for (var category in userCategories) {
-                final categoryId = category.id;
-                final mates = category.mates;
-                _loadProfileImages(categoryId, mates);
-              }
-
-              // 초기 로딩 완료 표시
-              if (_isInitialLoad) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _isInitialLoad = false;
-                    });
-                  }
-                });
-              }
-
-              // 검색어가 있으면 카테고리 필터링
-              final displayCategories = searchController.searchQuery.isNotEmpty
-                  ? userCategories.where((category) {
-                      return searchController.matchesSearchQuery(
-                        category,
-                        searchController.searchQuery,
-                        currentUserId: uID,
-                      );
-                    }).toList()
-                  : userCategories;
-
-              // 필터링된 결과가 없으면
-              if (displayCategories.isEmpty) {
-                // 초기 로딩 완료 표시
-                if (_isInitialLoad) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _isInitialLoad = false;
-                        _previousCategoryCount = 0; // 빈 상태도 저장
-                      });
-                    }
-                  });
-                }
-
-                return Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.h),
-                    child: Text(
-                      searchController.searchQuery.isNotEmpty
-                          ? '검색 결과가 없습니다.'
-                          : '등록된 카테고리가 없습니다.',
-                      style: TextStyle(color: Colors.white, fontSize: 16.sp),
-                      textAlign: TextAlign.center,
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      child: const Text('다시 시도'),
                     ),
-                  ),
-                );
-              }
+                  ],
+                ),
+              ),
+            );
+          }
 
-              // ✅ FadeIn 애니메이션으로 부드럽게 표시
-              return AnimatedOpacity(
-                opacity: _isInitialLoad ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeIn,
-                child: widget.layoutMode == ArchiveLayoutMode.grid
-                    ? _buildGridView(searchController, displayCategories)
-                    : _buildListView(searchController, displayCategories),
+          // 검색어 필터링 (로컬)
+          final displayCategories = _searchQuery.isNotEmpty
+              ? categories.where((category) {
+                  return category.name.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  );
+                }).toList()
+              : categories;
+
+          // 카테고리가 없는 경우
+          if (displayCategories.isEmpty) {
+            if (_searchQuery.isNotEmpty) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 40.h),
+                  child: Text(
+                    '검색 결과가 없습니다.',
+                    style: TextStyle(color: Colors.white, fontSize: 16.sp),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               );
-            },
+            }
+
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.h),
+                child: Text(
+                  '등록된 카테고리가 없습니다.',
+                  style: TextStyle(color: Colors.white, fontSize: 16.sp),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
+          // RefreshIndicator로 당겨서 새로고침 지원
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            color: Colors.white,
+            backgroundColor: const Color(0xFF1C1C1C),
+            child: widget.layoutMode == ArchiveLayoutMode.grid
+                ? _buildGridView(displayCategories)
+                : _buildListView(displayCategories),
           );
         },
       ),
     );
   }
 
-  /*Widget _buildShimmerGrid(int itemCount) {
-    // 최소 2개, 최대 6개의 Shimmer 표시
-    final shimmerCount = itemCount == 0 ? 6 : itemCount.clamp(1, 6);
-
+  Widget _buildGridView(List<Category> categories) {
     return GridView.builder(
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
-      physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: (168.w / 229.h),
-        mainAxisSpacing: 15.h,
-        crossAxisSpacing: 15.w,
-      ),
-      itemCount: shimmerCount,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey[800]!,
-          highlightColor: Colors.grey[700]!,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-          ),
-        );
-      },
-    );
-  }*/
-
-  Widget _buildGridView(
-    CategorySearchController searchController,
-    List userCategories,
-  ) {
-    return GridView.builder(
-      key: ValueKey(
-        'my_grid_${userCategories.length}_${searchController.searchQuery}',
-      ),
+      key: ValueKey('my_grid_${categories.length}_$_searchQuery'),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -304,30 +224,26 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
         mainAxisSpacing: 15.sp,
         crossAxisSpacing: 15.sp,
       ),
-      itemCount: userCategories.length,
+      itemCount: categories.length,
       itemBuilder: (context, index) {
-        final category = userCategories[index];
-        final categoryId = category.id;
+        final category = categories[index];
 
-        // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
-        final displayName = uID != null && _categoryController != null
-            ? _categoryController!.getCategoryDisplayName(category, uID!)
-            : category.name;
-
-        return ArchiveCardWidget(
-          key: ValueKey('my_archive_card_$categoryId'),
-          categoryId: categoryId,
+        return ApiArchiveCardWidget(
+          key: ValueKey('my_archive_card_${category.id}'),
+          category: category,
           layoutMode: ArchiveLayoutMode.grid,
           isEditMode: widget.isEditMode,
           isEditing:
-              widget.isEditMode && widget.editingCategoryId == categoryId,
+              widget.isEditMode &&
+              widget.editingCategoryId == category.id.toString(),
           editingController:
-              widget.isEditMode && widget.editingCategoryId == categoryId
+              widget.isEditMode &&
+                  widget.editingCategoryId == category.id.toString()
               ? widget.editingController
               : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
-              widget.onStartEdit!(categoryId, displayName);
+              widget.onStartEdit!(category.id.toString(), category.name);
             }
           },
         );
@@ -335,45 +251,36 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
     );
   }
 
-  Widget _buildListView(
-    CategorySearchController searchController,
-    List userCategories,
-  ) {
+  Widget _buildListView(List<Category> categories) {
     return ListView.separated(
-      key: ValueKey(
-        'my_list_${userCategories.length}_${searchController.searchQuery}',
-      ),
+      key: ValueKey('my_list_${categories.length}_$_searchQuery'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
       itemBuilder: (context, index) {
-        final category = userCategories[index];
-        final categoryId = category.id;
+        final category = categories[index];
 
-        // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
-        final displayName = uID != null && _categoryController != null
-            ? _categoryController!.getCategoryDisplayName(category, uID!)
-            : category.name;
-
-        return ArchiveCardWidget(
-          key: ValueKey('my_archive_list_card_$categoryId'),
-          categoryId: categoryId,
+        return ApiArchiveCardWidget(
+          key: ValueKey('my_archive_list_card_${category.id}'),
+          category: category,
           layoutMode: ArchiveLayoutMode.list,
           isEditMode: widget.isEditMode,
           isEditing:
-              widget.isEditMode && widget.editingCategoryId == categoryId,
+              widget.isEditMode &&
+              widget.editingCategoryId == category.id.toString(),
           editingController:
-              widget.isEditMode && widget.editingCategoryId == categoryId
+              widget.isEditMode &&
+                  widget.editingCategoryId == category.id.toString()
               ? widget.editingController
               : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
-              widget.onStartEdit!(categoryId, displayName);
+              widget.onStartEdit!(category.id.toString(), category.name);
             }
           },
         );
       },
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemCount: userCategories.length,
+      itemCount: categories.length,
     );
   }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:soi/api/api.dart';
+import 'package:soi/api/controller/api_user_controller.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_final_screen.dart';
@@ -23,13 +23,9 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final PageController _pageController = PageController();
-  final UserService _userService = UserService();
-  final AuthService _authService = AuthService();
 
   // 자동 인증을 위한 Timer
   Timer? _autoVerifyTimer;
-
-  // Firebase Phone Auth를 위한 변수
 
   // 사용자가 존재하는지 여부 및 상태 관리
   bool userExists = false;
@@ -74,6 +70,9 @@ class _AuthScreenState extends State<AuthScreen> {
   bool agreePrivacyTerms = false;
   bool agreeMarketingInfo = false;
 
+  // userController만 사용하여서 UI에서 직접 접근
+  final ApiUserController _userController = ApiUserController();
+
   @override
   void initState() {
     super.initState();
@@ -87,8 +86,6 @@ class _AuthScreenState extends State<AuthScreen> {
     idController = TextEditingController();
     pageReady = List.generate(8, (_) => ValueNotifier<bool>(false));
 
-    // UserService는 이미 초기화됨
-
     // ID 컨트롤러 리스너 추가
     idController.addListener(() {
       if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
@@ -96,7 +93,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final id = idController.text.trim();
         if (id.isNotEmpty) {
           try {
-            final result = await _userService.checkUserIdAvailable(id);
+            final result = await _userController.checkUserIdAvailable(id);
             if (result == true) {
               setState(() {
                 idErrorMessage = '사용 가능한 아이디입니다.';
@@ -223,8 +220,8 @@ class _AuthScreenState extends State<AuthScreen> {
                   }
 
                   try {
-                    await _authService
-                        .sendSmsVerification(formattedPhone)
+                    await _userController
+                        .requestSmsVerification(formattedPhone)
                         .onError((error, stackTrace) {
                           throw Exception('SMS 재전송 실패: $error');
                         });
@@ -377,8 +374,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               }
 
                               try {
-                                bool isSuccess = await _authService
-                                    .sendSmsVerification(formattedPhone);
+                                bool isSuccess = await _userController
+                                    .requestSmsVerification(formattedPhone);
                                 if (isSuccess) {
                                   _pageController.nextPage(
                                     duration: Duration(milliseconds: 300),
@@ -454,7 +451,7 @@ class _AuthScreenState extends State<AuthScreen> {
     smsCode = code;
 
     try {
-      await _authService
+      await _userController
           .verifySmsCode(
             phoneNumber.startsWith('0')
                 ? '+82${phoneNumber.substring(1)}'

@@ -10,6 +10,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:soi/api/controller/api_category_controller.dart';
+import 'package:soi/api/controller/api_comment_controller.dart';
+import 'package:soi/api/controller/api_friend_controller.dart';
+import 'package:soi/api/controller/api_media_controller.dart';
+import 'package:soi/api/controller/api_post_controller.dart';
+import 'package:soi/api/controller/api_user_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api_firebase/controllers/audio_controller.dart';
 import 'api_firebase/controllers/auth_controller.dart';
@@ -210,13 +216,24 @@ class MyApp extends StatelessWidget {
         // ============================================
         // New Backend API Services (REST API)
         // ============================================
-        Provider<api.AuthService>(create: (_) => api.AuthService()),
-        Provider<api.UserService>(create: (_) => api.UserService()),
-        Provider<api.CategoryService>(create: (_) => api.CategoryService()),
-        Provider<api.PostService>(create: (_) => api.PostService()),
-        Provider<api.FriendService>(create: (_) => api.FriendService()),
-        Provider<api.CommentService>(create: (_) => api.CommentService()),
-        Provider<api.MediaService>(create: (_) => api.MediaService()),
+        ChangeNotifierProvider<ApiUserController>(
+          create: (_) => ApiUserController(),
+        ),
+        ChangeNotifierProvider<ApiCategoryController>(
+          create: (_) => ApiCategoryController(),
+        ),
+        ChangeNotifierProvider<ApiPostController>(
+          create: (_) => ApiPostController(),
+        ),
+        ChangeNotifierProvider<ApiFriendController>(
+          create: (_) => ApiFriendController(),
+        ),
+        ChangeNotifierProvider<ApiCommentController>(
+          create: (_) => ApiCommentController(),
+        ),
+        ChangeNotifierProvider<ApiMediaController>(
+          create: (_) => ApiMediaController(),
+        ),
       ],
       child: ScreenUtilInit(
         designSize: const Size(393, 852),

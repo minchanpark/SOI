@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:soi/views/about_onboarding/onboarding_main_screen.dart';
 import '../../theme/theme.dart';
 
+/// 회원가입 완료 화면
 class AuthFinalScreen extends StatelessWidget {
   final String? id;
   final String? name;
@@ -96,20 +98,21 @@ class AuthFinalScreen extends StatelessWidget {
             ),
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pushNamedAndRemoveUntil(
+                Navigator.pushAndRemoveUntil(
                   context,
-                  '/onboarding',
+                  MaterialPageRoute(
+                    builder: (context) => OnboardingMainScreen(
+                      id: finalId,
+                      name: finalName,
+                      phone: finalPhone,
+                      birthDate: finalBirthDate,
+                      profileImagePath: finalProfileImagePath,
+                      agreeServiceTerms: finalAgreeServiceTerms,
+                      agreePrivacyTerms: finalAgreePrivacyTerms,
+                      agreeMarketingInfo: finalAgreeMarketingInfo,
+                    ),
+                  ),
                   (route) => false,
-                  arguments: {
-                    'id': finalId,
-                    'name': finalName,
-                    'phone': finalPhone,
-                    'birthDate': finalBirthDate,
-                    'profileImagePath': finalProfileImagePath,
-                    'agreeServiceTerms': finalAgreeServiceTerms,
-                    'agreePrivacyTerms': finalAgreePrivacyTerms,
-                    'agreeMarketingInfo': finalAgreeMarketingInfo,
-                  },
                 );
               },
               style: ElevatedButton.styleFrom(

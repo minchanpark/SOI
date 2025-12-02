@@ -1,5 +1,22 @@
 import 'package:soi_api_client/api.dart';
 
+/// 카테고리 필터 타입
+///
+/// 카테고리 조회 시 필터링 옵션입니다.
+enum CategoryFilter {
+  /// 전체 카테고리
+  all('ALL'),
+
+  /// 공개 카테고리 (그룹)
+  public_('PUBLIC'),
+
+  /// 비공개 카테고리 (개인)
+  private_('PRIVATE');
+
+  final String value;
+  const CategoryFilter(this.value);
+}
+
 /// 카테고리(앨범) 모델
 ///
 /// API의 CategoryRespDto를 앱 내부에서 사용하기 위한 모델입니다.

@@ -158,6 +158,45 @@ abstract class UserController extends ChangeNotifier {
   Future<User?> deleteUser(int id);
 
   // ============================================
+  // 로그인 상태 저장/복원 (자동 로그인)
+  // ============================================
+
+  /// 로그인 상태를 SharedPreferences에 저장
+  ///
+  /// Parameters:
+  /// - [userId]: 사용자 ID (int)
+  /// - [phoneNumber]: 전화번호
+  Future<void> saveLoginState({
+    required int userId,
+    required String phoneNumber,
+  });
+
+  /// 온보딩 완료 상태를 저장합니다.
+  Future<void> setOnboardingCompleted(bool completed);
+
+  /// 온보딩 완료 여부를 확인합니다.
+  Future<bool> isOnboardingCompleted();
+
+  /// 저장된 로그인 상태 확인
+  ///
+  /// Returns: 로그인 상태 여부
+  Future<bool> isLoggedInPersisted();
+
+  /// 저장된 사용자 정보 가져오기
+  ///
+  /// Returns: {userId, phoneNumber} 또는 null
+  Future<Map<String, dynamic>?> getSavedUserInfo();
+
+  /// 자동 로그인 시도
+  ///
+  /// 저장된 사용자 정보로 자동 로그인을 시도합니다.
+  /// Returns: 성공 여부
+  Future<bool> tryAutoLogin();
+
+  /// 로그인 상태 삭제 (로그아웃 시 호출)
+  Future<void> clearLoginState();
+
+  // ============================================
   // 에러 처리
   // ============================================
 

@@ -59,7 +59,6 @@ export 'api_exception.dart';
 // ============================================
 // 서비스 클래스
 // ============================================
-export 'services/auth_service.dart';
 export 'services/user_service.dart';
 export 'services/category_service.dart';
 export 'services/post_service.dart';

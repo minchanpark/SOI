@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api/controller/api_auth_controller.dart' as api;
+import 'package:soi/api/controller/api_user_controller.dart' as api;
 import 'package:solar_icons/solar_icons.dart';
 import '../../theme/theme.dart';
 import 'widgets/common/continue_button.dart';
@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final PageController _pageController = PageController();
 
   // REST API 서비스
-  late final api.ApiAuthController _apiAuthController;
+  api.ApiUserController? _apiUserController;
 
   // 전화번호 입력 컨트롤러
   final TextEditingController _phoneController = TextEditingController();
@@ -45,13 +45,16 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Provider에서 AuthService 가져오기
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _apiAuthController = Provider.of<api.ApiAuthController>(
-        context,
-        listen: false,
-      );
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Provider에서 ApiUserController 가져오기
+    _apiUserController ??= Provider.of<api.ApiUserController>(
+      context,
+      listen: false,
+    );
   }
 
   @override
@@ -354,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen> {
     phoneNumber = _normalizePhoneNumber(_phoneController.text);
 
     try {
-      final success = await _apiAuthController.requestSmsVerification(
+      final success = await _apiUserController!.requestSmsVerification(
         phoneNumber,
       );
 
@@ -381,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // -------------------------
   Future<void> _resendSmsCode() async {
     try {
-      final success = await _apiAuthController.requestSmsVerification(
+      final success = await _apiUserController!.requestSmsVerification(
         phoneNumber,
       );
 
@@ -410,7 +413,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       // 1. SMS 코드 인증 확인
-      final isValid = await _apiAuthController.verifySmsCode(phoneNumber, code);
+      final isValid = await _apiUserController!.verifySmsCode(
+        phoneNumber,
+        code,
+      );
 
       if (!isValid) {
         _showErrorSnackBar('인증번호가 올바르지 않습니다.');
@@ -421,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 2. 로그인 시도
       debugPrint("로그인 시도: $phoneNumber");
-      final user = await _apiAuthController.login(phoneNumber);
+      final user = await _apiUserController!.login(phoneNumber);
 
       if (user != null) {
         // 기존 회원 - 홈으로 이동
