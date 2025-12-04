@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
 
 import '../../../../api/controller/api_post_controller.dart';
 import '../../../../api/controller/api_user_controller.dart';
@@ -72,13 +73,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       }
 
       // 카테고리 내 포스트 조회 (서버가 이미 presigned URL 반환)
-      debugPrint("📂 카테고리 id: ${widget.category.id}");
+
       final posts = await postController!.getPostsByCategory(
         categoryId: widget.category.id,
         userId: currentUser.id,
       );
-
-      debugPrint("카테고리 사진 로드 완료: ${posts.length}개");
 
       if (mounted) {
         setState(() {
@@ -128,14 +127,18 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             // 멤버 수 표시
             InkWell(
               onTap: () {
-                // TODO: API 버전 멤버 바텀시트
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '멤버 목록 (총 ${widget.category.totalUserCount}명)',
-                    ),
-                    duration: const Duration(seconds: 1),
-                  ),
+                showApiCategoryMembersBottomSheet(
+                  context,
+                  category: widget.category,
+                  onAddFriendPressed: () {
+                    // TODO: API 버전 친구 추가 화면으로 이동
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('친구 추가 (API 버전 구현 예정)'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
                 );
               },
               borderRadius: BorderRadius.circular(100),
@@ -148,7 +151,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
                       Icon(Icons.people, size: 25.sp, color: Colors.white),
                       SizedBox(width: 2.w),
                       Text(
-                        '${widget.category.totalUserCount}',
+                        '${widget.category.totalUserCount + 1}',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,

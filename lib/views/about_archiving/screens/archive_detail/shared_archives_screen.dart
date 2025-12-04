@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../api/controller/api_category_controller.dart';
 import '../../../../api/controller/api_user_controller.dart';
 import '../../../../api/models/category.dart';
@@ -117,12 +118,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
     if (_isInitialLoad) {
       return Scaffold(
         backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-        body: const Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 3.0,
-          ),
-        ),
+        body: _buildShimmerGrid(),
       );
     }
 
@@ -134,9 +130,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
           // 로딩 중
           if (categoryController.isLoading && categories.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            );
+            return _buildShimmerGrid();
           }
 
           // 에러가 있을 때
@@ -281,6 +275,76 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
       },
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemCount: categories.length,
+    );
+  }
+
+  /// Shimmer 로딩 그리드
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: (168 / 229),
+        mainAxisSpacing: 15.sp,
+        crossAxisSpacing: 15.sp,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: const Color(0xFF2A2A2A),
+          highlightColor: const Color(0xFF3A3A3A),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1C),
+              borderRadius: BorderRadius.circular(6.61),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 146.8.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6.61),
+                  ),
+                ),
+                SizedBox(height: 8.7.h),
+                Padding(
+                  padding: EdgeInsets.only(left: 14.w),
+                  child: Container(
+                    width: 80.w,
+                    height: 14.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.87.h),
+                Padding(
+                  padding: EdgeInsets.only(left: 14.w),
+                  child: Row(
+                    children: List.generate(
+                      3,
+                      (i) => Container(
+                        width: 24.w,
+                        height: 24.w,
+                        margin: EdgeInsets.only(right: 4.w),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -9,6 +9,7 @@ import 'package:soi_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **userProfile** | **String** |  | [optional] 
+**userId** | **String** |  | [optional] 
 **text** | **String** |  | [optional] 
 **emojiId** | **int** |  | [optional] 
 **audioUrl** | **String** |  | [optional] 

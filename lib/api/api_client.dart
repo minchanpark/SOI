@@ -52,6 +52,7 @@ class SoiApiClient {
   PostAPIApi? _postApi;
   FriendAPIApi? _friendApi;
   CommentAPIApi? _commentApi;
+  NotificationAPIApi? _notificationApi;
   APIApi? _mediaApi;
 
   // ============================================
@@ -80,6 +81,7 @@ class SoiApiClient {
     _postApi = null;
     _friendApi = null;
     _commentApi = null;
+    _notificationApi = null;
     _mediaApi = null;
   }
 
@@ -151,6 +153,12 @@ class SoiApiClient {
   CommentAPIApi get commentApi {
     _checkInitialized();
     return _commentApi ??= CommentAPIApi(_apiClient);
+  }
+
+  /// 알림 API
+  NotificationAPIApi get notificationApi {
+    _checkInitialized();
+    return _notificationApi ??= NotificationAPIApi(_apiClient);
   }
 
   /// 미디어 API

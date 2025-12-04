@@ -6,10 +6,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:soi/api/controller/api_category_controller.dart';
+import 'package:soi/api/controller/api_user_controller.dart';
 import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../api_firebase/controllers/auth_controller.dart';
-import '../../../api_firebase/controllers/category_controller.dart';
 import '../../../api_firebase/models/selected_friend_model.dart';
 import '../../../theme/theme.dart';
 import '../../about_friends/friend_list_add_screen.dart';
@@ -19,14 +20,14 @@ import 'archive_detail/my_archives_screen.dart';
 import 'archive_detail/shared_archives_screen.dart';
 
 // 아카이브 메인 화면
-class ArchiveMainScreen extends StatefulWidget {
-  const ArchiveMainScreen({super.key});
+class APIArchiveMainScreen extends StatefulWidget {
+  const APIArchiveMainScreen({super.key});
 
   @override
-  State<ArchiveMainScreen> createState() => _ArchiveMainScreenState();
+  State<APIArchiveMainScreen> createState() => _APIArchiveMainScreenState();
 }
 
-class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
+class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   int _selectedIndex = 0;
   final ArchiveLayoutMode _layoutMode = ArchiveLayoutMode.grid;
 
@@ -852,7 +853,7 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
     });
   }
 
-  // 카테고리 생성 처리 함수
+  // 카테고리 생성 처리 함수 (REST API 버전)
   Future<void> _createNewCategory() async {
     final categoryName = _categoryNameController.text.trim();
     if (categoryName.isEmpty) {
@@ -863,82 +864,55 @@ class _ArchiveMainScreenState extends State<ArchiveMainScreen> {
     }
 
     // UI 즉시 닫기 (사용자 체감 속도 향상)
-    final selectedFriendsCopy = List<SelectedFriendModel>.from(
-      _selectedFriends,
-    );
     Navigator.pop(context);
     _categoryNameController.clear();
     setState(() => _selectedFriends = []);
 
     try {
-      final authController = Provider.of<AuthController>(
+      // REST API 컨트롤러 사용
+      final userController = Provider.of<ApiUserController>(
         context,
         listen: false,
       );
-      final categoryController = Provider.of<CategoryController>(
+      final categoryController = Provider.of<ApiCategoryController>(
         context,
         listen: false,
       );
-      final userId = authController.getUserId;
+
+      final userId = userController.currentUser?.id;
 
       if (userId == null) {
         _showSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
         return;
       }
 
-      // mates 리스트 준비 (현재 사용자 + 선택된 친구들)
-      final mates = [userId, ...selectedFriendsCopy.map((f) => f.uid)];
-
-      // 프로필 이미지 맵 수집
-      final mateProfileImages = await _collectMateProfileImages(
-        authController: authController,
-        userId: userId,
-        friends: selectedFriendsCopy,
-      );
-
-      await categoryController.createCategory(
+      // PRIVATE 카테고리 생성 (자기 자신을 receiverIds에 포함)
+      // TODO: 자기자신을 추가하거나, 빈 리스트로 주면 PRIVATE 카테고리로 처리하도록 API 수정을 요청하였으므로,
+      // TODO: 추후 API가 변경되면 receiverIds를 빈 리스트로 전달하도록 수정 필요
+      final categoryId = await categoryController.createCategory(
+        requesterId: userId,
         name: categoryName,
-        mates: mates,
-        mateProfileImages: mateProfileImages.isNotEmpty
-            ? mateProfileImages
-            : null,
+        receiverIds: [userId],
+
+        // PRIVATE 카테고리인 경우는, false로 설정해야함.
+        isPublic: false,
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
+      if (categoryId != null) {
+        // 카테고리 목록 새로고침
+        categoryController.invalidateCache();
+        await categoryController.loadCategories(userId, forceReload: true);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
+        }
+      } else {
+        _showSnackBar('카테고리 생성에 실패했습니다');
       }
     } catch (e) {
       debugPrint('[ArchiveMainScreen] 카테고리 생성 오류: $e');
       _showSnackBar('카테고리 생성에 실패했습니다');
     }
-  }
-
-  /// 프로필 이미지 맵 수집 (현재 사용자 + 친구들)
-  Future<Map<String, String>> _collectMateProfileImages({
-    required AuthController authController,
-    required String userId,
-    required List<SelectedFriendModel> friends,
-  }) async {
-    final images = <String, String>{};
-
-    // 현재 사용자 프로필 이미지 (캐시 우선)
-    try {
-      final userImage = await authController.getUserProfileImageUrlWithCache(
-        userId,
-      );
-      if (userImage.isNotEmpty) images[userId] = userImage;
-    } catch (e) {
-      debugPrint('[ArchiveMainScreen] 현재 사용자 프로필 이미지 가져오기 실패: $e');
-    }
-
-    // 선택된 친구들의 프로필 이미지 (이미 메모리에 있음)
-    for (final friend in friends) {
-      if (friend.profileImageUrl?.isNotEmpty == true) {
-        images[friend.uid] = friend.profileImageUrl!;
-      }
-    }
-
-    return images;
   }
 
   void _showSnackBar(String message) {

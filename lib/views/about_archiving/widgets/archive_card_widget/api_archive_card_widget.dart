@@ -10,7 +10,12 @@ import 'api_archive_popup_menu_widget.dart';
 
 /// REST API 기반 아카이브 카드 위젯
 ///
-/// Firebase 스트림 대신 Category 객체를 직접 전달받아 표시합니다.
+/// [category]: 카테고리 데이터
+/// [isEditMode]: 편집 모드 여부
+/// [isEditing]: 현재 편집 중인지 여부
+/// [editingController]: 편집 중인 텍스트 컨트롤러
+/// [onStartEdit]: 편집 시작 콜백
+/// [layoutMode]: 아카이브 레이아웃 모드
 class ApiArchiveCardWidget extends StatelessWidget {
   final Category category;
   final bool isEditMode;

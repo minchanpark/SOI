@@ -14,6 +14,7 @@ class CommentRespDto {
   /// Returns a new [CommentRespDto] instance.
   CommentRespDto({
     this.userProfile,
+    this.userId,
     this.text,
     this.emojiId,
     this.audioUrl,
@@ -31,6 +32,14 @@ class CommentRespDto {
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
   String? userProfile;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userId;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -93,6 +102,7 @@ class CommentRespDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is CommentRespDto &&
     other.userProfile == userProfile &&
+    other.userId == userId &&
     other.text == text &&
     other.emojiId == emojiId &&
     other.audioUrl == audioUrl &&
@@ -106,6 +116,7 @@ class CommentRespDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (userProfile == null ? 0 : userProfile!.hashCode) +
+    (userId == null ? 0 : userId!.hashCode) +
     (text == null ? 0 : text!.hashCode) +
     (emojiId == null ? 0 : emojiId!.hashCode) +
     (audioUrl == null ? 0 : audioUrl!.hashCode) +
@@ -116,7 +127,7 @@ class CommentRespDto {
     (commentType == null ? 0 : commentType!.hashCode);
 
   @override
-  String toString() => 'CommentRespDto[userProfile=$userProfile, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
+  String toString() => 'CommentRespDto[userProfile=$userProfile, userId=$userId, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -124,6 +135,11 @@ class CommentRespDto {
       json[r'userProfile'] = this.userProfile;
     } else {
       json[r'userProfile'] = null;
+    }
+    if (this.userId != null) {
+      json[r'userId'] = this.userId;
+    } else {
+      json[r'userId'] = null;
     }
     if (this.text != null) {
       json[r'text'] = this.text;
@@ -188,6 +204,7 @@ class CommentRespDto {
 
       return CommentRespDto(
         userProfile: mapValueOfType<String>(json, r'userProfile'),
+        userId: mapValueOfType<String>(json, r'userId'),
         text: mapValueOfType<String>(json, r'text'),
         emojiId: mapValueOfType<int>(json, r'emojiId'),
         audioUrl: mapValueOfType<String>(json, r'audioUrl'),

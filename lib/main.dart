@@ -45,7 +45,7 @@ import 'utils/app_route_observer.dart';
 import 'views/about_archiving/screens/archive_detail/all_archives_screen.dart';
 import 'views/about_archiving/screens/archive_detail/my_archives_screen.dart';
 import 'views/about_archiving/screens/archive_detail/shared_archives_screen.dart';
-import 'views/about_archiving/screens/archive_main_screen.dart';
+import 'views/about_archiving/screens/api_archive_main_screen.dart';
 import 'views/about_camera/camera_screen.dart';
 import 'views/about_feed/feed_home.dart';
 import 'views/about_friends/friend_list_add_screen.dart';
@@ -262,7 +262,7 @@ class MyApp extends StatelessWidget {
             '/home_navigation_screen': (context) =>
                 HomePageNavigationBar(currentPageIndex: 1),
             '/camera': (context) => const CameraScreen(),
-            '/archiving': (context) => const ArchiveMainScreen(),
+            '/archiving': (context) => const APIArchiveMainScreen(),
             '/start': (context) => const StartScreen(),
             '/auth': (context) => AuthScreen(),
             '/login': (context) => const LoginScreen(),

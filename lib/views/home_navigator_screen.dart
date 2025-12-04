@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:soi/views/about_feed/feed_home.dart';
 import '../theme/theme.dart';
-import 'about_archiving/screens/archive_main_screen.dart';
+import 'about_archiving/screens/api_archive_main_screen.dart';
 import 'about_camera/camera_screen.dart';
 import 'package:antdesign_icons/antdesign_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -109,27 +109,18 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
       body: IndexedStack(
         index: _currentPageIndex,
         children: [
-          _buildPage(
-            0,
-            const FeedHomeScreen(),
-          ),
+          _buildPage(0, const FeedHomeScreen()),
           _buildPage(
             1,
             _currentPageIndex == 1 ? const CameraScreen() : Container(),
           ),
-          _buildPage(
-            2,
-            const ArchiveMainScreen(),
-          ),
+          _buildPage(2, const APIArchiveMainScreen()),
         ],
       ),
     );
   }
 
   Widget _buildPage(int index, Widget child) {
-    return TickerMode(
-      enabled: _currentPageIndex == index,
-      child: child,
-    );
+    return TickerMode(enabled: _currentPageIndex == index, child: child);
   }
 }

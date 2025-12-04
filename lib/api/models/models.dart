@@ -9,3 +9,4 @@ export '../models/category.dart';
 export '../models/post.dart';
 export 'friend.dart';
 export 'comment.dart';
+export 'notification.dart';

@@ -4,6 +4,10 @@ import 'package:soi/api/models/category.dart' as model;
 import 'package:soi/api/services/category_service.dart';
 
 /// REST API 기반 카테고리 컨트롤러 구현체
+/// category_service.dart의 CategoryService를 사용하여
+/// 카테고리 관련 기능을 제공합니다.
+///
+/// cayegory_controller.dart의 CategoryController를 상속받아 구현합니다.
 class ApiCategoryController extends CategoryController {
   final CategoryService _categoryService;
 
@@ -128,7 +132,12 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 카테고리 생성
+  /// 카테고리 생성
+  /// Parameters:
+  /// - [requesterId]: 요청자 사용자 ID
+  /// - [name]: 카테고리 이름
+  /// - [receiverIds]: 초대할 사용자 ID 목록
+  /// - [isPublic]: 공개 여부
   @override
   Future<int?> createCategory({
     required int requesterId,
@@ -154,7 +163,10 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 카테고리 조회
+  /// 카테고리 조회
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  /// - [filter]: 카테고리 필터 (기본값: all)
   @override
   Future<List<model.Category>> getCategories({
     required int userId,
@@ -176,7 +188,12 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 모든 카테고리 조회
+  /// 모든 카테고리 조회
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  ///
+  /// Returns:
+  /// - [List<model.Category>]: 모든 카테고리 목록
   @override
   Future<List<model.Category>> getAllCategories(int userId) =>
       getCategories(userId: userId, filter: model.CategoryFilter.all);
@@ -191,7 +208,15 @@ class ApiCategoryController extends CategoryController {
   Future<List<model.Category>> getPrivateCategories(int userId) =>
       getCategories(userId: userId, filter: model.CategoryFilter.private_);
 
-  // 카테고리 고정
+  /// 카테고리 고정
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  ///
+  /// Returns:
+  /// - [bool]: 고정 성공 여부
+  ///   - true: 고정됨
+  ///   - false: 고정 해제됨
   @override
   Future<bool> toggleCategoryPin({
     required int categoryId,
@@ -213,7 +238,16 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 카테고리 초대
+  /// 카테고리 초대
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [requesterId]: 요청자 사용자 ID
+  /// - [receiverIds]: 초대할 사용자 ID 목록
+  ///
+  /// Returns:
+  /// - [bool]: 초대 성공 여부
+  ///   - true: 초대 성공
+  ///   - false: 초대 실패
   @override
   Future<bool> inviteUsersToCategory({
     required int categoryId,
@@ -237,7 +271,16 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 카테고리 초대 수락
+  /// 카테고리 초대 수락
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  ///
+  /// Returns:
+  /// - [bool]: 수락 성공 여부
+  ///   - true: 수락 성공
+  ///   - false: 수락 실패
   @override
   Future<bool> acceptInvite({
     required int categoryId,
@@ -259,7 +302,16 @@ class ApiCategoryController extends CategoryController {
     }
   }
 
-  // 카테고리 초대 거절
+  /// 카테고리 초대 거절
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  ///
+  /// Returns:
+  /// - [bool]: 거절 성공 여부
+  ///   - true: 거절 성공
+  ///   - false: 거절 실패
   @override
   Future<bool> declineInvite({
     required int categoryId,
@@ -279,6 +331,119 @@ class ApiCategoryController extends CategoryController {
       _setLoading(false);
       return false;
     }
+  }
+
+  // ============================================
+  // 카테고리 설정 (이름, 프로필)
+  // ============================================
+
+  /// 카테고리 커스텀 이름 수정
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  /// - [name]: 새 이름
+  ///
+  /// Returns:
+  /// - [bool]: 수정 성공 여부
+  ///   - true: 수정 성공
+  ///   - false: 수정 실패
+  @override
+  Future<bool> updateCustomName({
+    required int categoryId,
+    required int userId,
+    String? name,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final result = await _categoryService.updateCustomName(
+        categoryId: categoryId,
+        userId: userId,
+        name: name,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('카테고리 이름 수정 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// 카테고리 커스텀 프로필 이미지 수정
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  /// - [profileImageKey]: 새 프로필 이미지 키 (null이면 기본 이미지로 설정)
+  ///
+  /// Returns:
+  /// - [bool]: 수정 성공 여부
+  ///   - true: 수정 성공
+  ///   - false: 수정 실패
+  @override
+  Future<bool> updateCustomProfile({
+    required int categoryId,
+    required int userId,
+    String? profileImageKey,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final result = await _categoryService.updateCustomProfile(
+        categoryId: categoryId,
+        userId: userId,
+        profileImageKey: profileImageKey,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('카테고리 프로필 수정 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // ============================================
+  // 카테고리 삭제 (나가기)
+  // ============================================
+
+  /// 카테고리 나가기 (삭제)
+  @override
+  Future<bool> leaveCategory({
+    required int userId,
+    required int categoryId,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final result = await _categoryService.leaveCategory(
+        userId: userId,
+        categoryId: categoryId,
+      );
+
+      // 성공 시 캐시 무효화
+      if (result) {
+        invalidateCache();
+      }
+
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('카테고리 나가기 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// 카테고리 삭제 (leaveCategory의 별칭)
+  @override
+  Future<bool> deleteCategory({
+    required int userId,
+    required int categoryId,
+  }) async {
+    return leaveCategory(userId: userId, categoryId: categoryId);
   }
 
   @override

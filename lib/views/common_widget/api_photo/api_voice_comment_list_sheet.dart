@@ -208,7 +208,7 @@ class _ApiCommentRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$userName',
+                    userName,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 14.sp,

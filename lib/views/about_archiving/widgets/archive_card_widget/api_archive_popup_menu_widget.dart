@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+import '../../../../api/controller/api_category_controller.dart';
+import '../../../../api/controller/api_user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../archive_category_dialogs.dart';
 import 'animated_menu_overlay.dart';
@@ -35,6 +38,9 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
   OverlayEntry? _overlayEntry;
   final GlobalKey _buttonKey = GlobalKey();
   bool _isMenuOpen = false;
+
+  ApiCategoryController? categoryController;
+  ApiUserController? userController;
 
   @override
   void initState() {
@@ -245,13 +251,43 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
         break;
       case 'pin':
       case 'unpin':
-        // TODO: REST API를 통한 고정/해제 구현
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(action == 'pin' ? '카테고리를 고정했습니다.' : '고정을 해제했습니다.'),
-            duration: const Duration(seconds: 1),
-          ),
+        userController = Provider.of<ApiUserController>(context, listen: false);
+        categoryController = Provider.of<ApiCategoryController>(
+          context,
+          listen: false,
         );
+        final userId = userController!.currentUser?.id;
+        if (userId == null) return;
+
+        // API 호출 - toggleCategoryPin은 항상 성공하면 새 상태를 반환
+        // true = 고정됨, false = 고정 해제됨 (둘 다 성공)
+        try {
+          await categoryController!.toggleCategoryPin(
+            categoryId: widget.category.id,
+            userId: userId,
+          );
+
+          categoryController!.invalidateCache();
+
+          // 모든 필터의 카테고리를 순차적으로 로드
+          await categoryController!.loadCategories(
+            userId,
+            filter: CategoryFilter.all,
+            forceReload: true,
+          );
+          await categoryController!.loadCategories(
+            userId,
+            filter: CategoryFilter.public_,
+            forceReload: true,
+          );
+          await categoryController!.loadCategories(
+            userId,
+            filter: CategoryFilter.private_,
+            forceReload: true,
+          );
+        } catch (e) {
+          debugPrint('📌 [Pin] API 호출 실패: $e');
+        }
         break;
       case 'leave':
         // ArchiveCategoryDialogs 사용

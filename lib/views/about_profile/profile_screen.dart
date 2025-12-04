@@ -2,9 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import '../../api/controller/api_user_controller.dart';
+import '../../api/models/user.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 import '../../api_firebase/controllers/friend_controller.dart';
-import '../../api_firebase/models/auth_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,10 +15,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  AuthModel? _userInfo;
+  User? _userInfo; // API User 모델 사용
   String? _profileImageUrl;
   bool _isLoading = true;
   bool _isNotificationEnabled = false;
+
+  ApiUserController? userController;
 
   @override
   void initState() {
@@ -26,21 +29,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserData() async {
+    userController = context.read<ApiUserController>();
     final authController = context.read<AuthController>();
-    final userId = authController.getUserId;
 
-    if (userId != null) {
+    // ApiUserController의 currentUser 사용
+    final currentUser = userController!.currentUser;
+
+    if (currentUser != null) {
       try {
-        final userInfo = await authController.getUserInfo(userId);
-        final profileImageUrl = await authController
-            .getUserProfileImageUrlWithCache(userId);
+        // API에서 사용자 정보 가져오기
+        final userInfo = await userController!.getUser(currentUser.id);
+
+        // 프로필 이미지 URL (기존 Firebase 방식 유지)
+        final firebaseUserId = authController.getUserId;
+        String? profileImageUrl;
+        if (firebaseUserId != null) {
+          profileImageUrl = await authController
+              .getUserProfileImageUrlWithCache(firebaseUserId);
+        }
 
         setState(() {
           _userInfo = userInfo;
-          _profileImageUrl = profileImageUrl;
+          _profileImageUrl = profileImageUrl ?? currentUser.profileImageUrl;
           _isLoading = false;
         });
       } catch (e) {
+        debugPrint('사용자 데이터 로드 오류: $e');
         setState(() {
           _isLoading = false;
         });
@@ -504,13 +518,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         SizedBox(height: 12.h),
-        _buildAccountCard('아이디', _userInfo?.id ?? ''),
+        _buildAccountCard('아이디', _userInfo?.userId ?? ''),
         SizedBox(height: 7.h),
         _buildAccountCard('이름', _userInfo?.name ?? ''),
         SizedBox(height: 7.h),
         _buildAccountCard('생일', _userInfo?.birthDate ?? ''),
         SizedBox(height: 7.h),
-        _buildAccountCard('전화번호', _userInfo?.phone ?? ''),
+        _buildAccountCard('전화번호', _userInfo?.phoneNumber ?? ''),
       ],
     );
   }

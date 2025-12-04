@@ -320,6 +320,145 @@ class CategoryService {
   }
 
   // ============================================
+  // 카테고리 설정 (이름, 프로필)
+  // ============================================
+
+  /// 카테고리 커스텀 이름 수정
+  ///
+  /// 카테고리의 사용자별 커스텀 이름을 수정합니다.
+  /// 빈 문자열("")을 전달하면 커스텀 이름이 삭제되고 원래 이름으로 돌아갑니다.
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  /// - [name]: 새로운 커스텀 이름 (빈 문자열이면 커스텀 이름 삭제)
+  ///
+  /// Returns: 수정 성공 여부
+  Future<bool> updateCustomName({
+    required int categoryId,
+    required int userId,
+    String? name,
+  }) async {
+    try {
+      final response = await _categoryApi.customName(
+        categoryId,
+        userId,
+        name: name,
+      );
+
+      if (response == null) {
+        throw const DataValidationException(message: '카테고리 이름 수정 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '카테고리 이름 수정 실패');
+      }
+
+      return response.data ?? false;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '카테고리 이름 수정 실패: $e', originalException: e);
+    }
+  }
+
+  /// 카테고리 커스텀 프로필 이미지 수정
+  ///
+  /// 카테고리의 사용자별 커스텀 프로필 이미지를 수정합니다.
+  /// 빈 문자열("")을 전달하면 기본 프로필로 변경됩니다.
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  /// - [profileImageKey]: 새로운 프로필 이미지 키 (빈 문자열이면 기본 프로필)
+  ///
+  /// Returns: 수정 성공 여부
+  Future<bool> updateCustomProfile({
+    required int categoryId,
+    required int userId,
+    String? profileImageKey,
+  }) async {
+    try {
+      final response = await _categoryApi.customProfile(
+        categoryId,
+        userId,
+        profileImageKey: profileImageKey,
+      );
+
+      if (response == null) {
+        throw const DataValidationException(message: '카테고리 프로필 수정 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '카테고리 프로필 수정 실패');
+      }
+
+      return response.data ?? false;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(
+        message: '카테고리 프로필 수정 실패: $e',
+        originalException: e,
+      );
+    }
+  }
+
+  // ============================================
+  // 카테고리 삭제 (나가기)
+  // ============================================
+
+  /// 카테고리 나가기 (삭제)
+  ///
+  /// 카테고리에서 나갑니다.
+  /// 만약 카테고리에 속한 유저가 본인밖에 없으면 관련 데이터가 모두 삭제됩니다.
+  ///
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  /// - [categoryId]: 카테고리 ID
+  ///
+  /// Returns: 삭제/나가기 성공 여부
+  Future<bool> leaveCategory({
+    required int userId,
+    required int categoryId,
+  }) async {
+    try {
+      final response = await _categoryApi.delete(userId, categoryId);
+
+      if (response == null) {
+        throw const DataValidationException(message: '카테고리 나가기 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '카테고리 나가기 실패');
+      }
+
+      return true;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '카테고리 나가기 실패: $e', originalException: e);
+    }
+  }
+
+  /// 카테고리 삭제 (leaveCategory의 별칭)
+  Future<bool> deleteCategory({
+    required int userId,
+    required int categoryId,
+  }) async {
+    return leaveCategory(userId: userId, categoryId: categoryId);
+  }
+
+  // ============================================
   // 에러 핸들링 헬퍼
   // ============================================
 
