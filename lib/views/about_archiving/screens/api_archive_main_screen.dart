@@ -6,8 +6,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/api/controller/api_category_controller.dart';
-import 'package:soi/api/controller/api_user_controller.dart';
+import 'package:soi/api/controller/category_controller.dart';
+import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../api_firebase/controllers/auth_controller.dart';
@@ -41,7 +42,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
   // Provider 참조를 미리 저장 (dispose에서 안전하게 사용하기 위함)
   CategorySearchController? _categoryController;
-  AuthController? _authController;
+
+  UserController? _userController;
+  MediaController? _mediaController;
 
   // 편집 모드 상태 관리
   bool _isEditMode = false;
@@ -54,6 +57,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
   // 선택된 친구들 상태 관리
   List<SelectedFriendModel> _selectedFriends = [];
+
+  // 프로필 이미지 URL 키 및 URL
+  String? _profileImageUrlKey;
+  String? _profileImageUrl;
 
   // 탭 화면 목록을 동적으로 생성하는 메서드
   List<Widget> get _screens => [
@@ -106,10 +113,34 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       context,
       listen: false,
     );
+    _userController ??= Provider.of<UserController>(context, listen: false);
+    _mediaController ??= Provider.of<MediaController>(
+      context,
+      listen: false,
+    );
 
-    if (_authController == null) {
-      _authController = Provider.of<AuthController>(context, listen: false);
-      _authController!.addListener(_handleAuthControllerUpdated);
+    // 프로필 이미지 URL 로드 (한 번만 실행)
+    if (_profileImageUrl == null) {
+      _loadProfileImageUrl();
+    }
+  }
+
+  /// 프로필 이미지 presigned URL 로드
+  Future<void> _loadProfileImageUrl() async {
+    final currentUser = _userController?.currentUser;
+    final imageKey = currentUser?.profileImageUrlKey;
+
+    if (imageKey != null && imageKey.isNotEmpty) {
+      try {
+        final url = await _mediaController?.getPresignedUrl(imageKey);
+        if (mounted && url != null) {
+          setState(() {
+            _profileImageUrl = url;
+          });
+        }
+      } catch (e) {
+        debugPrint('프로필 이미지 URL 로드 실패: $e');
+      }
     }
   }
 
@@ -122,13 +153,6 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       // 검색어만 전달 (내부 카테고리 목록 사용)
       _categoryController?.searchCategories(_searchController.text);
     });
-  }
-
-  void _handleAuthControllerUpdated() {
-    final controller = _authController;
-    if (!mounted || controller == null || controller.isUploading) {
-      return;
-    }
   }
 
   // 편집 모드 관련 메서드들
@@ -275,73 +299,41 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           leading: Row(
             children: [
               SizedBox(width: 32.w),
-              // 프로필 이미지 - StreamBuilder로 실시간 업데이트
-              Consumer<AuthController>(
-                builder: (context, authController, _) {
-                  final currentUserId = authController.getUserId;
-                  return StreamBuilder<String>(
-                    stream: authController.getUserProfileImageUrlStream(
-                      currentUserId ?? '',
-                    ),
-                    builder: (context, imageSnapshot) {
-                      final isLoadingAvatar =
-                          imageSnapshot.connectionState ==
-                          ConnectionState.waiting;
-                      final profileImageUrl = imageSnapshot.data ?? '';
-
-                      return Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 8.h,
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(shape: BoxShape.circle),
-                          child: Builder(
-                            builder: (context) {
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/profile_screen',
-                                  );
-                                },
-                                child: SizedBox(
-                                  width: 34,
-                                  height: 34,
-                                  child: ClipOval(
-                                    child: isLoadingAvatar
-                                        ? _buildAvatarShimmer()
-                                        : profileImageUrl.isNotEmpty
-                                        ? CachedNetworkImage(
-                                            imageUrl: profileImageUrl,
-                                            fit: BoxFit.cover,
-                                            width: 34,
-                                            height: 34,
-                                            fadeInDuration: Duration.zero,
-                                            fadeOutDuration: Duration.zero,
-                                            memCacheWidth: (34 * 4).round(),
-                                            maxWidthDiskCache: (34 * 4).round(),
-                                            placeholder: (context, url) =>
-                                                _buildAvatarShimmer(),
-                                            errorWidget: (context, url, error) {
-                                              Future.microtask(
-                                                () => authController
-                                                    .cleanInvalidProfileImageUrl(),
-                                              );
-                                              return _buildAvatarFallback();
-                                            },
-                                          )
-                                        : _buildAvatarFallback(),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
+              // 프로필 이미지 - presigned URL 사용
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                child: Container(
+                  decoration: BoxDecoration(shape: BoxShape.circle),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/profile_screen');
                     },
-                  );
-                },
+                    child: SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: ClipOval(
+                        child:
+                            _profileImageUrl != null &&
+                                _profileImageUrl!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: _profileImageUrl!,
+                                fit: BoxFit.cover,
+                                width: 34,
+                                height: 34,
+                                fadeInDuration: Duration.zero,
+                                fadeOutDuration: Duration.zero,
+                                memCacheWidth: (34 * 4).round(),
+                                maxWidthDiskCache: (34 * 4).round(),
+                                placeholder: (context, url) =>
+                                    _buildAvatarShimmer(),
+                                errorWidget: (context, url, error) =>
+                                    _buildAvatarFallback(),
+                              )
+                            : _buildAvatarFallback(),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -870,11 +862,11 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
     try {
       // REST API 컨트롤러 사용
-      final userController = Provider.of<ApiUserController>(
+      final userController = Provider.of<UserController>(
         context,
         listen: false,
       );
-      final categoryController = Provider.of<ApiCategoryController>(
+      final categoryController = Provider.of<CategoryController>(
         context,
         listen: false,
       );
@@ -892,7 +884,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       final categoryId = await categoryController.createCategory(
         requesterId: userId,
         name: categoryName,
-        receiverIds: [userId],
+        receiverIds: [],
 
         // PRIVATE 카테고리인 경우는, false로 설정해야함.
         isPublic: false,
@@ -972,7 +964,6 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _pageController.dispose(); // PageController 정리
-    _authController?.removeListener(_handleAuthControllerUpdated);
 
     PaintingBinding.instance.imageCache.clear();
     super.dispose();

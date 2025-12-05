@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **int** |  | [optional] 
 **name** | **String** |  | [optional] 
-**userId** | **String** |  | [optional] 
+**nickname** | **String** |  | [optional] 
 **profileImageUrl** | **String** |  | [optional] 
 **active** | **bool** |  | [optional] 
 

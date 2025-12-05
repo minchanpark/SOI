@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../../api/models/comment.dart';
-import '../../../api/controller/api_comment_audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 
 /// API 기반 음성 댓글 리스트 Bottom Sheet
 ///
@@ -164,18 +164,9 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
 /// API 댓글 행 위젯
 class _ApiCommentRow extends StatelessWidget {
   final Comment comment;
-  final Map<String, String> userProfileImages;
-  final Map<String, String> userNames;
-  final bool isLoadingUser;
   final bool isHighlighted;
 
-  const _ApiCommentRow({
-    required this.comment,
-    this.isHighlighted = false,
-    this.userProfileImages = const {},
-    this.userNames = const {},
-    this.isLoadingUser = false,
-  });
+  const _ApiCommentRow({required this.comment, this.isHighlighted = false});
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +184,7 @@ class _ApiCommentRow extends StatelessWidget {
   Widget _buildTextRow(BuildContext context) {
     // userProfile은 프로필 이미지 URL
     final profileUrl = comment.userProfile ?? '';
-    final userName = userNames[comment.userProfile] ?? '이름을 가지고 오지 못하였습니다.';
+    final userName = comment.nickname ?? '알 수 없는 사용자';
 
     final content = Column(
       children: [
@@ -271,12 +262,12 @@ class _ApiCommentRow extends StatelessWidget {
   /// 음성 댓글 UI
   Widget _buildAudioRow(BuildContext context) {
     final profileUrl = comment.userProfile ?? '';
-    final userName = userNames[comment.userProfile] ?? '이름을 가지고 오지 못하였습니다.';
+    final userName = comment.nickname ?? '알 수 없는 사용자';
 
     // waveformData 파싱 (String -> List<double>)
     final waveformData = _parseWaveformData(comment.waveformData);
 
-    final content = Consumer<ApiCommentAudioController>(
+    final content = Consumer<AudioController>(
       builder: (context, audioController, child) {
         final isPlaying = audioController.isUrlPlaying(comment.audioUrl ?? '');
         final progress = audioController.progress;

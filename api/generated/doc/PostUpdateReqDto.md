@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **postId** | **int** |  | [optional] 
 **categoryId** | **int** |  | [optional] 
-**userId** | **String** |  | [optional] 
+**nickname** | **String** |  | [optional] 
 **content** | **String** |  | [optional] 
 **postFileKey** | **String** |  | [optional] 
 **audioFileKey** | **String** |  | [optional] 

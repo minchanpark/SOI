@@ -195,7 +195,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findUser**
-> ApiResponseDtoListUserRespDto findUser(userId)
+> ApiResponseDtoListUserRespDto findUser(nickname)
 
 키워드로 사용자 검색
 
@@ -206,10 +206,10 @@ No authorization required
 import 'package:soi_api_client/api.dart';
 
 final api_instance = UserAPIApi();
-final userId = userId_example; // String | 
+final nickname = nickname_example; // String | 
 
 try {
-    final result = api_instance.findUser(userId);
+    final result = api_instance.findUser(nickname);
     print(result);
 } catch (e) {
     print('Exception when calling UserAPIApi->findUser: $e\n');
@@ -220,7 +220,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**|  | 
+ **nickname** | **String**|  | 
 
 ### Return type
 

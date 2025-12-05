@@ -164,6 +164,49 @@ class CommentService {
     );
   }
 
+  /// 이모지 댓글 생성 (편의 메서드)
+  Future<bool> createEmojiComment({
+    required int postId,
+    required int userId,
+    required int emojiId,
+    double? locationX,
+    double? locationY,
+  }) async {
+    try {
+      final dto = CommentReqDto(
+        postId: postId,
+        userId: userId,
+        emojiId: emojiId,
+        text: '',
+        audioKey: '',
+        waveformData: '',
+        duration: 0,
+        locationX: locationX ?? 0.0,
+        locationY: locationY ?? 0.0,
+        commentType: CommentReqDtoCommentTypeEnum.EMOJI,
+      );
+
+      final response = await _commentApi.create2(dto);
+
+      if (response == null) {
+        throw const DataValidationException(message: '이모지 댓글 생성 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '이모지 댓글 생성 실패');
+      }
+
+      return true;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '이모지 댓글 생성 실패: $e', originalException: e);
+    }
+  }
+
   // ============================================
   // 댓글 조회
   // ============================================
@@ -205,6 +248,41 @@ class CommentService {
   Future<int> getCommentCount({required int postId}) async {
     final comments = await getComments(postId: postId);
     return comments.length;
+  }
+
+  // ============================================
+  // 댓글 삭제
+  // ============================================
+
+  /// 댓글 삭제
+  ///
+  /// [commentId]에 해당하는 댓글을 삭제합니다.
+  ///
+  /// Returns: 삭제 성공 여부
+  ///
+  /// Throws:
+  /// - [NotFoundException]: 댓글을 찾을 수 없음
+  Future<bool> deleteComment(int commentId) async {
+    try {
+      final response = await _commentApi.deleteComment(commentId);
+
+      if (response == null) {
+        throw const DataValidationException(message: '댓글 삭제 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '댓글 삭제 실패');
+      }
+
+      return true;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '댓글 삭제 실패: $e', originalException: e);
+    }
   }
 
   // ============================================

@@ -10,7 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **int** |  | [optional] 
 **name** | **String** |  | [optional] 
-**categoryPhotoUrl** | **String** |  | [optional] 
+**nickname** | **String** |  | [optional] 
+**categoryPhotoKey** | **String** |  | [optional] 
 **isNew** | **bool** |  | [optional] 
 **totalUserNum** | **int** |  | [optional] 
 **isPinned** | **bool** |  | [optional] 

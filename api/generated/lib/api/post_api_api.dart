@@ -74,7 +74,7 @@ class PostAPIApi {
 
   /// 게시물 삭제
   ///
-  /// 게시물을 삭제합니다. 삭제된건 일단 휴지통으로 이동됨
+  /// id로 게시물을 삭제합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -110,7 +110,7 @@ class PostAPIApi {
 
   /// 게시물 삭제
   ///
-  /// 게시물을 삭제합니다. 삭제된건 일단 휴지통으로 이동됨
+  /// id로 게시물을 삭제합니다.
   ///
   /// Parameters:
   ///
@@ -130,16 +130,18 @@ class PostAPIApi {
     return null;
   }
 
-  /// 메인페이지에 띄울 게시물 조회
+  /// 전체 게시물 조회
   ///
-  /// 사용자가 포함된 카테고리의 모든 게시물을 리턴해줌
+  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
   ///
   /// Note: This method returns the HTTP [Response].
   ///
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<Response> findAllByUserIdWithHttpInfo(int userId,) async {
+  ///
+  /// * [String] postStatus (required):
+  Future<Response> findAllByUserIdWithHttpInfo(int userId, String postStatus,) async {
     // ignore: prefer_const_declarations
     final path = r'/post/find-all';
 
@@ -151,6 +153,7 @@ class PostAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'postStatus', postStatus));
 
     const contentTypes = <String>[];
 
@@ -166,15 +169,17 @@ class PostAPIApi {
     );
   }
 
-  /// 메인페이지에 띄울 게시물 조회
+  /// 전체 게시물 조회
   ///
-  /// 사용자가 포함된 카테고리의 모든 게시물을 리턴해줌
+  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
   ///
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<ApiResponseDtoListPostRespDto?> findAllByUserId(int userId,) async {
-    final response = await findAllByUserIdWithHttpInfo(userId,);
+  ///
+  /// * [String] postStatus (required):
+  Future<ApiResponseDtoListPostRespDto?> findAllByUserId(int userId, String postStatus,) async {
+    final response = await findAllByUserIdWithHttpInfo(userId, postStatus,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -246,6 +251,69 @@ class PostAPIApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListPostRespDto',) as ApiResponseDtoListPostRespDto;
+    
+    }
+    return null;
+  }
+
+  /// 게시물 상태변경
+  ///
+  /// 게시물 상태를 변경합니다. ACTIVE : 활성화 SOFTDELETE : 삭제(휴지통) INACTIVE : 비활성화
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  ///
+  /// * [String] postStatus (required):
+  Future<Response> setPostWithHttpInfo(int postId, String postStatus,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/post/set-status';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'postId', postId));
+      queryParams.addAll(_queryParams('', 'postStatus', postStatus));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'PATCH',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 게시물 상태변경
+  ///
+  /// 게시물 상태를 변경합니다. ACTIVE : 활성화 SOFTDELETE : 삭제(휴지통) INACTIVE : 비활성화
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  ///
+  /// * [String] postStatus (required):
+  Future<ApiResponseDtoObject?> setPost(int postId, String postStatus,) async {
+    final response = await setPostWithHttpInfo(postId, postStatus,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoObject',) as ApiResponseDtoObject;
     
     }
     return null;

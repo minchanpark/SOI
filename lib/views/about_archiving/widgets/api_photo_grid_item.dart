@@ -6,7 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import '../../../api/models/post.dart';
-import '../../../api/controller/api_user_controller.dart';
+import '../../../api/controller/user_controller.dart';
 import '../../../api_firebase/controllers/audio_controller.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
@@ -43,13 +43,13 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   String? _profileImageUrl;
   bool _isLoadingProfile = true;
 
-  ApiUserController? userController;
+  UserController? userController;
 
   @override
   void initState() {
     super.initState();
     _initializeWaveformData();
-    userController = Provider.of<ApiUserController>(context, listen: false);
+    userController = Provider.of<UserController>(context, listen: false);
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProfileImage();
@@ -94,14 +94,14 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   /// 프로필 이미지 로드
   Future<void> _loadProfileImage() async {
     try {
-      userController = Provider.of<ApiUserController>(context, listen: false);
+      userController = Provider.of<UserController>(context, listen: false);
       final user = await userController!.getUser(
         userController!.currentUser!.id,
       );
 
       if (mounted) {
         setState(() {
-          _profileImageUrl = user?.profileImageUrl;
+          _profileImageUrl = user?.profileImageUrlKey;
           _isLoadingProfile = false;
         });
       }

@@ -14,7 +14,7 @@ class UserRespDto {
   /// Returns a new [UserRespDto] instance.
   UserRespDto({
     this.id,
-    this.userId,
+    this.nickname,
     this.name,
     this.profileImageUrl,
     this.birthDate,
@@ -35,7 +35,7 @@ class UserRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -72,7 +72,7 @@ class UserRespDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is UserRespDto &&
     other.id == id &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.name == name &&
     other.profileImageUrl == profileImageUrl &&
     other.birthDate == birthDate &&
@@ -82,14 +82,14 @@ class UserRespDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
     (profileImageUrl == null ? 0 : profileImageUrl!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode);
 
   @override
-  String toString() => 'UserRespDto[id=$id, userId=$userId, name=$name, profileImageUrl=$profileImageUrl, birthDate=$birthDate, phoneNum=$phoneNum]';
+  String toString() => 'UserRespDto[id=$id, nickname=$nickname, name=$name, profileImageUrl=$profileImageUrl, birthDate=$birthDate, phoneNum=$phoneNum]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -98,10 +98,10 @@ class UserRespDto {
     } else {
       json[r'id'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.name != null) {
       json[r'name'] = this.name;
@@ -146,7 +146,7 @@ class UserRespDto {
 
       return UserRespDto(
         id: mapValueOfType<int>(json, r'id'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         name: mapValueOfType<String>(json, r'name'),
         profileImageUrl: mapValueOfType<String>(json, r'profileImageUrl'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),

@@ -72,6 +72,64 @@ class CommentAPIApi {
     return null;
   }
 
+  /// 댓글 삭제
+  ///
+  /// id를 통해서 댓글을 삭제합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  Future<Response> deleteCommentWithHttpInfo(int postId,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/comment/delete';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'postId', postId));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'DELETE',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 댓글 삭제
+  ///
+  /// id를 통해서 댓글을 삭제합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  Future<ApiResponseDtoListObject?> deleteComment(int postId,) async {
+    final response = await deleteCommentWithHttpInfo(postId,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListObject',) as ApiResponseDtoListObject;
+    
+    }
+    return null;
+  }
+
   /// 댓글 조회
   ///
   /// 게시물에 달린 댓글을 조회합니다.

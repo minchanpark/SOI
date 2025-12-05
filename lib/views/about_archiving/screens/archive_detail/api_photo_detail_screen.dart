@@ -9,10 +9,10 @@ import 'package:provider/provider.dart';
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
 import '../../../../api/models/user.dart' as api_user;
-import '../../../../api/controller/api_user_controller.dart';
-import '../../../../api/controller/api_comment_controller.dart';
-import '../../../../api/controller/api_post_controller.dart';
-import '../../../../api/controller/api_media_controller.dart';
+import '../../../../api/controller/user_controller.dart';
+import '../../../../api/controller/comment_controller.dart';
+import '../../../../api/controller/post_controller.dart';
+import '../../../../api/controller/media_controller.dart';
 import '../../../../api_firebase/controllers/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../about_share/share_screen.dart';
@@ -50,7 +50,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   bool _isLoadingProfile = true;
 
   // 컨트롤러
-  ApiUserController? _userController;
+  UserController? _userController;
 
   // 상태 맵 (Firebase 버전과 동일한 구조)
   final Map<int, List<Comment>> _postComments = {};
@@ -81,7 +81,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
-    _userController = Provider.of<ApiUserController>(context, listen: false);
+    _userController = Provider.of<UserController>(context, listen: false);
     _loadUserProfileImage();
     _loadCommentsForPost(widget.posts[_currentIndex].id);
   }
@@ -262,7 +262,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
       if (!mounted) return;
       setState(() {
-        _userProfileImageUrl = user?.profileImageUrl ?? '';
+        _userProfileImageUrl = user?.profileImageUrlKey ?? '';
         _userName = user?.userId ?? currentPost.userId;
         _isLoadingProfile = false;
         _userProfileImages[currentPost.userId] = _userProfileImageUrl;
@@ -284,7 +284,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   /// 게시물의 댓글 로드
   Future<void> _loadCommentsForPost(int postId) async {
     try {
-      final commentController = Provider.of<ApiCommentController>(
+      final commentController = Provider.of<CommentController>(
         context,
         listen: false,
       );
@@ -362,7 +362,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       if (userId == null) return;
 
       final currentUserProfileImageUrl =
-          _userController?.currentUser?.profileImageUrl;
+          _userController?.currentUser?.profileImageUrlKey;
 
       _pendingVoiceComments[postId] = PendingApiVoiceComment(
         text: text,
@@ -397,7 +397,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       if (userId == null) return;
 
       final currentUserProfileImageUrl =
-          _userController?.currentUser?.profileImageUrl;
+          _userController?.currentUser?.profileImageUrlKey;
 
       _pendingVoiceComments[postId] = PendingApiVoiceComment(
         audioPath: audioPath,
@@ -465,7 +465,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     PendingApiVoiceComment pending,
   ) async {
     try {
-      final commentController = Provider.of<ApiCommentController>(
+      final commentController = Provider.of<CommentController>(
         context,
         listen: false,
       );
@@ -486,7 +486,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       // 음성 댓글 저장 부분
       else if (pending.audioPath != null) {
         // 음성 댓글 저장
-        final mediaController = Provider.of<ApiMediaController>(
+        final mediaController = Provider.of<MediaController>(
           context,
           listen: false,
         );
@@ -680,7 +680,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     if (confirmed != true) return;
 
     try {
-      final postController = Provider.of<ApiPostController>(
+      final postController = Provider.of<PostController>(
         context,
         listen: false,
       );

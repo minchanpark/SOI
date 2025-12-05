@@ -15,7 +15,7 @@ class UserFindRespDto {
   UserFindRespDto({
     this.id,
     this.name,
-    this.userId,
+    this.nickname,
     this.profileImageUrl,
     this.active,
   });
@@ -42,7 +42,7 @@ class UserFindRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -64,7 +64,7 @@ class UserFindRespDto {
   bool operator ==(Object other) => identical(this, other) || other is UserFindRespDto &&
     other.id == id &&
     other.name == name &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.profileImageUrl == profileImageUrl &&
     other.active == active;
 
@@ -73,12 +73,12 @@ class UserFindRespDto {
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (profileImageUrl == null ? 0 : profileImageUrl!.hashCode) +
     (active == null ? 0 : active!.hashCode);
 
   @override
-  String toString() => 'UserFindRespDto[id=$id, name=$name, userId=$userId, profileImageUrl=$profileImageUrl, active=$active]';
+  String toString() => 'UserFindRespDto[id=$id, name=$name, nickname=$nickname, profileImageUrl=$profileImageUrl, active=$active]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -92,10 +92,10 @@ class UserFindRespDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.profileImageUrl != null) {
       json[r'profileImageUrl'] = this.profileImageUrl;
@@ -131,7 +131,7 @@ class UserFindRespDto {
       return UserFindRespDto(
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         profileImageUrl: mapValueOfType<String>(json, r'profileImageUrl'),
         active: mapValueOfType<bool>(json, r'active'),
       );

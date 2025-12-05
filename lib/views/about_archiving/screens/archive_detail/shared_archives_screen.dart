@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../../api/controller/api_category_controller.dart';
-import '../../../../api/controller/api_user_controller.dart';
+import '../../../../api/controller/category_controller.dart';
+import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../theme/theme.dart';
 import '../../models/archive_layout_model.dart';
@@ -34,10 +34,16 @@ class SharedArchivesScreen extends StatefulWidget {
 class _SharedArchivesScreenState extends State<SharedArchivesScreen>
     with AutomaticKeepAliveClientMixin {
   int? _userId;
-  ApiUserController? _userController;
-  ApiCategoryController? _categoryController;
+
+  // API 컨트롤러들
+  UserController? _userController;
+  CategoryController? _categoryController;
+
+  /// 초기 로드 상태
   bool _isInitialLoad = true;
-  final String _searchQuery = ''; // 로컬 검색어
+
+  // 로컬 검색어
+  final String _searchQuery = '';
 
   @override
   void initState() {
@@ -50,8 +56,8 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _userController ??= Provider.of<ApiUserController>(context, listen: false);
-    _categoryController ??= Provider.of<ApiCategoryController>(
+    _userController ??= Provider.of<UserController>(context, listen: false);
+    _categoryController ??= Provider.of<CategoryController>(
       context,
       listen: false,
     );
@@ -59,11 +65,11 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
   /// 데이터 로드
   Future<void> _loadData() async {
-    final userController = Provider.of<ApiUserController>(
+    final userController = Provider.of<UserController>(
       context,
       listen: false,
     );
-    final categoryController = Provider.of<ApiCategoryController>(
+    final categoryController = Provider.of<CategoryController>(
       context,
       listen: false,
     );
@@ -124,7 +130,7 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      body: Consumer<ApiCategoryController>(
+      body: Consumer<CategoryController>(
         builder: (context, categoryController, child) {
           final categories = categoryController.publicCategories;
 

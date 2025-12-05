@@ -10,12 +10,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:soi/api/controller/api_category_controller.dart';
-import 'package:soi/api/controller/api_comment_controller.dart';
-import 'package:soi/api/controller/api_friend_controller.dart';
-import 'package:soi/api/controller/api_media_controller.dart';
-import 'package:soi/api/controller/api_post_controller.dart';
-import 'package:soi/api/controller/api_user_controller.dart';
+import 'package:soi/api/controller/category_controller.dart' as api_category;
+import 'package:soi/api/controller/comment_controller.dart';
+import 'package:soi/api/controller/friend_controller.dart' as api_friend;
+import 'package:soi/api/controller/media_controller.dart' as api_media;
+import 'package:soi/api/controller/notification_controller.dart'
+    as api_notification;
+import 'package:soi/api/controller/post_controller.dart';
+import 'package:soi/api/controller/user_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'api_firebase/controllers/audio_controller.dart';
 import 'api_firebase/controllers/auth_controller.dart';
@@ -216,23 +218,22 @@ class MyApp extends StatelessWidget {
         // ============================================
         // New Backend API Services (REST API)
         // ============================================
-        ChangeNotifierProvider<ApiUserController>(
-          create: (_) => ApiUserController(),
+        ChangeNotifierProvider<UserController>(create: (_) => UserController()),
+        ChangeNotifierProvider<api_category.CategoryController>(
+          create: (_) => api_category.CategoryController(),
         ),
-        ChangeNotifierProvider<ApiCategoryController>(
-          create: (_) => ApiCategoryController(),
+        ChangeNotifierProvider<PostController>(create: (_) => PostController()),
+        ChangeNotifierProvider<api_friend.FriendController>(
+          create: (_) => api_friend.FriendController(),
         ),
-        ChangeNotifierProvider<ApiPostController>(
-          create: (_) => ApiPostController(),
+        ChangeNotifierProvider<CommentController>(
+          create: (_) => CommentController(),
         ),
-        ChangeNotifierProvider<ApiFriendController>(
-          create: (_) => ApiFriendController(),
+        ChangeNotifierProvider<api_media.MediaController>(
+          create: (_) => api_media.MediaController(),
         ),
-        ChangeNotifierProvider<ApiCommentController>(
-          create: (_) => ApiCommentController(),
-        ),
-        ChangeNotifierProvider<ApiMediaController>(
-          create: (_) => ApiMediaController(),
+        ChangeNotifierProvider<api_notification.NotificationController>(
+          create: (_) => api_notification.NotificationController(),
         ),
       ],
       child: ScreenUtilInit(

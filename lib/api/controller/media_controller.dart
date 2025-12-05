@@ -5,133 +5,255 @@ import 'package:http/http.dart' as http;
 
 import '../services/media_service.dart';
 
-/// 미디어 컨트롤러 추상 클래스
+/// 미디어 컨트롤러
 ///
-/// 미디어 업로드 및 URL 발급 관련 기능을 정의하는 인터페이스입니다.
-/// 구현체를 교체하여 테스트나 다른 백엔드 사용이 가능합니다.
+/// 미디어 업로드 관련 UI 상태 관리 및 비즈니스 로직을 담당합니다.
+/// MediaService를 내부적으로 사용하며, API 변경 시 Service만 수정하면 됩니다.
 ///
 /// 사용 예시:
 /// ```dart
-/// final mediaController = Provider.of<MediaController>(context, listen: false);
+/// final controller = Provider.of<MediaController>(context, listen: false);
 ///
 /// // Presigned URL 발급
-/// final urls = await mediaController.getPresignedUrls(['image1.jpg']);
+/// final urls = await controller.getPresignedUrls(['image1.jpg']);
 ///
 /// // 이미지 업로드
-/// final key = await mediaController.uploadPostImage(
+/// final key = await controller.uploadPostImage(
 ///   file: imageFile,
 ///   userId: 1,
 ///   refId: 1,
 /// );
 /// ```
-abstract class MediaController extends ChangeNotifier {
+class MediaController extends ChangeNotifier {
+  final MediaService _mediaService;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+  double? _uploadProgress;
+
+  /// 생성자
+  ///
+  /// [mediaService]를 주입받아 사용합니다. 테스트 시 MockMediaService를 주입할 수 있습니다.
+  MediaController({MediaService? mediaService})
+    : _mediaService = mediaService ?? MediaService();
+
   /// 로딩 상태
-  bool get isLoading;
+  bool get isLoading => _isLoading;
 
   /// 에러 메시지
-  String? get errorMessage;
+  String? get errorMessage => _errorMessage;
 
-  /// 업로드 진행률 (0.0 ~ 1.0, 향후 확장용)
-  double? get uploadProgress;
+  /// 업로드 진행률 (0.0 ~ 1.0)
+  double? get uploadProgress => _uploadProgress;
 
   // ============================================
   // Presigned URL
   // ============================================
 
-  /// Presigned URL 발급
-  ///
-  /// S3에 저장된 파일에 접근할 수 있는 1시간 유효한 URL을 발급받습니다.
-  ///
-  /// Parameters:
-  /// - [keys]: S3 파일 키 목록
-  ///
-  /// Returns: Presigned URL 목록 (List<String>)
-  Future<List<String>> getPresignedUrls(List<String> keys);
+  Future<List<String>> getPresignedUrls(List<String> keys) async {
+    _setLoading(true);
+    _clearError();
 
-  /// 단일 파일 Presigned URL 발급 (편의 메서드)
-  ///
-  /// Returns: Presigned URL
-  Future<String?> getPresignedUrl(String key);
+    try {
+      final urls = await _mediaService.getPresignedUrls(keys);
+      _setLoading(false);
+      return urls;
+    } catch (e) {
+      _setError('URL 발급 실패: $e');
+      _setLoading(false);
+      return [];
+    }
+  }
+
+  Future<String?> getPresignedUrl(String key) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final url = await _mediaService.getPresignedUrl(key);
+      _setLoading(false);
+      return url;
+    } catch (e) {
+      _setError('URL 발급 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
 
   // ============================================
   // 미디어 업로드
   // ============================================
 
-  /// 미디어 파일 업로드
-  ///
-  /// 파일을 S3에 업로드합니다.
-  ///
-  /// Parameters:
-  /// - [files]: 업로드할 파일 목록 (MultipartFile)
-  /// - [types]: 각 파일의 미디어 타입 목록
-  /// - [usageTypes]: 각 파일의 사용 용도 목록
-  /// - [userId]: 업로드 사용자 ID
-  /// - [refId]: 참조 ID (게시물 ID 등)
-  ///
-  /// Returns: 업로드된 파일의 S3 키 목록 (List<String>)
   Future<List<String>> uploadMedia({
     required List<http.MultipartFile> files,
     required List<MediaType> types,
     required List<MediaUsageType> usageTypes,
     required int userId,
     required int refId,
-  });
+  }) async {
+    _setLoading(true);
+    _setUploadProgress(0.0);
+    _clearError();
 
-  /// 게시물 이미지 업로드 (편의 메서드)
-  ///
-  /// Returns: 업로드된 파일의 S3 키
+    try {
+      final keys = await _mediaService.uploadMedia(
+        files: files,
+        types: types,
+        usageTypes: usageTypes,
+        userId: userId,
+        refId: refId,
+      );
+      _setUploadProgress(1.0);
+      _setLoading(false);
+      return keys;
+    } catch (e) {
+      _setError('파일 업로드 실패: $e');
+      _setLoading(false);
+      return [];
+    }
+  }
+
   Future<String?> uploadPostImage({
     required http.MultipartFile file,
     required int userId,
     required int refId,
-  });
+  }) async {
+    _setLoading(true);
+    _setUploadProgress(0.0);
+    _clearError();
 
-  /// 게시물 오디오 업로드 (편의 메서드)
-  ///
-  /// Returns: 업로드된 파일의 S3 키
+    try {
+      final key = await _mediaService.uploadPostImage(
+        file: file,
+        userId: userId,
+        refId: refId,
+      );
+      _setUploadProgress(1.0);
+      _setLoading(false);
+      return key;
+    } catch (e) {
+      _setError('이미지 업로드 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   Future<String?> uploadPostAudio({
     required http.MultipartFile file,
     required int userId,
     required int refId,
-  });
+  }) async {
+    _setLoading(true);
+    _setUploadProgress(0.0);
+    _clearError();
 
-  /// 프로필 이미지 업로드 (편의 메서드)
-  ///
-  /// Returns: 업로드된 파일의 S3 키
+    try {
+      final key = await _mediaService.uploadPostAudio(
+        file: file,
+        userId: userId,
+        refId: refId,
+      );
+      _setUploadProgress(1.0);
+      _setLoading(false);
+      return key;
+    } catch (e) {
+      _setError('오디오 업로드 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   Future<String?> uploadProfileImage({
     required http.MultipartFile file,
     required int userId,
-  });
+  }) async {
+    _setLoading(true);
+    _setUploadProgress(0.0);
+    _clearError();
 
-  /// 댓글 오디오 업로드 (편의 메서드)
-  ///
-  /// Returns: 업로드된 파일의 S3 키
+    try {
+      final key = await _mediaService.uploadProfileImage(
+        file: file,
+        userId: userId,
+      );
+      _setUploadProgress(1.0);
+      _setLoading(false);
+      return key;
+    } catch (e) {
+      _setError('프로필 이미지 업로드 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   Future<String?> uploadCommentAudio({
     required http.MultipartFile file,
     required int userId,
     required int postId,
-  });
+  }) async {
+    _setLoading(true);
+    _setUploadProgress(0.0);
+    _clearError();
+
+    try {
+      final key = await _mediaService.uploadCommentAudio(
+        file: file,
+        userId: userId,
+        postId: postId,
+      );
+      _setUploadProgress(1.0);
+      _setLoading(false);
+      return key;
+    } catch (e) {
+      _setError('댓글 오디오 업로드 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
 
   // ============================================
   // 파일 변환 헬퍼
   // ============================================
 
-  /// File을 MultipartFile로 변환
   Future<http.MultipartFile> fileToMultipart(
     File file, {
     String fieldName = 'files',
-  });
+  }) async {
+    return MediaService.fileToMultipart(file, fieldName: fieldName);
+  }
 
-  /// 여러 File을 MultipartFile 목록으로 변환
   Future<List<http.MultipartFile>> filesToMultipart(
     List<File> files, {
     String fieldName = 'files',
-  });
+  }) async {
+    return MediaService.filesToMultipart(files, fieldName: fieldName);
+  }
 
   // ============================================
   // 에러 처리
   // ============================================
 
-  /// 에러 초기화
-  void clearError();
+  void clearError() {
+    _clearError();
+    notifyListeners();
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _setError(String message) {
+    _errorMessage = message;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+  }
+
+  void _setUploadProgress(double? value) {
+    _uploadProgress = value;
+    notifyListeners();
+  }
 }

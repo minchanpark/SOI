@@ -28,7 +28,7 @@ import '../models/models.dart';
 /// // 사용자 생성
 /// final user = await userService.createUser(
 ///   name: '홍길동',
-///   userId: 'hong123',
+///   nickName: 'hong123',
 ///   phoneNum: '01012345678',
 ///   birthDate: '1990-01-01',
 /// );
@@ -37,7 +37,7 @@ import '../models/models.dart';
 /// final user = await userService.getUser(1);
 ///
 /// // 사용자 ID 중복 확인
-/// final isAvailable = await userService.checkUserIdAvailable('hong123');
+/// final isAvailable = await userService.checknickNameAvailable('hong123');
 /// ```
 class UserService {
   final UserAPIApi _userApi;
@@ -153,7 +153,7 @@ class UserService {
   ///
   /// Parameters:
   /// - [name]: 사용자 이름
-  /// - [userId]: 사용자 아이디 (고유)
+  /// - [nickName]: 사용자 아이디 (고유)
   /// - [phoneNum]: 전화번호
   /// - [birthDate]: 생년월일 (yyyy-MM-dd 형식)
   /// - [profileImage]: 프로필 이미지 URL (선택)
@@ -168,7 +168,7 @@ class UserService {
   /// - [SoiApiException]: 이미 존재하는 아이디/전화번호
   Future<User> createUser({
     required String name,
-    required String userId,
+    required String nickName,
     required String phoneNum,
     required String birthDate,
     String? profileImageKey,
@@ -179,10 +179,10 @@ class UserService {
     try {
       final dto = UserCreateReqDto(
         name: name,
-        userId: userId,
+        nickname: nickName,
         phoneNum: phoneNum,
         birthDate: birthDate,
-        profileImageKey: profileImageKey,
+        profileImageKey: profileImageKey ?? '', // null 대신 빈 문자열 전송
         serviceAgreed: serviceAgreed,
         privacyPolicyAgreed: privacyPolicyAgreed,
         marketingAgreed: marketingAgreed,
@@ -283,7 +283,7 @@ class UserService {
 
   /// 키워드로 사용자 검색
   ///
-  /// [keyword]가 포함된 userId를 가진 사용자를 검색합니다.
+  /// [keyword]가 포함된 nickName를 가진 사용자를 검색합니다.
   ///
   /// Returns: 검색된 사용자 목록 (List<User>)
   Future<List<User>> findUsersByKeyword(String keyword) async {
@@ -315,14 +315,14 @@ class UserService {
 
   /// 사용자 ID 중복 확인
   ///
-  /// [userId]가 사용 가능한지 확인합니다.
+  /// [nickName]가 사용 가능한지 확인합니다.
   ///
   /// Returns:
   /// - true: 사용 가능
   /// - false: 이미 사용 중 (중복)
-  Future<bool> checkUserIdAvailable(String userId) async {
+  Future<bool> checknickNameAvailable(String nickName) async {
     try {
-      final response = await _userApi.idCheck(userId);
+      final response = await _userApi.idCheck(nickName);
 
       if (response == null) {
         return false;
@@ -354,7 +354,7 @@ class UserService {
   /// Parameters:
   /// - [id]: 사용자 고유 ID
   /// - [name]: 변경할 이름 (선택)
-  /// - [userId]: 변경할 아이디 (선택)
+  /// - [nickName]: 변경할 아이디 (선택)
   /// - [phoneNum]: 변경할 전화번호 (선택)
   /// - [birthDate]: 변경할 생년월일 (선택)
   /// - [profileImageKey]: 변경할 프로필 이미지 키 (선택)
@@ -363,7 +363,7 @@ class UserService {
   Future<User> updateUser({
     required int id,
     String? name,
-    String? userId,
+    String? nickName,
     String? phoneNum,
     String? birthDate,
     String? profileImageKey,
@@ -372,7 +372,7 @@ class UserService {
       final dto = UserUpdateReqDto(
         id: id,
         name: name,
-        userId: userId,
+        nickname: nickName,
         phoneNum: phoneNum,
         birthDate: birthDate,
         profileImageKey: profileImageKey,
@@ -405,7 +405,7 @@ class UserService {
 
   /// 프로필 이미지 수정
   ///
-  /// [userId]의 프로필 이미지를 [profileImage] URL로 수정합니다.
+  /// [userId]의 프로필 이미지를 [profileImageKey] URL로 수정합니다.
   ///
   /// Returns: 수정된 사용자 정보 (User)
   Future<User> updateProfileImage({

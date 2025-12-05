@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
-import '../../../api/controller/api_user_controller.dart';
+import '../../../api/controller/user_controller.dart';
 import '../about_voice_comment/voice_comment_widget.dart';
 
 /// API 기반 음성 녹음 활성화 상태 위젯
@@ -40,7 +40,7 @@ class ApiVoiceCommentActiveWidget extends StatelessWidget {
     return Container(
       key: ValueKey('voice-widget-${post.id}'),
       alignment: Alignment.center,
-      child: Consumer<ApiUserController>(
+      child: Consumer<UserController>(
         builder: (context, userController, child) {
           final currentUserId = userController.currentUser?.userId;
 

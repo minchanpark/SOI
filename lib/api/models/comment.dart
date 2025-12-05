@@ -11,17 +11,42 @@ enum CommentType {
 ///
 /// API의 CommentRespDto를 앱 내부에서 사용하기 위한 모델입니다.
 class Comment {
+  /// 댓글 고유 ID
+  final int? id;
+
+  /// 작성자 닉네임
+  final String? nickname;
+
+  /// 작성자 프로필 이미지 URL
   final String? userProfile;
+
+  /// 텍스트 댓글 내용
   final String? text;
+
+  /// 이모지 ID (이모지 댓글인 경우)
   final int? emojiId;
+
+  /// 음성 파일 URL (음성 댓글인 경우)
   final String? audioUrl;
+
+  /// 음성 파형 데이터
   final String? waveformData;
+
+  /// 음성 길이 (초)
   final int? duration;
+
+  /// 댓글 위치 X 좌표
   final double? locationX;
+
+  /// 댓글 위치 Y 좌표
   final double? locationY;
+
+  /// 댓글 유형 (텍스트/음성/이모지)
   final CommentType type;
 
   const Comment({
+    this.id,
+    this.nickname,
     this.userProfile,
     this.text,
     this.emojiId,
@@ -36,6 +61,8 @@ class Comment {
   /// CommentRespDto에서 Comment 모델 생성
   factory Comment.fromDto(CommentRespDto dto) {
     return Comment(
+      id: dto.id,
+      nickname: dto.nickname,
       userProfile: dto.userProfile,
       text: dto.text,
       emojiId: dto.emojiId,
@@ -65,6 +92,8 @@ class Comment {
   /// JSON에서 Comment 모델 생성
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
+      id: json['id'] as int?,
+      nickname: json['nickname'] as String?,
       userProfile: json['userProfile'] as String?,
       text: json['text'] as String?,
       emojiId: json['emojiId'] as int?,
@@ -94,6 +123,8 @@ class Comment {
   /// Comment 모델을 JSON으로 변환
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'nickname': nickname,
       'userProfile': userProfile,
       'text': text,
       'emojiId': emojiId,
@@ -123,6 +154,8 @@ class Comment {
 
   /// copyWith 메서드
   Comment copyWith({
+    int? id,
+    String? nickname,
     String? userProfile,
     String? text,
     int? emojiId,
@@ -134,6 +167,8 @@ class Comment {
     CommentType? type,
   }) {
     return Comment(
+      id: id ?? this.id,
+      nickname: nickname ?? this.nickname,
       userProfile: userProfile ?? this.userProfile,
       text: text ?? this.text,
       emojiId: emojiId ?? this.emojiId,
@@ -148,6 +183,6 @@ class Comment {
 
   @override
   String toString() {
-    return 'Comment{type: $type, text: $text, emojiId: $emojiId}';
+    return 'Comment{id: $id, nickname: $nickname, type: $type, text: $text, emojiId: $emojiId}';
   }
 }

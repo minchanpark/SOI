@@ -46,7 +46,7 @@ class Category {
     return Category(
       id: dto.id ?? 0,
       name: dto.name ?? '',
-      photoUrl: dto.categoryPhotoUrl,
+      photoUrl: dto.categoryPhotoKey,
       isNew: dto.isNew ?? false,
       totalUserCount: dto.totalUserNum ?? 0,
       isPinned: dto.isPinned ?? false,

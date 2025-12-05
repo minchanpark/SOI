@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../../api/controller/api_category_controller.dart';
-import '../../../../api/controller/api_user_controller.dart';
+import '../../../../api/controller/category_controller.dart';
+import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../archive_category_dialogs.dart';
 import 'animated_menu_overlay.dart';
@@ -39,8 +39,8 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
   final GlobalKey _buttonKey = GlobalKey();
   bool _isMenuOpen = false;
 
-  ApiCategoryController? categoryController;
-  ApiUserController? userController;
+  CategoryController? categoryController;
+  UserController? userController;
 
   @override
   void initState() {
@@ -251,8 +251,8 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
         break;
       case 'pin':
       case 'unpin':
-        userController = Provider.of<ApiUserController>(context, listen: false);
-        categoryController = Provider.of<ApiCategoryController>(
+        userController = Provider.of<UserController>(context, listen: false);
+        categoryController = Provider.of<CategoryController>(
           context,
           listen: false,
         );

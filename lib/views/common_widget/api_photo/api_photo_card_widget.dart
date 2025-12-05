@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
-import '../../../api/controller/api_comment_audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import 'api_photo_display_widget.dart';
 import 'api_user_info_widget.dart';
 import 'api_voice_recording_widget.dart';
@@ -137,7 +137,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                     backgroundColor: Colors.transparent,
                     builder: (ctx) {
                       return ChangeNotifierProvider(
-                        create: (_) => ApiCommentAudioController(),
+                        create: (_) => AudioController(),
                         child: SizedBox(
                           height: 480.h,
                           child: ApiVoiceCommentListSheet(

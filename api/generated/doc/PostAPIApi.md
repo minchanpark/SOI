@@ -11,8 +11,9 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create**](PostAPIApi.md#create) | **POST** /post/create | 게시물 추가
 [**delete1**](PostAPIApi.md#delete1) | **DELETE** /post/delete | 게시물 삭제
-[**findAllByUserId**](PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 메인페이지에 띄울 게시물 조회
+[**findAllByUserId**](PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
 [**findByCategoryId**](PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
+[**setPost**](PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
 [**showDetail**](PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
 [**update2**](PostAPIApi.md#update2) | **PATCH** /post/update | 게시물 수정
 
@@ -65,7 +66,7 @@ No authorization required
 
 게시물 삭제
 
-게시물을 삭제합니다. 삭제된건 일단 휴지통으로 이동됨
+id로 게시물을 삭제합니다.
 
 ### Example
 ```dart
@@ -104,11 +105,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findAllByUserId**
-> ApiResponseDtoListPostRespDto findAllByUserId(userId)
+> ApiResponseDtoListPostRespDto findAllByUserId(userId, postStatus)
 
-메인페이지에 띄울 게시물 조회
+전체 게시물 조회
 
-사용자가 포함된 카테고리의 모든 게시물을 리턴해줌
+사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
 
 ### Example
 ```dart
@@ -116,9 +117,10 @@ import 'package:soi_api_client/api.dart';
 
 final api_instance = PostAPIApi();
 final userId = 789; // int | 
+final postStatus = postStatus_example; // String | 
 
 try {
-    final result = api_instance.findAllByUserId(userId);
+    final result = api_instance.findAllByUserId(userId, postStatus);
     print(result);
 } catch (e) {
     print('Exception when calling PostAPIApi->findAllByUserId: $e\n');
@@ -130,6 +132,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **userId** | **int**|  | 
+ **postStatus** | **String**|  | 
 
 ### Return type
 
@@ -179,6 +182,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ApiResponseDtoListPostRespDto**](ApiResponseDtoListPostRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **setPost**
+> ApiResponseDtoObject setPost(postId, postStatus)
+
+게시물 상태변경
+
+게시물 상태를 변경합니다. ACTIVE : 활성화 SOFTDELETE : 삭제(휴지통) INACTIVE : 비활성화
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = PostAPIApi();
+final postId = 789; // int | 
+final postStatus = postStatus_example; // String | 
+
+try {
+    final result = api_instance.setPost(postId, postStatus);
+    print(result);
+} catch (e) {
+    print('Exception when calling PostAPIApi->setPost: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **postId** | **int**|  | 
+ **postStatus** | **String**|  | 
+
+### Return type
+
+[**ApiResponseDtoObject**](ApiResponseDtoObject.md)
 
 ### Authorization
 

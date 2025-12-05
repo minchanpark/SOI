@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
 
-import '../../../../api/controller/api_post_controller.dart';
-import '../../../../api/controller/api_user_controller.dart';
+import '../../../../api/controller/post_controller.dart';
+import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../api/models/post.dart';
 import '../../../../theme/theme.dart';
@@ -31,8 +31,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   String? _errorMessage;
   List<Post> _posts = [];
 
-  ApiPostController? postController;
-  ApiUserController? userController;
+  PostController? postController;
+  UserController? userController;
 
   @override
   void initState() {
@@ -59,8 +59,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     });
 
     try {
-      postController = Provider.of<ApiPostController>(context, listen: false);
-      userController = Provider.of<ApiUserController>(context, listen: false);
+      postController = Provider.of<PostController>(context, listen: false);
+      userController = Provider.of<UserController>(context, listen: false);
 
       // 현재 사용자 ID 가져오기
       final currentUser = userController!.currentUser;
@@ -73,7 +73,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       }
 
       // 카테고리 내 포스트 조회 (서버가 이미 presigned URL 반환)
-
       final posts = await postController!.getPostsByCategory(
         categoryId: widget.category.id,
         userId: currentUser.id,

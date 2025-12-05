@@ -8,7 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
-import '../../../api/controller/api_comment_audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import '../../../utils/position_converter.dart';
 import 'api_photo_card_widget.dart';
 import 'api_audio_control_widget.dart';
@@ -201,7 +201,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (sheetContext) => ChangeNotifierProvider(
-                  create: (_) => ApiCommentAudioController(),
+                  create: (_) => AudioController(),
                   child: SizedBox(
                     height: 480.h,
                     child: ApiVoiceCommentListSheet(

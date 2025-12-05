@@ -18,19 +18,19 @@ import '../models/models.dart';
 ///
 /// // 게시물 생성
 /// final success = await postService.createPost(
-///   userId: 'user123',
+///   nickName: 'user123',
 ///   content: '오늘의 일상',
 ///   postFileKey: 'images/photo.jpg',
 ///   categoryIds: [1, 2],
 /// );
 ///
 /// // 메인 피드 조회
-/// final posts = await postService.getMainFeedPosts(userId: 1);
+/// final posts = await postService.getMainFeedPosts(nickName: 1);
 ///
 /// // 카테고리별 게시물 조회
 /// final categoryPosts = await postService.getPostsByCategory(
 ///   categoryId: 1,
-///   userId: 1,
+///   nickName: 1,
 /// );
 /// ```
 class PostService {
@@ -48,7 +48,7 @@ class PostService {
   /// 새로운 게시물(사진 + 음성메모)을 생성합니다.
   ///
   /// Parameters:
-  /// - [userId]: 작성자 사용자 ID (String)
+  /// - [nickName]: 작성자 사용자 ID (String)
   /// - [content]: 게시물 내용 (선택)
   /// - [postFileKey]: 이미지 파일 키
   /// - [audioFileKey]: 음성 파일 키 (선택)
@@ -62,7 +62,7 @@ class PostService {
   /// - [BadRequestException]: 필수 정보 누락
   /// - [SoiApiException]: 게시물 생성 실패
   Future<bool> createPost({
-    required String userId,
+    required String nickName,
     String? content,
     String? postFileKey,
     String? audioFileKey,
@@ -72,7 +72,7 @@ class PostService {
   }) async {
     try {
       final dto = PostCreateReqDto(
-        userId: userId,
+        nickname: nickName,
         content: content,
         postFileKey: postFileKey,
         audioFileKey: audioFileKey,
@@ -111,10 +111,17 @@ class PostService {
   /// [userId]가 속한 모든 카테고리의 게시물을 조회합니다.
   /// 메인 페이지에 표시할 피드용입니다.
   ///
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
+  ///
   /// Returns: 게시물 목록 (List<Post>)
-  Future<List<Post>> getMainFeedPosts({required int userId}) async {
+  Future<List<Post>> getMainFeedPosts({
+    required int userId,
+    PostStatus postStatus = PostStatus.active,
+  }) async {
     try {
-      final response = await _postApi.findAllByUserId(userId);
+      final response = await _postApi.findAllByUserId(userId, postStatus.value);
 
       if (response == null) {
         return [];
@@ -221,7 +228,7 @@ class PostService {
   /// - [content]: 변경할 내용 (선택)
   /// - [postFileKey]: 변경할 이미지 키 (선택)
   /// - [audioFileKey]: 변경할 음성 키 (선택)
-  /// - [categoryIds]: 변경할 카테고리 목록 (선택)
+  /// - [categoryId]: 변경할 카테고리 ID (선택, 단일 값)
   /// - [waveformData]: 변경할 파형 데이터 (선택)
   /// - [duration]: 변경할 음성 길이 (선택)
   ///
@@ -231,7 +238,7 @@ class PostService {
     String? content,
     String? postFileKey,
     String? audioFileKey,
-    List<int>? categoryIds,
+    int? categoryId,
     String? waveformData,
     int? duration,
   }) async {
@@ -241,7 +248,7 @@ class PostService {
         content: content,
         postFileKey: postFileKey,
         audioFileKey: audioFileKey,
-        categoryId: categoryIds?.isNotEmpty == true ? categoryIds!.first : null,
+        categoryId: categoryId,
         waveformData: waveformData,
         duration: duration,
       );
@@ -264,6 +271,46 @@ class PostService {
     } catch (e) {
       if (e is SoiApiException) rethrow;
       throw SoiApiException(message: '게시물 수정 실패: $e', originalException: e);
+    }
+  }
+
+  // ============================================
+  // 게시물 상태 변경
+  // ============================================
+
+  /// 게시물 상태 변경
+  ///
+  /// [postId]에 해당하는 게시물의 상태를 변경합니다.
+  /// ACTIVE: 활성화, SOFTDELETE: 삭제(휴지통), INACTIVE: 비활성화
+  ///
+  /// Parameters:
+  /// - [postId]: 게시물 ID
+  /// - [postStatus]: 변경할 상태
+  ///
+  /// Returns: 변경 성공 여부
+  Future<bool> setPostStatus({
+    required int postId,
+    required PostStatus postStatus,
+  }) async {
+    try {
+      final response = await _postApi.setPost(postId, postStatus.value);
+
+      if (response == null) {
+        throw const DataValidationException(message: '게시물 상태 변경 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '게시물 상태 변경 실패');
+      }
+
+      return true;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '게시물 상태 변경 실패: $e', originalException: e);
     }
   }
 

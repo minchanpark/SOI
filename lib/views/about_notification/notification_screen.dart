@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:soi/api_firebase/controllers/media_controller.dart';
+import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/category_photos_screen.dart';
 import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/category_controller.dart';
@@ -9,7 +10,7 @@ import '../../api_firebase/controllers/auth_controller.dart';
 import '../../api_firebase/controllers/friend_request_controller.dart';
 import '../../api_firebase/models/notification_model.dart';
 import '../../api_firebase/models/photo_data_model.dart';
-import '../about_archiving/screens/archive_detail/photo_detail_screen.dart';
+
 import '../../api_firebase/repositories/auth_repository.dart';
 import 'widgets/category_invite_confirm_sheet.dart';
 import 'widgets/category_invite_friend_list_sheet.dart';
@@ -480,17 +481,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
           await _categoryController.getCategoryName(categoryId);
 
       // PhotoDetailScreen으로 이동
-      Navigator.push(
+      // TODO: ApiPhotoDetailScreen으로 변경
+      /* Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => PhotoDetailScreen(
+          builder: (context) => ApiPhotoDetailScreen(
             photos: photos,
             initialIndex: initialIndex,
             categoryName: categoryName,
             categoryId: categoryId,
           ),
         ),
-      );
+      );*/
 
       debugPrint('사진 상세로 이동: $photoId (인덱스: $initialIndex)');
       if (notification.commentId != null) {

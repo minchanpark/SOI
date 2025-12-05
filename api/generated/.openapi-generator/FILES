@@ -9,6 +9,7 @@ doc/ApiResponseDtoListCategoryRespDto.md
 doc/ApiResponseDtoListCommentRespDto.md
 doc/ApiResponseDtoListFriendCheckRespDto.md
 doc/ApiResponseDtoListNotificationRespDto.md
+doc/ApiResponseDtoListObject.md
 doc/ApiResponseDtoListPostRespDto.md
 doc/ApiResponseDtoListString.md
 doc/ApiResponseDtoListUserFindRespDto.md
@@ -68,6 +69,7 @@ lib/model/api_response_dto_list_category_resp_dto.dart
 lib/model/api_response_dto_list_comment_resp_dto.dart
 lib/model/api_response_dto_list_friend_check_resp_dto.dart
 lib/model/api_response_dto_list_notification_resp_dto.dart
+lib/model/api_response_dto_list_object.dart
 lib/model/api_response_dto_list_post_resp_dto.dart
 lib/model/api_response_dto_list_string.dart
 lib/model/api_response_dto_list_user_find_resp_dto.dart

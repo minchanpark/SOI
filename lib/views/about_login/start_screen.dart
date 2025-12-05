@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../api/controller/api_user_controller.dart';
+import '../../api/controller/user_controller.dart';
 import '../../theme/theme.dart';
 
 class StartScreen extends StatefulWidget {
@@ -107,7 +107,7 @@ class _StartScreenState extends State<StartScreen>
   /// 자동 로그인 체크
   Future<void> _checkAutoLogin() async {
     try {
-      final userController = Provider.of<ApiUserController>(
+      final userController = Provider.of<UserController>(
         context,
         listen: false,
       );

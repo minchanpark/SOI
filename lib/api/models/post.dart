@@ -1,5 +1,32 @@
 import 'package:soi_api_client/api.dart';
 
+/// 게시물 상태 enum
+///
+/// API에서 사용하는 게시물 상태값입니다.
+/// - ACTIVE: 활성화된 게시물 (기본)
+/// - DELETED: 삭제된 게시물 (휴지통)
+/// - INACTIVE: 비활성화된 게시물
+enum PostStatus {
+  active('ACTIVE'),
+  deleted('DELETED'),
+  inactive('INACTIVE');
+
+  final String value;
+  const PostStatus(this.value);
+
+  static PostStatus fromString(String value) {
+    switch (value.toUpperCase()) {
+      case 'DELETED':
+        return PostStatus.deleted;
+      case 'INACTIVE':
+        return PostStatus.inactive;
+      case 'ACTIVE':
+      default:
+        return PostStatus.active;
+    }
+  }
+}
+
 /// 게시물(포스트) 모델
 ///
 /// API의 PostRespDto를 앱 내부에서 사용하기 위한 모델입니다.
@@ -30,7 +57,7 @@ class Post {
   factory Post.fromDto(PostRespDto dto) {
     return Post(
       id: dto.id ?? 0,
-      userId: dto.userId ?? '',
+      userId: dto.nickname ?? '',
       content: dto.content,
       imageUrl: dto.postFileUrl,
       audioUrl: dto.audioFileUrl,

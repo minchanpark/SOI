@@ -6,7 +6,7 @@ import 'package:audioplayers/audioplayers.dart' as ap;
 ///
 /// 음성 댓글의 재생/일시정지를 관리합니다.
 /// Firebase 버전과 독립적으로 동작합니다.
-class ApiCommentAudioController extends ChangeNotifier {
+class AudioController extends ChangeNotifier {
   // ==================== 상태 관리 ====================
 
   /// AudioPlayer 인스턴스

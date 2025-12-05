@@ -258,6 +258,11 @@ class AuthRepository {
   /// [userId]: 사용자 UID (문서 ID)
   /// Returns: Stream<String> - 프로필 이미지 URL
   Stream<String> getUserProfileImageStream(String userId) {
+    // 빈 문자열이면 빈 스트림 반환 (Firebase 에러 방지)
+    if (userId.isEmpty) {
+      return Stream.value('');
+    }
+
     return _firestore
         .collection('users')
         .doc(userId)

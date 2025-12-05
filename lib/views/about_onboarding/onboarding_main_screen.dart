@@ -1,11 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api/controller/api_media_controller.dart';
-import 'package:soi/api/controller/api_user_controller.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
+import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/user_controller.dart';
 
 /// 온보딩 메인 스크린
 /// 온보딩 화면들을 페이지 뷰로 보여주고,
@@ -43,8 +43,9 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
   bool _hasLoadedArguments = false;
   bool _isCompleting = false;
 
-  final ApiUserController _apiUserController = ApiUserController();
-  final ApiMediaController _apiMediaController = ApiMediaController();
+  // Provider를 통해 가져올 컨트롤러 (late 초기화)
+  late UserController _apiUserController;
+  late MediaController _apiMediaController;
 
   String? profileImageKey;
 
@@ -74,9 +75,36 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+
+    // Provider를 통해 전역 UserController 가져오기
+    _apiUserController = Provider.of<UserController>(context, listen: false);
+    _apiMediaController = Provider.of<MediaController>(
+      context,
+      listen: false,
+    );
+
     if (!_hasLoadedArguments) {
+      // 1. 먼저 ModalRoute arguments에서 데이터 확인
       _registrationData =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+      // 2. arguments가 없으면 생성자 파라미터에서 데이터 구성
+      if (_registrationData == null && widget.id != null) {
+        _registrationData = {
+          'nickName': widget.id,
+          'name': widget.name,
+          'phone': widget.phone,
+          'birthDate': widget.birthDate,
+          'profileImagePath': widget.profileImagePath,
+          'agreeServiceTerms': widget.agreeServiceTerms,
+          'agreePrivacyTerms': widget.agreePrivacyTerms,
+          'agreeMarketingInfo': widget.agreeMarketingInfo,
+        };
+        debugPrint(
+          '[OnboardingMainScreen] 생성자 파라미터에서 데이터 로드: $_registrationData',
+        );
+      }
+
       _hasLoadedArguments = true;
     }
   }
@@ -84,7 +112,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _apiUserController.dispose();
+    // _apiUserController는 Provider가 관리하므로 dispose하지 않음
     super.dispose();
   }
 
@@ -94,10 +122,10 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     if (_isCompleting) return;
 
     final registration = _registrationData;
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final user = authController.currentUser;
 
-    if (registration == null || user == null) {
+    // registration 데이터가 없으면 홈으로 이동 (이미 가입된 사용자일 수 있음)
+    if (registration == null) {
+      debugPrint('[OnboardingMainScreen] 회원가입 데이터 없음, 홈 화면으로 이동');
       Navigator.pushNamedAndRemoveUntil(
         context,
         '/home_navigation_screen',
@@ -106,36 +134,103 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
       return;
     }
 
-    final String id = (registration['id'] as String?) ?? '';
+    final String nickName = (registration['nickName'] as String?) ?? '';
     final String name = (registration['name'] as String?) ?? '';
     final String phone = (registration['phone'] as String?) ?? '';
     final String birthDate = (registration['birthDate'] as String?) ?? '';
-    final MultipartFile profileImagePath = registration['profileImagePath'];
+    final String? profileImagePath =
+        registration['profileImagePath'] as String?;
+
+    // 필수 데이터 확인
+    if (nickName.isEmpty || name.isEmpty || phone.isEmpty) {
+      debugPrint(
+        '[OnboardingMainScreen] 필수 데이터 누락: nickName=$nickName, name=$name, phone=$phone',
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/home_navigation_screen',
+        (route) => false,
+      );
+      return;
+    }
 
     setState(() {
       _isCompleting = true;
     });
 
-    try {
-      profileImageKey = await _apiMediaController.uploadProfileImage(
-        file: profileImagePath,
-        userId: _apiUserController.currentUser!.id,
-      );
+    debugPrint(
+      '[OnboardingMainScreen] 회원가입 시작: nickName=$nickName, name=$name, phone=$phone',
+    );
 
-      await _apiUserController.createUser(
+    try {
+      // 1. 사용자 먼저 생성 (프로필 이미지 없이)
+      final createdUser = await _apiUserController.createUser(
         name: name,
-        userId: id,
+        nickName: nickName,
         phoneNum: phone,
         birthDate: birthDate,
-        profileImageKey: profileImageKey,
       );
 
+      if (createdUser == null) {
+        debugPrint('[OnboardingMainScreen] 사용자 생성 실패');
+        setState(() {
+          _isCompleting = false;
+        });
+        return;
+      }
+
+      debugPrint('[OnboardingMainScreen] 사용자 생성 성공: userId=${createdUser.id}');
+
+      // 생성된 사용자를 현재 사용자로 설정 (Provider 상태 업데이트)
+      _apiUserController.setCurrentUser(createdUser);
+
+      // 2. 프로필 이미지가 있으면 업로드 후 사용자 업데이트
+      if (profileImagePath != null && profileImagePath.isNotEmpty) {
+        final imageFile = File(profileImagePath);
+        if (await imageFile.exists()) {
+          debugPrint(
+            '[OnboardingMainScreen] 프로필 이미지 업로드 시작: $profileImagePath',
+          );
+
+          // 파일을 MultipartFile로 변환 (서버는 'files' 필드명 기대)
+          final multipartFile = await _apiMediaController.fileToMultipart(
+            imageFile,
+            fieldName: 'files',
+          );
+
+          profileImageKey = await _apiMediaController.uploadProfileImage(
+            file: multipartFile,
+            userId: createdUser.id,
+          );
+
+          // 3. 프로필 이미지 키로 사용자 정보 업데이트
+          if (profileImageKey != null) {
+            await _apiUserController.updateprofileImageUrl(
+              userId: createdUser.id,
+              profileImageKey: profileImageKey!,
+            );
+            debugPrint(
+              '[OnboardingMainScreen] 프로필 이미지 업데이트 완료: $profileImageKey',
+            );
+          }
+        } else {
+          debugPrint('[OnboardingMainScreen] 프로필 이미지 파일 없음: $profileImagePath');
+        }
+      }
+
+      // 4. 로그인 상태 저장
       await _apiUserController.saveLoginState(
-        userId: _apiUserController.currentUser!.id,
+        userId: createdUser.id,
         phoneNumber: phone,
       );
+
+      debugPrint('[OnboardingMainScreen] 회원가입 완료, 홈 화면으로 이동');
     } catch (e) {
-      debugPrint('Failed to finalize onboarding: $e');
+      debugPrint('[OnboardingMainScreen] 회원가입 실패: $e');
+      setState(() {
+        _isCompleting = false;
+      });
+      return;
     }
 
     if (!mounted) return;

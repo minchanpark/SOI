@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:soi/api/controller/api_user_controller.dart';
+import 'package:provider/provider.dart';
+import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_final_screen.dart';
@@ -71,7 +72,8 @@ class _AuthScreenState extends State<AuthScreen> {
   bool agreeMarketingInfo = false;
 
   // userController만 사용하여서 UI에서 직접 접근
-  final ApiUserController _userController = ApiUserController();
+  late UserController _userController;
+  bool _isControllerInitialized = false;
 
   @override
   void initState() {
@@ -88,12 +90,13 @@ class _AuthScreenState extends State<AuthScreen> {
 
     // ID 컨트롤러 리스너 추가
     idController.addListener(() {
+      if (!_isControllerInitialized) return; // Provider 초기화 전이면 무시
       if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
       debounceTimer = Timer(const Duration(milliseconds: 300), () async {
         final id = idController.text.trim();
         if (id.isNotEmpty) {
           try {
-            final result = await _userController.checkUserIdAvailable(id);
+            final result = await _userController.checknickNameAvailable(id);
             if (result == true) {
               setState(() {
                 idErrorMessage = '사용 가능한 아이디입니다.';
@@ -115,6 +118,15 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isControllerInitialized) {
+      _userController = Provider.of<UserController>(context, listen: false);
+      _isControllerInitialized = true;
+    }
   }
 
   @override
@@ -176,8 +188,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     selectedMonth = monthController.text;
                     selectedDay = dayController.text;
                     selectedYear = yearController.text;
-                    birthDate =
-                        "${selectedYear ?? ''}년 ${selectedMonth ?? ''}월 ${selectedDay ?? ''}일";
+                    // 서버 API 형식에 맞게 YYYY.MM.DD 형식으로 저장
+                    final month = (selectedMonth ?? '').padLeft(2, '0');
+                    final day = (selectedDay ?? '').padLeft(2, '0');
+                    birthDate = "${selectedYear ?? ''}.$month.$day";
 
                     // 모든 필드가 채워졌는지 확인
                     bool isComplete =

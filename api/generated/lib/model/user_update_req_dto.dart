@@ -15,7 +15,7 @@ class UserUpdateReqDto {
   UserUpdateReqDto({
     this.id,
     this.name,
-    this.userId,
+    this.nickname,
     this.phoneNum,
     this.birthDate,
     this.profileImageKey,
@@ -44,7 +44,7 @@ class UserUpdateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -82,7 +82,7 @@ class UserUpdateReqDto {
   bool operator ==(Object other) => identical(this, other) || other is UserUpdateReqDto &&
     other.id == id &&
     other.name == name &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.phoneNum == phoneNum &&
     other.birthDate == birthDate &&
     other.profileImageKey == profileImageKey &&
@@ -93,14 +93,14 @@ class UserUpdateReqDto {
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
     (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
     (marketingAgreed == null ? 0 : marketingAgreed!.hashCode);
 
   @override
-  String toString() => 'UserUpdateReqDto[id=$id, name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, marketingAgreed=$marketingAgreed]';
+  String toString() => 'UserUpdateReqDto[id=$id, name=$name, nickname=$nickname, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, marketingAgreed=$marketingAgreed]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -114,10 +114,10 @@ class UserUpdateReqDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.phoneNum != null) {
       json[r'phoneNum'] = this.phoneNum;
@@ -163,7 +163,7 @@ class UserUpdateReqDto {
       return UserUpdateReqDto(
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         phoneNum: mapValueOfType<String>(json, r'phoneNum'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),
         profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),

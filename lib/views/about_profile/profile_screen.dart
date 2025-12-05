@@ -2,10 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../api/controller/api_user_controller.dart';
+import '../../api/controller/user_controller.dart';
+import '../../api/controller/media_controller.dart';
 import '../../api/models/user.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
-import '../../api_firebase/controllers/friend_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,51 +15,75 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  User? _userInfo; // API User 모델 사용
+  // 사용자 정보
+  User? _userInfo;
+  User? currentUser;
+  User? userInfo;
+
+  // 프로필 이미지 URL
   String? _profileImageUrl;
+  String? _profileImageUrlKey;
+
+  // 로딩 상태
   bool _isLoading = true;
+
+  // 알림 설정 상태
   bool _isNotificationEnabled = false;
 
-  ApiUserController? userController;
+  // API 컨트롤러들
+  UserController? userController;
+  MediaController? mediaController;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    // 빌드가 완료된 후 데이터 로드
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserData();
+    });
   }
 
   Future<void> _loadUserData() async {
-    userController = context.read<ApiUserController>();
-    final authController = context.read<AuthController>();
+    if (!mounted) return;
 
-    // ApiUserController의 currentUser 사용
-    final currentUser = userController!.currentUser;
+    // UserController 인스턴스 가져오기
+    userController = context.read<UserController>();
+    mediaController = context.read<MediaController>();
+
+    // UserController의 currentUser 사용.
+    // 현재 로그인한 사용자의 정보를 가지고 온다.
+    currentUser = userController!.currentUser;
 
     if (currentUser != null) {
       try {
         // API에서 사용자 정보 가져오기
-        final userInfo = await userController!.getUser(currentUser.id);
+        userInfo = await userController!.getUser(currentUser!.id);
 
-        // 프로필 이미지 URL (기존 Firebase 방식 유지)
-        final firebaseUserId = authController.getUserId;
-        String? profileImageUrl;
-        if (firebaseUserId != null) {
-          profileImageUrl = await authController
-              .getUserProfileImageUrlWithCache(firebaseUserId);
+        _profileImageUrlKey = userInfo?.profileImageUrlKey;
+
+        // presigned URL 가져오기 (키가 있을 경우에만)
+        String? presignedUrl;
+        if (_profileImageUrlKey != null && _profileImageUrlKey!.isNotEmpty) {
+          presignedUrl = await mediaController!.getPresignedUrl(
+            _profileImageUrlKey!,
+          );
         }
 
+        if (!mounted) return;
         setState(() {
           _userInfo = userInfo;
-          _profileImageUrl = profileImageUrl ?? currentUser.profileImageUrl;
+          _profileImageUrl = presignedUrl;
           _isLoading = false;
         });
       } catch (e) {
         debugPrint('사용자 데이터 로드 오류: $e');
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
         });
       }
     } else {
+      debugPrint('currentUser가 null입니다.');
       setState(() {
         _isLoading = false;
       });
@@ -183,13 +207,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// 실제 로그아웃 수행
   Future<void> _performLogout() async {
     try {
-      final authController = context.read<AuthController>();
-      final friendController = context.read<FriendController>();
+      final apiUserController = context.read<UserController>();
 
-      // FriendController 상태 초기화 (새 사용자 로그인 시 새로운 데이터 로드를 위해)
-      await friendController.reset();
-
-      await authController.signOut();
+      // UserController 로그아웃 (SharedPreferences 정리 + currentUser null)
+      await apiUserController.logout();
 
       if (mounted) {
         // 로그아웃 성공 시 로그인 화면으로 이동

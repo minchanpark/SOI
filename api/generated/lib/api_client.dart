@@ -194,6 +194,8 @@ class ApiClient {
           return ApiResponseDtoListFriendCheckRespDto.fromJson(value);
         case 'ApiResponseDtoListNotificationRespDto':
           return ApiResponseDtoListNotificationRespDto.fromJson(value);
+        case 'ApiResponseDtoListObject':
+          return ApiResponseDtoListObject.fromJson(value);
         case 'ApiResponseDtoListPostRespDto':
           return ApiResponseDtoListPostRespDto.fromJson(value);
         case 'ApiResponseDtoListString':

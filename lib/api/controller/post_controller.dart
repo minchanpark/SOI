@@ -1,33 +1,45 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/post_service.dart';
 
-/// 게시물 컨트롤러 추상 클래스
+/// 게시물 컨트롤러
 ///
-/// 게시물 관련 기능을 정의하는 인터페이스입니다.
-/// 구현체를 교체하여 테스트나 다른 백엔드 사용이 가능합니다.
+/// 게시물 관련 UI 상태 관리 및 비즈니스 로직을 담당합니다.
+/// PostService를 내부적으로 사용하며, API 변경 시 Service만 수정하면 됩니다.
 ///
 /// 사용 예시:
 /// ```dart
-/// final postController = Provider.of<PostController>(context, listen: false);
+/// final controller = Provider.of<PostController>(context, listen: false);
 ///
 /// // 게시물 생성
-/// final success = await postController.createPost(
-///   userId: 'user123',
+/// final success = await controller.createPost(
+///   nickName: 'user123',
 ///   content: '오늘의 일상',
 ///   postFileKey: 'images/photo.jpg',
 ///   categoryIds: [1, 2],
 /// );
 ///
 /// // 메인 피드 조회
-/// final posts = await postController.getMainFeedPosts(userId: 1);
+/// final posts = await controller.getMainFeedPosts(userId: 1);
 /// ```
-abstract class PostController extends ChangeNotifier {
+class PostController extends ChangeNotifier {
+  final PostService _postService;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  /// 생성자
+  ///
+  /// [postService]를 주입받아 사용합니다. 테스트 시 MockPostService를 주입할 수 있습니다.
+  PostController({PostService? postService})
+    : _postService = postService ?? PostService();
+
   /// 로딩 상태
-  bool get isLoading;
+  bool get isLoading => _isLoading;
 
   /// 에러 메시지
-  String? get errorMessage;
+  String? get errorMessage => _errorMessage;
 
   // ============================================
   // 게시물 생성
@@ -38,7 +50,7 @@ abstract class PostController extends ChangeNotifier {
   /// 새로운 게시물(사진 + 음성메모)을 생성합니다.
   ///
   /// Parameters:
-  /// - [userId]: 작성자 사용자 ID (String)
+  /// - [nickName]: 작성자 사용자 ID (String)
   /// - [content]: 게시물 내용 (선택)
   /// - [postFileKey]: 이미지 파일 키
   /// - [audioFileKey]: 음성 파일 키 (선택)
@@ -47,15 +59,38 @@ abstract class PostController extends ChangeNotifier {
   /// - [duration]: 음성 길이 (선택)
   ///
   /// Returns: 생성 성공 여부
+  ///   - true: 생성 성공
+  ///   - false: 생성 실패
   Future<bool> createPost({
-    required String userId,
+    required String nickName,
     String? content,
     String? postFileKey,
     String? audioFileKey,
     List<int> categoryIds = const [],
     String? waveformData,
     int? duration,
-  });
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await _postService.createPost(
+        nickName: nickName,
+        content: content,
+        postFileKey: postFileKey,
+        audioFileKey: audioFileKey,
+        categoryIds: categoryIds,
+        waveformData: waveformData,
+        duration: duration,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('게시물 생성 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
 
   // ============================================
   // 게시물 조회
@@ -66,8 +101,31 @@ abstract class PostController extends ChangeNotifier {
   /// [userId]가 속한 모든 카테고리의 게시물을 조회합니다.
   /// 메인 페이지에 표시할 피드용입니다.
   ///
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
+  ///
   /// Returns: 게시물 목록 (List<Post>)
-  Future<List<Post>> getMainFeedPosts({required int userId});
+  Future<List<Post>> getMainFeedPosts({
+    required int userId,
+    PostStatus postStatus = PostStatus.active,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final posts = await _postService.getMainFeedPosts(
+        userId: userId,
+        postStatus: postStatus,
+      );
+      _setLoading(false);
+      return posts;
+    } catch (e) {
+      _setError('피드 조회 실패: $e');
+      _setLoading(false);
+      return [];
+    }
+  }
 
   /// 카테고리별 게시물 조회
   ///
@@ -75,65 +133,185 @@ abstract class PostController extends ChangeNotifier {
   ///
   /// Parameters:
   /// - [categoryId]: 카테고리 ID
-  /// - [userId]: 요청 사용자 ID (권한 확인용)
+  /// - [userId]: 요청 사용자 ID (권한 확인용)(int)
   ///
   /// Returns: 게시물 목록 (List<Post>)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,
-  });
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final posts = await _postService.getPostsByCategory(
+        categoryId: categoryId,
+        userId: userId,
+      );
+      _setLoading(false);
+      return posts;
+    } catch (e) {
+      _setError('카테고리 게시물 조회 실패: $e');
+      _setLoading(false);
+      return [];
+    }
+  }
 
   /// 게시물 상세 조회
-  ///
   /// [postId]에 해당하는 게시물의 상세 정보를 조회합니다.
   ///
+  /// Parameters:
+  ///   - [postId]: 조회할 게시물 ID
+  ///
   /// Returns: 게시물 정보 (Post)
-  Future<Post?> getPostDetail(int postId);
+  Future<Post?> getPostDetail(int postId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final post = await _postService.getPostDetail(postId);
+      _setLoading(false);
+      return post;
+    } catch (e) {
+      _setError('게시물 상세 조회 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
 
   // ============================================
   // 게시물 수정
   // ============================================
 
   /// 게시물 수정
-  ///
   /// 기존 게시물의 내용을 수정합니다.
   ///
   /// Parameters:
-  /// - [postId]: 수정할 게시물 ID
-  /// - [content]: 변경할 내용 (선택)
-  /// - [postFileKey]: 변경할 이미지 키 (선택)
-  /// - [audioFileKey]: 변경할 음성 키 (선택)
-  /// - [categoryIds]: 변경할 카테고리 목록 (선택)
-  /// - [waveformData]: 변경할 파형 데이터 (선택)
-  /// - [duration]: 변경할 음성 길이 (선택)
+  ///   - [postId]: 수정할 게시물 ID
+  ///   - [content]: 변경할 내용 (선택)
+  ///   - [postFileKey]: 변경할 이미지 키 (선택)
+  ///   - [audioFileKey]: 변경할 음성 키 (선택)
+  ///   - [categoryId]: 변경할 카테고리 ID (선택, 단일 값)
+  ///   - [waveformData]: 변경할 파형 데이터 (선택)
+  ///   - [duration]: 변경할 음성 길이 (선택)
   ///
   /// Returns: 수정 성공 여부
+  ///   - true: 수정 성공
+  ///   - false: 수정 실패
   Future<bool> updatePost({
     required int postId,
     String? content,
     String? postFileKey,
     String? audioFileKey,
-    List<int>? categoryIds,
+    int? categoryId,
     String? waveformData,
     int? duration,
-  });
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await _postService.updatePost(
+        postId: postId,
+        content: content,
+        postFileKey: postFileKey,
+        audioFileKey: audioFileKey,
+        categoryId: categoryId,
+        waveformData: waveformData,
+        duration: duration,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('게시물 수정 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  // ============================================
+  // 게시물 상태 변경
+  // ============================================
+
+  /// 게시물 상태 변경
+  /// [postId]에 해당하는 게시물의 상태를 변경합니다.
+  ///
+  /// Parameters:
+  ///   - [postId]: 게시물 ID
+  ///   - [postStatus]: 변경할 상태 (ACTIVE, DELETED, INACTIVE)
+  ///
+  /// Returns: 변경 성공 여부
+  Future<bool> setPostStatus({
+    required int postId,
+    required PostStatus postStatus,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await _postService.setPostStatus(
+        postId: postId,
+        postStatus: postStatus,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('게시물 상태 변경 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
 
   // ============================================
   // 게시물 삭제
   // ============================================
 
   /// 게시물 삭제
-  ///
   /// [postId]에 해당하는 게시물을 삭제합니다.
   /// 삭제된 게시물은 휴지통으로 이동됩니다.
   ///
+  /// Parameters:
+  ///   - [postId]: 삭제할 게시물 ID
+  ///
   /// Returns: 삭제 성공 여부
-  Future<bool> deletePost(int postId);
+  ///   - true: 삭제 성공
+  ///   - false: 삭제 실패
+  Future<bool> deletePost(int postId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await _postService.deletePost(postId);
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('게시물 삭제 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
 
   // ============================================
   // 에러 처리
   // ============================================
 
   /// 에러 초기화
-  void clearError();
+  void clearError() {
+    _clearError();
+    notifyListeners();
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _setError(String message) {
+    _errorMessage = message;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+  }
 }

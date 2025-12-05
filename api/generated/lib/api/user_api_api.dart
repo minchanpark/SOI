@@ -252,8 +252,8 @@ class UserAPIApi {
   ///
   /// Parameters:
   ///
-  /// * [String] userId (required):
-  Future<Response> findUserWithHttpInfo(String userId,) async {
+  /// * [String] nickname (required):
+  Future<Response> findUserWithHttpInfo(String nickname,) async {
     // ignore: prefer_const_declarations
     final path = r'/user/find-by-keyword';
 
@@ -264,7 +264,7 @@ class UserAPIApi {
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
 
-      queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'nickname', nickname));
 
     const contentTypes = <String>[];
 
@@ -286,9 +286,9 @@ class UserAPIApi {
   ///
   /// Parameters:
   ///
-  /// * [String] userId (required):
-  Future<ApiResponseDtoListUserRespDto?> findUser(String userId,) async {
-    final response = await findUserWithHttpInfo(userId,);
+  /// * [String] nickname (required):
+  Future<ApiResponseDtoListUserRespDto?> findUser(String nickname,) async {
+    final response = await findUserWithHttpInfo(nickname,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

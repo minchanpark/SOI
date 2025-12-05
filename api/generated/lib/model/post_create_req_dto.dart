@@ -14,7 +14,7 @@ class PostCreateReqDto {
   /// Returns a new [PostCreateReqDto] instance.
   PostCreateReqDto({
     this.id,
-    this.userId,
+    this.nickname,
     this.content,
     this.postFileKey,
     this.audioFileKey,
@@ -37,7 +37,7 @@ class PostCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -84,7 +84,7 @@ class PostCreateReqDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostCreateReqDto &&
     other.id == id &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.content == content &&
     other.postFileKey == postFileKey &&
     other.audioFileKey == audioFileKey &&
@@ -96,7 +96,7 @@ class PostCreateReqDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (content == null ? 0 : content!.hashCode) +
     (postFileKey == null ? 0 : postFileKey!.hashCode) +
     (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
@@ -105,7 +105,7 @@ class PostCreateReqDto {
     (duration == null ? 0 : duration!.hashCode);
 
   @override
-  String toString() => 'PostCreateReqDto[id=$id, userId=$userId, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration]';
+  String toString() => 'PostCreateReqDto[id=$id, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -114,10 +114,10 @@ class PostCreateReqDto {
     } else {
       json[r'id'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.content != null) {
       json[r'content'] = this.content;
@@ -168,7 +168,7 @@ class PostCreateReqDto {
 
       return PostCreateReqDto(
         id: mapValueOfType<int>(json, r'id'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         content: mapValueOfType<String>(json, r'content'),
         postFileKey: mapValueOfType<String>(json, r'postFileKey'),
         audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),

@@ -51,6 +51,11 @@ class AuthService {
   /// [userId]: 사용자 UID
   /// Returns: Stream<String> - 프로필 이미지 URL
   Stream<String> getUserProfileImageStream(String userId) {
+    // 빈 문자열이면 빈 스트림 반환
+    if (userId.isEmpty) {
+      return Stream.value('');
+    }
+
     try {
       return _repository.getUserProfileImageStream(userId);
     } catch (e) {

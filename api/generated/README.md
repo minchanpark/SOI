@@ -71,6 +71,7 @@ Class | Method | HTTP request | Description
 *CategoryAPIApi* | [**inviteResponse**](doc//CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
 *CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가
 *CommentAPIApi* | [**create2**](doc//CommentAPIApi.md#create2) | **POST** /comment/create | 댓글 추가
+*CommentAPIApi* | [**deleteComment**](doc//CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
 *CommentAPIApi* | [**getComment**](doc//CommentAPIApi.md#getcomment) | **GET** /comment/get | 댓글 조회
 *FriendAPIApi* | [**blockFriend**](doc//FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
 *FriendAPIApi* | [**create1**](doc//FriendAPIApi.md#create1) | **POST** /friend/create | 친구 추가
@@ -83,8 +84,9 @@ Class | Method | HTTP request | Description
 *NotificationAPIApi* | [**getFriend**](doc//NotificationAPIApi.md#getfriend) | **POST** /notification/get-friend | 친구관련 알림 조회
 *PostAPIApi* | [**create**](doc//PostAPIApi.md#create) | **POST** /post/create | 게시물 추가
 *PostAPIApi* | [**delete1**](doc//PostAPIApi.md#delete1) | **DELETE** /post/delete | 게시물 삭제
-*PostAPIApi* | [**findAllByUserId**](doc//PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 메인페이지에 띄울 게시물 조회
+*PostAPIApi* | [**findAllByUserId**](doc//PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
 *PostAPIApi* | [**findByCategoryId**](doc//PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
+*PostAPIApi* | [**setPost**](doc//PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
 *PostAPIApi* | [**showDetail**](doc//PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
 *PostAPIApi* | [**update2**](doc//PostAPIApi.md#update2) | **PATCH** /post/update | 게시물 수정
 *UserAPIApi* | [**authSMS**](doc//UserAPIApi.md#authsms) | **POST** /user/auth | 전화번호 인증
@@ -108,6 +110,7 @@ Class | Method | HTTP request | Description
  - [ApiResponseDtoListCommentRespDto](doc//ApiResponseDtoListCommentRespDto.md)
  - [ApiResponseDtoListFriendCheckRespDto](doc//ApiResponseDtoListFriendCheckRespDto.md)
  - [ApiResponseDtoListNotificationRespDto](doc//ApiResponseDtoListNotificationRespDto.md)
+ - [ApiResponseDtoListObject](doc//ApiResponseDtoListObject.md)
  - [ApiResponseDtoListPostRespDto](doc//ApiResponseDtoListPostRespDto.md)
  - [ApiResponseDtoListString](doc//ApiResponseDtoListString.md)
  - [ApiResponseDtoListUserFindRespDto](doc//ApiResponseDtoListUserFindRespDto.md)

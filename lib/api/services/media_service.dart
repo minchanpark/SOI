@@ -139,6 +139,16 @@ class MediaService {
       final typeStrings = types.map((t) => t.value).toList();
       final usageTypeStrings = usageTypes.map((t) => t.value).toList();
 
+      debugPrint('[MediaService] uploadMedia 호출:');
+      debugPrint('  - types: $typeStrings');
+      debugPrint('  - usageTypes: $usageTypeStrings');
+      debugPrint('  - userId: $userId');
+      debugPrint('  - refId: $refId');
+      debugPrint('  - files: ${files.length}개');
+      for (final file in files) {
+        debugPrint('    - filename: ${file.filename}, length: ${file.length}');
+      }
+
       final response = await _mediaApi.uploadMedia(
         typeStrings,
         usageTypeStrings,

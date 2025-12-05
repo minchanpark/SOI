@@ -14,7 +14,7 @@ class UserCreateReqDto {
   /// Returns a new [UserCreateReqDto] instance.
   UserCreateReqDto({
     this.name,
-    this.userId,
+    this.nickname,
     this.phoneNum,
     this.birthDate,
     this.profileImageKey,
@@ -37,7 +37,7 @@ class UserCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -90,7 +90,7 @@ class UserCreateReqDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is UserCreateReqDto &&
     other.name == name &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.phoneNum == phoneNum &&
     other.birthDate == birthDate &&
     other.profileImageKey == profileImageKey &&
@@ -102,7 +102,7 @@ class UserCreateReqDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (name == null ? 0 : name!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
     (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
@@ -111,7 +111,7 @@ class UserCreateReqDto {
     (marketingAgreed == null ? 0 : marketingAgreed!.hashCode);
 
   @override
-  String toString() => 'UserCreateReqDto[name=$name, userId=$userId, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
+  String toString() => 'UserCreateReqDto[name=$name, nickname=$nickname, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -120,10 +120,10 @@ class UserCreateReqDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.phoneNum != null) {
       json[r'phoneNum'] = this.phoneNum;
@@ -178,7 +178,7 @@ class UserCreateReqDto {
 
       return UserCreateReqDto(
         name: mapValueOfType<String>(json, r'name'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         phoneNum: mapValueOfType<String>(json, r'phoneNum'),
         birthDate: mapValueOfType<String>(json, r'birthDate'),
         profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),

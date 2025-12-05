@@ -13,8 +13,9 @@ part of openapi.api;
 class CommentRespDto {
   /// Returns a new [CommentRespDto] instance.
   CommentRespDto({
+    this.id,
     this.userProfile,
-    this.userId,
+    this.nickname,
     this.text,
     this.emojiId,
     this.audioUrl,
@@ -31,6 +32,14 @@ class CommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
+  int? id;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   String? userProfile;
 
   ///
@@ -39,7 +48,7 @@ class CommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -101,8 +110,9 @@ class CommentRespDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is CommentRespDto &&
+    other.id == id &&
     other.userProfile == userProfile &&
-    other.userId == userId &&
+    other.nickname == nickname &&
     other.text == text &&
     other.emojiId == emojiId &&
     other.audioUrl == audioUrl &&
@@ -115,8 +125,9 @@ class CommentRespDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (id == null ? 0 : id!.hashCode) +
     (userProfile == null ? 0 : userProfile!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
     (text == null ? 0 : text!.hashCode) +
     (emojiId == null ? 0 : emojiId!.hashCode) +
     (audioUrl == null ? 0 : audioUrl!.hashCode) +
@@ -127,19 +138,24 @@ class CommentRespDto {
     (commentType == null ? 0 : commentType!.hashCode);
 
   @override
-  String toString() => 'CommentRespDto[userProfile=$userProfile, userId=$userId, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
+  String toString() => 'CommentRespDto[id=$id, userProfile=$userProfile, nickname=$nickname, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+    if (this.id != null) {
+      json[r'id'] = this.id;
+    } else {
+      json[r'id'] = null;
+    }
     if (this.userProfile != null) {
       json[r'userProfile'] = this.userProfile;
     } else {
       json[r'userProfile'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
     if (this.text != null) {
       json[r'text'] = this.text;
@@ -203,8 +219,9 @@ class CommentRespDto {
       }());
 
       return CommentRespDto(
+        id: mapValueOfType<int>(json, r'id'),
         userProfile: mapValueOfType<String>(json, r'userProfile'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
         text: mapValueOfType<String>(json, r'text'),
         emojiId: mapValueOfType<int>(json, r'emojiId'),
         audioUrl: mapValueOfType<String>(json, r'audioUrl'),

@@ -15,7 +15,8 @@ class CategoryRespDto {
   CategoryRespDto({
     this.id,
     this.name,
-    this.categoryPhotoUrl,
+    this.nickname,
+    this.categoryPhotoKey,
     this.isNew,
     this.totalUserNum,
     this.isPinned,
@@ -45,7 +46,15 @@ class CategoryRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? categoryPhotoUrl;
+  String? nickname;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? categoryPhotoKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -85,7 +94,8 @@ class CategoryRespDto {
   bool operator ==(Object other) => identical(this, other) || other is CategoryRespDto &&
     other.id == id &&
     other.name == name &&
-    other.categoryPhotoUrl == categoryPhotoUrl &&
+    other.nickname == nickname &&
+    other.categoryPhotoKey == categoryPhotoKey &&
     other.isNew == isNew &&
     other.totalUserNum == totalUserNum &&
     other.isPinned == isPinned &&
@@ -97,7 +107,8 @@ class CategoryRespDto {
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (categoryPhotoUrl == null ? 0 : categoryPhotoUrl!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (categoryPhotoKey == null ? 0 : categoryPhotoKey!.hashCode) +
     (isNew == null ? 0 : isNew!.hashCode) +
     (totalUserNum == null ? 0 : totalUserNum!.hashCode) +
     (isPinned == null ? 0 : isPinned!.hashCode) +
@@ -105,7 +116,7 @@ class CategoryRespDto {
     (pinnedAt == null ? 0 : pinnedAt!.hashCode);
 
   @override
-  String toString() => 'CategoryRespDto[id=$id, name=$name, categoryPhotoUrl=$categoryPhotoUrl, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfile=$usersProfile, pinnedAt=$pinnedAt]';
+  String toString() => 'CategoryRespDto[id=$id, name=$name, nickname=$nickname, categoryPhotoKey=$categoryPhotoKey, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfile=$usersProfile, pinnedAt=$pinnedAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -119,10 +130,15 @@ class CategoryRespDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.categoryPhotoUrl != null) {
-      json[r'categoryPhotoUrl'] = this.categoryPhotoUrl;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'categoryPhotoUrl'] = null;
+      json[r'nickname'] = null;
+    }
+    if (this.categoryPhotoKey != null) {
+      json[r'categoryPhotoKey'] = this.categoryPhotoKey;
+    } else {
+      json[r'categoryPhotoKey'] = null;
     }
     if (this.isNew != null) {
       json[r'isNew'] = this.isNew;
@@ -169,7 +185,8 @@ class CategoryRespDto {
       return CategoryRespDto(
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
-        categoryPhotoUrl: mapValueOfType<String>(json, r'categoryPhotoUrl'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        categoryPhotoKey: mapValueOfType<String>(json, r'categoryPhotoKey'),
         isNew: mapValueOfType<bool>(json, r'isNew'),
         totalUserNum: mapValueOfType<int>(json, r'totalUserNum'),
         isPinned: mapValueOfType<bool>(json, r'isPinned'),

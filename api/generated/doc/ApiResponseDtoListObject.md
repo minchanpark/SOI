@@ -1,4 +1,4 @@
-# soi_api_client.model.UserUpdateReqDto
+# soi_api_client.model.ApiResponseDtoListObject
 
 ## Load the model package
 ```dart
@@ -8,13 +8,9 @@ import 'package:soi_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **int** |  | [optional] 
-**name** | **String** |  | [optional] 
-**nickname** | **String** |  | [optional] 
-**phoneNum** | **String** |  | [optional] 
-**birthDate** | **String** |  | [optional] 
-**profileImageKey** | **String** |  | [optional] 
-**marketingAgreed** | **bool** |  | [optional] 
+**success** | **bool** |  | [optional] 
+**data** | [**List<Object>**](Object.md) |  | [optional] [default to const []]
+**message** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

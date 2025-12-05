@@ -42,6 +42,7 @@ part 'model/api_response_dto_list_category_resp_dto.dart';
 part 'model/api_response_dto_list_comment_resp_dto.dart';
 part 'model/api_response_dto_list_friend_check_resp_dto.dart';
 part 'model/api_response_dto_list_notification_resp_dto.dart';
+part 'model/api_response_dto_list_object.dart';
 part 'model/api_response_dto_list_post_resp_dto.dart';
 part 'model/api_response_dto_list_string.dart';
 part 'model/api_response_dto_list_user_find_resp_dto.dart';

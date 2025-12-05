@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api/controller/api_user_controller.dart' as api;
+import 'package:soi/api/controller/user_controller.dart' as api;
 import 'package:solar_icons/solar_icons.dart';
 import '../../theme/theme.dart';
 import 'widgets/common/continue_button.dart';
@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final PageController _pageController = PageController();
 
   // REST API 서비스
-  api.ApiUserController? _apiUserController;
+  api.UserController? _apiUserController;
 
   // 전화번호 입력 컨트롤러
   final TextEditingController _phoneController = TextEditingController();
@@ -50,8 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Provider에서 ApiUserController 가져오기
-    _apiUserController ??= Provider.of<api.ApiUserController>(
+    // Provider에서 UserController 가져오기
+    _apiUserController ??= Provider.of<api.UserController>(
       context,
       listen: false,
     );
