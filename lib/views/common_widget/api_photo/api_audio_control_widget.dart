@@ -13,89 +13,144 @@ import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.da
 class ApiAudioControlWidget extends StatelessWidget {
   final Post post;
   final List<double>? waveformData;
+  final VoidCallback? onPressed;
 
   const ApiAudioControlWidget({
     super.key,
     required this.post,
     this.waveformData,
+    this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AudioController>(
-      builder: (context, audioController, child) {
-        final isPlaying =
-            audioController.currentPlayingAudioUrl == post.audioUrl;
-        final progress = isPlaying && audioController.playbackDuration > 0
-            ? (audioController.playbackPosition /
-                      audioController.playbackDuration)
-                  .clamp(0.0, 1.0)
-            : 0.0;
+    if (_hasAudioController(context)) {
+      return Consumer<AudioController>(
+        builder: (context, audioController, child) {
+          final isPlaying =
+              audioController.currentPlayingAudioUrl == post.audioUrl;
+          final progress = isPlaying && audioController.playbackDuration > 0
+              ? (audioController.playbackPosition /
+                        audioController.playbackDuration)
+                    .clamp(0.0, 1.0)
+              : 0.0;
 
-        return GestureDetector(
-          onTap: () {
-            if (post.hasAudio) {
-              audioController.toggleAudio(post.audioUrl!);
-            }
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 재생/일시정지 아이콘
-                Icon(
-                  isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
-                  size: 20.w,
-                ),
-                SizedBox(width: 8.w),
+          return _AudioControlSurface(
+            isPlaying: isPlaying,
+            progress: progress,
+            waveformData: waveformData,
+            duration: Duration(seconds: post.durationInSeconds),
+            onTap: () {
+              if (onPressed != null) {
+                onPressed!();
+              } else if (post.hasAudio) {
+                audioController.toggleAudio(post.audioUrl!);
+              }
+            },
+          );
+        },
+      );
+    }
 
-                // 파형 표시
-                Expanded(
-                  child: SizedBox(
-                    height: 30.h,
-                    child: waveformData != null
-                        ? CustomWaveformWidget(
-                            waveformData: waveformData!,
-                            progress: progress,
-                            activeColor: Colors.white,
-                            color: Colors.grey[600]!,
-                          )
-                        : LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.grey[600],
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-
-                SizedBox(width: 8.w),
-
-                // 재생 시간
-                Text(
-                  _formatDuration(Duration(seconds: post.durationInSeconds)),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+    // Provider가 없는 경우에도 UI가 깨지지 않도록 기본 컨트롤 표출
+    return _AudioControlSurface(
+      isPlaying: false,
+      progress: 0,
+      waveformData: waveformData,
+      duration: Duration(seconds: post.durationInSeconds),
+      onTap: () {
+        if (onPressed != null) {
+          onPressed!();
+        }
       },
     );
   }
 
+  bool _hasAudioController(BuildContext context) {
+    try {
+      Provider.of<AudioController>(context, listen: false);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+class _AudioControlSurface extends StatelessWidget {
+  final bool isPlaying;
+  final double progress;
+  final List<double>? waveformData;
+  final Duration duration;
+  final VoidCallback? onTap;
+
+  const _AudioControlSurface({
+    required this.isPlaying,
+    required this.progress,
+    required this.waveformData,
+    required this.duration,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isPlaying ? Icons.pause : Icons.play_arrow,
+              color: Colors.white,
+              size: 20.w,
+            ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: SizedBox(
+                height: 30.h,
+                child: waveformData != null
+                    ? CustomWaveformWidget(
+                        waveformData: waveformData!,
+                        progress: progress,
+                        activeColor: Colors.white,
+                        color: Colors.grey[600]!,
+                      )
+                    : LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey[600],
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              _format(duration),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11.sp,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _format(Duration duration) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';

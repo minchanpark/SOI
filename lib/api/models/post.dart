@@ -32,7 +32,7 @@ enum PostStatus {
 /// API의 PostRespDto를 앱 내부에서 사용하기 위한 모델입니다.
 class Post {
   final int id;
-  final String userId;
+  final String nickName;
   final String? content;
   final String? imageUrl;
   final String? audioUrl;
@@ -43,7 +43,7 @@ class Post {
 
   const Post({
     required this.id,
-    required this.userId,
+    required this.nickName,
     this.content,
     this.imageUrl,
     this.audioUrl,
@@ -57,7 +57,7 @@ class Post {
   factory Post.fromDto(PostRespDto dto) {
     return Post(
       id: dto.id ?? 0,
-      userId: dto.nickname ?? '',
+      nickName: dto.nickname ?? '',
       content: dto.content,
       imageUrl: dto.postFileUrl,
       audioUrl: dto.audioFileUrl,
@@ -72,7 +72,7 @@ class Post {
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       id: json['id'] as int? ?? 0,
-      userId: json['userId'] as String? ?? '',
+      nickName: json['nickName'] as String? ?? '',
       content: json['content'] as String?,
       imageUrl: json['postFileUrl'] as String?,
       audioUrl: json['audioFileKey'] as String?,
@@ -89,7 +89,7 @@ class Post {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'userId': userId,
+      'nickName': nickName,
       'content': content,
       'postFileUrl': imageUrl,
       'audioFileUrl': audioUrl,
@@ -112,7 +112,7 @@ class Post {
   /// copyWith 메서드
   Post copyWith({
     int? id,
-    String? userId,
+    String? nickName,
     String? content,
     String? imageUrl,
     String? audioUrl,
@@ -123,7 +123,7 @@ class Post {
   }) {
     return Post(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
+      nickName: nickName ?? this.nickName,
       content: content ?? this.content,
       imageUrl: imageUrl,
       audioUrl: audioUrl,
@@ -139,14 +139,14 @@ class Post {
       identical(this, other) ||
       other is Post &&
           runtimeType == other.runtimeType &&
-          userId == other.userId &&
+          nickName == other.nickName &&
           createdAt == other.createdAt;
 
   @override
-  int get hashCode => userId.hashCode ^ (createdAt?.hashCode ?? 0);
+  int get hashCode => nickName.hashCode ^ (createdAt?.hashCode ?? 0);
 
   @override
   String toString() {
-    return 'Post{userId: $userId, hasImage: $hasImage, hasAudio: $hasAudio}';
+    return 'Post{nickName: $nickName, hasImage: $hasImage, hasAudio: $hasAudio}';
   }
 }

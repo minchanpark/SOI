@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:soi/api/controller/media_controller.dart';
 import '../../../api/models/category.dart';
 
 /// API 버전 카테고리 멤버들을 보여주는 바텀시트
@@ -25,10 +27,52 @@ class ApiCategoryMembersBottomSheet extends StatefulWidget {
 
 class _ApiCategoryMembersBottomSheetState
     extends State<ApiCategoryMembersBottomSheet> {
+  // presigned URL 캐시
+  final Map<String, String> _presignedUrlCache = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // 빌드 완료 후 presigned URL 로드
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPresignedUrls();
+    });
+  }
+
+  /// 모든 프로필 이미지의 presigned URL을 미리 로드
+  Future<void> _loadPresignedUrls() async {
+    final mediaController = Provider.of<MediaController>(
+      context,
+      listen: false,
+    );
+    final profileUrlKeys = widget.category.usersProfileKey;
+
+    for (final key in profileUrlKeys) {
+      if (key.isNotEmpty) {
+        try {
+          final url = await mediaController.getPresignedUrl(key);
+          if (url != null) {
+            _presignedUrlCache[key] = url;
+          }
+        } catch (e) {
+          debugPrint('[ApiCategoryMembersBottomSheet] presigned URL 로드 실패: $e');
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final profileUrls = widget.category.usersProfile;
-    final totalMemberCount = widget.category.totalUserCount + 1;
+    final profileUrlKeys = widget.category.usersProfileKey;
+    final totalMemberCount = widget.category.totalUserCount;
+    final memberNickNames = widget.category.nickNames;
 
     return Container(
       decoration: BoxDecoration(
@@ -54,8 +98,15 @@ class _ApiCategoryMembersBottomSheetState
 
           SizedBox(height: 24.h),
 
-          // 멤버 목록
-          _buildMembersGrid(context, profileUrls, totalMemberCount),
+          // 멤버 목록 (로딩 중이면 shimmer 표시)
+          _isLoading
+              ? _buildLoadingGrid(totalMemberCount)
+              : _buildMembersGrid(
+                  context,
+                  profileUrlKeys,
+                  totalMemberCount,
+                  memberNickNames,
+                ),
 
           SizedBox(height: 20.h),
         ],
@@ -63,11 +114,52 @@ class _ApiCategoryMembersBottomSheetState
     );
   }
 
+  /// 로딩 중 그리드 (shimmer)
+  Widget _buildLoadingGrid(int totalMemberCount) {
+    final itemCount = totalMemberCount + 1;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          childAspectRatio: 0.8,
+          mainAxisSpacing: 16.h,
+          crossAxisSpacing: 12.w,
+        ),
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          if (index == totalMemberCount) {
+            return _buildAddFriendButton(context);
+          }
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildMemberShimmer(),
+              SizedBox(height: (5.86).h),
+              Container(
+                width: 40.w,
+                height: 12.h,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade700,
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   /// 멤버 그리드 위젯
   Widget _buildMembersGrid(
     BuildContext context,
-    List<String> profileUrls,
+    List<String> profileUrlKeys,
     int totalMemberCount,
+    List<String> memberNickNames,
   ) {
     final itemCount = totalMemberCount + 1; // +1 친구 추가 버튼
 
@@ -87,20 +179,26 @@ class _ApiCategoryMembersBottomSheetState
           if (index == totalMemberCount) {
             return _buildAddFriendButton(context);
           }
-          final profileUrl = index < profileUrls.length
-              ? profileUrls[index]
+
+          final profileUrlKey = index < profileUrlKeys.length
+              ? profileUrlKeys[index]
               : '';
-          return _buildMemberItem(profileUrl, index);
+
+          final memberNickName = index < memberNickNames.length
+              ? memberNickNames[index]
+              : '멤버 ${index + 1}';
+
+          // 캐시에서 presigned URL 가져오기
+          final profileUrl = _presignedUrlCache[profileUrlKey] ?? '';
+
+          return _buildMemberItem(profileUrl, memberNickName, index);
         },
       ),
     );
   }
 
   /// 개별 멤버 아이템
-  Widget _buildMemberItem(String profileUrl, int index) {
-    // 임시 이름 (서버에서 이름 정보가 없으므로)
-    final tempName = '멤버 ${index + 1}';
-
+  Widget _buildMemberItem(String profileUrl, String memberNickName, int index) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -133,7 +231,7 @@ class _ApiCategoryMembersBottomSheetState
 
         // 이름 (임시)
         Text(
-          tempName,
+          memberNickName,
           style: TextStyle(
             color: Colors.white,
             fontSize: 12.sp,

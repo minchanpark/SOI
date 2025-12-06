@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../api_firebase/controllers/auth_controller.dart';
+
+import '../../../api/controller/user_controller.dart';
+import '../../../api/models/user.dart' as api_user;
 
 class ProfileCacheManager {
-  // 프로필 정보 캐싱
   final Map<String, String> _userProfileImages = {};
   final Map<String, String> _userNames = {};
   final Map<String, bool> _loadingStates = {};
 
-  // Getters
+  VoidCallback? _onStateChanged;
+
   Map<String, String> get userProfileImages => _userProfileImages;
   Map<String, String> get userNames => _userNames;
   Map<String, bool> get loadingStates => _loadingStates;
-
-  // 콜백 함수들
-  VoidCallback? _onStateChanged;
 
   void setOnStateChanged(VoidCallback? callback) {
     _onStateChanged = callback;
@@ -24,91 +23,80 @@ class ProfileCacheManager {
     _onStateChanged?.call();
   }
 
-  /// 현재 사용자 프로필 로드
-  Future<void> loadCurrentUserProfile(
-    AuthController authController,
-    String currentUserId,
-  ) async {
-    if (!_userProfileImages.containsKey(currentUserId)) {
-      try {
-        final currentUserProfileImage = await authController
-            .getUserProfileImageUrlWithCache(currentUserId);
-        _userProfileImages[currentUserId] = currentUserProfileImage;
-        _notifyStateChanged();
-      } catch (e) {
-        debugPrint('[ERROR] 현재 사용자 프로필 이미지 로드 실패: $e');
-      }
-    }
+  Future<void> loadCurrentUserProfile(UserController userController) async {
+    final currentUser = userController.currentUser;
+    if (currentUser == null) return;
+    final key = currentUser.userId;
+    if (_userProfileImages.containsKey(key)) return;
+
+    _userProfileImages[key] = currentUser.profileImageUrlKey ?? '';
+    _userNames[key] = currentUser.userId;
+    _loadingStates[key] = false;
+    _notifyStateChanged();
   }
 
-  /// 특정 사용자의 프로필 정보를 로드하는 메서드
-  Future<void> loadUserProfileForPhoto(
-    String userId,
+  Future<void> loadUserProfileForPost(
+    String userNickname,
     BuildContext context,
   ) async {
-    if (_loadingStates[userId] == true || _userNames.containsKey(userId)) {
+    if (_loadingStates[userNickname] == true || _userNames.containsKey(userNickname)) {
       return;
     }
 
-    _loadingStates[userId] = true;
+    _loadingStates[userNickname] = true;
     _notifyStateChanged();
 
     try {
-      final authController = Provider.of<AuthController>(
+      final userController = Provider.of<UserController>(
         context,
         listen: false,
       );
-      final profileImageUrl = await authController
-          .getUserProfileImageUrlWithCache(userId);
-      final userInfo = await authController.getUserInfo(userId);
+      api_user.User? user;
+      final numericId = int.tryParse(userNickname);
+      if (numericId != null) {
+        user = await userController.getUser(numericId);
+      } else {
+        user = await userController.getUserByNickname(userNickname);
+      }
 
-      _userProfileImages[userId] = profileImageUrl;
-      _userNames[userId] = userInfo?.id ?? userId;
-      _loadingStates[userId] = false;
+      _userProfileImages[userNickname] = user?.profileImageUrlKey ?? '';
+      _userNames[userNickname] = user?.userId ?? userNickname;
+      _loadingStates[userNickname] = false;
       _notifyStateChanged();
     } catch (e) {
-      _userNames[userId] = userId;
-      _loadingStates[userId] = false;
+      debugPrint('[ProfileCacheManager] 사용자 정보 로드 실패: $e');
+      _userNames[userNickname] = userNickname;
+      _loadingStates[userNickname] = false;
       _notifyStateChanged();
     }
   }
 
-  /// 특정 사용자의 프로필 이미지 캐시 강제 리프레시
   Future<void> refreshUserProfileImage(
-    String userId,
+    String userNickname,
     BuildContext context,
   ) async {
-    final authController = Provider.of<AuthController>(context, listen: false);
+    final userController = Provider.of<UserController>(context, listen: false);
     try {
-      _loadingStates[userId] = true;
+      _loadingStates[userNickname] = true;
       _notifyStateChanged();
 
-      final profileImageUrl = await authController
-          .getUserProfileImageUrlWithCache(userId);
-
-      _userProfileImages[userId] = profileImageUrl;
-      _loadingStates[userId] = false;
+      api_user.User? user;
+      final numericId = int.tryParse(userNickname);
+      if (numericId != null) {
+        user = await userController.getUser(numericId);
+      } else {
+        user = await userController.getUserByNickname(userNickname);
+      }
+      _userProfileImages[userNickname] = user?.profileImageUrlKey ?? '';
+      _userNames[userNickname] = user?.userId ?? userNickname;
+      _loadingStates[userNickname] = false;
       _notifyStateChanged();
     } catch (e) {
-      _loadingStates[userId] = false;
+      _loadingStates[userNickname] = false;
       _notifyStateChanged();
     }
   }
 
-  /// AuthController 변경 감지 시 프로필 이미지 캐시 업데이트
-  Future<void> onAuthControllerChanged(AuthController authController) async {
-    final currentUser = authController.currentUser;
-    if (currentUser != null) {
-      final newProfileImageUrl = await authController
-          .getUserProfileImageUrlWithCache(currentUser.uid);
-      if (_userProfileImages[currentUser.uid] != newProfileImageUrl) {
-        _userProfileImages[currentUser.uid] = newProfileImageUrl;
-        _notifyStateChanged();
-      }
-    }
-  }
-
-  /// 리소스 정리
   void dispose() {
     _userProfileImages.clear();
     _userNames.clear();

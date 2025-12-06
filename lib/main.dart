@@ -19,6 +19,7 @@ import 'package:soi/api/controller/notification_controller.dart'
 import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'api_firebase/controllers/audio_controller.dart';
 import 'api_firebase/controllers/auth_controller.dart';
 import 'api_firebase/controllers/category_controller.dart';
@@ -95,6 +96,9 @@ void main() async {
 
   // REST API 클라이언트 초기화
   api.SoiApiClient.instance.initialize();
+
+  // Kakao SDK 초기화
+  KakaoSdk.init(nativeAppKey: dotenv.env['KAKAO_NATIVE_APP_KEY']!);
 
   _configureErrorHandling();
 

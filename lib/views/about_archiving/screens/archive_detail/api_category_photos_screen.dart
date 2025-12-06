@@ -150,7 +150,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
                       Icon(Icons.people, size: 25.sp, color: Colors.white),
                       SizedBox(width: 2.w),
                       Text(
-                        '${widget.category.totalUserCount + 1}',
+                        '${widget.category.totalUserCount}',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,

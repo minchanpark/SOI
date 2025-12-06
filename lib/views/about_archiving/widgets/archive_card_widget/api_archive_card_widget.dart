@@ -96,7 +96,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
             Padding(
               padding: EdgeInsets.only(left: 14),
               child: ApiArchiveProfileRowWidget(
-                profileUrls: category.usersProfile,
+                profileUrlKeys: category.usersProfileKey,
                 totalUserCount: category.totalUserCount,
               ),
             ),

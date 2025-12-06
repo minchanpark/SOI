@@ -22,22 +22,24 @@ enum CategoryFilter {
 /// API의 CategoryRespDto를 앱 내부에서 사용하기 위한 모델입니다.
 class Category {
   final int id;
-  final String name;
+  final String name; // 카테고리 이름
+  final List<String> nickNames; // 카테고리 닉네임
   final String? photoUrl;
   final bool isNew;
   final int totalUserCount;
   final bool isPinned;
-  final List<String> usersProfile;
+  final List<String> usersProfileKey;
   final DateTime? pinnedAt;
 
   const Category({
     required this.id,
     required this.name,
+    this.nickNames = const [],
     this.photoUrl,
     this.isNew = false,
     this.totalUserCount = 0,
     this.isPinned = false,
-    this.usersProfile = const [],
+    this.usersProfileKey = const [],
     this.pinnedAt,
   });
 
@@ -46,11 +48,12 @@ class Category {
     return Category(
       id: dto.id ?? 0,
       name: dto.name ?? '',
+      nickNames: dto.nicknames,
       photoUrl: dto.categoryPhotoKey,
       isNew: dto.isNew ?? false,
       totalUserCount: dto.totalUserNum ?? 0,
       isPinned: dto.isPinned ?? false,
-      usersProfile: dto.usersProfile,
+      usersProfileKey: dto.usersProfileKey,
       pinnedAt: dto.pinnedAt,
     );
   }
@@ -60,12 +63,17 @@ class Category {
     return Category(
       id: json['id'] as int? ?? 0,
       name: json['name'] as String? ?? '',
+      nickNames:
+          (json['nickNames'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
       photoUrl: json['categoryPhotoUrl'] as String?,
       isNew: json['isNew'] as bool? ?? false,
       totalUserCount: json['totalUserNum'] as int? ?? 0,
       isPinned: json['isPinned'] as bool? ?? false,
-      usersProfile:
-          (json['usersProfile'] as List<dynamic>?)
+      usersProfileKey:
+          (json['usersProfileKey'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
@@ -80,11 +88,12 @@ class Category {
     return {
       'id': id,
       'name': name,
+      'nickNames': nickNames,
       'categoryPhotoUrl': photoUrl,
       'isNew': isNew,
       'totalUserNum': totalUserCount,
       'isPinned': isPinned,
-      'usersProfile': usersProfile,
+      'usersProfileKey': usersProfileKey,
       'pinnedAt': pinnedAt?.toIso8601String(),
     };
   }
@@ -96,21 +105,23 @@ class Category {
   Category copyWith({
     int? id,
     String? name,
+    List<String>? nickNames,
     String? photoUrl,
     bool? isNew,
     int? totalUserCount,
     bool? isPinned,
-    List<String>? usersProfile,
+    List<String>? usersProfileKey,
     DateTime? pinnedAt,
   }) {
     return Category(
       id: id ?? this.id,
       name: name ?? this.name,
+      nickNames: nickNames ?? this.nickNames,
       photoUrl: photoUrl ?? this.photoUrl,
       isNew: isNew ?? this.isNew,
       totalUserCount: totalUserCount ?? this.totalUserCount,
       isPinned: isPinned ?? this.isPinned,
-      usersProfile: usersProfile ?? this.usersProfile,
+      usersProfileKey: usersProfileKey ?? this.usersProfileKey,
       pinnedAt: pinnedAt ?? this.pinnedAt,
     );
   }

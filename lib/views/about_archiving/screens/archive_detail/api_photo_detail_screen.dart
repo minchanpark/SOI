@@ -17,6 +17,7 @@ import '../../../../api_firebase/controllers/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../about_share/share_screen.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
+import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
 
 /// API 기반 사진 상세 화면
 ///
@@ -43,6 +44,7 @@ class ApiPhotoDetailScreen extends StatefulWidget {
 class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   late final PageController _pageController;
   late int _currentIndex;
+  late final AudioController _audioController;
 
   // 사용자 프로필 관련
   String _userProfileImageUrl = '';
@@ -81,15 +83,20 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
+    _audioController = AudioController();
     _userController = Provider.of<UserController>(context, listen: false);
     _loadUserProfileImage();
-    _loadCommentsForPost(widget.posts[_currentIndex].id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadCommentsForPost(widget.posts[_currentIndex].id);
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _stopAudio();
+    _audioController.dispose();
     PaintingBinding.instance.imageCache.clear();
     super.dispose();
   }
@@ -97,10 +104,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
+    return ChangeNotifierProvider<AudioController>.value(
+      value: _audioController,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.black,
         title: Text(
@@ -123,13 +132,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
                 );
 
                 if (currentPost.hasAudio) {
-                  final audioController = Provider.of<AudioController>(
-                    context,
-                    listen: false,
-                  );
-                  if (audioController.currentPlayingAudioUrl ==
+                  if (_audioController.currentPlayingAudioUrl ==
                       currentPost.audioUrl) {
-                    audioDuration = audioController.currentDuration;
+                    audioDuration = _audioController.currentDuration;
                   }
                 }
 
@@ -177,13 +182,13 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         itemBuilder: (context, index) {
           final post = widget.posts[index];
           final currentUserId = _userController?.currentUser?.userId;
-          final isOwner = currentUserId == post.userId;
+          final isOwner = currentUserId == post.nickName;
 
           // 사용자 캐시 채우기
-          if (!_userProfileImages.containsKey(post.userId)) {
-            _userProfileImages[post.userId] = _userProfileImageUrl;
-            _profileLoadingStates[post.userId] = _isLoadingProfile;
-            _userNames[post.userId] = _userName;
+          if (!_userProfileImages.containsKey(post.nickName)) {
+            _userProfileImages[post.nickName] = _userProfileImageUrl;
+            _profileLoadingStates[post.nickName] = _isLoadingProfile;
+            _userNames[post.nickName] = _userName;
           }
 
           return ApiPhotoCardWidget(
@@ -235,6 +240,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           );
         },
       ),
+      ),
     );
   }
 
@@ -254,7 +260,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   Future<void> _loadUserProfileImage() async {
     final currentPost = widget.posts[_currentIndex];
     try {
-      final userId = int.tryParse(currentPost.userId);
+      final userId = int.tryParse(currentPost.nickName);
       api_user.User? user;
       if (userId != null) {
         user = await _userController?.getUser(userId);
@@ -263,20 +269,20 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       if (!mounted) return;
       setState(() {
         _userProfileImageUrl = user?.profileImageUrlKey ?? '';
-        _userName = user?.userId ?? currentPost.userId;
+        _userName = currentPost.nickName;
         _isLoadingProfile = false;
-        _userProfileImages[currentPost.userId] = _userProfileImageUrl;
-        _profileLoadingStates[currentPost.userId] = false;
-        _userNames[currentPost.userId] = _userName;
+        _userProfileImages[currentPost.nickName] = _userProfileImageUrl;
+        _profileLoadingStates[currentPost.nickName] = false;
+        _userNames[currentPost.nickName] = _userName;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _userName = currentPost.userId;
+        _userName = currentPost.nickName;
         _isLoadingProfile = false;
-        _userProfileImages[currentPost.userId] = '';
-        _profileLoadingStates[currentPost.userId] = false;
-        _userNames[currentPost.userId] = currentPost.userId;
+        _userProfileImages[currentPost.nickName] = '';
+        _profileLoadingStates[currentPost.nickName] = false;
+        _userNames[currentPost.nickName] = currentPost.nickName;
       });
     }
   }
@@ -339,11 +345,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   void _toggleAudio(Post post) async {
     if (!post.hasAudio) return;
     try {
-      final audioController = Provider.of<AudioController>(
-        context,
-        listen: false,
-      );
-      await audioController.toggleAudio(post.audioUrl!);
+      await _audioController.toggleAudio(post.audioUrl!);
     } catch (e) {
       debugPrint('오디오 토글 실패: $e');
     }
@@ -714,11 +716,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   }
 
   Future<void> _stopAudio() async {
-    final audioController = Provider.of<AudioController>(
-      context,
-      listen: false,
-    );
-    await audioController.stopRealtimeAudio();
+    await _audioController.stopRealtimeAudio();
   }
 
   void _showSnackBar(String message, {Color? backgroundColor}) {

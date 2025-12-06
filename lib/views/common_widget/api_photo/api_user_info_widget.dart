@@ -43,11 +43,11 @@ class ApiUserInfoWidget extends StatelessWidget {
                 height: 22.h,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '@${userNames[post.userId] ?? post.userId}',
+                  '@${userNames[post.nickName] ?? post.nickName}',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
-                    fontFamily: "Pretendard",
+                    fontFamily: "Pretendard Variable",
                     fontWeight: FontWeight.w600,
                   ),
                   overflow: TextOverflow.visible,
@@ -60,7 +60,7 @@ class ApiUserInfoWidget extends StatelessWidget {
                 style: TextStyle(
                   color: const Color(0xffcccccc),
                   fontSize: 14.sp,
-                  fontFamily: "Pretendard",
+                  fontFamily: "Pretendard Variable",
                   fontWeight: FontWeight.w400,
                 ),
               ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:soi_api_client/api.dart';
 
 import '../models/models.dart';
 import '../services/friend_service.dart';
@@ -44,6 +43,17 @@ class FriendController extends ChangeNotifier {
   // 친구 추가
   // ============================================
 
+  /// 친구 추가
+  /// 친구 추가 요청을 보내고, 친구 추가 결과를 반환합니다.
+  ///
+  /// Parameters:
+  ///   - [requesterId]: 친구 요청자 ID
+  ///   - [receiverPhoneNum]: 친구 수신자 전화번호
+  ///
+  /// Returns:
+  ///   - [Friend]: 추가된 친구 정보 (실패 시 null)
+  ///   - null: 친구 추가 실패
+  ///     - 실패한 경우에는, 클라이언트에서 문자로 앱 설치 링크나 앱 설치 안내 페이지를 보내도록 처리해야 합니다.
   Future<Friend?> addFriend({
     required int requesterId,
     required String receiverPhoneNum,
@@ -69,6 +79,14 @@ class FriendController extends ChangeNotifier {
   // 친구 조회
   // ============================================
 
+  /// 모든 친구 조회
+  /// 주어진 사용자 ID에 대한 모든 친구 목록을 반환합니다.
+  ///
+  /// Parameters:
+  ///   - [userId]: 친구 목록을 조회할 사용자 ID
+  ///
+  /// Returns:
+  ///   - [List<User>]: 친구 목록 (실패 시 빈 리스트)
   Future<List<User>> getAllFriends({required int userId}) async {
     _setLoading(true);
     _clearError();
@@ -84,7 +102,16 @@ class FriendController extends ChangeNotifier {
     }
   }
 
-  Future<List<FriendCheckRespDto>> checkFriendRelations({
+  /// 친구관계 확인
+  /// 주어진 전화번호 목록에 대한 친구 관계를 확인합니다.
+  ///
+  /// Parameters:
+  ///   - [userId]: 친구 관계를 확인할 사용자 ID
+  ///   - [phoneNumbers]: 친구 관계를 확인할 전화번호 목록
+  ///
+  /// Returns:
+  ///   - [List<FriendCheck>]: 친구 관계 확인 결과 목록 (실패 시 빈 리스트)
+  Future<List<FriendCheck>> checkFriendRelations({
     required int userId,
     required List<String> phoneNumbers,
   }) async {
@@ -97,7 +124,8 @@ class FriendController extends ChangeNotifier {
         phoneNumbers: phoneNumbers,
       );
       _setLoading(false);
-      return relations;
+      // DTO를 FriendCheck 모델로 변환
+      return relations.map((dto) => FriendCheck.fromDto(dto)).toList();
     } catch (e) {
       _setError('친구 관계 확인 실패: $e');
       _setLoading(false);
@@ -109,6 +137,17 @@ class FriendController extends ChangeNotifier {
   // 친구 차단
   // ============================================
 
+  /// 친구 차단
+  /// 주어진 친구를 차단합니다.
+  ///
+  /// Parameters:
+  ///   - [requesterId]: 차단 요청자 ID
+  ///   - [receiverId]: 차단 대상자 ID
+  ///
+  /// Returns:
+  ///   - [bool]: 차단 성공 여부
+  ///     - true: 차단 성공
+  ///     - false: 차단 실패
   Future<bool> blockFriend({
     required int requesterId,
     required int receiverId,
@@ -130,6 +169,17 @@ class FriendController extends ChangeNotifier {
     }
   }
 
+  /// 차단 해제
+  /// 주어진 친구의 차단을 해제합니다.
+  ///
+  /// Parameters:
+  ///   - [requesterId]: 차단 해제 요청자 ID
+  ///   - [receiverId]: 차단 해제 대상자 ID
+  ///
+  /// Returns:
+  ///   - [bool]: 차단 해제 성공 여부
+  ///     - true: 차단 해제 성공
+  ///     - false: 차단 해제 실패
   Future<bool> unblockFriend({
     required int requesterId,
     required int receiverId,
@@ -155,6 +205,17 @@ class FriendController extends ChangeNotifier {
   // 친구 삭제
   // ============================================
 
+  /// 친구 삭제
+  /// 주어진 친구를 삭제합니다.
+  ///
+  /// Parameters:
+  ///   - [requesterId]: 삭제 요청자 ID
+  ///   - [receiverId]: 삭제 대상자 ID
+  ///
+  /// Returns:
+  ///   - [bool]: 삭제 성공 여부
+  ///     - true: 삭제 성공
+  ///     - false: 삭제 실패
   Future<bool> deleteFriend({
     required int requesterId,
     required int receiverId,
@@ -180,7 +241,16 @@ class FriendController extends ChangeNotifier {
   // 친구 상태 업데이트
   // ============================================
 
-  Future<FriendRespDto?> updateFriendStatus({
+  /// 친구 상태 업데이트
+  /// 주어진 친구의 상태를 업데이트합니다.
+  ///
+  /// Parameters:
+  ///   - [friendId]: 상태를 업데이트할 친구 ID
+  ///   - [status]: 업데이트할 친구 상태 (FriendStatus enum)
+  ///
+  /// Returns:
+  ///   - [Friend?]: 업데이트된 친구 정보 (실패 시 null)
+  Future<Friend?> updateFriendStatus({
     required int friendId,
     required FriendStatus status,
   }) async {
@@ -193,7 +263,8 @@ class FriendController extends ChangeNotifier {
         status: status,
       );
       _setLoading(false);
-      return result;
+      // DTO를 Friend 모델로 변환
+      return Friend.fromDto(result);
     } catch (e) {
       _setError('친구 상태 업데이트 실패: $e');
       _setLoading(false);

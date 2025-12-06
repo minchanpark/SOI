@@ -253,7 +253,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
 
     return CachedNetworkImage(
       key: ValueKey(
-        'profile_${widget.post.userId}_${_profileImageUrl.hashCode}',
+        'profile_${widget.post.nickName}_${_profileImageUrl.hashCode}',
       ),
       imageUrl: _profileImageUrl!,
       memCacheWidth: (28 * 5).round(),

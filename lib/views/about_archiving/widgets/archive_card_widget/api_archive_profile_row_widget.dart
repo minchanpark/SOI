@@ -1,35 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:soi/api/controller/media_controller.dart';
 
 /// REST API 기반 프로필 이미지 행 위젯
 ///
-/// Category 객체에서 직접 프로필 URL 리스트와 총 인원수를 받아 표시합니다.
+/// Category 객체에서 직접 프로필 URL 키 리스트와 총 인원수를 받아 표시합니다.
 /// 최대 3개의 프로필을 표시하고, 초과 인원은 +N 배지로 표시합니다.
-class ApiArchiveProfileRowWidget extends StatelessWidget {
-  final List<String> profileUrls;
+class ApiArchiveProfileRowWidget extends StatefulWidget {
+  final List<String> profileUrlKeys;
   final int totalUserCount;
 
   const ApiArchiveProfileRowWidget({
     super.key,
-    required this.profileUrls,
+    required this.profileUrlKeys,
     this.totalUserCount = 0,
   });
 
   @override
+  State<ApiArchiveProfileRowWidget> createState() =>
+      _ApiArchiveProfileRowWidgetState();
+}
+
+class _ApiArchiveProfileRowWidgetState
+    extends State<ApiArchiveProfileRowWidget> {
+  // Presigned URL 캐시 (키 -> URL)
+  final Map<String, String> _presignedUrlCache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPresignedUrls();
+  }
+
+  @override
+  void didUpdateWidget(ApiArchiveProfileRowWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // profileUrlKeys가 변경되면 다시 로드
+    if (oldWidget.profileUrlKeys != widget.profileUrlKeys) {
+      _loadPresignedUrls();
+    }
+  }
+
+  Future<void> _loadPresignedUrls() async {
+    final mediaController = context.read<MediaController>();
+    final displayCount = widget.totalUserCount.clamp(1, 3);
+
+    // 표시할 프로필 키들만 로드 (최대 3개)
+    final keysToLoad = widget.profileUrlKeys.take(displayCount).toList();
+
+    for (final key in keysToLoad) {
+      if (key.isEmpty || _presignedUrlCache.containsKey(key)) continue;
+
+      final url = await mediaController.getPresignedUrl(key);
+      if (url != null && mounted) {
+        setState(() {
+          _presignedUrlCache[key] = url;
+          debugPrint("프로필 이미지 캐시: ${_presignedUrlCache[key]}");
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // totalUserCount에 +1 (기본값 0이므로 최소 1명 보장)
-    final effectiveUserCount = totalUserCount + 1;
-
-    // 빈 문자열을 제외한 실제 프로필 URL만 필터링
-    final validProfileUrls = profileUrls
-        .where((url) => url.isNotEmpty)
-        .toList();
-
-    // 표시할 프로필 수: effectiveUserCount 기준 (최대 3개)
-    final displayCount = effectiveUserCount.clamp(1, 3);
-    // 남은 인원: 총 인원 - 표시된 프로필 수
-    final remainingCount = effectiveUserCount > 3 ? effectiveUserCount - 3 : 0;
+    final displayCount = widget.totalUserCount.clamp(1, 3);
+    final remainingCount = widget.totalUserCount > 3
+        ? widget.totalUserCount - 3
+        : 0;
 
     // +N 배지 포함 시 너비 계산
     final badgeCount = remainingCount > 0 ? 1 : 0;
@@ -42,12 +81,13 @@ class ApiArchiveProfileRowWidget extends StatelessWidget {
         width: totalWidth,
         child: Stack(
           children: [
-            // effectiveUserCount 기준으로 displayCount개 표시
+            // displayCount개 프로필 표시
             ...List.generate(displayCount, (index) {
-              // validProfileUrls에 해당 인덱스가 있으면 이미지, 없으면 기본 아바타
-              final imageUrl = index < validProfileUrls.length
-                  ? validProfileUrls[index]
+              // 키가 있고, presigned URL이 캐시에 있으면 사용
+              final key = index < widget.profileUrlKeys.length
+                  ? widget.profileUrlKeys[index]
                   : '';
+              final imageUrl = _presignedUrlCache[key] ?? '';
 
               return Positioned(
                 left: index * 12.0,

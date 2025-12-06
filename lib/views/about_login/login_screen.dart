@@ -402,6 +402,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // -------------------------
   // 인증 및 로그인
   // -------------------------
+
+  /// 인증번호 확인 및 로그인 처리
   Future<void> _verifyAndLogin() async {
     if (_isVerifying) return;
 
@@ -427,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 2. 로그인 시도
       debugPrint("로그인 시도: $phoneNumber");
-      final user = await _apiUserController!.login(phoneNumber);
+      final user = await _apiUserController!.login(_phoneController.text);
 
       if (user != null) {
         // 기존 회원 - 홈으로 이동

@@ -8,5 +8,6 @@ export '../models/user.dart';
 export '../models/category.dart';
 export '../models/post.dart';
 export 'friend.dart';
+export 'friend_check.dart';
 export 'comment.dart';
 export 'notification.dart';

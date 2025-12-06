@@ -42,7 +42,7 @@ class User {
       id: dto.id ?? 0,
       userId: dto.nickname ?? '',
       name: dto.name ?? '',
-      profileImageUrlKey: dto.profileImageUrl,
+      profileImageUrlKey: dto.profileImageKey,
       birthDate: dto.birthDate,
       phoneNumber: dto.phoneNum ?? '',
     );
@@ -57,7 +57,7 @@ class User {
       id: dto.id ?? 0,
       userId: dto.nickname ?? '',
       name: dto.name ?? '',
-      profileImageUrlKey: dto.profileImageUrl,
+      profileImageUrlKey: dto.profileImageKey,
       birthDate: null,
       phoneNumber: '',
       active: dto.active ?? false,

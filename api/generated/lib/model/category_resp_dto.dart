@@ -15,12 +15,12 @@ class CategoryRespDto {
   CategoryRespDto({
     this.id,
     this.name,
-    this.nickname,
+    this.nicknames = const [],
     this.categoryPhotoKey,
     this.isNew,
     this.totalUserNum,
     this.isPinned,
-    this.usersProfile = const [],
+    this.usersProfileKey = const [],
     this.pinnedAt,
   });
 
@@ -40,13 +40,7 @@ class CategoryRespDto {
   ///
   String? name;
 
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  String? nickname;
+  List<String> nicknames;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -80,7 +74,7 @@ class CategoryRespDto {
   ///
   bool? isPinned;
 
-  List<String> usersProfile;
+  List<String> usersProfileKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -94,12 +88,12 @@ class CategoryRespDto {
   bool operator ==(Object other) => identical(this, other) || other is CategoryRespDto &&
     other.id == id &&
     other.name == name &&
-    other.nickname == nickname &&
+    _deepEquality.equals(other.nicknames, nicknames) &&
     other.categoryPhotoKey == categoryPhotoKey &&
     other.isNew == isNew &&
     other.totalUserNum == totalUserNum &&
     other.isPinned == isPinned &&
-    _deepEquality.equals(other.usersProfile, usersProfile) &&
+    _deepEquality.equals(other.usersProfileKey, usersProfileKey) &&
     other.pinnedAt == pinnedAt;
 
   @override
@@ -107,16 +101,16 @@ class CategoryRespDto {
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (nickname == null ? 0 : nickname!.hashCode) +
+    (nicknames.hashCode) +
     (categoryPhotoKey == null ? 0 : categoryPhotoKey!.hashCode) +
     (isNew == null ? 0 : isNew!.hashCode) +
     (totalUserNum == null ? 0 : totalUserNum!.hashCode) +
     (isPinned == null ? 0 : isPinned!.hashCode) +
-    (usersProfile.hashCode) +
+    (usersProfileKey.hashCode) +
     (pinnedAt == null ? 0 : pinnedAt!.hashCode);
 
   @override
-  String toString() => 'CategoryRespDto[id=$id, name=$name, nickname=$nickname, categoryPhotoKey=$categoryPhotoKey, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfile=$usersProfile, pinnedAt=$pinnedAt]';
+  String toString() => 'CategoryRespDto[id=$id, name=$name, nicknames=$nicknames, categoryPhotoKey=$categoryPhotoKey, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfileKey=$usersProfileKey, pinnedAt=$pinnedAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -130,11 +124,7 @@ class CategoryRespDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.nickname != null) {
-      json[r'nickname'] = this.nickname;
-    } else {
-      json[r'nickname'] = null;
-    }
+      json[r'nicknames'] = this.nicknames;
     if (this.categoryPhotoKey != null) {
       json[r'categoryPhotoKey'] = this.categoryPhotoKey;
     } else {
@@ -155,7 +145,7 @@ class CategoryRespDto {
     } else {
       json[r'isPinned'] = null;
     }
-      json[r'usersProfile'] = this.usersProfile;
+      json[r'usersProfileKey'] = this.usersProfileKey;
     if (this.pinnedAt != null) {
       json[r'pinnedAt'] = this.pinnedAt!.toUtc().toIso8601String();
     } else {
@@ -185,13 +175,15 @@ class CategoryRespDto {
       return CategoryRespDto(
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
-        nickname: mapValueOfType<String>(json, r'nickname'),
+        nicknames: json[r'nicknames'] is Iterable
+            ? (json[r'nicknames'] as Iterable).cast<String>().toList(growable: false)
+            : const [],
         categoryPhotoKey: mapValueOfType<String>(json, r'categoryPhotoKey'),
         isNew: mapValueOfType<bool>(json, r'isNew'),
         totalUserNum: mapValueOfType<int>(json, r'totalUserNum'),
         isPinned: mapValueOfType<bool>(json, r'isPinned'),
-        usersProfile: json[r'usersProfile'] is Iterable
-            ? (json[r'usersProfile'] as Iterable).cast<String>().toList(growable: false)
+        usersProfileKey: json[r'usersProfileKey'] is Iterable
+            ? (json[r'usersProfileKey'] as Iterable).cast<String>().toList(growable: false)
             : const [],
         pinnedAt: mapDateTime(json, r'pinnedAt', r''),
       );

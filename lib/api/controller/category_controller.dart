@@ -12,7 +12,6 @@ class CategoryController extends ChangeNotifier {
   // 카테고리 캐시 (filter별로 관리)
   final Map<model.CategoryFilter, List<model.Category>> _categoriesCache = {};
   int? _lastLoadedUserId;
-  model.CategoryFilter? _lastLoadedFilter;
   DateTime? _lastLoadTime;
   static const Duration _cacheTimeout = Duration(seconds: 30);
 
@@ -60,6 +59,11 @@ class CategoryController extends ChangeNotifier {
   /// 카테고리 목록 로드 및 캐시
   ///
   /// [forceReload]가 true이면 캐시를 무시하고 새로 로드합니다.
+  ///
+  /// **로드 전략:**
+  /// - ALL: PUBLIC, PRIVATE, ALL 모두 로드 (병렬 처리)
+  /// - PUBLIC: PUBLIC만 로드
+  /// - PRIVATE: PRIVATE만 로드
   Future<List<model.Category>> loadCategories(
     int userId, {
     model.CategoryFilter filter = model.CategoryFilter.all,
@@ -69,42 +73,90 @@ class CategoryController extends ChangeNotifier {
     final isCacheValid =
         _lastLoadTime != null && now.difference(_lastLoadTime!) < _cacheTimeout;
 
-    // 캐시가 유효하고 같은 userId + filter면 캐시된 데이터 반환
-    if (!forceReload &&
-        _lastLoadedUserId == userId &&
-        _lastLoadedFilter == filter &&
-        isCacheValid &&
-        _categoriesCache.containsKey(filter) &&
-        _categoriesCache[filter]!.isNotEmpty) {
-      _currentCategories = _categoriesCache[filter]!;
-      debugPrint(
-        '[CategoryController] 캐시된 카테고리 반환 (filter: ${filter.value}): ${_currentCategories.length}개',
-      );
-      notifyListeners();
-      return _currentCategories;
+    // 캐시가 유효하고 같은 userId면 캐시된 데이터 반환
+    if (!forceReload && _lastLoadedUserId == userId && isCacheValid) {
+      // ALL 필터인 경우: ALL, PUBLIC, PRIVATE 모두 캐시되어 있어야 함
+      // ALL 필터라는 것은: 사용자가 전체 카테고리를 보고자 하는 것
+      if (filter == model.CategoryFilter.all) {
+        final hasAllCaches =
+            _categoriesCache.containsKey(model.CategoryFilter.all) &&
+            _categoriesCache.containsKey(model.CategoryFilter.public_) &&
+            _categoriesCache.containsKey(model.CategoryFilter.private_);
+
+        if (hasAllCaches) {
+          _currentCategories = _categoriesCache[filter]!;
+          debugPrint(
+            '[CategoryController] 캐시된 카테고리 반환 (filter: ${filter.value}): ${_currentCategories.length}개',
+          );
+          notifyListeners();
+          return _currentCategories;
+        }
+      }
+      // 그 외 필터인 경우: PUBLIC 또는 PRIVATE
+      else {
+        // PUBLIC 또는 PRIVATE 필터: 해당 필터만 캐시되어 있으면 됨
+        if (_categoriesCache.containsKey(filter) &&
+            _categoriesCache[filter]!.isNotEmpty) {
+          _currentCategories = _categoriesCache[filter]!;
+          debugPrint(
+            '[CategoryController] 캐시된 카테고리 반환 (filter: ${filter.value}): ${_currentCategories.length}개',
+          );
+          notifyListeners();
+          return _currentCategories;
+        }
+      }
     }
 
     _setLoading(true);
     _clearError();
 
     try {
-      final categories = await _categoryService.getCategories(
-        userId: userId,
-        filter: filter,
-      );
+      if (filter == model.CategoryFilter.all) {
+        // ALL 필터: PUBLIC, PRIVATE, ALL 모두 병렬 로드
+        final results = await Future.wait([
+          _categoryService.getCategories(
+            userId: userId,
+            filter: model.CategoryFilter.all,
+          ),
+          _categoryService.getCategories(
+            userId: userId,
+            filter: model.CategoryFilter.public_,
+          ),
+          _categoryService.getCategories(
+            userId: userId,
+            filter: model.CategoryFilter.private_,
+          ),
+        ]);
 
-      // filter별 캐시 저장
-      _categoriesCache[filter] = categories;
-      _currentCategories = categories;
+        // 각 filter별 캐시 저장
+        _categoriesCache[model.CategoryFilter.all] = results[0];
+        _categoriesCache[model.CategoryFilter.public_] = results[1];
+        _categoriesCache[model.CategoryFilter.private_] = results[2];
+        _currentCategories = results[0]; // ALL을 현재 카테고리로 설정
+
+        debugPrint(
+          '[CategoryController] 전체 카테고리 로드 완료 - ALL: ${results[0].length}개, PUBLIC: ${results[1].length}개, PRIVATE: ${results[2].length}개',
+        );
+      } else {
+        // PUBLIC 또는 PRIVATE 필터: 해당 필터만 로드
+        final categories = await _categoryService.getCategories(
+          userId: userId,
+          filter: filter,
+        );
+
+        _categoriesCache[filter] = categories;
+        _currentCategories = categories;
+
+        debugPrint(
+          '[CategoryController] 카테고리 로드 완료 (filter: ${filter.value}): ${categories.length}개',
+        );
+      }
+
       _lastLoadedUserId = userId;
-      _lastLoadedFilter = filter;
       _lastLoadTime = DateTime.now();
 
-      debugPrint(
-        '[CategoryController] 카테고리 로드 완료 (filter: ${filter.value}): ${categories.length}개',
-      );
       _setLoading(false);
-      return categories;
+      return _currentCategories;
     } catch (e) {
       _setError('카테고리 조회 실패: $e');
       debugPrint('[CategoryController] 카테고리 로드 실패: $e');
@@ -118,7 +170,6 @@ class CategoryController extends ChangeNotifier {
     _categoriesCache.clear();
     _currentCategories = [];
     _lastLoadedUserId = null;
-    _lastLoadedFilter = null;
     _lastLoadTime = null;
     debugPrint('🗑️ [CategoryController] 캐시 무효화');
     notifyListeners();
@@ -135,11 +186,13 @@ class CategoryController extends ChangeNotifier {
 
   /// 카테고리 생성
   /// Parameters:
-  /// - [requesterId]: 요청자 사용자 ID
-  /// - [name]: 카테고리 이름
-  /// - [receiverIds]: 초대할 사용자 ID 목록
-  /// - [isPublic]: 공개 여부
-
+  ///   - [requesterId]: 요청자 사용자 ID
+  ///   - [name]: 카테고리 이름
+  ///   - [receiverIds]: 초대할 사용자 ID 목록
+  ///   - [isPublic]: 공개 여부
+  ///
+  /// Returns:
+  ///   - [int]: 생성된 카테고리 ID (실패 시 null)
   Future<int?> createCategory({
     required int requesterId,
     required String name,
@@ -168,7 +221,6 @@ class CategoryController extends ChangeNotifier {
   /// Parameters:
   /// - [userId]: 사용자 ID
   /// - [filter]: 카테고리 필터 (기본값: all)
-
   Future<List<model.Category>> getCategories({
     required int userId,
     model.CategoryFilter filter = model.CategoryFilter.all,
@@ -195,7 +247,6 @@ class CategoryController extends ChangeNotifier {
   ///
   /// Returns:
   /// - [List<model.Category>]: 모든 카테고리 목록
-
   Future<List<model.Category>> getAllCategories(int userId) =>
       getCategories(userId: userId, filter: model.CategoryFilter.all);
 
@@ -218,7 +269,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 고정 성공 여부
   ///   - true: 고정됨
   ///   - false: 고정 해제됨
-
   Future<bool> toggleCategoryPin({
     required int categoryId,
     required int userId,
@@ -249,7 +299,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 초대 성공 여부
   ///   - true: 초대 성공
   ///   - false: 초대 실패
-
   Future<bool> inviteUsersToCategory({
     required int categoryId,
     required int requesterId,
@@ -282,7 +331,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 수락 성공 여부
   ///   - true: 수락 성공
   ///   - false: 수락 실패
-
   Future<bool> acceptInvite({
     required int categoryId,
     required int userId,
@@ -313,7 +361,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 거절 성공 여부
   ///   - true: 거절 성공
   ///   - false: 거절 실패
-
   Future<bool> declineInvite({
     required int categoryId,
     required int userId,
@@ -349,7 +396,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 수정 성공 여부
   ///   - true: 수정 성공
   ///   - false: 수정 실패
-
   Future<bool> updateCustomName({
     required int categoryId,
     required int userId,
@@ -383,7 +429,6 @@ class CategoryController extends ChangeNotifier {
   /// - [bool]: 수정 성공 여부
   ///   - true: 수정 성공
   ///   - false: 수정 실패
-
   Future<bool> updateCustomProfile({
     required int categoryId,
     required int userId,
@@ -411,7 +456,15 @@ class CategoryController extends ChangeNotifier {
   // ============================================
 
   /// 카테고리 나가기 (삭제)
-
+  ///
+  /// Parameters:
+  ///   - [userId]: 사용자 ID
+  ///   - [categoryId]: 카테고리 ID
+  ///
+  /// Returns:
+  ///   - [bool]: 나가기 성공 여부
+  ///     - true: 나가기 성공
+  ///     - false: 나가기 실패
   Future<bool> leaveCategory({
     required int userId,
     required int categoryId,
@@ -439,7 +492,15 @@ class CategoryController extends ChangeNotifier {
   }
 
   /// 카테고리 삭제 (leaveCategory의 별칭)
-
+  ///
+  /// Parameters:
+  ///   - [userId]: 사용자 ID
+  ///   - [categoryId]: 카테고리 ID
+  ///
+  /// Returns:
+  ///   - [bool]: 삭제 성공 여부
+  ///     - true: 삭제 성공
+  ///     - false: 삭제 실패
   Future<bool> deleteCategory({
     required int userId,
     required int categoryId,

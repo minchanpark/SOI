@@ -40,6 +40,9 @@ class UserController extends ChangeNotifier {
   /// 현재 로그인된 사용자
   User? get currentUser => _currentUser;
 
+  /// 현재 로그인된 사용자 ID
+  int? get currentUserId => _currentUser?.id;
+
   /// 로그인 상태
   bool get isLoggedIn => _currentUser != null;
 
@@ -256,9 +259,28 @@ class UserController extends ChangeNotifier {
     }
   }
 
+  /// 닉네임으로 사용자 조회
+  Future<User?> getUserByNickname(String nickname) async {
+    final numericId = int.tryParse(nickname);
+    if (numericId != null) {
+      return getUser(numericId);
+    }
+
+    try {
+      final users = await findUsersByKeyword(nickname);
+      try {
+        return users.firstWhere((user) => user.userId == nickname);
+      } catch (_) {
+        return users.isNotEmpty ? users.first : null;
+      }
+    } catch (e) {
+      debugPrint('[UserController] 닉네임 조회 실패: $e');
+      return null;
+    }
+  }
+
   /// 모든 사용자 정보를 가지고 오는 메서드
   /// Returns: 사용자 목록 (List<User>)
-
   Future<List<User>> getAllUsers() async {
     _setLoading(true);
     _clearError();
@@ -281,7 +303,6 @@ class UserController extends ChangeNotifier {
   ///   - [keyword]: 검색 키워드 (String)
   ///
   /// Returns: 검색된 사용자 목록 (List<User>)
-
   Future<List<User>> findUsersByKeyword(String keyword) async {
     _setLoading(true);
     _clearError();
@@ -307,7 +328,6 @@ class UserController extends ChangeNotifier {
   /// - [nickName]: 확인할 nickName (String)
   ///
   /// Returns: 사용 가능한 경우 true, 중복된 경우 false
-
   Future<bool> checknickNameAvailable(String nickName) async {
     _setLoading(true);
     _clearError();
@@ -340,7 +360,6 @@ class UserController extends ChangeNotifier {
   ///
   /// Returns: 수정된 사용자 정보 (User)
   ///   - null: 수정 실패
-
   Future<User?> updateUser({
     required int id,
     String? name,
@@ -377,7 +396,6 @@ class UserController extends ChangeNotifier {
   /// - [profileImageKey]: 프로필 이미지 키
   ///
   /// Returns: 수정된 사용자 정보 (User)
-
   Future<User?> updateprofileImageUrl({
     required int userId,
     required String profileImageKey,
@@ -411,7 +429,6 @@ class UserController extends ChangeNotifier {
   ///
   /// Returns: 삭제된 사용자 정보 (User)
   ///   - null: 삭제 실패
-
   Future<User?> deleteUser(int id) async {
     _setLoading(true);
     _clearError();
@@ -455,7 +472,6 @@ class UserController extends ChangeNotifier {
   /// Parameters:
   /// - [userId]: 사용자 ID
   /// - [phoneNumber]: 전화번호
-
   Future<void> saveLoginState({
     required int userId,
     required String phoneNumber,
@@ -477,7 +493,6 @@ class UserController extends ChangeNotifier {
   ///
   /// Parameters:
   ///   - [completed]: 온보딩 완료 여부 (bool)
-
   Future<void> setOnboardingCompleted(bool completed) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -490,7 +505,8 @@ class UserController extends ChangeNotifier {
 
   /// 온보딩 완료 여부를 확인합니다.
   /// Returns: 온보딩 완료 여부 (bool)
-
+  ///   - true: 온보딩 완료
+  ///   - false: 온보딩 미완료
   Future<bool> isOnboardingCompleted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -503,7 +519,8 @@ class UserController extends ChangeNotifier {
 
   /// 저장된 로그인 상태를 확인합니다.
   /// Returns: 로그인 상태 (bool)
-
+  ///  - true: 로그인 상태
+  ///  - false: 비로그인 상태
   Future<bool> isLoggedInPersisted() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -517,7 +534,6 @@ class UserController extends ChangeNotifier {
   /// 저장된 사용자 정보를 가져옵니다.
   /// Returns: 사용자 정보 맵 (Map<String, dynamic>)
   ///   - null: 저장된 정보 없음
-
   Future<Map<String, dynamic>?> getSavedUserInfo() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -550,7 +566,6 @@ class UserController extends ChangeNotifier {
   /// Returns: 자동 로그인 성공 여부 (bool)
   ///  - true: 자동 로그인 성공
   ///  - false: 자동 로그인 실패
-
   Future<bool> tryAutoLogin() async {
     try {
       debugPrint('[UserController] 자동 로그인 시도...');
@@ -585,7 +600,6 @@ class UserController extends ChangeNotifier {
 
   /// 저장된 로그인 상태를 삭제합니다.
   /// Returns: 없음
-
   Future<void> clearLoginState() async {
     try {
       final prefs = await SharedPreferences.getInstance();

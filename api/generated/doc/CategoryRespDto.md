@@ -10,12 +10,12 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **int** |  | [optional] 
 **name** | **String** |  | [optional] 
-**nickname** | **String** |  | [optional] 
+**nicknames** | **List<String>** |  | [optional] [default to const []]
 **categoryPhotoKey** | **String** |  | [optional] 
 **isNew** | **bool** |  | [optional] 
 **totalUserNum** | **int** |  | [optional] 
 **isPinned** | **bool** |  | [optional] 
-**usersProfile** | **List<String>** |  | [optional] [default to const []]
+**usersProfileKey** | **List<String>** |  | [optional] [default to const []]
 **pinnedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

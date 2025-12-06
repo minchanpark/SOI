@@ -11,7 +11,6 @@ import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/api_firebase/controllers/category_search_controller.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
-import '../../../api_firebase/controllers/auth_controller.dart';
 import '../../../api_firebase/models/selected_friend_model.dart';
 import '../../../theme/theme.dart';
 import '../../about_friends/friend_list_add_screen.dart';
@@ -53,13 +52,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   final ValueNotifier<bool> _hasTextChangedNotifier = ValueNotifier<bool>(
     false,
   );
-  String _originalText = ''; // 원본 텍스트 저장
+
+  // 원본 텍스트 저장
+  String _originalText = '';
 
   // 선택된 친구들 상태 관리
   List<SelectedFriendModel> _selectedFriends = [];
 
-  // 프로필 이미지 URL 키 및 URL
-  String? _profileImageUrlKey;
+  // 프로필 이미지 URL
   String? _profileImageUrl;
 
   // 탭 화면 목록을 동적으로 생성하는 메서드
@@ -114,33 +114,42 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       listen: false,
     );
     _userController ??= Provider.of<UserController>(context, listen: false);
-    _mediaController ??= Provider.of<MediaController>(
-      context,
-      listen: false,
-    );
+    _mediaController ??= Provider.of<MediaController>(context, listen: false);
 
-    // 프로필 이미지 URL 로드 (한 번만 실행)
+    // 프로필 이미지 URL 로드 (한 번만 실행, 빌드 완료 후)
     if (_profileImageUrl == null) {
-      _loadProfileImageUrl();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadProfileImageUrl();
+      });
     }
   }
 
   /// 프로필 이미지 presigned URL 로드
   Future<void> _loadProfileImageUrl() async {
-    final currentUser = _userController?.currentUser;
-    final imageKey = currentUser?.profileImageUrlKey;
+    // 최적화: currentUser를 직접 사용 (불필요한 getUser API 호출 제거)
+    final user = _userController?.currentUser;
 
-    if (imageKey != null && imageKey.isNotEmpty) {
-      try {
-        final url = await _mediaController?.getPresignedUrl(imageKey);
-        if (mounted && url != null) {
-          setState(() {
-            _profileImageUrl = url;
-          });
-        }
-      } catch (e) {
-        debugPrint('프로필 이미지 URL 로드 실패: $e');
+    if (user == null) {
+      debugPrint('[ArchiveMainScreen] currentUser가 null - 프로필 이미지 로드 건너뜀');
+      return;
+    }
+
+    final profileImageKey = user.profileImageUrlKey;
+
+    if (profileImageKey == null || profileImageKey.isEmpty) {
+      debugPrint('[ArchiveMainScreen] profileImageUrlKey가 비어있음 - 기본 아바타 표시');
+      return;
+    }
+
+    try {
+      final url = await _mediaController?.getPresignedUrl(profileImageKey);
+      if (mounted && url != null) {
+        setState(() {
+          _profileImageUrl = url;
+        });
       }
+    } catch (e) {
+      debugPrint('[ArchiveMainScreen] 프로필 이미지 URL 로드 실패: $e');
     }
   }
 
@@ -224,9 +233,8 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
     // 사용자별 커스텀 이름 업데이트
     try {
-      // 현재 사용자 ID 가져오기
-      final authController = AuthController();
-      final userId = authController.getUserId;
+      // 최적화: 이미 있는 _userController 사용 (새 AuthController 인스턴스 생성 제거)
+      final userId = _userController?.currentUser?.id.toString();
 
       if (userId == null) {
         throw Exception('사용자 정보를 찾을 수 없습니다');
@@ -884,15 +892,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       final categoryId = await categoryController.createCategory(
         requesterId: userId,
         name: categoryName,
-        receiverIds: [],
+        receiverIds: [userId],
 
         // PRIVATE 카테고리인 경우는, false로 설정해야함.
         isPublic: false,
       );
 
       if (categoryId != null) {
-        // 카테고리 목록 새로고침
-        categoryController.invalidateCache();
+        // ✅ 최적화: forceReload: true가 캐시를 무시하므로 invalidateCache 중복 제거
         await categoryController.loadCategories(userId, forceReload: true);
 
         if (mounted) {
@@ -965,7 +972,8 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     _searchController.dispose();
     _pageController.dispose(); // PageController 정리
 
-    PaintingBinding.instance.imageCache.clear();
+    // ✅ 최적화: 전체 이미지 캐시 삭제 제거 (다른 화면의 캐시까지 삭제되어 비효율적)
+    // CachedNetworkImage가 자체적으로 캐시를 관리하므로 수동 삭제 불필요
     super.dispose();
   }
 }
