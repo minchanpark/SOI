@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../api_firebase/controllers/category_controller.dart';
+import '../../../api/controller/category_controller.dart' as api_category;
 import 'category_item_widget.dart';
 
 /// 카테고리 목록을 표시하는 위젯
@@ -11,8 +11,8 @@ import 'category_item_widget.dart';
 /// 새 카테고리 추가 버튼도 함께 제공합니다.
 class CategoryListWidget extends StatefulWidget {
   final ScrollController scrollController;
-  final List<String> selectedCategoryIds;
-  final Function(String categoryId) onCategorySelected;
+  final List<int> selectedCategoryIds;
+  final Function(int categoryId) onCategorySelected;
   final VoidCallback addCategoryPressed;
   final VoidCallback? onConfirmSelection;
 
@@ -52,13 +52,13 @@ class _CategoryListWidgetState extends State<CategoryListWidget>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return Consumer<CategoryController>(
+    return Consumer<api_category.CategoryController>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading) {
           return _buildShimmerGrid();
         }
 
-        final categories = viewModel.userCategoryList;
+        final categories = viewModel.categories;
 
         return Stack(
           alignment: Alignment.bottomCenter,
@@ -104,7 +104,7 @@ class _CategoryListWidgetState extends State<CategoryListWidget>
                     final categoryId = category.id;
 
                     return CategoryItemWidget(
-                      imageUrl: category.categoryPhotoUrl,
+                      imageUrl: category.photoUrl,
                       label: category.name,
                       categoryId: categoryId,
                       selectedCategoryIds: widget.selectedCategoryIds,

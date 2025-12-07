@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -102,6 +103,74 @@ class PostService {
     }
   }
 
+  /// 게시물 생성 후 ID 반환
+  ///
+  /// 게시물을 생성하고 서버에서 반환한 게시물 ID를 그대로 돌려줍니다.
+  Future<int?> createPostAndReturnId({
+    required int id,
+    required String nickName,
+    String? content,
+    List<int> categoryIds = const [],
+    String? postFileKey,
+    String? audioFileKey,
+    String? waveformData,
+    int? duration,
+  }) async {
+    try {
+      final dto = PostCreateReqDto(
+        id: id,
+        nickname: nickName,
+        content: content,
+        categoryId: categoryIds,
+        postFileKey: postFileKey,
+        audioFileKey: audioFileKey,
+        waveformData: waveformData,
+        duration: duration,
+      );
+
+      final response = await _postApi.createWithHttpInfo(dto);
+      if (response.statusCode >= HttpStatus.badRequest) {
+        throw ApiException(response.statusCode, response.body);
+      }
+
+      if (response.bodyBytes.isEmpty) {
+        return null;
+      }
+
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
+      if (decoded is Map<String, dynamic>) {
+        final success = decoded['success'] as bool?;
+        if (success == false) {
+          throw SoiApiException(
+            message: decoded['message'] as String? ?? '[PostService]게시물 생성 실패',
+          );
+        }
+
+        final data = decoded['data'];
+        if (data is int) return data;
+        if (data is num) return data.toInt();
+        if (data is String) {
+          final parsed = int.tryParse(data);
+          if (parsed != null) return parsed;
+        }
+        if (data is Map && data['id'] is int) {
+          return data['id'] as int;
+        }
+      }
+      return null;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(
+        message: '[PostService]게시물 생성 실패: $e',
+        originalException: e,
+      );
+    }
+  }
+
   // ============================================
   // 게시물 조회
   // ============================================
@@ -115,7 +184,7 @@ class PostService {
   /// - [userId]: 사용자 ID
   /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
   ///
-  /// Returns: 게시물 목록 (List<Post>)
+  /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getMainFeedPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
@@ -150,7 +219,7 @@ class PostService {
   /// - [categoryId]: 카테고리 ID
   /// - [userId]: 요청 사용자 ID (권한 확인용)
   ///
-  /// Returns: 게시물 목록 (List<Post>)
+  /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,

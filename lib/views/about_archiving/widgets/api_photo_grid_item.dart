@@ -6,8 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import '../../../api/models/post.dart';
-import '../../../api/controller/user_controller.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
+import '../../../api/controller/media_controller.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
 /// REST API 기반 사진 그리드 아이템 위젯
@@ -42,18 +42,26 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   // 프로필 이미지 캐시
   String? _profileImageUrl;
   bool _isLoadingProfile = true;
-
-  UserController? userController;
+  late final MediaController _mediaController;
 
   @override
   void initState() {
     super.initState();
     _initializeWaveformData();
-    userController = Provider.of<UserController>(context, listen: false);
+    _mediaController = Provider.of<MediaController>(context, listen: false);
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadProfileImage();
+      _loadProfileImage(widget.post.profileImageUrlKey);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ApiPhotoGridItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.profileImageUrlKey !=
+        widget.post.profileImageUrlKey) {
+      _loadProfileImage(widget.post.profileImageUrlKey);
+    }
   }
 
   /// waveformData String을 List<double>로 파싱
@@ -92,26 +100,31 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   }
 
   /// 프로필 이미지 로드
-  Future<void> _loadProfileImage() async {
-    try {
-      userController = Provider.of<UserController>(context, listen: false);
-      final user = await userController!.getUser(
-        userController!.currentUser!.id,
-      );
+  Future<void> _loadProfileImage(String? profileKey) async {
+    if (profileKey == null || profileKey.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _profileImageUrl = null;
+        _isLoadingProfile = false;
+      });
+      return;
+    }
 
-      if (mounted) {
-        setState(() {
-          _profileImageUrl = user?.profileImageUrlKey;
-          _isLoadingProfile = false;
-        });
-      }
+    setState(() => _isLoadingProfile = true);
+    try {
+      final url = await _mediaController.getPresignedUrl(profileKey);
+      if (!mounted) return;
+      setState(() {
+        _profileImageUrl = url;
+        _isLoadingProfile = false;
+      });
     } catch (e) {
       debugPrint('[ApiPhotoGridItem] 프로필 이미지 로드 실패: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingProfile = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _profileImageUrl = null;
+        _isLoadingProfile = false;
+      });
     }
   }
 
@@ -143,7 +156,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
               borderRadius: BorderRadius.circular(8),
               child: widget.post.hasImage
                   ? CachedNetworkImage(
-                      imageUrl: widget.post.imageUrl!,
+                      imageUrl: widget.post.postFileUrl!,
                       memCacheWidth: (175 * 2).round(),
                       maxWidthDiskCache: (175 * 2).round(),
                       fit: BoxFit.cover,
@@ -287,7 +300,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
       listen: false,
     );
 
-    audioController.toggleAudio(widget.post.audioUrl!);
+    audioController.togglePlayPause(widget.post.audioUrl!);
   }
 
   /// 파형 위젯 빌드
@@ -296,14 +309,14 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
       builder: (context, audioController, child) {
         final isCurrentAudio =
             audioController.isPlaying &&
-            audioController.currentPlayingAudioUrl == widget.post.audioUrl;
+            audioController.currentAudioUrl == widget.post.audioUrl;
 
         double progress = 0.0;
         if (isCurrentAudio &&
-            audioController.currentDuration.inMilliseconds > 0) {
+            audioController.totalDuration.inMilliseconds > 0) {
           progress =
               (audioController.currentPosition.inMilliseconds /
-                      audioController.currentDuration.inMilliseconds)
+                      audioController.totalDuration.inMilliseconds)
                   .clamp(0.0, 1.0);
         }
 

@@ -14,7 +14,9 @@ class NotificationRespDto {
   /// Returns a new [NotificationRespDto] instance.
   NotificationRespDto({
     this.text,
-    this.userProfile,
+    this.name,
+    this.nickname,
+    this.userProfileKey,
     this.imageUrl,
     this.relatedId,
   });
@@ -33,7 +35,23 @@ class NotificationRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userProfile;
+  String? name;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? nickname;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userProfileKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -54,7 +72,9 @@ class NotificationRespDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is NotificationRespDto &&
     other.text == text &&
-    other.userProfile == userProfile &&
+    other.name == name &&
+    other.nickname == nickname &&
+    other.userProfileKey == userProfileKey &&
     other.imageUrl == imageUrl &&
     other.relatedId == relatedId;
 
@@ -62,12 +82,14 @@ class NotificationRespDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (text == null ? 0 : text!.hashCode) +
-    (userProfile == null ? 0 : userProfile!.hashCode) +
+    (name == null ? 0 : name!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (userProfileKey == null ? 0 : userProfileKey!.hashCode) +
     (imageUrl == null ? 0 : imageUrl!.hashCode) +
     (relatedId == null ? 0 : relatedId!.hashCode);
 
   @override
-  String toString() => 'NotificationRespDto[text=$text, userProfile=$userProfile, imageUrl=$imageUrl, relatedId=$relatedId]';
+  String toString() => 'NotificationRespDto[text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, relatedId=$relatedId]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -76,10 +98,20 @@ class NotificationRespDto {
     } else {
       json[r'text'] = null;
     }
-    if (this.userProfile != null) {
-      json[r'userProfile'] = this.userProfile;
+    if (this.name != null) {
+      json[r'name'] = this.name;
     } else {
-      json[r'userProfile'] = null;
+      json[r'name'] = null;
+    }
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
+    } else {
+      json[r'nickname'] = null;
+    }
+    if (this.userProfileKey != null) {
+      json[r'userProfileKey'] = this.userProfileKey;
+    } else {
+      json[r'userProfileKey'] = null;
     }
     if (this.imageUrl != null) {
       json[r'imageUrl'] = this.imageUrl;
@@ -114,7 +146,9 @@ class NotificationRespDto {
 
       return NotificationRespDto(
         text: mapValueOfType<String>(json, r'text'),
-        userProfile: mapValueOfType<String>(json, r'userProfile'),
+        name: mapValueOfType<String>(json, r'name'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        userProfileKey: mapValueOfType<String>(json, r'userProfileKey'),
         imageUrl: mapValueOfType<String>(json, r'imageUrl'),
         relatedId: mapValueOfType<int>(json, r'relatedId'),
       );

@@ -12,7 +12,6 @@ class ApiVoiceRecordingWidget extends StatelessWidget {
   final Post post;
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
-  final Map<String, String> userProfileImages;
   final Map<int, List<Comment>> postComments;
   final Function(int) onToggleVoiceComment;
   final Function(int, String?, List<double>?, int?) onVoiceCommentCompleted;
@@ -29,7 +28,6 @@ class ApiVoiceRecordingWidget extends StatelessWidget {
     required this.post,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
-    required this.userProfileImages,
     required this.postComments,
     required this.onToggleVoiceComment,
     required this.onVoiceCommentCompleted,
@@ -57,7 +55,6 @@ class ApiVoiceRecordingWidget extends StatelessWidget {
             ? ApiVoiceCommentActiveWidget(
                 post: post,
                 voiceCommentActiveStates: voiceCommentActiveStates,
-                userProfileImages: userProfileImages,
                 postComments: postComments,
                 onVoiceCommentCompleted: onVoiceCommentCompleted,
                 onVoiceCommentDeleted: onVoiceCommentDeleted,

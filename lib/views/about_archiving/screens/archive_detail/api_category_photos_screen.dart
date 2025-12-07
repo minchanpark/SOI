@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,6 +33,9 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   String? _errorMessage;
   List<Post> _posts = [];
 
+  Timer? _autoRefreshTimer;
+  static const Duration _autoRefreshInterval = Duration(minutes: 30);
+
   PostController? postController;
   UserController? userController;
 
@@ -38,16 +43,18 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   void initState() {
     super.initState();
     // 빌드 완료 후 데이터 로드 (notifyListeners 충돌 방지)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadPosts();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadPosts();
+      _startAutoRefreshTimer();
     });
   }
 
   // Provider가 관리하는 컨트롤러는 dispose하지 않음
-  // @override
-  // void dispose() {
-  //   super.dispose();
-  // }
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
 
   /// 카테고리 내 사진(포스트) 목록 로드
   Future<void> _loadPosts() async {
@@ -98,6 +105,18 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   /// 새로고침
   Future<void> _onRefresh() async {
     await _loadPosts();
+    _startAutoRefreshTimer();
+  }
+
+  void _startAutoRefreshTimer() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) async {
+      if (!mounted) {
+        _autoRefreshTimer?.cancel();
+        return;
+      }
+      await _loadPosts();
+    });
   }
 
   @override

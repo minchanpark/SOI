@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../../api/models/post.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
 /// API 기반 오디오 컨트롤 위젯
@@ -28,10 +28,10 @@ class ApiAudioControlWidget extends StatelessWidget {
       return Consumer<AudioController>(
         builder: (context, audioController, child) {
           final isPlaying =
-              audioController.currentPlayingAudioUrl == post.audioUrl;
-          final progress = isPlaying && audioController.playbackDuration > 0
-              ? (audioController.playbackPosition /
-                        audioController.playbackDuration)
+              audioController.currentAudioUrl == post.audioUrl;
+          final progress = isPlaying && audioController.totalDuration.inMilliseconds > 0
+              ? (audioController.currentPosition.inMilliseconds /
+                        audioController.totalDuration.inMilliseconds)
                     .clamp(0.0, 1.0)
               : 0.0;
 
@@ -44,7 +44,7 @@ class ApiAudioControlWidget extends StatelessWidget {
               if (onPressed != null) {
                 onPressed!();
               } else if (post.hasAudio) {
-                audioController.toggleAudio(post.audioUrl!);
+                audioController.togglePlayPause(post.audioUrl!);
               }
             },
           );

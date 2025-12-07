@@ -27,7 +27,7 @@ class AppNotification {
   factory AppNotification.fromDto(NotificationRespDto dto) {
     return AppNotification(
       text: dto.text,
-      userProfile: dto.userProfile,
+      userProfile: dto.userProfileKey,
       imageUrl: dto.imageUrl,
       relatedId: dto.relatedId,
     );

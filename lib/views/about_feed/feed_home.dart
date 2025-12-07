@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
@@ -9,7 +8,6 @@ import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import 'manager/feed_audio_manager.dart';
 import 'manager/feed_data_manager.dart';
-import 'manager/profile_cache_manager.dart';
 import 'manager/voice_comment_state_manager.dart';
 import 'widgets/feed_page_builder.dart';
 
@@ -23,7 +21,6 @@ class FeedHomeScreen extends StatefulWidget {
 class _FeedHomeScreenState extends State<FeedHomeScreen> {
   FeedDataManager? _feedDataManager;
   VoiceCommentStateManager? _voiceCommentStateManager;
-  ProfileCacheManager? _profileCacheManager;
   FeedAudioManager? _feedAudioManager;
 
   UserController? _userController;
@@ -33,26 +30,16 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     super.initState();
     _feedDataManager = FeedDataManager();
     _voiceCommentStateManager = VoiceCommentStateManager();
-    _profileCacheManager = ProfileCacheManager();
     _feedAudioManager = FeedAudioManager();
 
     _feedDataManager?.setOnStateChanged(() => mounted ? setState(() {}) : null);
     _voiceCommentStateManager?.setOnStateChanged(
       () => mounted ? setState(() {}) : null,
     );
-    _profileCacheManager?.setOnStateChanged(
-      () => mounted ? setState(() {}) : null,
-    );
 
     _feedDataManager?.setOnPostsLoaded((items) {
       if (!mounted) return;
       for (final item in items) {
-        unawaited(
-          _profileCacheManager?.loadUserProfileForPost(
-            item.post.nickName,
-            context,
-          ),
-        );
         unawaited(
           _voiceCommentStateManager?.loadCommentsForPost(item.post.id, context),
         );
@@ -67,7 +54,6 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   Future<void> _loadInitialData() async {
     if (_userController == null) return;
-    await _profileCacheManager?.loadCurrentUserProfile(_userController!);
     await _feedDataManager?.loadUserCategoriesAndPhotos(context);
   }
 
@@ -75,13 +61,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   void dispose() {
     _feedDataManager?.dispose();
     _voiceCommentStateManager?.dispose();
-    _profileCacheManager?.dispose();
     PaintingBinding.instance.imageCache.clear();
     super.dispose();
-  }
-
-  Future<void> refreshUserProfileImage(String userNickname) async {
-    await _profileCacheManager?.refreshUserProfileImage(userNickname, context);
   }
 
   Future<void> _deletePost(int index, FeedPostItem item) async {
@@ -226,9 +207,6 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         hasMoreData: _feedDataManager!.hasMoreData,
         isLoadingMore: _feedDataManager!.isLoadingMore,
         postComments: _voiceCommentStateManager!.postComments,
-        userProfileImages: _profileCacheManager!.userProfileImages,
-        profileLoadingStates: _profileCacheManager!.loadingStates,
-        userNames: _profileCacheManager!.userNames,
         voiceCommentActiveStates:
             _voiceCommentStateManager!.voiceCommentActiveStates,
         voiceCommentSavedStates:

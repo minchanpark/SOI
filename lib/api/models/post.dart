@@ -34,7 +34,8 @@ class Post {
   final int id;
   final String nickName;
   final String? content;
-  final String? imageUrl;
+  final String? postFileUrl;
+  final String? profileImageUrlKey;
   final String? audioUrl;
   final String? waveformData;
   final int? duration;
@@ -45,7 +46,8 @@ class Post {
     required this.id,
     required this.nickName,
     this.content,
-    this.imageUrl,
+    this.postFileUrl,
+    this.profileImageUrlKey,
     this.audioUrl,
     this.waveformData,
     this.duration,
@@ -59,7 +61,8 @@ class Post {
       id: dto.id ?? 0,
       nickName: dto.nickname ?? '',
       content: dto.content,
-      imageUrl: dto.postFileUrl,
+      postFileUrl: dto.postFileUrl,
+      profileImageUrlKey: dto.userProfileImageKey,
       audioUrl: dto.audioFileUrl,
       waveformData: dto.waveformData,
       duration: dto.duration,
@@ -74,7 +77,10 @@ class Post {
       id: json['id'] as int? ?? 0,
       nickName: json['nickName'] as String? ?? '',
       content: json['content'] as String?,
-      imageUrl: json['postFileUrl'] as String?,
+      profileImageUrlKey:
+          (json['profileImageUrlKey'] as String?) ??
+          (json['userProfileImageKey'] as String?),
+      postFileUrl: json['postFileUrl'] as String?,
       audioUrl: json['audioFileKey'] as String?,
       waveformData: json['waveformData'] as String?,
       duration: json['duration'] as int?,
@@ -91,7 +97,8 @@ class Post {
       'id': id,
       'nickName': nickName,
       'content': content,
-      'postFileUrl': imageUrl,
+      'postFileUrl': postFileUrl,
+      'profileImageUrlKey': profileImageUrlKey,
       'audioFileUrl': audioUrl,
       'waveformData': waveformData,
       'duration': duration,
@@ -101,7 +108,7 @@ class Post {
   }
 
   /// 이미지 유무 확인
-  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+  bool get hasImage => postFileUrl != null && postFileUrl!.isNotEmpty;
 
   /// 오디오 유무 확인
   bool get hasAudio => audioUrl != null && audioUrl!.isNotEmpty;
@@ -114,9 +121,10 @@ class Post {
     int? id,
     String? nickName,
     String? content,
-    String? imageUrl,
+    String? postFileUrl,
     String? audioUrl,
     String? waveformData,
+    String? profileImageUrlKey,
     int? duration,
     bool? isActive,
     DateTime? createdAt,
@@ -125,9 +133,10 @@ class Post {
       id: id ?? this.id,
       nickName: nickName ?? this.nickName,
       content: content ?? this.content,
-      imageUrl: imageUrl,
+      postFileUrl: postFileUrl,
       audioUrl: audioUrl,
       waveformData: waveformData ?? this.waveformData,
+      profileImageUrlKey: profileImageUrlKey ?? this.profileImageUrlKey,
       duration: duration ?? this.duration,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

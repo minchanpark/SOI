@@ -92,6 +92,42 @@ class PostController extends ChangeNotifier {
     }
   }
 
+  /// 게시물 생성 후 ID 반환 (UI 전용)
+  Future<int?> createPostAndReturnId({
+    required int id,
+    required String nickName,
+    String? content,
+    List<int> categoryIds = const [],
+    String? postFileKey,
+    String? audioFileKey,
+    String? waveformData,
+    int? duration,
+  }) async {
+    debugPrint("[PostController] createPostAndReturnId 호출됨");
+    try {
+      debugPrint("[PostController] 전달된 nickName: $nickName");
+      debugPrint("[PostController] 전달된 content: $content");
+      debugPrint("[PostController] 전달된 categoryIds: $categoryIds");
+      debugPrint("[PostController] 전달된 postFileKey: $postFileKey");
+      debugPrint("[PostController] 전달된 audioFileKey: $audioFileKey");
+      debugPrint("[PostController] 전달된 waveformData: $waveformData");
+      debugPrint("[PostController] 전달된 duration: $duration");
+      return await _postService.createPostAndReturnId(
+        id: id,
+        nickName: nickName,
+        content: content,
+        categoryIds: categoryIds,
+        postFileKey: postFileKey,
+        audioFileKey: audioFileKey,
+        waveformData: waveformData,
+        duration: duration,
+      );
+    } catch (e) {
+      _setError('[PostController]게시물 생성 실패: $e');
+      return null;
+    }
+  }
+
   // ============================================
   // 게시물 조회
   // ============================================
@@ -105,7 +141,7 @@ class PostController extends ChangeNotifier {
   /// - [userId]: 사용자 ID
   /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
   ///
-  /// Returns: 게시물 목록 (List<Post>)
+  /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getMainFeedPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
@@ -135,7 +171,7 @@ class PostController extends ChangeNotifier {
   /// - [categoryId]: 카테고리 ID
   /// - [userId]: 요청 사용자 ID (권한 확인용)(int)
   ///
-  /// Returns: 게시물 목록 (List<Post>)
+  /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,

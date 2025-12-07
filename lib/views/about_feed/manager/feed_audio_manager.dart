@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../api/models/post.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import '../../../api_firebase/controllers/comment_audio_controller.dart';
 
 class FeedAudioManager {
@@ -13,7 +13,7 @@ class FeedAudioManager {
       await Provider.of<AudioController>(
         context,
         listen: false,
-      ).toggleAudio(audioUrl);
+      ).togglePlayPause(audioUrl);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

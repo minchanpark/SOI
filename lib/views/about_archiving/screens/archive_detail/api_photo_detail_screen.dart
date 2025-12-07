@@ -13,7 +13,7 @@ import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/media_controller.dart';
-import '../../../../api_firebase/controllers/audio_controller.dart';
+import '../../../../api/controller/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../about_share/share_screen.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
@@ -110,136 +110,134 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         backgroundColor: Colors.black,
         resizeToAvoidBottomInset: true,
         appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: Colors.black,
-        title: Text(
-          widget.categoryName,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.sp,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 23.w),
-            child: IconButton(
-              onPressed: () async {
-                final currentPost = widget.posts[_currentIndex];
-                Duration audioDuration = Duration(
-                  seconds: currentPost.durationInSeconds,
-                );
-
-                if (currentPost.hasAudio) {
-                  if (_audioController.currentPlayingAudioUrl ==
-                      currentPost.audioUrl) {
-                    audioDuration = _audioController.currentDuration;
-                  }
-                }
-
-                // waveformData 파싱
-                List<double>? waveformData;
-                if (currentPost.waveformData != null &&
-                    currentPost.waveformData!.isNotEmpty) {
-                  try {
-                    final decoded = jsonDecode(currentPost.waveformData!);
-                    if (decoded is List) {
-                      waveformData = decoded
-                          .map((e) => (e as num).toDouble())
-                          .toList();
-                    }
-                  } catch (_) {}
-                }
-
-                if (!mounted) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ShareScreen(
-                      imageUrl: currentPost.imageUrl ?? '',
-                      waveformData: waveformData,
-                      audioDuration: audioDuration,
-                      categoryName: widget.categoryName,
-                    ),
-                  ),
-                );
-              },
-              icon: Image.asset(
-                'assets/share_icon.png',
-                width: 20.w,
-                height: 20.h,
-              ),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.black,
+          title: Text(
+            widget.categoryName,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20.sp,
+              fontFamily: 'Pretendard',
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.posts.length,
-        scrollDirection: Axis.vertical,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, index) {
-          final post = widget.posts[index];
-          final currentUserId = _userController?.currentUser?.userId;
-          final isOwner = currentUserId == post.nickName;
+          actions: [
+            Padding(
+              padding: EdgeInsets.only(right: 23.w),
+              child: IconButton(
+                onPressed: () async {
+                  final currentPost = widget.posts[_currentIndex];
+                  Duration audioDuration = Duration(
+                    seconds: currentPost.durationInSeconds,
+                  );
 
-          // 사용자 캐시 채우기
-          if (!_userProfileImages.containsKey(post.nickName)) {
-            _userProfileImages[post.nickName] = _userProfileImageUrl;
-            _profileLoadingStates[post.nickName] = _isLoadingProfile;
-            _userNames[post.nickName] = _userName;
-          }
-
-          return ApiPhotoCardWidget(
-            post: post,
-            categoryName: widget.categoryName,
-            categoryId: widget.categoryId,
-            index: index,
-            isOwner: isOwner,
-            isArchive: true,
-            isCategory: true,
-            postComments: _postComments,
-            userProfileImages: _userProfileImages,
-            profileLoadingStates: _profileLoadingStates,
-            userNames: _userNames,
-            voiceCommentActiveStates: _voiceCommentActiveStates,
-            voiceCommentSavedStates: _voiceCommentSavedStates,
-            pendingTextComments: _pendingTextComments,
-            pendingVoiceComments: _pendingVoiceComments,
-            onToggleAudio: _toggleAudio,
-            onToggleVoiceComment: _toggleVoiceComment,
-            onVoiceCommentCompleted:
-                (postId, audioPath, waveformData, duration) {
-                  if (audioPath != null &&
-                      waveformData != null &&
-                      duration != null) {
-                    _onVoiceCommentRecordingFinished(
-                      postId,
-                      audioPath,
-                      waveformData,
-                      duration,
-                    );
+                  if (currentPost.hasAudio) {
+                    if (_audioController.currentAudioUrl ==
+                        currentPost.audioUrl) {
+                      audioDuration = _audioController.totalDuration;
+                    }
                   }
+
+                  // waveformData 파싱
+                  List<double>? waveformData;
+                  if (currentPost.waveformData != null &&
+                      currentPost.waveformData!.isNotEmpty) {
+                    try {
+                      final decoded = jsonDecode(currentPost.waveformData!);
+                      if (decoded is List) {
+                        waveformData = decoded
+                            .map((e) => (e as num).toDouble())
+                            .toList();
+                      }
+                    } catch (_) {}
+                  }
+
+                  if (!mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ShareScreen(
+                        imageUrl: currentPost.postFileUrl ?? '',
+                        waveformData: waveformData,
+                        audioDuration: audioDuration,
+                        categoryName: widget.categoryName,
+                      ),
+                    ),
+                  );
                 },
-            onTextCommentCompleted: (postId, text) async {
-              await _onTextCommentCreated(postId, text);
-            },
-            onVoiceCommentDeleted: (postId) {
-              setState(() {
-                _voiceCommentActiveStates[postId] = false;
-                _pendingVoiceComments.remove(postId);
-              });
-            },
-            onProfileImageDragged: (postId, absolutePosition) {
-              _onProfileImageDragged(postId, absolutePosition);
-            },
-            onSaveRequested: _onSaveRequested,
-            onSaveCompleted: _onSaveCompleted,
-            onDeletePressed: () => _deletePost(post),
-          );
-        },
-      ),
+                icon: Image.asset(
+                  'assets/share_icon.png',
+                  width: 20.w,
+                  height: 20.h,
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: PageView.builder(
+          controller: _pageController,
+          itemCount: widget.posts.length,
+          scrollDirection: Axis.vertical,
+          onPageChanged: _onPageChanged,
+          itemBuilder: (context, index) {
+            final post = widget.posts[index];
+            final currentUserId = _userController?.currentUser?.userId;
+            final isOwner = currentUserId == post.nickName;
+
+            // 사용자 캐시 채우기
+            if (!_userProfileImages.containsKey(post.nickName)) {
+              _userProfileImages[post.nickName] = _userProfileImageUrl;
+              _profileLoadingStates[post.nickName] = _isLoadingProfile;
+              _userNames[post.nickName] = _userName;
+            }
+
+            return ApiPhotoCardWidget(
+              post: post,
+              categoryName: widget.categoryName,
+              categoryId: widget.categoryId,
+              index: index,
+              isOwner: isOwner,
+              isArchive: true,
+              isCategory: true,
+              postComments: _postComments,
+
+              voiceCommentActiveStates: _voiceCommentActiveStates,
+              voiceCommentSavedStates: _voiceCommentSavedStates,
+              pendingTextComments: _pendingTextComments,
+              pendingVoiceComments: _pendingVoiceComments,
+              onToggleAudio: _toggleAudio,
+              onToggleVoiceComment: _toggleVoiceComment,
+              onVoiceCommentCompleted:
+                  (postId, audioPath, waveformData, duration) {
+                    if (audioPath != null &&
+                        waveformData != null &&
+                        duration != null) {
+                      _onVoiceCommentRecordingFinished(
+                        postId,
+                        audioPath,
+                        waveformData,
+                        duration,
+                      );
+                    }
+                  },
+              onTextCommentCompleted: (postId, text) async {
+                await _onTextCommentCreated(postId, text);
+              },
+              onVoiceCommentDeleted: (postId) {
+                setState(() {
+                  _voiceCommentActiveStates[postId] = false;
+                  _pendingVoiceComments.remove(postId);
+                });
+              },
+              onProfileImageDragged: (postId, absolutePosition) {
+                _onProfileImageDragged(postId, absolutePosition);
+              },
+              onSaveRequested: _onSaveRequested,
+              onSaveCompleted: _onSaveCompleted,
+              onDeletePressed: () => _deletePost(post),
+            );
+          },
+        ),
       ),
     );
   }
@@ -345,7 +343,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   void _toggleAudio(Post post) async {
     if (!post.hasAudio) return;
     try {
-      await _audioController.toggleAudio(post.audioUrl!);
+      await _audioController.togglePlayPause(post.audioUrl!);
     } catch (e) {
       debugPrint('오디오 토글 실패: $e');
     }

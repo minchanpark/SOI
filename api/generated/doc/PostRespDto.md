@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **id** | **int** |  | [optional] 
 **nickname** | **String** |  | [optional] 
 **content** | **String** |  | [optional] 
+**userProfileImageKey** | **String** |  | [optional] 
 **postFileUrl** | **String** |  | [optional] 
 **audioFileUrl** | **String** |  | [optional] 
 **waveformData** | **String** |  | [optional] 

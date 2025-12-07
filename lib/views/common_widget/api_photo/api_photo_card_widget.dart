@@ -25,9 +25,6 @@ class ApiPhotoCardWidget extends StatefulWidget {
 
   // 상태 관리 관련
   final Map<int, List<Comment>> postComments;
-  final Map<String, String> userProfileImages;
-  final Map<String, bool> profileLoadingStates;
-  final Map<String, String> userNames;
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
   final Map<int, bool>? pendingTextComments;
@@ -54,9 +51,6 @@ class ApiPhotoCardWidget extends StatefulWidget {
     this.isArchive = false,
     this.isCategory = false,
     required this.postComments,
-    required this.userProfileImages,
-    required this.profileLoadingStates,
-    required this.userNames,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
     this.pendingTextComments,
@@ -112,8 +106,6 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 categoryName: widget.categoryName,
                 isArchive: widget.isArchive,
                 postComments: widget.postComments,
-                userProfileImages: widget.userProfileImages,
-                profileLoadingStates: widget.profileLoadingStates,
                 onProfileImageDragged: widget.onProfileImageDragged,
                 onToggleAudio: widget.onToggleAudio,
                 pendingVoiceComments: widget.pendingVoiceComments,
@@ -123,7 +115,6 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
               // 사용자 정보 위젯 (아이디와 날짜)
               ApiUserInfoWidget(
                 post: widget.post,
-                userNames: widget.userNames,
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
                 onLikePressed: () {
@@ -169,7 +160,6 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
             post: widget.post,
             voiceCommentActiveStates: widget.voiceCommentActiveStates,
             voiceCommentSavedStates: widget.voiceCommentSavedStates,
-            userProfileImages: widget.userProfileImages,
             postComments: widget.postComments,
             onToggleVoiceComment: widget.onToggleVoiceComment,
             onVoiceCommentCompleted: widget.onVoiceCommentCompleted,

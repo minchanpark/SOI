@@ -17,29 +17,27 @@ class CategoryLabelWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.only(top: 16.h),
-        child: IntrinsicWidth(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.only(left: 15.w, right: 15.w, top: 1.h),
-                child: Text(
-                  categoryName,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: "Pretendard",
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+      child: IntrinsicWidth(
+        child: Container(
+          height: (24.3).h,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          alignment: Alignment.center,
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(left: 15.w, right: 15.w, bottom: 2.h),
+              child: Text(
+                categoryName,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: "Pretendard",
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ),

@@ -10,7 +10,6 @@ import '../about_more_menu/more_menu_button_widget.dart';
 /// Post 모델을 사용합니다.
 class ApiUserInfoWidget extends StatelessWidget {
   final Post post;
-  final Map<String, String> userNames;
   final bool isCurrentUserPost;
   final VoidCallback? onDeletePressed;
   final VoidCallback? onLikePressed;
@@ -21,7 +20,6 @@ class ApiUserInfoWidget extends StatelessWidget {
   const ApiUserInfoWidget({
     super.key,
     required this.post,
-    required this.userNames,
     this.isCurrentUserPost = false,
     this.onDeletePressed,
     this.onLikePressed,
@@ -43,7 +41,7 @@ class ApiUserInfoWidget extends StatelessWidget {
                 height: 22.h,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '@${userNames[post.nickName] ?? post.nickName}',
+                  '@${post.nickName}',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,

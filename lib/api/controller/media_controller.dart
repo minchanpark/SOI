@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/media_service.dart';
@@ -234,18 +235,18 @@ class MediaController extends ChangeNotifier {
   // ============================================
 
   void clearError() {
-    _clearError();
-    notifyListeners();
+    if (_errorMessage == null) return;
+    _scheduleNotify(() => _errorMessage = null);
   }
 
   void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
+    if (_isLoading == value) return;
+    _scheduleNotify(() => _isLoading = value);
   }
 
   void _setError(String message) {
-    _errorMessage = message;
-    notifyListeners();
+    if (_errorMessage == message) return;
+    _scheduleNotify(() => _errorMessage = message);
   }
 
   void _clearError() {
@@ -253,7 +254,23 @@ class MediaController extends ChangeNotifier {
   }
 
   void _setUploadProgress(double? value) {
-    _uploadProgress = value;
-    notifyListeners();
+    if (_uploadProgress == value) return;
+    _scheduleNotify(() => _uploadProgress = value);
+  }
+
+  void _scheduleNotify(VoidCallback updater) {
+    void runUpdate() {
+      updater();
+      notifyListeners();
+    }
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks) {
+      runUpdate();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        runUpdate();
+      });
+    }
   }
 }

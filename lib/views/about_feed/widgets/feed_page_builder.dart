@@ -9,9 +9,6 @@ class FeedPageBuilder extends StatelessWidget {
   final bool hasMoreData;
   final bool isLoadingMore;
   final Map<int, List<Comment>> postComments;
-  final Map<String, String> userProfileImages;
-  final Map<String, bool> profileLoadingStates;
-  final Map<String, String> userNames;
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
   final Map<int, bool> pendingTextComments;
@@ -36,9 +33,6 @@ class FeedPageBuilder extends StatelessWidget {
     required this.hasMoreData,
     required this.isLoadingMore,
     required this.postComments,
-    required this.userProfileImages,
-    required this.profileLoadingStates,
-    required this.userNames,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
     required this.pendingTextComments,
@@ -86,9 +80,6 @@ class FeedPageBuilder extends StatelessWidget {
           index: index,
           isOwner: isOwner,
           postComments: postComments,
-          userProfileImages: userProfileImages,
-          profileLoadingStates: profileLoadingStates,
-          userNames: userNames,
           voiceCommentActiveStates: voiceCommentActiveStates,
           voiceCommentSavedStates: voiceCommentSavedStates,
           pendingTextComments: pendingTextComments,

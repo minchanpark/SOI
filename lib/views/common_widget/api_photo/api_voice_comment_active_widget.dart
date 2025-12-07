@@ -12,7 +12,6 @@ import '../about_voice_comment/voice_comment_widget.dart';
 class ApiVoiceCommentActiveWidget extends StatelessWidget {
   final Post post;
   final Map<int, bool> voiceCommentActiveStates;
-  final Map<String, String> userProfileImages;
   final Map<int, List<Comment>> postComments;
   final Function(int, String?, List<double>?, int?) onVoiceCommentCompleted;
   final Function(int) onVoiceCommentDeleted;
@@ -25,7 +24,6 @@ class ApiVoiceCommentActiveWidget extends StatelessWidget {
     super.key,
     required this.post,
     required this.voiceCommentActiveStates,
-    required this.userProfileImages,
     required this.postComments,
     required this.onVoiceCommentCompleted,
     required this.onVoiceCommentDeleted,
@@ -42,11 +40,8 @@ class ApiVoiceCommentActiveWidget extends StatelessWidget {
       alignment: Alignment.center,
       child: Consumer<UserController>(
         builder: (context, userController, child) {
-          final currentUserId = userController.currentUser?.userId;
-
-          final currentUserProfileImage = currentUserId != null
-              ? userProfileImages[currentUserId]
-              : null;
+          final currentUserProfileImage =
+              userController.currentUser?.profileImageUrlKey;
 
           // 실시간 댓글 데이터로 저장 상태 확인
           final hasRealTimeComment = postComments[post.id]?.isNotEmpty ?? false;

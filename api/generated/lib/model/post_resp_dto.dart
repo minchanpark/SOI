@@ -16,6 +16,7 @@ class PostRespDto {
     this.id,
     this.nickname,
     this.content,
+    this.userProfileImageKey,
     this.postFileUrl,
     this.audioFileUrl,
     this.waveformData,
@@ -47,6 +48,14 @@ class PostRespDto {
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
   String? content;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userProfileImageKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -101,6 +110,7 @@ class PostRespDto {
     other.id == id &&
     other.nickname == nickname &&
     other.content == content &&
+    other.userProfileImageKey == userProfileImageKey &&
     other.postFileUrl == postFileUrl &&
     other.audioFileUrl == audioFileUrl &&
     other.waveformData == waveformData &&
@@ -114,6 +124,7 @@ class PostRespDto {
     (id == null ? 0 : id!.hashCode) +
     (nickname == null ? 0 : nickname!.hashCode) +
     (content == null ? 0 : content!.hashCode) +
+    (userProfileImageKey == null ? 0 : userProfileImageKey!.hashCode) +
     (postFileUrl == null ? 0 : postFileUrl!.hashCode) +
     (audioFileUrl == null ? 0 : audioFileUrl!.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
@@ -122,7 +133,7 @@ class PostRespDto {
     (createdAt == null ? 0 : createdAt!.hashCode);
 
   @override
-  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, postFileUrl=$postFileUrl, audioFileUrl=$audioFileUrl, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
+  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, postFileUrl=$postFileUrl, audioFileUrl=$audioFileUrl, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -140,6 +151,11 @@ class PostRespDto {
       json[r'content'] = this.content;
     } else {
       json[r'content'] = null;
+    }
+    if (this.userProfileImageKey != null) {
+      json[r'userProfileImageKey'] = this.userProfileImageKey;
+    } else {
+      json[r'userProfileImageKey'] = null;
     }
     if (this.postFileUrl != null) {
       json[r'postFileUrl'] = this.postFileUrl;
@@ -196,6 +212,7 @@ class PostRespDto {
         id: mapValueOfType<int>(json, r'id'),
         nickname: mapValueOfType<String>(json, r'nickname'),
         content: mapValueOfType<String>(json, r'content'),
+        userProfileImageKey: mapValueOfType<String>(json, r'userProfileImageKey'),
         postFileUrl: mapValueOfType<String>(json, r'postFileUrl'),
         audioFileUrl: mapValueOfType<String>(json, r'audioFileUrl'),
         waveformData: mapValueOfType<String>(json, r'waveformData'),

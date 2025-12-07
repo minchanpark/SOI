@@ -11,8 +11,8 @@ class CategoryItemWidget extends StatefulWidget {
   final String? image;
   final String label;
   final VoidCallback onTap;
-  final String? categoryId;
-  final List<String>? selectedCategoryIds;
+  final int? categoryId;
+  final List<int>? selectedCategoryIds;
 
   const CategoryItemWidget({
     super.key,

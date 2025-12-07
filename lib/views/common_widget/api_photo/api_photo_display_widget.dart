@@ -9,10 +9,8 @@ import 'package:shimmer/shimmer.dart';
 import '../../../api/controller/category_controller.dart' as api_category;
 import '../../../api/controller/comment_controller.dart';
 import '../../../api/controller/audio_controller.dart';
-import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/models/post.dart';
-import '../../../api/models/user.dart' as api_user;
 import '../../../utils/position_converter.dart';
 import '../../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
 import '../../common_widget/abput_photo/category_label_widget.dart';
@@ -20,6 +18,7 @@ import '../../common_widget/abput_photo/first_line_ellipsis_text.dart';
 import 'api_audio_control_widget.dart';
 import 'api_voice_comment_list_sheet.dart';
 import 'pending_api_voice_comment.dart';
+import 'package:soi/api/controller/media_controller.dart';
 
 /// Firebase 버전의 PhotoDisplayWidget 디자인을 API 버전에서도 동일하게 유지
 class ApiPhotoDisplayWidget extends StatefulWidget {
@@ -28,8 +27,6 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final String categoryName;
   final bool isArchive;
   final Map<int, List<Comment>> postComments;
-  final Map<String, String> userProfileImages;
-  final Map<String, bool> profileLoadingStates;
   final Function(int, Offset) onProfileImageDragged;
   final Function(Post) onToggleAudio;
   final Map<int, PendingApiVoiceComment> pendingVoiceComments;
@@ -41,8 +38,6 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
     required this.categoryName,
     this.isArchive = false,
     required this.postComments,
-    required this.userProfileImages,
-    required this.profileLoadingStates,
     required this.onProfileImageDragged,
     required this.onToggleAudio,
     this.pendingVoiceComments = const {},
@@ -65,11 +60,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   bool _isShowingComments = false;
   bool _autoOpenedOnce = false;
   bool _isCaptionExpanded = false;
-  String? _uploaderProfileUrl;
-  bool _isUploaderLoading = false;
+  String? _uploaderProfileImageUrl;
+  bool _isProfileLoading = false;
+  late final MediaController _mediaController;
 
-  bool get _hasComments =>
-      (widget.postComments[widget.post.id] ?? const <Comment>[]).isNotEmpty;
+  List<Comment> get _postComments =>
+      widget.postComments[widget.post.id] ?? const <Comment>[];
+
+  bool get _hasComments => _postComments.isNotEmpty;
 
   bool get _hasCaption => widget.post.content?.isNotEmpty ?? false;
 
@@ -77,11 +75,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   void initState() {
     super.initState();
     _isShowingComments = _hasComments;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _resolveUploaderProfile();
-      }
-    });
+    _mediaController = Provider.of<MediaController>(context, listen: false);
+    _scheduleProfileLoad(widget.post.profileImageUrlKey);
   }
 
   @override
@@ -93,139 +88,65 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         _autoOpenedOnce = true;
       });
     }
-    final previousProfile = oldWidget.userProfileImages[widget.post.nickName];
-    final currentProfile = widget.userProfileImages[widget.post.nickName];
-    if (oldWidget.post.nickName != widget.post.nickName ||
-        previousProfile != currentProfile) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _resolveUploaderProfile();
-        }
+    if (oldWidget.post.profileImageUrlKey != widget.post.profileImageUrlKey) {
+      _scheduleProfileLoad(widget.post.profileImageUrlKey);
+    }
+  }
+
+  List<double>? _parseWaveformData(String? waveformString) {
+    if (waveformString == null || waveformString.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(waveformString);
+      if (decoded is List) {
+        return decoded.map((e) => (e as num).toDouble()).toList();
+      }
+    } catch (_) {
+      // 문자열 파싱이 실패해도 앱이 죽지 않도록 무시
+    }
+    return null;
+  }
+
+  Future<void> _loadProfileImage(String? key) async {
+    if (key == null || key.isEmpty) {
+      setState(() {
+        _uploaderProfileImageUrl = null;
+        _isProfileLoading = false;
+      });
+      return;
+    }
+
+    setState(() => _isProfileLoading = true);
+    try {
+      final url = await _mediaController.getPresignedUrl(key);
+      if (!mounted) return;
+      setState(() {
+        _uploaderProfileImageUrl = url;
+        _isProfileLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _uploaderProfileImageUrl = null;
+        _isProfileLoading = false;
       });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final waveformData = _parseWaveformData(widget.post.waveformData);
-    return Center(
-      child: SizedBox(
-        width: _imageWidth.w,
-        height: _imageHeight.h,
-        child: Builder(
-          builder: (builderContext) {
-            return DragTarget<String>(
-              onWillAcceptWithDetails: (details) => details.data.isNotEmpty,
-              onAcceptWithDetails: (details) {
-                final renderBox =
-                    builderContext.findRenderObject() as RenderBox?;
-                if (renderBox == null) return;
-                final localPosition = renderBox.globalToLocal(details.offset);
-                final adjusted = Offset(
-                  localPosition.dx + 32,
-                  localPosition.dy + 32,
-                );
-                widget.onProfileImageDragged(widget.post.id, adjusted);
-              },
-              builder: (context, candidateData, rejectedData) {
-                return GestureDetector(
-                  onTap: () => _handleBaseTap(),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: _buildMediaContent(),
-                      ),
-                      if (_isShowingComments && !_showActionOverlay)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.35),
-                            ),
-                          ),
-                        ),
-                      if (_showActionOverlay)
-                        Positioned.fill(
-                          child: GestureDetector(
-                            onTap: _dismissOverlay,
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.45),
-                            ),
-                          ),
-                        ),
-                      if (!widget.isArchive)
-                        Positioned(
-                          top: 12.h,
-                          left: 12.w,
-                          child: CategoryLabelWidget(
-                            categoryName: widget.categoryName,
-                            onTap: _navigateToCategory,
-                          ),
-                        ),
-                      if (widget.post.hasAudio)
-                        Positioned(
-                          left: 18.w,
-                          right: 18.w,
-                          bottom: _hasCaption ? 82.h : 22.h,
-                          child: ApiAudioControlWidget(
-                            post: widget.post,
-                            waveformData: waveformData,
-                            onPressed: () => widget.onToggleAudio(widget.post),
-                          ),
-                        ),
-                      if (_hasComments)
-                        Positioned(
-                          bottom: 18.h,
-                          right: 18.w,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isShowingComments = !_isShowingComments;
-                              });
-                            },
-                            child: Container(
-                              width: 42.w,
-                              height: 42.w,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.55),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _isShowingComments
-                                    ? Icons.close
-                                    : Icons.chat_bubble_outline,
-                                color: Colors.white,
-                                size: 20.w,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (_hasCaption && !widget.post.hasAudio)
-                        Positioned(
-                          left: 16.w,
-                          right: 16.w,
-                          bottom: 18.h,
-                          child: _buildCaptionOverlay(),
-                        ),
-                      ..._buildCommentAvatars(),
-                      if (_isShowingComments) ..._buildPendingWidgets(),
-                      if (_showActionOverlay) ..._buildDeletePopup(),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
+  void _scheduleProfileLoad(String? key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadProfileImage(key);
+      }
+    });
   }
 
+  /// 미디어(이미지 또는 비디오) 콘텐츠 빌드
   Widget _buildMediaContent() {
     if (widget.post.hasImage) {
       return CachedNetworkImage(
-        imageUrl: widget.post.imageUrl!,
+        imageUrl: widget.post.postFileUrl!,
         width: _imageWidth.w,
         height: _imageHeight.h,
         fit: BoxFit.cover,
@@ -265,10 +186,12 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   List<Widget> _buildCommentAvatars() {
     if (!_isShowingComments) return const [];
 
-    final comments = widget.postComments[widget.post.id] ?? const <Comment>[];
-    final filteredComments = comments
-        .where((c) => c.type == CommentType.text || c.type == CommentType.audio)
-        .where((c) => c.hasLocation)
+    final filteredComments = _postComments
+        .where(
+          (c) =>
+              (c.type == CommentType.text || c.type == CommentType.audio) &&
+              c.hasLocation,
+        )
         .toList();
 
     final actualSize = Size(_imageWidth.w, _imageHeight.h);
@@ -316,12 +239,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     });
   }
 
-  List<Widget> _buildPendingWidgets() {
-    final marker = _buildPendingMarker();
-    if (marker == null) return const [];
-    return [marker];
-  }
-
+  /// 업로드 중인 음성 댓글 마커 빌드
   Widget? _buildPendingMarker() {
     final pending = widget.pendingVoiceComments[widget.post.id];
     if (pending == null || pending.relativePosition == null) {
@@ -350,12 +268,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     );
   }
 
-  List<Widget> _buildDeletePopup() {
-    final popup = _buildDeleteActionPopup();
-    if (popup == null) return const [];
-    return [popup];
-  }
-
+  /// 댓글 삭제 액션 팝업 빌드
   Widget? _buildDeleteActionPopup() {
     if (!_showActionOverlay ||
         _selectedCommentPosition == null ||
@@ -412,12 +325,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   }
 
   Widget _buildCaptionOverlay() {
-    final userKey = widget.post.nickName;
-    final profileUrl = widget.userProfileImages[userKey] ?? _uploaderProfileUrl;
-    final isLoading =
-        widget.profileLoadingStates[userKey] ??
-        (_isUploaderLoading && profileUrl == null);
-
     final captionStyle = TextStyle(
       color: Colors.white,
       fontSize: 14.sp,
@@ -427,9 +334,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _isCaptionExpanded = !_isCaptionExpanded;
-        });
+        setState(() => _isCaptionExpanded = !_isCaptionExpanded);
       },
       child: Container(
         width: 278.w,
@@ -451,15 +356,21 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
               width: 32.w,
               height: 32.w,
               decoration: const BoxDecoration(shape: BoxShape.circle),
-              child: ClipOval(
-                child: isLoading
-                    ? Shimmer.fromColors(
-                        baseColor: Colors.grey[800]!,
-                        highlightColor: Colors.grey[600]!,
-                        child: Container(color: Colors.grey[700]),
-                      )
-                    : _buildCircleAvatar(imageUrl: profileUrl, size: 32.w),
-              ),
+              child: _isProfileLoading
+                  ? Shimmer.fromColors(
+                      baseColor: Colors.grey[800]!,
+                      highlightColor: Colors.grey[600]!,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFF2A2A2A),
+                        ),
+                      ),
+                    )
+                  : _buildCircleAvatar(
+                      imageUrl: _uploaderProfileImageUrl,
+                      size: 32.w,
+                    ),
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -575,17 +486,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         : avatarContent;
   }
 
-  List<double>? _parseWaveformData(String? waveformString) {
-    if (waveformString == null || waveformString.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(waveformString);
-      if (decoded is List) {
-        return decoded.map((e) => (e as num).toDouble()).toList();
-      }
-    } catch (_) {}
-    return null;
-  }
-
   void _handleBaseTap() {
     if (_showActionOverlay) {
       _dismissOverlay();
@@ -608,7 +508,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   }
 
   void _openCommentSheet(String selectedKey) {
-    final comments = widget.postComments[widget.post.id] ?? const <Comment>[];
+    final comments = _postComments;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -646,6 +546,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     });
   }
 
+  /// 댓글 삭제 처리
   Future<void> _deleteSelectedComment() async {
     final targetId = _selectedCommentId;
     if (targetId == null) return;
@@ -668,6 +569,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     }
   }
 
+  /// 카테고리 화면으로 네비게이트
   void _navigateToCategory() {
     final controller = context.read<api_category.CategoryController?>();
     final category = controller?.getCategoryById(widget.categoryId);
@@ -691,45 +593,123 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     );
   }
 
-  void _resolveUploaderProfile() {
-    final cached = widget.userProfileImages[widget.post.nickName];
-    if (cached != null) {
-      setState(() {
-        _uploaderProfileUrl = cached;
-        _isUploaderLoading = false;
-      });
-      return;
-    }
+  @override
+  Widget build(BuildContext context) {
+    final waveformData = _parseWaveformData(widget.post.waveformData);
+    final pendingMarker = _isShowingComments ? _buildPendingMarker() : null;
+    final deletePopup = _showActionOverlay ? _buildDeleteActionPopup() : null;
 
-    final userController = context.read<UserController?>();
-    if (userController == null) return;
-
-    setState(() {
-      _isUploaderLoading = true;
-    });
-
-    Future<api_user.User?> fetchProfile() async {
-      if (widget.post.nickName.isEmpty) return null;
-      final numericId = int.tryParse(widget.post.nickName);
-      if (numericId != null) {
-        return userController.getUser(numericId);
-      }
-      return userController.getUserByNickname(widget.post.nickName);
-    }
-
-    fetchProfile()
-        .then((user) {
-          if (!mounted) return;
-          setState(() {
-            _uploaderProfileUrl = user?.profileImageUrlKey;
-            _isUploaderLoading = false;
-          });
-        })
-        .catchError((_) {
-          if (!mounted) return;
-          setState(() {
-            _isUploaderLoading = false;
-          });
-        });
+    return Center(
+      child: SizedBox(
+        width: _imageWidth.w,
+        height: _imageHeight.h,
+        child: Builder(
+          builder: (builderContext) {
+            return DragTarget<String>(
+              onWillAcceptWithDetails: (details) => details.data.isNotEmpty,
+              onAcceptWithDetails: (details) {
+                final renderBox =
+                    builderContext.findRenderObject() as RenderBox?;
+                if (renderBox == null) return;
+                final localPosition = renderBox.globalToLocal(details.offset);
+                final adjusted = Offset(
+                  localPosition.dx + 32,
+                  localPosition.dy + 32,
+                );
+                widget.onProfileImageDragged(widget.post.id, adjusted);
+              },
+              builder: (context, candidateData, rejectedData) {
+                return GestureDetector(
+                  onTap: _handleBaseTap,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: _buildMediaContent(),
+                      ),
+                      if (_isShowingComments && !_showActionOverlay)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.35),
+                            ),
+                          ),
+                        ),
+                      if (_showActionOverlay)
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: _dismissOverlay,
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.45),
+                            ),
+                          ),
+                        ),
+                      if (!widget.isArchive)
+                        Positioned(
+                          top: 11.h,
+                          child: CategoryLabelWidget(
+                            categoryName: widget.categoryName,
+                            onTap: _navigateToCategory,
+                          ),
+                        ),
+                      if (widget.post.hasAudio)
+                        Positioned(
+                          left: 18.w,
+                          right: 18.w,
+                          bottom: _hasCaption ? 82.h : 22.h,
+                          child: ApiAudioControlWidget(
+                            post: widget.post,
+                            waveformData: waveformData,
+                            onPressed: () => widget.onToggleAudio(widget.post),
+                          ),
+                        ),
+                      if (_hasComments)
+                        Positioned(
+                          bottom: 18.h,
+                          right: 18.w,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isShowingComments = !_isShowingComments;
+                              });
+                            },
+                            child: Container(
+                              width: 42.w,
+                              height: 42.w,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _isShowingComments
+                                    ? Icons.close
+                                    : Icons.chat_bubble_outline,
+                                color: Colors.white,
+                                size: 20.w,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_hasCaption && !widget.post.hasAudio)
+                        Positioned(
+                          left: 16.w,
+                          right: 16.w,
+                          bottom: 18.h,
+                          child: _buildCaptionOverlay(),
+                        ),
+                      ..._buildCommentAvatars(),
+                      if (pendingMarker != null) pendingMarker,
+                      if (deletePopup != null) deletePopup,
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 }

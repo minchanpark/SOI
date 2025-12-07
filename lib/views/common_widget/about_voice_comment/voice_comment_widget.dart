@@ -4,7 +4,7 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import '../../../api_firebase/controllers/auth_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
