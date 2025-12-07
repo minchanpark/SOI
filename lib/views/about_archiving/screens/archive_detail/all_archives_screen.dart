@@ -8,6 +8,7 @@ import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../theme/theme.dart';
 import '../../widgets/archive_card_widget/api_archive_card_widget.dart';
+import '../../../../api/controller/category_search_controller.dart';
 
 // 전체 아카이브 화면
 // 모든 사용자의 아카이브 목록을 표시
@@ -42,9 +43,6 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
 
   /// 초기 로드 상태
   bool _isInitialLoad = true;
-
-  // 로컬 검색어
-  final String _searchQuery = '';
 
   @override
   void initState() {
@@ -115,6 +113,13 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
       body: Consumer<CategoryController>(
         builder: (context, categoryController, child) {
           final categories = categoryController.allCategories;
+          final searchController = context.watch<CategorySearchController>();
+          final isSearchActive =
+              searchController.searchQuery.isNotEmpty &&
+              searchController.activeFilter == CategoryFilter.all;
+          final displayCategories = isSearchActive
+              ? searchController.filteredCategories
+              : categories;
 
           // 로딩 중
           if (categoryController.isLoading && categories.isEmpty) {
@@ -145,18 +150,9 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
             );
           }
 
-          // 검색어 필터링 (로컬)
-          final displayCategories = _searchQuery.isNotEmpty
-              ? categories.where((category) {
-                  return category.name.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  );
-                }).toList()
-              : categories;
-
           // 카테고리가 없는 경우
           if (displayCategories.isEmpty) {
-            if (_searchQuery.isNotEmpty) {
+            if (isSearchActive) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 40.h),
@@ -187,17 +183,23 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
             color: Colors.white,
             backgroundColor: const Color(0xFF1C1C1C),
             child: widget.layoutMode == ArchiveLayoutMode.grid
-                ? _buildGridView(displayCategories)
-                : _buildListView(displayCategories),
+                ? _buildGridView(
+                    displayCategories,
+                    searchController.searchQuery,
+                  )
+                : _buildListView(
+                    displayCategories,
+                    searchController.searchQuery,
+                  ),
           );
         },
       ),
     );
   }
 
-  Widget _buildGridView(List<Category> categories) {
+  Widget _buildGridView(List<Category> categories, String searchQuery) {
     return GridView.builder(
-      key: ValueKey('grid_${categories.length}_$_searchQuery'),
+      key: ValueKey('grid_${categories.length}_$searchQuery'),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -233,9 +235,9 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     );
   }
 
-  Widget _buildListView(List<Category> categories) {
+  Widget _buildListView(List<Category> categories, String searchQuery) {
     return ListView.separated(
-      key: ValueKey('list_${categories.length}_$_searchQuery'),
+      key: ValueKey('list_${categories.length}_$searchQuery'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
       itemBuilder: (context, index) {

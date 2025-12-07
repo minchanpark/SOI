@@ -25,7 +25,8 @@ import 'api_firebase/controllers/auth_controller.dart';
 import 'api_firebase/controllers/category_controller.dart';
 import 'api_firebase/controllers/category_cover_photo_controller.dart';
 import 'api_firebase/controllers/category_member_controller.dart';
-import 'api_firebase/controllers/category_search_controller.dart';
+import 'package:soi/api/controller/category_search_controller.dart'
+    as api_category_search;
 import 'api_firebase/controllers/comment_audio_controller.dart';
 import 'api_firebase/controllers/comment_record_controller.dart';
 import 'api_firebase/controllers/contact_controller.dart';
@@ -185,7 +186,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EmojiReactionController()),
         ChangeNotifierProvider(create: (_) => CategoryMemberController()),
         ChangeNotifierProvider(create: (_) => CategoryCoverPhotoController()),
-        ChangeNotifierProvider(create: (_) => CategorySearchController()),
         ChangeNotifierProvider(
           create: (_) => FriendRequestController(
             friendRequestService: FriendRequestService(
@@ -225,6 +225,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<UserController>(create: (_) => UserController()),
         ChangeNotifierProvider<api_category.CategoryController>(
           create: (_) => api_category.CategoryController(),
+        ),
+        ChangeNotifierProvider<api_category_search.CategorySearchController>(
+          create: (_) => api_category_search.CategorySearchController(),
         ),
         ChangeNotifierProvider<PostController>(create: (_) => PostController()),
         ChangeNotifierProvider<api_friend.FriendController>(

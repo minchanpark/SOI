@@ -8,6 +8,7 @@ import '../../../../api/models/category.dart';
 import '../../../../theme/theme.dart';
 import '../../models/archive_layout_model.dart';
 import '../../widgets/archive_card_widget/api_archive_card_widget.dart';
+import '../../../../api/controller/category_search_controller.dart';
 
 // 공유 아카이브 화면 (REST API 버전)
 // 다른 사용자와 공유된 카테고리만 표시
@@ -41,9 +42,6 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
 
   /// 초기 로드 상태
   bool _isInitialLoad = true;
-
-  // 로컬 검색어
-  final String _searchQuery = '';
 
   @override
   void initState() {
@@ -133,6 +131,13 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
       body: Consumer<CategoryController>(
         builder: (context, categoryController, child) {
           final categories = categoryController.publicCategories;
+          final searchController = context.watch<CategorySearchController>();
+          final isSearchActive =
+              searchController.searchQuery.isNotEmpty &&
+              searchController.activeFilter == CategoryFilter.public_;
+          final displayCategories = isSearchActive
+              ? searchController.filteredCategories
+              : categories;
 
           // 로딩 중
           if (categoryController.isLoading && categories.isEmpty) {
@@ -163,18 +168,9 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
             );
           }
 
-          // 검색어 필터링 (로컬)
-          final displayCategories = _searchQuery.isNotEmpty
-              ? categories.where((category) {
-                  return category.name.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  );
-                }).toList()
-              : categories;
-
           // 카테고리가 없는 경우
           if (displayCategories.isEmpty) {
-            if (_searchQuery.isNotEmpty) {
+            if (isSearchActive) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 40.h),
@@ -205,17 +201,23 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
             color: Colors.white,
             backgroundColor: const Color(0xFF1C1C1C),
             child: widget.layoutMode == ArchiveLayoutMode.grid
-                ? _buildGridView(displayCategories)
-                : _buildListView(displayCategories),
+                ? _buildGridView(
+                    displayCategories,
+                    searchController.searchQuery,
+                  )
+                : _buildListView(
+                    displayCategories,
+                    searchController.searchQuery,
+                  ),
           );
         },
       ),
     );
   }
 
-  Widget _buildGridView(List<Category> categories) {
+  Widget _buildGridView(List<Category> categories, String searchQuery) {
     return GridView.builder(
-      key: ValueKey('shared_grid_${categories.length}_$_searchQuery'),
+      key: ValueKey('shared_grid_${categories.length}_$searchQuery'),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -251,9 +253,9 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
     );
   }
 
-  Widget _buildListView(List<Category> categories) {
+  Widget _buildListView(List<Category> categories, String searchQuery) {
     return ListView.separated(
-      key: ValueKey('shared_list_${categories.length}_$_searchQuery'),
+      key: ValueKey('shared_list_${categories.length}_$searchQuery'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
       itemBuilder: (context, index) {

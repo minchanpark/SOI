@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../api/controller/user_controller.dart';
 import '../../api/controller/media_controller.dart';
+import '../../api/controller/user_controller.dart';
 import '../../api/models/user.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 
@@ -26,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 로딩 상태
   bool _isLoading = true;
+  bool _isUploadingProfile = false;
 
   // 알림 설정 상태
   bool _isNotificationEnabled = false;
@@ -92,26 +96,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// 프로필 이미지 업데이트 메서드
   Future<void> _updateProfileImage() async {
-    final authController = context.read<AuthController>();
-
     try {
-      final success = await authController.updateProfileImage();
+      final picker = ImagePicker();
+      final userController = context.read<UserController>();
+      final mediaController = context.read<MediaController>();
+      final current = userController.currentUser;
 
-      if (success && mounted) {
-        // 프로필 이미지 업데이트 성공 시 새로운 이미지 URL 가져오기
-        final userId = authController.getUserId;
-        if (userId != null) {
-          final newProfileImageUrl = await authController
-              .getUserProfileImageUrlWithCache(userId);
-
-          setState(() {
-            _profileImageUrl = newProfileImageUrl;
-          });
-        }
+      if (current == null) {
+        _showProfileSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
+        return;
       }
+
+      final XFile? pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      );
+
+      if (pickedImage == null) return;
+
+      final file = File(pickedImage.path);
+      if (!await file.exists()) {
+        _showProfileSnackBar('선택한 이미지를 찾을 수 없습니다.');
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isUploadingProfile = true;
+      });
+
+      final multipartFile = await mediaController.fileToMultipart(file);
+      final profileKey = await mediaController.uploadProfileImage(
+        file: multipartFile,
+        userId: current.id,
+      );
+
+      if (profileKey == null) {
+        _showProfileSnackBar('프로필 이미지 업로드에 실패했습니다.');
+        return;
+      }
+
+      final updatedUser = await userController.updateprofileImageUrl(
+        userId: current.id,
+        profileImageKey: profileKey,
+      );
+
+      if (updatedUser != null) {
+        userController.setCurrentUser(updatedUser);
+      }
+
+      await userController.refreshCurrentUser();
+
+      final newProfileImageUrl = await mediaController.getPresignedUrl(
+        profileKey,
+      );
+
+      if (!mounted) return;
+
+      final refreshedUser = userController.currentUser;
+      final resolvedProfileKey = refreshedUser?.profileImageUrlKey ?? profileKey;
+
+      setState(() {
+        _profileImageUrlKey = resolvedProfileKey;
+        _profileImageUrl = newProfileImageUrl;
+        _userInfo = refreshedUser ?? updatedUser ?? _userInfo;
+      });
+
+      _showProfileSnackBar('프로필 이미지가 변경되었습니다.');
     } catch (e) {
+      debugPrint('프로필 이미지 업데이트 오류: $e');
       if (mounted) {
-        debugPrint('프로필 이미지 업데이트 오류: $e');
+        _showProfileSnackBar('프로필 이미지를 변경할 수 없습니다.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingProfile = false;
+        });
       }
     }
   }
@@ -482,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                     // 업로딩 중일 때 로딩 표시
-                    if (context.watch<AuthController>().isUploading)
+                    if (_isUploadingProfile)
                       Container(
                         width: 96,
                         height: 96,
@@ -813,6 +876,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: const Color(0xff000000),
           ),
         ),
+      ),
+    );
+}
+
+  void _showProfileSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF5A5A5A),
       ),
     );
   }

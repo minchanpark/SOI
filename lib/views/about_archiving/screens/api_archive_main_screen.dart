@@ -9,7 +9,8 @@ import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/category_controller.dart';
 import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
-import 'package:soi/api_firebase/controllers/category_search_controller.dart';
+import 'package:soi/api/controller/category_search_controller.dart';
+import 'package:soi/api/models/category.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../api_firebase/models/selected_friend_model.dart';
 import '../../../theme/theme.dart';
@@ -40,10 +41,18 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   Timer? _searchDebounceTimer;
 
   // Provider 참조를 미리 저장 (dispose에서 안전하게 사용하기 위함)
-  CategorySearchController? _categoryController;
+  CategorySearchController? _categorySearchController;
+  CategoryController? _categoryController;
+  VoidCallback? _categoryDataListener;
 
   UserController? _userController;
   MediaController? _mediaController;
+
+  // UserController 리스너 참조 저장 --> 프로필 이미지 변경 감지 및 처리
+  VoidCallback? _userListener;
+
+  // 프로필 이미지 캐싱 키
+  String? _cachedProfileImageKey;
 
   // 편집 모드 상태 관리
   bool _isEditMode = false;
@@ -99,7 +108,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 다음 프레임에서 실행하여 UI 렌더링을 먼저 완료
       Future.delayed(Duration.zero, () {
-        _categoryController?.clearSearch(notify: false);
+        _categorySearchController?.clearSearch(notify: false);
       });
     });
   }
@@ -109,23 +118,53 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     super.didChangeDependencies();
 
     // Provider 참조를 안전하게 저장
-    _categoryController ??= Provider.of<CategorySearchController>(
+    _ensureCategorySearchController();
+    _ensureCategoryController();
+
+    final userController = Provider.of<UserController>(context, listen: false);
+    if (_userController != userController) {
+      if (_userListener != null) {
+        _userController?.removeListener(_userListener!);
+      }
+      _userController = userController;
+      _userListener ??= _handleUserProfileChanged;
+      _userController?.addListener(_userListener!);
+      _handleUserProfileChanged();
+    }
+    _mediaController ??= Provider.of<MediaController>(context, listen: false);
+
+    // 프로필 이미지 URL은 UserController 리스너에서 관리
+  }
+
+  void _ensureCategorySearchController() {
+    if (_categorySearchController != null) return;
+    _categorySearchController = Provider.of<CategorySearchController>(
       context,
       listen: false,
     );
-    _userController ??= Provider.of<UserController>(context, listen: false);
-    _mediaController ??= Provider.of<MediaController>(context, listen: false);
+  }
 
-    // 프로필 이미지 URL 로드 (한 번만 실행, 빌드 완료 후)
-    if (_profileImageUrl == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadProfileImageUrl();
-      });
+  void _ensureCategoryController() {
+    final categoryController = Provider.of<CategoryController>(
+      context,
+      listen: false,
+    );
+    if (_categoryController == categoryController) return;
+
+    if (_categoryDataListener != null) {
+      _categoryController?.removeListener(_categoryDataListener!);
     }
+    _categoryController = categoryController;
+    _categoryDataListener ??= () {
+      if (_categorySearchController?.searchQuery.isNotEmpty == true) {
+        _applySearch();
+      }
+    };
+    _categoryController?.addListener(_categoryDataListener!);
   }
 
   /// 프로필 이미지 presigned URL 로드
-  Future<void> _loadProfileImageUrl() async {
+  Future<void> _loadProfileImageUrl({String? profileImageKey}) async {
     // 최적화: currentUser를 직접 사용 (불필요한 getUser API 호출 제거)
     final user = _userController?.currentUser;
 
@@ -134,18 +173,19 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       return;
     }
 
-    final profileImageKey = user.profileImageUrlKey;
+    final resolvedKey = profileImageKey ?? user.profileImageUrlKey;
 
-    if (profileImageKey == null || profileImageKey.isEmpty) {
+    if (resolvedKey == null || resolvedKey.isEmpty) {
       debugPrint('[ArchiveMainScreen] profileImageUrlKey가 비어있음 - 기본 아바타 표시');
       return;
     }
 
     try {
-      final url = await _mediaController?.getPresignedUrl(profileImageKey);
+      final url = await _mediaController?.getPresignedUrl(resolvedKey);
       if (mounted && url != null) {
         setState(() {
           _profileImageUrl = url;
+          _cachedProfileImageKey = resolvedKey;
         });
       }
     } catch (e) {
@@ -153,15 +193,87 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     }
   }
 
-  void _onSearchChanged() {
-    // 이전 타이머 취소
-    _searchDebounceTimer?.cancel();
+  /// 사용자 정보 변경 처리
+  /// 프로필 이미지 키 변경 시 presigned URL 재로딩
+  void _handleUserProfileChanged() {
+    final key = _userController?.currentUser?.profileImageUrlKey;
 
-    // 300ms 지연 후 검색 실행 (타이핑 중 깜빡거림 방지)
-    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      // 검색어만 전달 (내부 카테고리 목록 사용)
-      _categoryController?.searchCategories(_searchController.text);
+    // 프로필 이미지 키가 없으면 기본 아바타로 설정
+    if (key == null || key.isEmpty) {
+      if (_profileImageUrl != null && mounted) {
+        setState(() {
+          _profileImageUrl = null;
+          _cachedProfileImageKey = null;
+        });
+      }
+      return;
+    }
+
+    // 이미 캐싱된 키와 동일하면 재로딩 불필요
+    if (_profileImageUrl != null && key == _cachedProfileImageKey) {
+      return;
+    }
+
+    // 프로필 이미지 키 변경 시 presigned URL 재로딩
+    _cachedProfileImageKey = key;
+
+    setState(() {
+      // 프로필 이미지 URL 초기화하여 로딩 상태 표시
+      _profileImageUrl = null;
     });
+
+    // 프로필 이미지 URL 재로딩
+    _loadProfileImageUrl(profileImageKey: key);
+  }
+
+  void _onSearchChanged() {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _applySearch();
+    });
+  }
+
+  void _applySearch() {
+    if (!mounted) return;
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      _categorySearchController?.clearSearch();
+      return;
+    }
+
+    final categoryController = context.read<CategoryController>();
+    final filter = _currentFilter;
+    final categories = _getCategoriesForFilter(categoryController, filter);
+    _categorySearchController?.searchCategories(
+      categories,
+      query,
+      filter: filter,
+    );
+  }
+
+  CategoryFilter get _currentFilter {
+    switch (_selectedIndex) {
+      case 1:
+        return CategoryFilter.public_;
+      case 2:
+        return CategoryFilter.private_;
+      default:
+        return CategoryFilter.all;
+    }
+  }
+
+  List<Category> _getCategoriesForFilter(
+    CategoryController controller,
+    CategoryFilter filter,
+  ) {
+    switch (filter) {
+      case CategoryFilter.public_:
+        return controller.publicCategories;
+      case CategoryFilter.private_:
+        return controller.privateCategories;
+      case CategoryFilter.all:
+        return controller.categories;
+    }
   }
 
   // 편집 모드 관련 메서드들
@@ -234,17 +346,22 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     // 사용자별 커스텀 이름 업데이트
     try {
       // 최적화: 이미 있는 _userController 사용 (새 AuthController 인스턴스 생성 제거)
-      final userId = _userController?.currentUser?.id.toString();
+      final userId = _userController?.currentUser?.id;
 
       if (userId == null) {
         throw Exception('사용자 정보를 찾을 수 없습니다');
       }
 
+      final categoryId = int.tryParse(_editingCategoryId ?? '');
+      if (categoryId == null) {
+        throw Exception('카테고리 정보를 찾을 수 없습니다');
+      }
+
       // 커스텀 이름 업데이트
-      await _categoryController?.updateCustomCategoryName(
-        categoryId: _editingCategoryId!,
+      await _categoryController?.updateCustomName(
+        categoryId: categoryId,
         userId: userId,
-        customName: trimmedText,
+        name: trimmedText,
       );
 
       // 리스너 제거 후 모드 종료
@@ -485,6 +602,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                   setState(() {
                     _selectedIndex = index;
                   });
+                  _applySearch();
                 },
                 children: _screens,
               ),
@@ -562,6 +680,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           duration: Duration(milliseconds: 100),
           curve: Curves.easeInOut,
         );
+        _applySearch();
       },
       child: Container(
         height: 34.h,
@@ -985,8 +1104,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _pageController.dispose(); // PageController 정리
+    if (_userListener != null) {
+      _userController?.removeListener(_userListener!);
+    }
+    if (_categoryDataListener != null) {
+      _categoryController?.removeListener(_categoryDataListener!);
+    }
 
-    // ✅ 최적화: 전체 이미지 캐시 삭제 제거 (다른 화면의 캐시까지 삭제되어 비효율적)
+    // 최적화: 전체 이미지 캐시 삭제 제거 (다른 화면의 캐시까지 삭제되어 비효율적)
     // CachedNetworkImage가 자체적으로 캐시를 관리하므로 수동 삭제 불필요
     super.dispose();
   }

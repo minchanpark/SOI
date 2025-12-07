@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/api/controller/friend_controller.dart';
 
 /// REST API 기반 프로필 이미지 행 위젯
 ///
@@ -27,6 +30,14 @@ class _ApiArchiveProfileRowWidgetState
     extends State<ApiArchiveProfileRowWidget> {
   // Presigned URL 캐시 (키 -> URL)
   final Map<String, String> _presignedUrlCache = {};
+  UserController? _userController;
+  FriendController? _friendController;
+
+  // userController 리스너 --> 프로필 업데이트 처리
+  VoidCallback? _userListener;
+
+  // friendController 리스너 --> 프로필 업데이트 처리
+  VoidCallback? _friendListener;
 
   @override
   void initState() {
@@ -35,15 +46,75 @@ class _ApiArchiveProfileRowWidgetState
   }
 
   @override
-  void didUpdateWidget(ApiArchiveProfileRowWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // profileUrlKeys가 변경되면 다시 로드
-    if (oldWidget.profileUrlKeys != widget.profileUrlKeys) {
-      _loadPresignedUrls();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final userController = Provider.of<UserController>(context, listen: false);
+
+    // UserController 리스너 등록
+    if (_userController != userController) {
+      if (_userListener != null) {
+        // 이전 리스너 제거
+        _userController?.removeListener(_userListener!);
+      }
+      _userController = userController;
+
+      // 리스너 콜백 설정 --> 프로필 변경 감지를 해서 프로필을 업데이트
+      _userListener ??= _handleProfileUpdates;
+
+      // 리스너 등록 --> 프로필 변경 감지
+      _userController?.addListener(_userListener!);
+    }
+
+    final friendController = Provider.of<FriendController>(
+      context,
+      listen: false,
+    );
+    // FriendController 리스너 등록
+    if (_friendController != friendController) {
+      if (_friendListener != null) {
+        // 이전 리스너 제거
+        _friendController?.removeListener(_friendListener!);
+      }
+      _friendController = friendController;
+
+      // 리스너 콜백 설정 --> 프로필 변경 감지를 해서 프로필을 업데이트
+      _friendListener ??= _handleProfileUpdates;
+
+      // 리스너 등록 --> 프로필 변경 감지
+      _friendController?.addListener(_friendListener!);
     }
   }
 
-  Future<void> _loadPresignedUrls() async {
+  @override
+  void didUpdateWidget(ApiArchiveProfileRowWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final keysChanged = !listEquals(
+      oldWidget.profileUrlKeys,
+      widget.profileUrlKeys,
+    );
+    final countChanged = oldWidget.totalUserCount != widget.totalUserCount;
+
+    if (keysChanged || countChanged) {
+      _presignedUrlCache.clear();
+      _loadPresignedUrls(forceReload: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_userListener != null) {
+      // UserController 리스너 제거
+      _userController?.removeListener(_userListener!);
+    }
+    if (_friendListener != null) {
+      // FriendController 리스너 제거
+      _friendController?.removeListener(_friendListener!);
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadPresignedUrls({bool forceReload = false}) async {
     final mediaController = context.read<MediaController>();
     final displayCount = widget.totalUserCount.clamp(1, 3);
 
@@ -51,7 +122,8 @@ class _ApiArchiveProfileRowWidgetState
     final keysToLoad = widget.profileUrlKeys.take(displayCount).toList();
 
     for (final key in keysToLoad) {
-      if (key.isEmpty || _presignedUrlCache.containsKey(key)) continue;
+      if (key.isEmpty) continue;
+      if (!forceReload && _presignedUrlCache.containsKey(key)) continue;
 
       final url = await mediaController.getPresignedUrl(key);
       if (url != null && mounted) {
@@ -180,5 +252,13 @@ class _ApiArchiveProfileRowWidgetState
         ),
       ),
     );
+  }
+
+  void _handleProfileUpdates() {
+    if (!mounted) return;
+    // 프로필 이미지 키가 변경되었을 수 있으므로 캐시 초기화
+    _presignedUrlCache.clear();
+    // 프로필 이미지 URL 재로딩
+    _loadPresignedUrls(forceReload: true);
   }
 }
