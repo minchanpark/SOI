@@ -175,6 +175,42 @@ class CategoryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 특정 카테고리를 읽음 상태로 표시
+  ///
+  /// 서버에서 isNew 값이 false로 내려오더라도 캐시가 남아 있으면
+  /// UI에 즉시 반영되지 않을 수 있으므로, 사용자가 카테고리를 열었을 때
+  /// 로컬 캐시의 isNew를 false로 갱신한다.
+  void markCategoryAsViewed(int categoryId) {
+    bool updated = false;
+
+    bool updateList(List<model.Category>? categories) {
+      if (categories == null) return false;
+      final index = categories.indexWhere((c) => c.id == categoryId);
+      if (index == -1) return false;
+      final target = categories[index];
+      if (!target.isNew) return false;
+      categories[index] = target.copyWith(isNew: false);
+      return true;
+    }
+
+    // 현재 목록 갱신
+    updated = updateList(_currentCategories) || updated;
+
+    // 필터별 캐시 갱신
+    _categoriesCache.updateAll((key, value) {
+      final list = List<model.Category>.from(value);
+      if (updateList(list)) {
+        updated = true;
+        return list;
+      }
+      return value;
+    });
+
+    if (updated) {
+      notifyListeners();
+    }
+  }
+
   /// ID로 캐시된 카테고리 조회
   model.Category? getCategoryById(int categoryId) {
     try {

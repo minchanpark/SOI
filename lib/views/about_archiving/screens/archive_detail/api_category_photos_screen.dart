@@ -5,7 +5,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
+import 'package:soi/views/about_friends/friend_list_add_screen.dart';
 
+import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
@@ -32,6 +34,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<Post> _posts = [];
+  Category? _category;
 
   Timer? _autoRefreshTimer;
   static const Duration _autoRefreshInterval = Duration(minutes: 30);
@@ -42,8 +45,14 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   @override
   void initState() {
     super.initState();
+    _category = widget.category;
     // 빌드 완료 후 데이터 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final categoryController = Provider.of<CategoryController>(
+        context,
+        listen: false,
+      );
+      categoryController.markCategoryAsViewed(_currentCategory.id);
       await _loadPosts();
       _startAutoRefreshTimer();
     });
@@ -81,7 +90,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
       // 카테고리 내 포스트 조회 (서버가 이미 presigned URL 반환)
       final posts = await postController!.getPostsByCategory(
-        categoryId: widget.category.id,
+        categoryId: _currentCategory.id,
         userId: currentUser.id,
       );
 
@@ -119,6 +128,56 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     });
   }
 
+  Category get _currentCategory => _category ?? widget.category;
+
+  Future<void> _handleAddFriends() async {
+    final category = _currentCategory;
+    final previousCount = category.totalUserCount;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FriendListAddScreen(
+          categoryId: category.id.toString(),
+          categoryMemberUids: null,
+        ),
+      ),
+    );
+
+    final updatedCategory = await _refreshCategory();
+    if (!mounted) return;
+
+    if (updatedCategory != null &&
+        updatedCategory.totalUserCount != previousCount) {
+      showApiCategoryMembersBottomSheet(
+        context,
+        category: updatedCategory,
+        onAddFriendPressed: _handleAddFriends,
+      );
+    }
+  }
+
+  Future<Category?> _refreshCategory() async {
+    final categoryController = Provider.of<CategoryController>(
+      context,
+      listen: false,
+    );
+    final userController = Provider.of<UserController>(context, listen: false);
+    final userId = userController.currentUser?.id;
+    if (userId == null) {
+      return _currentCategory;
+    }
+
+    await categoryController.loadCategories(userId, forceReload: true);
+    final updated = categoryController.getCategoryById(_currentCategory.id);
+    if (mounted && updated != null) {
+      setState(() {
+        _category = updated;
+      });
+    }
+    return updated ?? _currentCategory;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,7 +190,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
           children: [
             // 카테고리 이름
             Text(
-              widget.category.name,
+              _currentCategory.name,
               style: TextStyle(
                 color: const Color(0xFFD9D9D9),
                 fontSize: 20,
@@ -147,16 +206,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
               onTap: () {
                 showApiCategoryMembersBottomSheet(
                   context,
-                  category: widget.category,
-                  onAddFriendPressed: () {
-                    // TODO: API 버전 친구 추가 화면으로 이동
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('친구 추가 (API 버전 구현 예정)'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
+                  category: _currentCategory,
+                  onAddFriendPressed: _handleAddFriends,
                 );
               },
               borderRadius: BorderRadius.circular(100),
@@ -169,7 +220,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
                       Icon(Icons.people, size: 25.sp, color: Colors.white),
                       SizedBox(width: 2.w),
                       Text(
-                        '${widget.category.totalUserCount}',
+                        '${_currentCategory.totalUserCount}',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -280,8 +331,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             post: post,
             allPosts: _posts,
             currentIndex: index,
-            categoryName: widget.category.name,
-            categoryId: widget.category.id,
+            categoryName: _currentCategory.name,
+            categoryId: _currentCategory.id,
           );
         },
       ),

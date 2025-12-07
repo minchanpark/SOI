@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -161,7 +163,9 @@ class _ApiCategoryMembersBottomSheetState
     int totalMemberCount,
     List<String> memberNickNames,
   ) {
-    final itemCount = totalMemberCount + 1; // +1 친구 추가 버튼
+    // 친구 추가 버튼 포함 총 아이템 수
+    // +1 친구 추가 버튼 --> 추가하기 버튼을 위해서
+    final itemCount = totalMemberCount + 1;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -254,8 +258,10 @@ class _ApiCategoryMembersBottomSheetState
         // 바텀시트 닫기
         Navigator.pop(context);
 
-        // 친구 추가 콜백 호출
-        widget.onAddFriendPressed?.call();
+        // 친구 추가 콜백 호출 (다음 프레임에서 실행)
+        if (widget.onAddFriendPressed != null) {
+          Future.microtask(widget.onAddFriendPressed!);
+        }
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

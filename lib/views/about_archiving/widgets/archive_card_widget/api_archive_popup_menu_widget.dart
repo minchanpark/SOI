@@ -286,7 +286,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
             forceReload: true,
           );
         } catch (e) {
-          debugPrint('📌 [Pin] API 호출 실패: $e');
+          debugPrint('[Pin] API 호출 실패: $e');
         }
         break;
       case 'leave':
@@ -294,17 +294,50 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
         ArchiveCategoryDialogs.showLeaveCategoryBottomSheetApi(
           context,
           widget.category,
-          onConfirm: () {
-            // TODO: REST API를 통한 나가기 구현
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('카테고리에서 나갔습니다.'),
-                duration: const Duration(seconds: 1),
-              ),
-            );
-          },
+          onConfirm: _leaveCategory,
         );
         break;
     }
+  }
+
+  Future<void> _leaveCategory() async {
+    try {
+      userController = Provider.of<UserController>(context, listen: false);
+      categoryController = Provider.of<CategoryController>(
+        context,
+        listen: false,
+      );
+
+      final userId = userController!.currentUser?.id;
+      if (userId == null) {
+        _showSnackBar('로그인이 필요합니다.');
+        return;
+      }
+
+      final success = await categoryController!.leaveCategory(
+        userId: userId,
+        categoryId: widget.category.id,
+      );
+
+      if (success) {
+        await categoryController!.loadCategories(userId, forceReload: true);
+        _showSnackBar('카테고리에서 나갔습니다.');
+      } else {
+        _showSnackBar('카테고리 나가기에 실패했습니다.');
+      }
+    } catch (e) {
+      debugPrint('[LeaveCategory] 실패: $e');
+      _showSnackBar('카테고리 나가기에 실패했습니다.');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 }

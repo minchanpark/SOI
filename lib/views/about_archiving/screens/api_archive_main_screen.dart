@@ -655,7 +655,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                           padding: EdgeInsets.only(top: 2.h),
                           child: TextButton(
                             onPressed: () {
-                              _createNewCategory();
+                              _createNewCategory(_selectedFriends);
                             },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
@@ -854,7 +854,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   }
 
   // 카테고리 생성 처리 함수 (REST API 버전)
-  Future<void> _createNewCategory() async {
+  Future<void> _createNewCategory(
+    List<SelectedFriendModel> selectedFriends,
+  ) async {
     final categoryName = _categoryNameController.text.trim();
     if (categoryName.isEmpty) {
       ScaffoldMessenger.of(
@@ -870,6 +872,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
     try {
       // REST API 컨트롤러 사용
+      // 최적화: 이미 있는 Provider 인스턴스 사용 (새 인스턴스 생성 제거)
       final userController = Provider.of<UserController>(
         context,
         listen: false,
@@ -886,20 +889,31 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
         return;
       }
 
-      // PRIVATE 카테고리 생성 (자기 자신을 receiverIds에 포함)
-      // TODO: 자기자신을 추가하거나, 빈 리스트로 주면 PRIVATE 카테고리로 처리하도록 API 수정을 요청하였으므로,
-      // TODO: 추후 API가 변경되면 receiverIds를 빈 리스트로 전달하도록 수정 필요
+      final isPublicCategory = selectedFriends.isNotEmpty;
+      final receiverIds = <int>[userId];
+
+      // 선택된 친구들의 ID 추가
+      // PUBLIC 카테고리인 경우에만 추가
+      if (isPublicCategory) {
+        for (final friend in selectedFriends) {
+          final parsedId = int.tryParse(friend.uid);
+          if (parsedId != null && !receiverIds.contains(parsedId)) {
+            receiverIds.add(parsedId);
+          }
+        }
+      }
+
+      // 카테고리 생성 API 호출
+      // 최적화: 이미 있는 categoryController 사용 (새 인스턴스 생성 제거)
       final categoryId = await categoryController.createCategory(
         requesterId: userId,
         name: categoryName,
-        receiverIds: [userId],
-
-        // PRIVATE 카테고리인 경우는, false로 설정해야함.
-        isPublic: false,
+        receiverIds: receiverIds,
+        isPublic: isPublicCategory,
       );
 
       if (categoryId != null) {
-        // ✅ 최적화: forceReload: true가 캐시를 무시하므로 invalidateCache 중복 제거
+        // 최적화: forceReload: true가 캐시를 무시하므로 invalidateCache 중복 제거
         await categoryController.loadCategories(userId, forceReload: true);
 
         if (mounted) {
