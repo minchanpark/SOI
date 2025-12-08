@@ -24,6 +24,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   FeedAudioManager? _feedAudioManager;
 
   UserController? _userController;
+  VoidCallback? _userControllerListener;
+  String? _lastProfileImageKey;
 
   @override
   void initState() {
@@ -48,6 +50,9 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _userController = Provider.of<UserController>(context, listen: false);
+      _lastProfileImageKey = _userController?.currentUser?.profileImageUrlKey;
+      _userControllerListener ??= _handleUserProfileChanged;
+      _userController?.addListener(_userControllerListener!);
       _loadInitialData();
     });
   }
@@ -59,6 +64,9 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   @override
   void dispose() {
+    if (_userControllerListener != null) {
+      _userController?.removeListener(_userControllerListener!);
+    }
     _feedDataManager?.dispose();
     _voiceCommentStateManager?.dispose();
     PaintingBinding.instance.imageCache.clear();
@@ -154,6 +162,50 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   void _stopAllAudio() {
     _feedAudioManager?.stopAllAudio(context);
+  }
+
+  // 프로필 이미지 변경 감지 및 피드 새로고침
+  void _handleUserProfileChanged() {
+    final newKey = _userController?.currentUser?.profileImageUrlKey;
+
+    // 프로필 이미지 키가 변경되지 않았으면 종료
+    if (newKey == _lastProfileImageKey) {
+      return;
+    }
+
+    // 프로필 이미지가 변경되었으므로, 마지막 키 업데이트
+    _lastProfileImageKey = newKey;
+
+    // 프로필 이미지가 변경되었으므로 피드 새로고침
+    _refreshFeedAfterProfileUpdate();
+  }
+
+  // 피드 새로고침 및 댓글 재로딩
+  void _refreshFeedAfterProfileUpdate() {
+    final posts = _feedDataManager?.allPosts ?? const <FeedPostItem>[];
+    if (posts.isNotEmpty) {
+      _voiceCommentStateManager?.postComments.clear();
+    }
+
+    // 피드 데이터 새로고침
+    unawaited(
+      // 사용자 카테고리 및 사진 로드
+      _feedDataManager?.loadUserCategoriesAndPhotos(context).then((_) {
+        final refreshedPosts = _feedDataManager?.allPosts ?? [];
+        for (final item in refreshedPosts) {
+          // 각 게시물에 대한 댓글 로드
+          unawaited(
+            _voiceCommentStateManager?.loadCommentsForPost(
+              item.post.id,
+              context,
+            ),
+          );
+        }
+        if (mounted) {
+          setState(() {});
+        }
+      }),
+    );
   }
 
   @override

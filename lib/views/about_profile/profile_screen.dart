@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../api/controller/category_controller.dart';
 import '../../api/controller/media_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/user.dart';
@@ -122,12 +124,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
+      final compressedFile = await _compressProfileImage(file);
+
       if (!mounted) return;
       setState(() {
         _isUploadingProfile = true;
       });
 
-      final multipartFile = await mediaController.fileToMultipart(file);
+      final multipartFile = await mediaController.fileToMultipart(
+        compressedFile,
+      );
       final profileKey = await mediaController.uploadProfileImage(
         file: multipartFile,
         userId: current.id,
@@ -149,6 +155,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       await userController.refreshCurrentUser();
 
+      // 카테고리 캐시 무효화 및 재로딩
+      if (mounted) {
+        // 카테고리 컨트롤러 가져오기
+        final categoryController = context.read<CategoryController>();
+
+        // 캐시 무효화
+        categoryController.invalidateCache();
+
+        // 카테고리 재로딩
+        await categoryController.loadCategories(current.id, forceReload: true);
+      }
+
       final newProfileImageUrl = await mediaController.getPresignedUrl(
         profileKey,
       );
@@ -156,7 +174,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
 
       final refreshedUser = userController.currentUser;
-      final resolvedProfileKey = refreshedUser?.profileImageUrlKey ?? profileKey;
+      final resolvedProfileKey =
+          refreshedUser?.profileImageUrlKey ?? profileKey;
 
       setState(() {
         _profileImageUrlKey = resolvedProfileKey;
@@ -176,6 +195,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isUploadingProfile = false;
         });
       }
+    }
+  }
+
+  /// 프로필 이미지를 업로드하기 전에 압축한다.
+  Future<File> _compressProfileImage(File file) async {
+    try {
+      final targetPath =
+          '${file.parent.path}/profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path,
+        targetPath,
+        quality: 70,
+        minWidth: 1080,
+        minHeight: 1080,
+        format: CompressFormat.jpeg,
+      );
+
+      // XFile을 File로 변환
+      if (compressedFile != null) {
+        return File(compressedFile.path);
+      }
+
+      return file;
+    } catch (e) {
+      debugPrint('프로필 이미지 압축 오류: $e');
+      return file;
     }
   }
 
@@ -878,7 +924,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
-}
+  }
 
   void _showProfileSnackBar(String message) {
     if (!mounted) return;

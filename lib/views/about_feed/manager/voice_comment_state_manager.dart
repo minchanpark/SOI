@@ -13,6 +13,16 @@ import '../../../utils/position_converter.dart';
 import '../../common_widget/api_photo/pending_api_voice_comment.dart';
 
 /// API 기반 음성/텍스트 댓글 상태 매니저
+/// 각 게시물별로 음성/텍스트 댓글의 활성화 상태, 저장 상태, 대기 중인 댓글 등을 관리
+///
+/// Parameters:
+///   - [voiceCommentActiveStates]: 게시물 ID별 음성/텍스트 댓글 활성화 상태 맵
+///   - [voiceCommentSavedStates]: 게시물 ID별 음성/텍스트 댓글 저장 상태 맵
+///   - [pendingVoiceComments]: 게시물 ID별 대기 중인 음성/텍스트 댓글 맵
+///   - [postComments]: 게시물 ID별 댓글 목록 맵
+///   - [pendingTextComments]: 게시물 ID별 대기 중인 텍스트 댓글 상태 맵
+///   - [autoPlacementIndices]: 게시물 ID별 자동 배치 인덱스 맵
+///   - [onStateChanged]: 상태 변경 시 호출되는 콜백 함수
 class VoiceCommentStateManager {
   final Map<int, bool> _voiceCommentActiveStates = {};
   final Map<int, bool> _voiceCommentSavedStates = {};
@@ -38,27 +48,39 @@ class VoiceCommentStateManager {
     _onStateChanged?.call();
   }
 
+  /// 댓글을 특정 게시물에 대해 로드하는 메서드
   Future<void> loadCommentsForPost(int postId, BuildContext context) async {
     try {
+      // 댓글 컨트롤러 가져오기
       final commentController = Provider.of<CommentController>(
         context,
         listen: false,
       );
+      // 댓글 불러오기
       final comments = await commentController.getComments(postId: postId);
+
+      // 불러온 댓글 저장
       _postComments[postId] = comments;
+
+      // 저장된 댓글이 있는지 여부 업데이트
       _voiceCommentSavedStates[postId] = comments.isNotEmpty;
       _notifyStateChanged();
     } catch (e) {
-      debugPrint('❌ 댓글 로드 실패(postId: $postId): $e');
+      debugPrint('댓글 로드 실패(postId: $postId): $e');
     }
   }
 
+  /// 음성/텍스트 댓글 활성화 상태 토글 메서드
   void toggleVoiceComment(int postId) {
-    _voiceCommentActiveStates[postId] =
-        !(_voiceCommentActiveStates[postId] ?? false);
+    final newValue = !(_voiceCommentActiveStates[postId] ?? false);
+    _voiceCommentActiveStates[postId] = newValue;
+    if (!newValue) {
+      _clearPendingState(postId);
+    }
     _notifyStateChanged();
   }
 
+  /// 텍스트 댓글이 완료되었을 때 호출되는 메서드
   Future<void> onTextCommentCompleted(
     int postId,
     String text,
@@ -74,18 +96,25 @@ class VoiceCommentStateManager {
       return;
     }
 
+    // 텍스트 댓글 대기 상태 설정
     _pendingVoiceComments[postId] = PendingApiVoiceComment(
       text: text.trim(),
       isTextComment: true,
       recorderUserId: currentUser.id,
       profileImageUrl: currentUser.profileImageUrlKey,
     );
+
+    // 텍스트 댓글 대기 상태 설정
     _pendingTextComments[postId] = true;
+
+    // 저장된 댓글 상태 업데이트
     _voiceCommentSavedStates[postId] = false;
-    _voiceCommentActiveStates[postId] = true;
+
+    // 상태 변경 알림
     _notifyStateChanged();
   }
 
+  /// 음성 댓글이 완료되었을 때 호출되는 메서드
   Future<void> onVoiceCommentCompleted(
     int postId,
     String? audioPath,
@@ -103,6 +132,7 @@ class VoiceCommentStateManager {
       return;
     }
 
+    // 음성 댓글 대기 상태 설정
     _pendingVoiceComments[postId] = PendingApiVoiceComment(
       audioPath: audioPath,
       waveformData: waveformData,
@@ -110,41 +140,58 @@ class VoiceCommentStateManager {
       recorderUserId: currentUser.id,
       profileImageUrl: currentUser.profileImageUrlKey,
     );
+
+    // 저장된 댓글 상태 업데이트
     _pendingTextComments.remove(postId);
-    _voiceCommentActiveStates[postId] = true;
+
+    // 저장된 댓글 상태 업데이트
     _voiceCommentSavedStates[postId] = false;
+
+    // 상태 변경 알림
     _notifyStateChanged();
   }
 
+  /// 프로필 이미지 위치가 드래그로 변경되었을 때 호출되는 메서드
   void onProfileImageDragged(int postId, Offset absolutePosition) {
     final imageSize = Size(354.w, 500.h);
+
+    // 절대 위치를 상대 위치로 변환
     final relativePosition = PositionConverter.toRelativePosition(
       absolutePosition,
       imageSize,
     );
 
+    // 대기 중인 댓글의 위치 업데이트
     final pending = _pendingVoiceComments[postId];
     if (pending != null) {
       _pendingVoiceComments[postId] = pending.copyWith(
         relativePosition: relativePosition,
       );
+
+      // 상태 변경 알림
       _notifyStateChanged();
     }
   }
 
+  /// 음성/텍스트 댓글을 서버에 저장하는 메서드
   Future<void> saveVoiceComment(int postId, BuildContext context) async {
+    // 대기 중인 댓글 가져오기
     final pending = _pendingVoiceComments[postId];
     if (pending == null) {
       throw StateError('임시 댓글을 찾을 수 없습니다. postId: $postId');
     }
 
+    // 로그인된 사용자 ID 가져오기
     final userId = pending.recorderUserId;
     if (userId == null) {
       throw StateError('로그인된 사용자를 찾을 수 없습니다.');
     }
 
+    // 최종 위치 결정
     final finalPosition =
         pending.relativePosition ?? _generateAutoProfilePosition(postId);
+
+    // 최종 위치가 지정되지 않은 경우 자동 배치 위치 생성
     final pendingCopy = PendingApiVoiceComment(
       audioPath: pending.audioPath,
       waveformData: pending.waveformData,
@@ -165,6 +212,7 @@ class VoiceCommentStateManager {
     await _saveCommentToServer(postId, userId, pendingCopy, context);
   }
 
+  /// 댓글을 서버에 저장하는 내부 메서드
   Future<void> _saveCommentToServer(
     int postId,
     int userId,
@@ -172,6 +220,7 @@ class VoiceCommentStateManager {
     BuildContext context,
   ) async {
     try {
+      // 댓글 컨트롤러 가져오기
       final commentController = Provider.of<CommentController>(
         context,
         listen: false,
@@ -180,6 +229,7 @@ class VoiceCommentStateManager {
       bool success = false;
 
       if (pending.isTextComment && pending.text != null) {
+        // 텍스트 댓글 저장하고 그 결과를 success에 할당
         success = await commentController.createTextComment(
           postId: postId,
           userId: userId,
@@ -188,13 +238,18 @@ class VoiceCommentStateManager {
           locationY: pending.relativePosition?.dy,
         );
       } else if (pending.audioPath != null) {
+        // media 컨트롤러 가져오기
         final mediaController = Provider.of<api_media.MediaController>(
           context,
           listen: false,
         );
+        // 오디오 파일 객체 생성 --> Stirng으로 되어있는 경로를 File 객체로 변환
         final audioFile = File(pending.audioPath!);
+
+        // 파일을 멀티파트로 변환 --> 서버 업로드를 위해
         final multipartFile = await mediaController.fileToMultipart(audioFile);
 
+        // 오디오 업로드하고 그 키를 받아옴
         final audioKey = await mediaController.uploadCommentAudio(
           file: multipartFile,
           userId: userId,
@@ -210,6 +265,7 @@ class VoiceCommentStateManager {
           return;
         }
 
+        // 파형 데이터를 JSON 문자열로 변환
         String? waveformJson;
         if (pending.waveformData != null) {
           final roundedWaveform = pending.waveformData!
@@ -218,6 +274,7 @@ class VoiceCommentStateManager {
           waveformJson = jsonEncode(roundedWaveform);
         }
 
+        // 오디오 댓글 생성하고 그 결과를 success에 할당
         success = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
@@ -230,13 +287,10 @@ class VoiceCommentStateManager {
       }
 
       if (success) {
+        // 댓글 저장 성공 시 댓글 목록 새로고침
         await loadCommentsForPost(postId, context);
       } else {
-        _showSnackBar(
-          context,
-          '댓글 저장에 실패했습니다.',
-          backgroundColor: Colors.red,
-        );
+        _showSnackBar(context, '댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
       }
     } catch (e) {
       debugPrint('댓글 저장 실패(postId: $postId): $e');
@@ -248,21 +302,22 @@ class VoiceCommentStateManager {
     }
   }
 
+  /// 음성/텍스트 댓글이 삭제되었을 때 호출되는 메서드
   void onVoiceCommentDeleted(int postId) {
     _voiceCommentActiveStates[postId] = false;
     _voiceCommentSavedStates[postId] = false;
-    _pendingVoiceComments.remove(postId);
-    _pendingTextComments.remove(postId);
+    _clearPendingState(postId);
     _notifyStateChanged();
   }
 
+  /// 음성/텍스트 댓글이 저장이 완료되었을 때 호출되는 메서드
   void onSaveCompleted(int postId) {
     _voiceCommentActiveStates[postId] = false;
-    _pendingVoiceComments.remove(postId);
-    _pendingTextComments.remove(postId);
+    _clearPendingState(postId);
     _notifyStateChanged();
   }
 
+  /// 자동 배치 위치 생성기
   Offset _generateAutoProfilePosition(int postId) {
     final occupiedPositions = <Offset>[];
     final comments = _postComments[postId] ?? const <Comment>[];
@@ -275,11 +330,13 @@ class VoiceCommentStateManager {
       }
     }
 
+    // 현재 대기 중인 댓글의 위치도 포함
     final pending = _pendingVoiceComments[postId];
     if (pending?.relativePosition != null) {
       occupiedPositions.add(pending!.relativePosition!);
     }
 
+    // 자동 배치 패턴
     const pattern = [
       Offset(0.5, 0.5),
       Offset(0.62, 0.5),
@@ -312,6 +369,7 @@ class VoiceCommentStateManager {
     return const Offset(0.5, 0.5);
   }
 
+  ///
   Offset _applyJitter(Offset base, int loop, int attempt) {
     if (loop <= 0) {
       return _clampOffset(base);
@@ -352,6 +410,11 @@ class VoiceCommentStateManager {
     _pendingVoiceComments.clear();
     _pendingTextComments.clear();
     _postComments.clear();
+  }
+
+  void _clearPendingState(int postId) {
+    _pendingVoiceComments.remove(postId);
+    _pendingTextComments.remove(postId);
   }
 
   void _showSnackBar(
