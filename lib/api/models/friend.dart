@@ -2,10 +2,11 @@ import 'package:soi_api_client/api.dart';
 
 /// 친구 관계 상태
 enum FriendStatus {
-  pending,   // 요청 대기 중
-  accepted,  // 수락됨
-  blocked,   // 차단됨
+  pending, // 요청 대기 중
+  accepted, // 수락됨
+  blocked, // 차단됨
   cancelled, // 취소됨
+  none, // 없음 --> 친구 관계가 아님
 }
 
 /// 친구 관계 모델

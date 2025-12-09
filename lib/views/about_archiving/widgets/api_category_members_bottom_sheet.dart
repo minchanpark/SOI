@@ -12,6 +12,10 @@ import '../../../api/models/category.dart';
 ///
 /// 바텀시트가 열릴 때 최신 카테고리 정보를 서버에서 가져와
 /// 새로운 presigned URL로 프로필 이미지를 표시합니다.
+///
+/// Parameters:
+///   - [category]: 표시할 카테고리 정보
+///   - [onAddFriendPressed]: 친구 추가 버튼이 눌렸을 때 호출되는
 class ApiCategoryMembersBottomSheet extends StatefulWidget {
   final Category category;
   final VoidCallback? onAddFriendPressed;
@@ -44,16 +48,23 @@ class _ApiCategoryMembersBottomSheetState
 
   /// 모든 프로필 이미지의 presigned URL을 미리 로드
   Future<void> _loadPresignedUrls() async {
+    // MediaController 가져오기
     final mediaController = Provider.of<MediaController>(
       context,
       listen: false,
     );
+
+    // 프로필 URL 키 목록
     final profileUrlKeys = widget.category.usersProfileKey;
 
+    // 모든 프로필 URL 키에 대해 presigned URL 요청
     for (final key in profileUrlKeys) {
+      // 키가 비어있지 않은 경우에만 요청
       if (key.isNotEmpty) {
         try {
+          // presigned URL 요청
           final url = await mediaController.getPresignedUrl(key);
+          // Url이 null이 아니면 캐시에 저장
           if (url != null) {
             _presignedUrlCache[key] = url;
           }
@@ -72,8 +83,13 @@ class _ApiCategoryMembersBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    // 카테고리 정보
     final profileUrlKeys = widget.category.usersProfileKey;
+
+    // 멤버 총 수
     final totalMemberCount = widget.category.totalUserCount;
+
+    // 멤버 닉네임 목록
     final memberNickNames = widget.category.nickNames;
 
     return Container(
@@ -180,17 +196,16 @@ class _ApiCategoryMembersBottomSheetState
         ),
         itemCount: itemCount,
         itemBuilder: (context, index) {
+          // 마지막 아이템은 친구 추가 버튼
           if (index == totalMemberCount) {
             return _buildAddFriendButton(context);
           }
 
-          final profileUrlKey = index < profileUrlKeys.length
-              ? profileUrlKeys[index]
-              : '';
+          // 프로필 URL 키를 index별로 순서대로 가지고 오기
+          final profileUrlKey = profileUrlKeys[index];
 
-          final memberNickName = index < memberNickNames.length
-              ? memberNickNames[index]
-              : '멤버 ${index + 1}';
+          // 멤버 닉네임을 index별로 순서대로 가지고 오기
+          final memberNickName = memberNickNames[index];
 
           // 캐시에서 presigned URL 가져오기
           final profileUrl = _presignedUrlCache[profileUrlKey] ?? '';
@@ -223,11 +238,11 @@ class _ApiCategoryMembersBottomSheetState
                       debugPrint(
                         '[ApiCategoryMembersBottomSheet] 이미지 로드 에러: $error',
                       );
-                      return _buildMemberFallback();
+                      return _buildBasicMemberIcon();
                     },
                   )
                 // 프로필 이미지가 없으면, 기본 프로필 이미지 표시
-                : _buildMemberFallback(),
+                : _buildBasicMemberIcon(),
           ),
         ),
 
@@ -319,11 +334,11 @@ class _ApiCategoryMembersBottomSheetState
   }
 
   /// 기본 프로필 이미지 (fallback)
-  Widget _buildMemberFallback() {
+  Widget _buildBasicMemberIcon() {
     return Container(
       width: 60,
       height: 60,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: Color(0xFFd9d9d9),
       ),

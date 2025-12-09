@@ -124,8 +124,7 @@ class FriendController extends ChangeNotifier {
         phoneNumbers: phoneNumbers,
       );
       _setLoading(false);
-      // DTO를 FriendCheck 모델로 변환
-      return relations.map((dto) => FriendCheck.fromDto(dto)).toList();
+      return relations;
     } catch (e) {
       _setError('친구 관계 확인 실패: $e');
       _setLoading(false);

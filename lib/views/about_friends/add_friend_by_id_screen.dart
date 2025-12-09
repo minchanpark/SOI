@@ -121,6 +121,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
             userId: currentUserId,
             phoneNumbers: phoneNumbers,
           );
+          debugPrint("친구 관계 조회 결과: $relations");
 
           // 전화번호 -> 상태 매핑을 userId -> 상태로 변환
           final phoneToStatus = <String, String>{};
@@ -136,6 +137,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
             final status = phoneToStatus[user.phoneNumber] ?? 'none';
             _friendshipStatus[user.id] = status;
           }
+          debugPrint("최종 친구 상태 매핑: $_friendshipStatus");
         } else {
           _friendshipStatus = {};
         }

@@ -131,7 +131,7 @@ class FriendService {
   /// - [phoneNumbers]: 확인할 전화번호 목록
   ///
   /// Returns: 친구 관계 정보 목록 (List<FriendCheckRespDto>)
-  Future<List<FriendCheckRespDto>> checkFriendRelations({
+  Future<List<FriendCheck>> checkFriendRelations({
     required int userId,
     required List<String> phoneNumbers,
   }) async {
@@ -146,7 +146,8 @@ class FriendService {
         throw SoiApiException(message: response.message ?? '친구 관계 확인 실패');
       }
 
-      return response.data;
+      final data = response.data;
+      return data.map((dto) => FriendCheck.fromDto(dto)).toList();
     } on ApiException catch (e) {
       throw _handleApiException(e);
     } on SocketException catch (e) {
@@ -377,6 +378,8 @@ class FriendService {
         return FriendUpdateRespDtoStatusEnum.BLOCKED;
       case FriendStatus.cancelled:
         return FriendUpdateRespDtoStatusEnum.CANCELLED;
+      case FriendStatus.none:
+        return null;
     }
   }
 }

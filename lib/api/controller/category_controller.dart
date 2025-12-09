@@ -211,6 +211,48 @@ class CategoryController extends ChangeNotifier {
     }
   }
 
+  /// 특정 카테고리 캐시 갱신 헬퍼
+  /// 카테고리 이름을 수정하고 나서 UI에 바로 반영되지 않는 문제를 해결하기 위해서 사용
+  ///
+  /// Parameters:
+  ///   - [categoryId]: 카테고리 ID
+  ///   - [update]: 카테고리 객체를 받아 수정된 객체를 반환하는 함수
+  void _updateCachedCategory(
+    int categoryId,
+    model.Category Function(model.Category category) update,
+  ) {
+    bool updated = false;
+
+    // 특정 카테고리만 갱신하는 내부 함수
+    List<model.Category> updateList(List<model.Category> categories) {
+      final index = categories.indexWhere((c) => c.id == categoryId);
+      if (index == -1) return categories;
+
+      final newList = List<model.Category>.from(categories);
+      newList[index] = update(newList[index]);
+      updated = true;
+      return newList;
+    }
+
+    // 현재 목록 갱신
+    _currentCategories = updateList(_currentCategories);
+
+    // 필터별 캐시 갱신
+    _categoriesCache.updateAll((key, value) => updateList(value));
+
+    if (updated) {
+      notifyListeners();
+    }
+  }
+
+  void _updateCategoryNameInCache(int categoryId, String? newName) {
+    if (newName == null) return;
+    _updateCachedCategory(
+      categoryId,
+      (category) => category.copyWith(name: newName),
+    );
+  }
+
   /// ID로 캐시된 카테고리 조회
   model.Category? getCategoryById(int categoryId) {
     try {
@@ -440,11 +482,17 @@ class CategoryController extends ChangeNotifier {
     _setLoading(true);
     _clearError();
     try {
+      // 카테고리 이름을 수정
       final result = await _categoryService.updateCustomName(
         categoryId: categoryId,
         userId: userId,
         name: name,
       );
+      // 수정이 성공하면 캐시를 갱신하고 변경사항을 바로 UI에 반영
+      if (result) {
+        _updateCategoryNameInCache(categoryId, name);
+      }
+
       _setLoading(false);
       return result;
     } catch (e) {

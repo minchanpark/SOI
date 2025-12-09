@@ -73,6 +73,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     super.dispose();
   }
 
+  // 사진 게시물 삭제 처리
   Future<void> _deletePost(int index, FeedPostItem item) async {
     try {
       final postController = Provider.of<PostController>(
@@ -103,6 +104,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     }
   }
 
+  // 페이지 변경 처리 (무한 스크롤)
   void _handlePageChanged(int index) {
     final totalPosts = _feedDataManager?.allPosts.length ?? 0;
     if (totalPosts == 0) {
@@ -115,14 +117,17 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     }
   }
 
+  // 음성 재생 토글
   Future<void> _toggleAudio(FeedPostItem item) async {
     await _feedAudioManager?.toggleAudio(item.post, context);
   }
 
+  // 음성 댓글 활성화/비활성화 토글
   void _toggleVoiceComment(int postId) {
     _voiceCommentStateManager?.toggleVoiceComment(postId);
   }
 
+  // 음성 댓글 완료 처리
   Future<void> _onVoiceCommentCompleted(
     int postId,
     String? audioPath,
@@ -139,6 +144,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     );
   }
 
+  // 텍스트 댓글 완료 처리
   Future<void> _onTextCommentCompleted(int postId, String text) async {
     if (_userController == null) return;
     await _voiceCommentStateManager?.onTextCommentCompleted(
@@ -148,18 +154,22 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     );
   }
 
+  // 음성 댓글 삭제 처리
   void _onVoiceCommentDeleted(int postId) {
     _voiceCommentStateManager?.onVoiceCommentDeleted(postId);
   }
 
+  // 음성 댓글 저장 완료 처리
   void _onSaveCompleted(int postId) {
     _voiceCommentStateManager?.onSaveCompleted(postId);
   }
 
+  // 프로필 이미지 드래그 이벤트 처리
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
     _voiceCommentStateManager?.onProfileImageDragged(postId, absolutePosition);
   }
 
+  // 모든 오디오 정지
   void _stopAllAudio() {
     _feedAudioManager?.stopAllAudio(context);
   }

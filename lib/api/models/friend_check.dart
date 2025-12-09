@@ -43,18 +43,20 @@ class FriendCheck {
       case FriendCheckRespDtoStatusEnum.CANCELLED:
         return FriendStatus.cancelled;
       default:
-        return FriendStatus.pending;
+        return FriendStatus.none;
     }
   }
 
   /// 상태 문자열 반환 (UI용)
   String get statusString {
-    if (isFriend || status == FriendStatus.accepted) {
-      return 'accepted';
-    } else if (status == FriendStatus.pending) {
+    if (status == FriendStatus.pending) {
       return 'pending';
-    } else if (status == FriendStatus.blocked) {
+    }
+    if (status == FriendStatus.blocked) {
       return 'blocked';
+    }
+    if (status == FriendStatus.accepted || isFriend) {
+      return 'accepted';
     }
     return 'none';
   }

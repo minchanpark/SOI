@@ -8,8 +8,12 @@ import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.da
 
 /// API 기반 오디오 컨트롤 위젯
 ///
-/// Firebase 버전의 AudioControlWidget과 동일한 디자인을 유지하면서
-/// Post 모델을 사용합니다.
+/// post의 audioUrl이 null이 아니면 재생 가능
+///
+/// Parameters:
+///   - [post]: 오디오가 포함된 Post 객체 (필수)
+///   - [waveformData]: 오디오 파형 데이터 (선택적)
+///   - [onPressed]: 커스텀 재생/일시정지 콜백 (선택적)
 class ApiAudioControlWidget extends StatelessWidget {
   final Post post;
   final List<double>? waveformData;
@@ -24,12 +28,13 @@ class ApiAudioControlWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // AudioController Provider가 존재하는 경우 --> 오디오 재생/일시정지 기능 활성화
     if (_hasAudioController(context)) {
       return Consumer<AudioController>(
         builder: (context, audioController, child) {
-          final isPlaying =
-              audioController.currentAudioUrl == post.audioUrl;
-          final progress = isPlaying && audioController.totalDuration.inMilliseconds > 0
+          final isPlaying = audioController.currentAudioUrl == post.audioUrl;
+          final progress =
+              isPlaying && audioController.totalDuration.inMilliseconds > 0
               ? (audioController.currentPosition.inMilliseconds /
                         audioController.totalDuration.inMilliseconds)
                     .clamp(0.0, 1.0)
@@ -52,7 +57,7 @@ class ApiAudioControlWidget extends StatelessWidget {
       );
     }
 
-    // Provider가 없는 경우에도 UI가 깨지지 않도록 기본 컨트롤 표출
+    // AudioController Provider가 존재하지 않는 경우 --> 재생 불가 UI 표시
     return _AudioControlSurface(
       isPlaying: false,
       progress: 0,
@@ -66,6 +71,8 @@ class ApiAudioControlWidget extends StatelessWidget {
     );
   }
 
+  // AudioController Provider 존재 여부를 확인하는 메소드
+  // 존재하지 않으면 예외 발생
   bool _hasAudioController(BuildContext context) {
     try {
       Provider.of<AudioController>(context, listen: false);
@@ -75,13 +82,14 @@ class ApiAudioControlWidget extends StatelessWidget {
     }
   }
 
-  String _formatDuration(Duration duration) {
+  /*String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
+  }*/
 }
 
+// 오디오 컨트롤 UI 서피스
 class _AudioControlSurface extends StatelessWidget {
   final bool isPlaying;
   final double progress;
@@ -150,6 +158,7 @@ class _AudioControlSurface extends StatelessWidget {
     );
   }
 
+  // 시간 형식 변환 (mm:ss)
   static String _format(Duration duration) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds % 60;

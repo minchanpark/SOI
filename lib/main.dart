@@ -103,11 +103,22 @@ void main() async {
 
   _configureErrorHandling();
 
+  final userController = UserController();
+  final didAutoLogin = await userController.tryAutoLogin();
+  if (didAutoLogin) {
+    await userController.refreshCurrentUser();
+  }
+
   if (hasSeenLaunchVideo) {
     FlutterNativeSplash.remove();
   }
 
-  runApp(MyApp(hasSeenLaunchVideo: hasSeenLaunchVideo));
+  runApp(
+    MyApp(
+      hasSeenLaunchVideo: hasSeenLaunchVideo,
+      preloadedUserController: userController,
+    ),
+  );
 }
 
 void _configureSplash(WidgetsBinding binding, bool hasSeenLaunchVideo) {
@@ -170,7 +181,12 @@ void _configureErrorHandling() {
 
 class MyApp extends StatelessWidget {
   final bool hasSeenLaunchVideo;
-  const MyApp({super.key, required this.hasSeenLaunchVideo});
+  final UserController preloadedUserController;
+  const MyApp({
+    super.key,
+    required this.hasSeenLaunchVideo,
+    required this.preloadedUserController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +238,9 @@ class MyApp extends StatelessWidget {
         // ============================================
         // New Backend API Services (REST API)
         // ============================================
-        ChangeNotifierProvider<UserController>(create: (_) => UserController()),
+        ChangeNotifierProvider<UserController>.value(
+          value: preloadedUserController,
+        ),
         ChangeNotifierProvider<api_category.CategoryController>(
           create: (_) => api_category.CategoryController(),
         ),
