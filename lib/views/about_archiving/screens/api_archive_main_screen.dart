@@ -121,6 +121,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     _ensureCategorySearchController();
     _ensureCategoryController();
 
+    // MediaController를 먼저 준비해야 사용자 정보 변경 시 즉시 로딩 가능
+    _mediaController ??= Provider.of<MediaController>(context, listen: false);
+
     final userController = Provider.of<UserController>(context, listen: false);
     if (_userController != userController) {
       if (_userListener != null) {
@@ -131,7 +134,6 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       _userController?.addListener(_userListener!);
       _handleUserProfileChanged();
     }
-    _mediaController ??= Provider.of<MediaController>(context, listen: false);
 
     // 프로필 이미지 URL은 UserController 리스너에서 관리
   }
