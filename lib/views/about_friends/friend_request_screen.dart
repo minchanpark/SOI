@@ -87,64 +87,6 @@ class _FriendRequestScreenState extends State<FriendRequestScreen> {
     }
   }
 
-  /// 친구 요청 수락
-  void _onAcceptRequest(
-    String requestId,
-    FriendRequestController controller,
-  ) async {
-    try {
-      await controller.acceptFriendRequest(requestId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('친구 요청을 수락했습니다'),
-            backgroundColor: Color(0xFF5A5A5A),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('친구 요청 수락에 실패했습니다'),
-            backgroundColor: Color(0xFF5A5A5A),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-  /// 친구 요청 거절
-  void _onRejectRequest(
-    String requestId,
-    FriendRequestController controller,
-  ) async {
-    try {
-      await controller.rejectFriendRequest(requestId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('친구 요청을 거절했습니다'),
-            backgroundColor: Color(0xFF5A5A5A),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('친구 요청 거절에 실패했습니다'),
-            backgroundColor: Color(0xFF5A5A5A),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
   /// 친구 추가 (연락처 기반)
   void _onAddFriend(Contact contact) async {
     try {
@@ -404,15 +346,7 @@ class _FriendRequestScreenState extends State<FriendRequestScreen> {
           _buildSectionTitle('친구 요청'),
           SizedBox(height: 12.h),
 
-          Consumer<FriendRequestController>(
-            builder: (context, controller, child) {
-              return FriendRequestCard(
-                scale: 1.0,
-                onAcceptRequest: _onAcceptRequest,
-                onRejectRequest: _onRejectRequest,
-              );
-            },
-          ),
+          FriendRequestCard(scale: 1.0),
 
           SizedBox(height: 32.h),
 

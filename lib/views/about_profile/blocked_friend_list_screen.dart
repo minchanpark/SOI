@@ -1,11 +1,13 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../api_firebase/controllers/friend_controller.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
-import '../../api_firebase/models/auth_model.dart';
+
+import '../../api/controller/friend_controller.dart';
+import '../../api/controller/user_controller.dart';
+import '../../api/models/friend.dart';
+import '../../api/models/user.dart';
 
 class BlockedFriendListScreen extends StatefulWidget {
   const BlockedFriendListScreen({super.key});
@@ -16,8 +18,7 @@ class BlockedFriendListScreen extends StatefulWidget {
 }
 
 class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
-  List<String> _blockedUserIds = [];
-  List<AuthModel> _blockedUsers = [];
+  final List<User> _blockedUsers = [];
   bool _isLoading = true;
   String? _error;
 
@@ -34,48 +35,54 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     });
 
     try {
+      final userController = context.read<UserController>();
       final friendController = context.read<FriendController>();
-      final authController = context.read<AuthController>();
+      final currentUserId = userController.currentUserId;
 
-      // 차단된 사용자 ID 목록 가져오기
-      final blockedUserIds = await friendController.getBlockedUsers();
-
-      // 각 차단된 사용자의 정보 가져오기
-      final List<AuthModel> blockedUsers = [];
-      for (String userId in blockedUserIds) {
-        final userInfo = await authController.getUserInfo(userId);
-        if (userInfo != null) {
-          blockedUsers.add(userInfo);
-        }
+      if (currentUserId == null) {
+        setState(() {
+          _error = '로그인이 필요합니다.';
+          _isLoading = false;
+        });
+        return;
       }
 
+      final blockedUsers = await friendController.getAllFriends(
+        userId: currentUserId,
+        status: FriendStatus.blocked,
+      );
+
+      if (!mounted) return;
       setState(() {
-        _blockedUserIds = blockedUserIds;
-        _blockedUsers = blockedUsers;
+        _blockedUsers
+          ..clear()
+          ..addAll(blockedUsers);
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = '차단된 친구를 불러오지 못했습니다.';
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _unblockUser(String userId, String userName) async {
-    try {
-      final friendController = context.read<FriendController>();
-      final success = await friendController.unblockFriend(userId);
+  Future<void> _unblockUser(User user) async {
+    final userController = context.read<UserController>();
+    final friendController = context.read<FriendController>();
+    final currentUserId = userController.currentUserId;
+    if (currentUserId == null) return;
 
-      if (success) {
-        // 성공 시 목록에서 제거
-        setState(() {
-          _blockedUserIds.remove(userId);
-          _blockedUsers.removeWhere((user) => user.uid == userId);
-        });
-      }
-    } catch (e) {
-      debugPrint('친구 차단 해제 실패: $e');
+    final success = await friendController.unblockFriend(
+      requesterId: currentUserId,
+      receiverId: user.id,
+    );
+
+    if (success && mounted) {
+      setState(() {
+        _blockedUsers.removeWhere((u) => u.id == user.id);
+      });
     }
   }
 
@@ -90,20 +97,15 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '차단된 친구',
-              textAlign: TextAlign.start,
-              style: TextStyle(
-                color: const Color(0xFFF8F8F8),
-                fontSize: 20.sp,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+        title: Text(
+          '차단된 친구',
+          textAlign: TextAlign.start,
+          style: TextStyle(
+            color: const Color(0xFFF8F8F8),
+            fontSize: 20.sp,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: SingleChildScrollView(child: _buildBody()),
@@ -157,7 +159,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
             MediaQuery.of(context).size.height -
             MediaQuery.of(context).padding.top -
             kToolbarHeight -
-            100.h, // AppBar와 패딩을 제외한 높이
+            100.h,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -191,7 +193,10 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (int i = 0; i < _blockedUsers.length; i++) ...[
-              _buildBlockedUserItem(_blockedUsers[i]),
+              _BlockedUserItem(
+                user: _blockedUsers[i],
+                onUnblock: () => _unblockUser(_blockedUsers[i]),
+              ),
               if (i < _blockedUsers.length - 1)
                 Divider(color: const Color(0xFF333333), height: 24.h),
             ],
@@ -200,70 +205,53 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
       ),
     );
   }
+}
 
-  Widget _buildBlockedUserItem(AuthModel user) {
+class _BlockedUserItem extends StatelessWidget {
+  final User user;
+  final VoidCallback onUnblock;
+
+  const _BlockedUserItem({
+    required this.user,
+    required this.onUnblock,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final profileUrl = user.profileImageUrlKey ?? '';
+
     return Row(
       children: [
-        // 프로필 이미지
-        FutureBuilder<String>(
-          future: context.read<AuthController>().getUserProfileImageUrlById(
-            user.uid,
+        Container(
+          width: 44.w,
+          height: 44.w,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF333333),
           ),
-          builder: (context, snapshot) {
-            final imageUrl = snapshot.data ?? '';
-
-            return Container(
-              width: 44.sp,
-              height: 44.sp,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF333333),
-              ),
-              child: imageUrl.isNotEmpty
-                  ? ClipOval(
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        memCacheWidth: (44 * 4).round(),
-                        maxWidthDiskCache: (44 * 4).round(),
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: const Color(0xFF333333),
-                          highlightColor: const Color(0xFF555555),
-                          child: Container(
-                            width: 44.sp,
-                            height: 44.sp,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF333333),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFFd9d9d9),
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 26,
-                          ),
+          child: profileUrl.isNotEmpty
+              ? ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: profileUrl,
+                    fit: BoxFit.cover,
+                    memCacheHeight: (44 * 4).round(),
+                    maxWidthDiskCache: (44 * 4).round(),
+                    placeholder: (context, url) => Shimmer.fromColors(
+                      baseColor: const Color(0xFF333333),
+                      highlightColor: const Color(0xFF555555),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFF333333),
                         ),
                       ),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFd9d9d9),
-                      ),
-                      child: Icon(Icons.person, color: Colors.white, size: 26),
                     ),
-            );
-          },
+                    errorWidget: (context, url, error) => const _ProfileFallback(),
+                  ),
+                )
+              : const _ProfileFallback(),
         ),
         SizedBox(width: 12.w),
-
-        // 사용자 정보
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +267,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
               ),
               SizedBox(height: 2.h),
               Text(
-                user.id,
+                user.userId,
                 style: TextStyle(
                   color: const Color(0xFFD9D9D9),
                   fontSize: 9.sp,
@@ -290,34 +278,45 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
             ],
           ),
         ),
-
-        // 차단 해제 버튼
-        Container(
+        SizedBox(
           width: 84.w,
           height: 29,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(13),
-          ),
           child: TextButton(
-            onPressed: () => _unblockUser(user.uid, user.name),
+            onPressed: onUnblock,
             style: TextButton.styleFrom(
-              minimumSize: Size.zero,
+              backgroundColor: const Color(0xFFF8F8F8),
+              foregroundColor: const Color(0xFF1C1C1C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
               padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
               '차단 해제',
               style: TextStyle(
-                color: const Color(0xFF1C1C1C),
                 fontSize: 13.sp,
-                fontFamily: 'Pretendard Variable',
+                fontFamily: 'Pretendard',
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ProfileFallback extends StatelessWidget {
+  const _ProfileFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0xFFd9d9d9),
+      ),
+      child: const Icon(Icons.person, color: Colors.white, size: 26),
     );
   }
 }
