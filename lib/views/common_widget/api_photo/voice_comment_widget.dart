@@ -5,7 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../api/controller/audio_controller.dart';
-import '../../../api_firebase/controllers/auth_controller.dart';
+import '../../../api/controller/media_controller.dart';
+import '../../../api/controller/user_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
 /// 음성 댓글 전용 위젯
@@ -76,6 +77,9 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
   /// 이전 녹음 상태 (애니메이션 제어용)
   VoiceCommentState? _lastState;
+  final Map<String, Future<String?>> _profileUrlFutures = {};
+  bool get _isTextCommentMode =>
+      widget.startInPlacingMode && (_waveformData == null || _waveformData!.isEmpty);
 
   // ============================================================
   // 여러 가지 생명주기 관련 메서드
@@ -755,7 +759,8 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     _releaseParentScroll();
     setState(() {
       _lastState = _currentState;
-      _currentState = VoiceCommentState.recorded;
+      _currentState =
+          _isTextCommentMode ? VoiceCommentState.saved : VoiceCommentState.recorded;
     });
   }
 
@@ -877,25 +882,47 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 프로필 아바타 위젯 생성
   /// profileImageUrl이 있으면 CachedNetworkImage 사용, 없으면 기본 아이콘 표시
   Widget _buildProfileAvatar() {
-    return Consumer<AuthController>(
-      builder: (context, authController, _) {
-        final currentUserId = authController.currentUser?.uid;
-        if (currentUserId == null) {
-          return _buildAvatarFromUrl(widget.profileImageUrl);
-        }
-
-        return StreamBuilder<String>(
-          stream: authController.getUserProfileImageUrlStream(currentUserId),
+    return Consumer2<UserController, MediaController>(
+      builder: (context, userController, mediaController, _) {
+        final profileSource =
+            userController.currentUser?.profileImageUrlKey ??
+            widget.profileImageUrl;
+        final future = _getResolvedProfileImageUrl(
+          profileSource,
+          mediaController,
+        );
+        return FutureBuilder<String?>(
+          future: future,
           builder: (context, snapshot) {
-            final streamUrl = snapshot.data;
-            final resolvedUrl = (streamUrl != null && streamUrl.isNotEmpty)
-                ? streamUrl
-                : widget.profileImageUrl;
+            final resolvedUrl = snapshot.data ?? widget.profileImageUrl;
             return _buildAvatarFromUrl(resolvedUrl);
           },
         );
       },
     );
+  }
+
+  Future<String?> _getResolvedProfileImageUrl(
+    String? profileKey,
+    MediaController mediaController,
+  ) {
+    if (profileKey == null || profileKey.isEmpty) {
+      return Future.value(null);
+    }
+
+    final uri = Uri.tryParse(profileKey);
+    if (uri != null && uri.hasScheme) {
+      return Future.value(profileKey);
+    }
+
+    final cachedFuture = _profileUrlFutures[profileKey];
+    if (cachedFuture != null) {
+      return cachedFuture;
+    }
+
+    final future = mediaController.getPresignedUrl(profileKey);
+    _profileUrlFutures[profileKey] = future;
+    return future;
   }
 
   Widget _buildAvatarFromUrl(String? imageUrl) {

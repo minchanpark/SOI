@@ -224,20 +224,23 @@ class PostService {
   /// 특정 카테고리에 속한 게시물만 조회합니다.
   ///
   /// Parameters:
-  /// - [categoryId]: 카테고리 ID
-  /// - [userId]: 요청 사용자 ID (권한 확인용)
-  /// - [page]: 페이지 번호 (기본값: 0)
+  ///   - [categoryId]: 카테고리 ID
+  ///   - [userId]: 요청 사용자 ID (권한 확인용)
+  ///   - [notificationId]: 알림 ID (선택, 알림에서 접근 시 사용)
+  ///   - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,
+    int? notificationId,
     int page = 0,
   }) async {
     try {
       final response = await _postApi.findByCategoryId(
         categoryId,
         userId,
+        notificationId: notificationId,
         page: page,
       );
 

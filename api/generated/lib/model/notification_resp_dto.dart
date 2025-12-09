@@ -18,6 +18,9 @@ class NotificationRespDto {
     this.nickname,
     this.userProfileKey,
     this.imageUrl,
+    this.type,
+    this.isRead,
+    this.categoryIdForPost,
     this.relatedId,
   });
 
@@ -61,6 +64,24 @@ class NotificationRespDto {
   ///
   String? imageUrl;
 
+  NotificationRespDtoTypeEnum? type;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? isRead;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? categoryIdForPost;
+
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
   /// does not include a default value (using the "default:" property), however, the generated
@@ -76,6 +97,9 @@ class NotificationRespDto {
     other.nickname == nickname &&
     other.userProfileKey == userProfileKey &&
     other.imageUrl == imageUrl &&
+    other.type == type &&
+    other.isRead == isRead &&
+    other.categoryIdForPost == categoryIdForPost &&
     other.relatedId == relatedId;
 
   @override
@@ -86,10 +110,13 @@ class NotificationRespDto {
     (nickname == null ? 0 : nickname!.hashCode) +
     (userProfileKey == null ? 0 : userProfileKey!.hashCode) +
     (imageUrl == null ? 0 : imageUrl!.hashCode) +
+    (type == null ? 0 : type!.hashCode) +
+    (isRead == null ? 0 : isRead!.hashCode) +
+    (categoryIdForPost == null ? 0 : categoryIdForPost!.hashCode) +
     (relatedId == null ? 0 : relatedId!.hashCode);
 
   @override
-  String toString() => 'NotificationRespDto[text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, relatedId=$relatedId]';
+  String toString() => 'NotificationRespDto[text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, type=$type, isRead=$isRead, categoryIdForPost=$categoryIdForPost, relatedId=$relatedId]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -117,6 +144,21 @@ class NotificationRespDto {
       json[r'imageUrl'] = this.imageUrl;
     } else {
       json[r'imageUrl'] = null;
+    }
+    if (this.type != null) {
+      json[r'type'] = this.type;
+    } else {
+      json[r'type'] = null;
+    }
+    if (this.isRead != null) {
+      json[r'isRead'] = this.isRead;
+    } else {
+      json[r'isRead'] = null;
+    }
+    if (this.categoryIdForPost != null) {
+      json[r'categoryIdForPost'] = this.categoryIdForPost;
+    } else {
+      json[r'categoryIdForPost'] = null;
     }
     if (this.relatedId != null) {
       json[r'relatedId'] = this.relatedId;
@@ -150,6 +192,9 @@ class NotificationRespDto {
         nickname: mapValueOfType<String>(json, r'nickname'),
         userProfileKey: mapValueOfType<String>(json, r'userProfileKey'),
         imageUrl: mapValueOfType<String>(json, r'imageUrl'),
+        type: NotificationRespDtoTypeEnum.fromJson(json[r'type']),
+        isRead: mapValueOfType<bool>(json, r'isRead'),
+        categoryIdForPost: mapValueOfType<int>(json, r'categoryIdForPost'),
         relatedId: mapValueOfType<int>(json, r'relatedId'),
       );
     }
@@ -200,4 +245,93 @@ class NotificationRespDto {
   static const requiredKeys = <String>{
   };
 }
+
+
+class NotificationRespDtoTypeEnum {
+  /// Instantiate a new enum with the provided [value].
+  const NotificationRespDtoTypeEnum._(this.value);
+
+  /// The underlying value of this enum member.
+  final String value;
+
+  @override
+  String toString() => value;
+
+  String toJson() => value;
+
+  static const CATEGORY_INVITE = NotificationRespDtoTypeEnum._(r'CATEGORY_INVITE');
+  static const CATEGORY_ADDED = NotificationRespDtoTypeEnum._(r'CATEGORY_ADDED');
+  static const PHOTO_ADDED = NotificationRespDtoTypeEnum._(r'PHOTO_ADDED');
+  static const COMMENT_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_ADDED');
+  static const COMMENT_AUDIO_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_AUDIO_ADDED');
+  static const FRIEND_REQUEST = NotificationRespDtoTypeEnum._(r'FRIEND_REQUEST');
+  static const FRIEND_RESPOND = NotificationRespDtoTypeEnum._(r'FRIEND_RESPOND');
+
+  /// List of all possible values in this [enum][NotificationRespDtoTypeEnum].
+  static const values = <NotificationRespDtoTypeEnum>[
+    CATEGORY_INVITE,
+    CATEGORY_ADDED,
+    PHOTO_ADDED,
+    COMMENT_ADDED,
+    COMMENT_AUDIO_ADDED,
+    FRIEND_REQUEST,
+    FRIEND_RESPOND,
+  ];
+
+  static NotificationRespDtoTypeEnum? fromJson(dynamic value) => NotificationRespDtoTypeEnumTypeTransformer().decode(value);
+
+  static List<NotificationRespDtoTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <NotificationRespDtoTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = NotificationRespDtoTypeEnum.fromJson(row);
+        if (value != null) {
+          result.add(value);
+        }
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [NotificationRespDtoTypeEnum] to String,
+/// and [decode] dynamic data back to [NotificationRespDtoTypeEnum].
+class NotificationRespDtoTypeEnumTypeTransformer {
+  factory NotificationRespDtoTypeEnumTypeTransformer() => _instance ??= const NotificationRespDtoTypeEnumTypeTransformer._();
+
+  const NotificationRespDtoTypeEnumTypeTransformer._();
+
+  String encode(NotificationRespDtoTypeEnum data) => data.value;
+
+  /// Decodes a [dynamic value][data] to a NotificationRespDtoTypeEnum.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  NotificationRespDtoTypeEnum? decode(dynamic data, {bool allowNull = true}) {
+    if (data != null) {
+      switch (data) {
+        case r'CATEGORY_INVITE': return NotificationRespDtoTypeEnum.CATEGORY_INVITE;
+        case r'CATEGORY_ADDED': return NotificationRespDtoTypeEnum.CATEGORY_ADDED;
+        case r'PHOTO_ADDED': return NotificationRespDtoTypeEnum.PHOTO_ADDED;
+        case r'COMMENT_ADDED': return NotificationRespDtoTypeEnum.COMMENT_ADDED;
+        case r'COMMENT_AUDIO_ADDED': return NotificationRespDtoTypeEnum.COMMENT_AUDIO_ADDED;
+        case r'FRIEND_REQUEST': return NotificationRespDtoTypeEnum.FRIEND_REQUEST;
+        case r'FRIEND_RESPOND': return NotificationRespDtoTypeEnum.FRIEND_RESPOND;
+        default:
+          if (!allowNull) {
+            throw ArgumentError('Unknown enum value to decode: $data');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// Singleton [NotificationRespDtoTypeEnumTypeTransformer] instance.
+  static NotificationRespDtoTypeEnumTypeTransformer? _instance;
+}
+
 

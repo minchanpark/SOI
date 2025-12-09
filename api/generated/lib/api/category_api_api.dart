@@ -349,7 +349,9 @@ class CategoryAPIApi {
   /// * [String] categoryFilter (required):
   ///
   /// * [int] userId (required):
-  Future<Response> getCategoriesWithHttpInfo(String categoryFilter, int userId,) async {
+  ///
+  /// * [int] page:
+  Future<Response> getCategoriesWithHttpInfo(String categoryFilter, int userId, { int? page, }) async {
     // ignore: prefer_const_declarations
     final path = r'/category/find';
 
@@ -362,6 +364,9 @@ class CategoryAPIApi {
 
       queryParams.addAll(_queryParams('', 'categoryFilter', categoryFilter));
       queryParams.addAll(_queryParams('', 'userId', userId));
+    if (page != null) {
+      queryParams.addAll(_queryParams('', 'page', page));
+    }
 
     const contentTypes = <String>[];
 
@@ -386,8 +391,10 @@ class CategoryAPIApi {
   /// * [String] categoryFilter (required):
   ///
   /// * [int] userId (required):
-  Future<ApiResponseDtoListCategoryRespDto?> getCategories(String categoryFilter, int userId,) async {
-    final response = await getCategoriesWithHttpInfo(categoryFilter, userId,);
+  ///
+  /// * [int] page:
+  Future<ApiResponseDtoListCategoryRespDto?> getCategories(String categoryFilter, int userId, { int? page, }) async {
+    final response = await getCategoriesWithHttpInfo(categoryFilter, userId,  page: page, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

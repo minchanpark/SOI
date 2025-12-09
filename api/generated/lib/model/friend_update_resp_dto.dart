@@ -15,6 +15,7 @@ class FriendUpdateRespDto {
   FriendUpdateRespDto({
     this.id,
     this.status,
+    this.notificationId,
   });
 
   ///
@@ -27,19 +28,29 @@ class FriendUpdateRespDto {
 
   FriendUpdateRespDtoStatusEnum? status;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? notificationId;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is FriendUpdateRespDto &&
     other.id == id &&
-    other.status == status;
+    other.status == status &&
+    other.notificationId == notificationId;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
-    (status == null ? 0 : status!.hashCode);
+    (status == null ? 0 : status!.hashCode) +
+    (notificationId == null ? 0 : notificationId!.hashCode);
 
   @override
-  String toString() => 'FriendUpdateRespDto[id=$id, status=$status]';
+  String toString() => 'FriendUpdateRespDto[id=$id, status=$status, notificationId=$notificationId]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -52,6 +63,11 @@ class FriendUpdateRespDto {
       json[r'status'] = this.status;
     } else {
       json[r'status'] = null;
+    }
+    if (this.notificationId != null) {
+      json[r'notificationId'] = this.notificationId;
+    } else {
+      json[r'notificationId'] = null;
     }
     return json;
   }
@@ -77,6 +93,7 @@ class FriendUpdateRespDto {
       return FriendUpdateRespDto(
         id: mapValueOfType<int>(json, r'id'),
         status: FriendUpdateRespDtoStatusEnum.fromJson(json[r'status']),
+        notificationId: mapValueOfType<int>(json, r'notificationId'),
       );
     }
     return null;

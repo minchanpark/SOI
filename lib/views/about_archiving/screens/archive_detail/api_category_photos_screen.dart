@@ -97,7 +97,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       final posts = await postController!.getPostsByCategory(
         categoryId: _currentCategory.id,
         userId: currentUser.id,
+        notificationId: null,
       );
+      debugPrint("[ApiCategoryPhotosScreen] 현재 사용자 ID: ${currentUser.id}");
+      debugPrint("[ApiCategoryPhotosScreen] 카테고리 ID: ${_currentCategory.id}");
+      debugPrint("[ApiCategoryPhotosScreen] 로드된 포스트: $posts");
 
       final postFileKeys = posts
           .where((post) => post.hasImage)

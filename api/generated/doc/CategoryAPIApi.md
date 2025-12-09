@@ -247,7 +247,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getCategories**
-> ApiResponseDtoListCategoryRespDto getCategories(categoryFilter, userId)
+> ApiResponseDtoListCategoryRespDto getCategories(categoryFilter, userId, page)
 
 유저가 속한 카테고리 리스트를 가져오는 API
 
@@ -260,9 +260,10 @@ import 'package:soi_api_client/api.dart';
 final api_instance = CategoryAPIApi();
 final categoryFilter = categoryFilter_example; // String | 
 final userId = 789; // int | 
+final page = 56; // int | 
 
 try {
-    final result = api_instance.getCategories(categoryFilter, userId);
+    final result = api_instance.getCategories(categoryFilter, userId, page);
     print(result);
 } catch (e) {
     print('Exception when calling CategoryAPIApi->getCategories: $e\n');
@@ -275,6 +276,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **categoryFilter** | **String**|  | 
  **userId** | **int**|  | 
+ **page** | **int**|  | [optional] [default to 0]
 
 ### Return type
 

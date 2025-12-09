@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/user_controller.dart';
-import '../about_voice_comment/voice_comment_widget.dart';
+import 'voice_comment_widget.dart';
 
 /// API 기반 음성 녹음 활성화 상태 위젯
 ///

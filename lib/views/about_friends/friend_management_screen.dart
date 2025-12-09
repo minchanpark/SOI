@@ -226,6 +226,8 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
   Future<void> _handleToggleChange(ContactController contactController) async {
     final result = await contactController.handleToggleChange();
 
+    if (!mounted) return;
+
     if (result.type == ContactToggleResultType.requiresSettings) {
       // 설정 이동 팝업 표시
       PermissionSettingsDialog.show(context, _openAppSettings);
@@ -365,12 +367,8 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                     ),
                   ),
                 ),
-                // 친구 요청 카드
-                FriendRequestCard(
-                  scale: scale,
-                  onAcceptRequest: _acceptFriendRequest,
-                  onRejectRequest: _rejectFriendRequest,
-                ),
+                // 친구 요청 카드 (API)
+                FriendRequestCard(scale: scale),
                 SizedBox(height: 24.h),
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
@@ -409,40 +407,6 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
         },
       ),
     );
-  }
-
-  /// 친구 요청 수락
-  Future<void> _acceptFriendRequest(
-    String requestId,
-    FriendRequestController controller,
-  ) async {
-    final success = await controller.acceptFriendRequest(requestId);
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('친구 요청을 수락했습니다'),
-          backgroundColor: Color(0xFF5A5A5A),
-        ),
-      );
-    }
-  }
-
-  /// 친구 요청 거절
-  Future<void> _rejectFriendRequest(
-    String requestId,
-    FriendRequestController controller,
-  ) async {
-    final success = await controller.rejectFriendRequest(requestId);
-
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('친구 요청을 거절했습니다'),
-          backgroundColor: Color(0xff666666),
-        ),
-      );
-    }
   }
 
   /// 연락처에서 친구 추가

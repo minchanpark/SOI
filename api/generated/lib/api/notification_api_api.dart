@@ -25,7 +25,9 @@ class NotificationAPIApi {
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<Response> getAllWithHttpInfo(int userId,) async {
+  ///
+  /// * [int] page (required):
+  Future<Response> getAllWithHttpInfo(int userId, int page,) async {
     // ignore: prefer_const_declarations
     final path = r'/notification/get-all';
 
@@ -37,6 +39,7 @@ class NotificationAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'page', page));
 
     const contentTypes = <String>[];
 
@@ -59,8 +62,10 @@ class NotificationAPIApi {
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<ApiResponseDtoNotificationGetAllRespDto?> getAll(int userId,) async {
-    final response = await getAllWithHttpInfo(userId,);
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoNotificationGetAllRespDto?> getAll(int userId, int page,) async {
+    final response = await getAllWithHttpInfo(userId, page,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -83,7 +88,9 @@ class NotificationAPIApi {
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<Response> getFriendWithHttpInfo(int userId,) async {
+  ///
+  /// * [int] page (required):
+  Future<Response> getFriendWithHttpInfo(int userId, int page,) async {
     // ignore: prefer_const_declarations
     final path = r'/notification/get-friend';
 
@@ -95,6 +102,7 @@ class NotificationAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'page', page));
 
     const contentTypes = <String>[];
 
@@ -117,8 +125,10 @@ class NotificationAPIApi {
   /// Parameters:
   ///
   /// * [int] userId (required):
-  Future<ApiResponseDtoListNotificationRespDto?> getFriend(int userId,) async {
-    final response = await getFriendWithHttpInfo(userId,);
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoListNotificationRespDto?> getFriend(int userId, int page,) async {
+    final response = await getFriendWithHttpInfo(userId, page,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

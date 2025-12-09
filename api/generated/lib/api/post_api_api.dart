@@ -212,8 +212,10 @@ class PostAPIApi {
   ///
   /// * [int] userId (required):
   ///
+  /// * [int] notificationId:
+  ///
   /// * [int] page:
-  Future<Response> findByCategoryIdWithHttpInfo(int categoryId, int userId, { int? page, }) async {
+  Future<Response> findByCategoryIdWithHttpInfo(int categoryId, int userId, { int? notificationId, int? page, }) async {
     // ignore: prefer_const_declarations
     final path = r'/post/find-by/category';
 
@@ -226,6 +228,9 @@ class PostAPIApi {
 
       queryParams.addAll(_queryParams('', 'categoryId', categoryId));
       queryParams.addAll(_queryParams('', 'userId', userId));
+    if (notificationId != null) {
+      queryParams.addAll(_queryParams('', 'notificationId', notificationId));
+    }
     if (page != null) {
       queryParams.addAll(_queryParams('', 'page', page));
     }
@@ -254,9 +259,11 @@ class PostAPIApi {
   ///
   /// * [int] userId (required):
   ///
+  /// * [int] notificationId:
+  ///
   /// * [int] page:
-  Future<ApiResponseDtoListPostRespDto?> findByCategoryId(int categoryId, int userId, { int? page, }) async {
-    final response = await findByCategoryIdWithHttpInfo(categoryId, userId,  page: page, );
+  Future<ApiResponseDtoListPostRespDto?> findByCategoryId(int categoryId, int userId, { int? notificationId, int? page, }) async {
+    final response = await findByCategoryIdWithHttpInfo(categoryId, userId,  notificationId: notificationId, page: page, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

@@ -50,9 +50,10 @@ class NotificationService {
   /// - [SoiApiException]: 알림 조회 실패
   Future<NotificationGetAllResult> getAllNotifications({
     required int userId,
+    int page = 0,
   }) async {
     try {
-      final response = await _notificationApi.getAll(userId);
+      final response = await _notificationApi.getAll(userId, page);
 
       if (response == null) {
         return const NotificationGetAllResult();
@@ -91,9 +92,10 @@ class NotificationService {
   /// - [SoiApiException]: 알림 조회 실패
   Future<List<AppNotification>> getFriendNotifications({
     required int userId,
+    int page = 0,
   }) async {
     try {
-      final response = await _notificationApi.getFriend(userId);
+      final response = await _notificationApi.getFriend(userId, page);
 
       if (response == null) {
         return [];

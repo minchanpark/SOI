@@ -152,7 +152,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findByCategoryId**
-> ApiResponseDtoListPostRespDto findByCategoryId(categoryId, userId, page)
+> ApiResponseDtoListPostRespDto findByCategoryId(categoryId, userId, notificationId, page)
 
 카테고리에 해당하는 게시물 조회
 
@@ -165,10 +165,11 @@ import 'package:soi_api_client/api.dart';
 final api_instance = PostAPIApi();
 final categoryId = 789; // int | 
 final userId = 789; // int | 
+final notificationId = 789; // int | 
 final page = 56; // int | 
 
 try {
-    final result = api_instance.findByCategoryId(categoryId, userId, page);
+    final result = api_instance.findByCategoryId(categoryId, userId, notificationId, page);
     print(result);
 } catch (e) {
     print('Exception when calling PostAPIApi->findByCategoryId: $e\n');
@@ -181,6 +182,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **categoryId** | **int**|  | 
  **userId** | **int**|  | 
+ **notificationId** | **int**|  | [optional] 
  **page** | **int**|  | [optional] [default to 0]
 
 ### Return type

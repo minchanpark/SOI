@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../api_firebase/controllers/auth_controller.dart';
 import '../../../api_firebase/models/photo_data_model.dart';
 import '../../../api_firebase/models/comment_record_model.dart';
-import 'voice_comment_widget.dart';
+import '../api_photo/voice_comment_widget.dart';
 
 /// 음성 녹음이 활성화된 상태의 위젯
 ///
