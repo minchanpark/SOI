@@ -15,6 +15,7 @@ import 'wave_form_widget/custom_waveform_widget.dart';
 /// Firebase 버전의 PhotoGridItem과 동일한 UI를 유지하면서
 /// Post 모델을 사용합니다.
 class ApiPhotoGridItem extends StatefulWidget {
+  final String postUrl;
   final Post post;
   final List<Post> allPosts;
   final int currentIndex;
@@ -24,6 +25,7 @@ class ApiPhotoGridItem extends StatefulWidget {
   const ApiPhotoGridItem({
     super.key,
     required this.post,
+    required this.postUrl,
     required this.allPosts,
     required this.currentIndex,
     required this.categoryName,
@@ -51,16 +53,15 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     _mediaController = Provider.of<MediaController>(context, listen: false);
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadProfileImage(widget.post.profileImageUrlKey);
+      _loadProfileImage(widget.post.userProfileImageKey);
     });
   }
 
   @override
   void didUpdateWidget(covariant ApiPhotoGridItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.post.profileImageUrlKey !=
-        widget.post.profileImageUrlKey) {
-      _loadProfileImage(widget.post.profileImageUrlKey);
+    if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
+      _loadProfileImage(widget.post.userProfileImageKey);
     }
   }
 
@@ -154,9 +155,9 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
             height: 232,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: widget.post.hasImage
+              child: widget.postUrl.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: widget.post.postFileUrl!,
+                      imageUrl: widget.postUrl,
                       memCacheWidth: (175 * 2).round(),
                       maxWidthDiskCache: (175 * 2).round(),
                       fit: BoxFit.cover,

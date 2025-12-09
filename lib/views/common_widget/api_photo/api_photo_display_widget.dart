@@ -71,12 +71,19 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
 
   bool get _hasCaption => widget.post.content?.isNotEmpty ?? false;
 
+  String? postImageUrl;
+
   @override
   void initState() {
     super.initState();
     _isShowingComments = _hasComments;
     _mediaController = Provider.of<MediaController>(context, listen: false);
-    _scheduleProfileLoad(widget.post.profileImageUrlKey);
+    _scheduleProfileLoad(widget.post.userProfileImageKey);
+    if (widget.post.postFileKey?.isNotEmpty ?? false) {
+      _loadPostImage(widget.post.postFileKey!);
+    } else {
+      postImageUrl = null;
+    }
   }
 
   @override
@@ -88,8 +95,33 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         _autoOpenedOnce = true;
       });
     }
-    if (oldWidget.post.profileImageUrlKey != widget.post.profileImageUrlKey) {
-      _scheduleProfileLoad(widget.post.profileImageUrlKey);
+    if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
+      _scheduleProfileLoad(widget.post.userProfileImageKey);
+    }
+    if (oldWidget.post.postFileKey != widget.post.postFileKey) {
+      _loadPostImage(widget.post.postFileKey!);
+    }
+  }
+
+  Future<void> _loadPostImage(String key) async {
+    if (widget.post.postFileKey == null || widget.post.postFileKey!.isEmpty) {
+      setState(() {
+        postImageUrl = null;
+      });
+      return;
+    }
+
+    try {
+      final url = await _mediaController.getPresignedUrl(key);
+      if (!mounted) return;
+      setState(() {
+        postImageUrl = url;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        postImageUrl = null;
+      });
     }
   }
 
@@ -146,7 +178,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   Widget _buildMediaContent() {
     if (widget.post.hasImage) {
       return CachedNetworkImage(
-        imageUrl: widget.post.postFileUrl!,
+        imageUrl: postImageUrl ?? '',
         width: _imageWidth.w,
         height: _imageHeight.h,
         fit: BoxFit.cover,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
 import 'package:soi/views/about_friends/friend_list_add_screen.dart';
 
@@ -36,11 +37,14 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   List<Post> _posts = [];
   Category? _category;
 
+  List<String> _postImageUrls = [];
+
   Timer? _autoRefreshTimer;
   static const Duration _autoRefreshInterval = Duration(minutes: 30);
 
   PostController? postController;
   UserController? userController;
+  MediaController? mediaController;
 
   @override
   void initState() {
@@ -77,6 +81,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     try {
       postController = Provider.of<PostController>(context, listen: false);
       userController = Provider.of<UserController>(context, listen: false);
+      mediaController = Provider.of<MediaController>(context, listen: false);
 
       // 현재 사용자 ID 가져오기
       final currentUser = userController!.currentUser;
@@ -93,6 +98,13 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         categoryId: _currentCategory.id,
         userId: currentUser.id,
       );
+
+      final postFileKeys = posts
+          .where((post) => post.hasImage)
+          .map((e) => e.postFileKey!)
+          .toList();
+
+      _postImageUrls = await mediaController!.getPresignedUrls(postFileKeys);
 
       if (mounted) {
         setState(() {
@@ -326,9 +338,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
+          final postImage = _postImageUrls[index];
 
           return ApiPhotoGridItem(
             post: post,
+            postUrl: postImage,
             allPosts: _posts,
             currentIndex: index,
             categoryName: _currentCategory.name,
