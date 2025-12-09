@@ -148,7 +148,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getAllFriend**
-> ApiResponseDtoListUserFindRespDto getAllFriend(id)
+> ApiResponseDtoListUserFindRespDto getAllFriend(id, friendStatus)
 
 모든 친구 조회
 
@@ -160,9 +160,10 @@ import 'package:soi_api_client/api.dart';
 
 final api_instance = FriendAPIApi();
 final id = 789; // int | 
+final friendStatus = friendStatus_example; // String | 
 
 try {
-    final result = api_instance.getAllFriend(id);
+    final result = api_instance.getAllFriend(id, friendStatus);
     print(result);
 } catch (e) {
     print('Exception when calling FriendAPIApi->getAllFriend: $e\n');
@@ -174,6 +175,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **int**|  | 
+ **friendStatus** | **String**|  | 
 
 ### Return type
 
@@ -283,7 +285,7 @@ No authorization required
 
 친구 상태 업데이트
 
-친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
 
 ### Example
 ```dart

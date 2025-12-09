@@ -8,11 +8,11 @@ import 'package:soi_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**id** | **int** |  | [optional] 
+**userId** | **int** |  | [optional] 
 **nickname** | **String** |  | [optional] 
 **content** | **String** |  | [optional] 
-**postFileKey** | **String** |  | [optional] 
-**audioFileKey** | **String** |  | [optional] 
+**postFileKey** | **List<String>** |  | [optional] [default to const []]
+**audioFileKey** | **List<String>** |  | [optional] [default to const []]
 **categoryId** | **List<int>** |  | [optional] [default to const []]
 **waveformData** | **String** |  | [optional] 
 **duration** | **int** |  | [optional] 

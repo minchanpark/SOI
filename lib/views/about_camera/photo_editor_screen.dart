@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+//import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +64,7 @@ class _UploadPayload {
   final String? caption; // 캡션 텍스트
   final List<double>? waveformData; // 음성 파형 데이터
   final int? audioDurationSeconds; // 음성 재생 시간 (초)
+  final int usageCount; // 미디어 사용 횟수
 
   const _UploadPayload({
     required this.userId,
@@ -70,6 +72,7 @@ class _UploadPayload {
     required this.mediaFile,
     required this.mediaPath,
     required this.isVideo,
+    required this.usageCount,
     this.audioFile,
     this.audioPath,
     this.caption,
@@ -83,10 +86,10 @@ class _UploadPayload {
 /// 서버에 파일을 업로드한 후 받은 키(key) 값들을 저장합니다.
 /// 이 키들은 나중에 게시물을 업데이트할 때 사용됩니다.
 class _MediaUploadResult {
-  final String mediaKey; // 사진/비디오 파일의 서버 키
-  final String? audioKey; // 음성 파일의 서버 키 (있는 경우)
+  final List<String> mediaKeys; // 사진/비디오 파일의 서버 키 목록
+  final List<String> audioKeys; // 음성 파일의 서버 키 목록
 
-  const _MediaUploadResult({required this.mediaKey, this.audioKey});
+  const _MediaUploadResult({required this.mediaKeys, required this.audioKeys});
 }
 
 class _PhotoEditorScreenState extends State<PhotoEditorScreen>
@@ -364,6 +367,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
+  // ========== 바텀시트 및 UI 상호작용 메서드들 ==========
+
+  // 카테고리 선택/해제 핸들러
   void _handleCategorySelection(int categoryId) {
     final wasEmpty = _selectedCategoryIds.isEmpty;
 
@@ -393,6 +399,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
+  // 바텀시트를 특정 크기로 애니메이션하는 메서드
   void _animateSheetTo(
     double size, {
     bool lockExtent = false,
@@ -417,6 +424,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         return;
       }
 
+      // 애니메이션 실행
       await _draggableScrollController.animateTo(
         size,
         duration: const Duration(milliseconds: 500),
@@ -434,6 +442,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     });
   }
 
+  // 바텀시트를 초기 위치로 재설정하는 메서드
   Future<void> _resetBottomSheetIfNeeded() async {
     if (_isDisposing || !_draggableScrollController.isAttached) return;
 
@@ -442,6 +451,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         : _initialChildSize;
     final currentSize = _draggableScrollController.size;
 
+    // 애니메이션이 필요한 경우에만 실행
     if ((currentSize - targetSize).abs() > 0.001) {
       await _draggableScrollController.animateTo(
         targetSize,
@@ -451,8 +461,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
+  // ========== 캡션 입력 관련 메서드들 ==========
+
+  // 마이크 아이콘 탭 핸들러
   void _handleMicTap() {
+    // 오디오 녹음 위젯 표시를 위해서 상태변수값 변경
     setState(() => _showAudioRecorder = true);
+
+    // 캡션 입력창 포커스 해제
     _captionFocusNode.unfocus();
   }
 
@@ -467,8 +483,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
               key: const ValueKey('audio_recorder'),
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               child: AudioRecorderWidget(
+                audioController: _audioController,
                 autoStart: true,
-
                 onRecordingFinished: (audioFilePath, waveformData, duration) {
                   setState(() {
                     _recordedAudioPath = audioFilePath;
@@ -558,7 +574,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
-  // ========== 업로드 및 화면 전환 관련 메서드들 ==========
+  // ========== 임시 파일 삭제 메서드들 ==========
 
   /// 임시 파일을 삭제하는 메소드입니다.
   Future<void> _deleteTemporaryFile(File file, String path) async {
@@ -567,7 +583,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     try {
       if (await file.exists()) {
         await file.delete();
-        debugPrint('임시 파일 삭제: $path');
       }
     } catch (e) {
       debugPrint('임시 파일 삭제 실패: $e');
@@ -588,11 +603,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   bool get isVideoFromCamera => widget.isVideo == true && widget.isFromCamera;
   bool get isVideoFromGallery => widget.isVideo == true && !widget.isFromCamera;
 
+  // ========== 업로드 메서드들 ==========
+
   /// 미디어를 업로드하고 홈 화면으로 이동하는 메서드입니다.
+  ///
+  /// Parameters:
+  ///   - [categoryIds]: 업로드할 게시물에 연결할 카테고리 ID 목록
   Future<void> _uploadThenNavigate(List<int> categoryIds) async {
     if (!mounted) return;
 
-    // 업로드할 데이터 준비
+    // post 저장에 필요한 데이터를 미리 준비
     final payload = await _prepareUploadPayload();
     if (payload == null) return;
     if (!mounted) return;
@@ -600,48 +620,44 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     try {
       // 성능 최적화: 병렬 처리 가능한 작업들을 동시 실행
       await Future.wait([
+        // 오디오 중지
         _audioController.stopRealtimeAudio(),
+
+        // 이미지 캐시 정리
         Future.microtask(() => _clearImageCache()),
       ]);
+
+      // 오디오 녹음 데이터 초기화
       _audioController.clearCurrentRecording();
-      // 성능 최적화: 불필요한 500ms 대기 제거
 
-      // 1. 먼저 post 생성 (모든 카테고리를 한 번에 전달)
-      final postId = await _createDraftPost(
-        categoryIds: categoryIds,
-        payload: payload,
-      );
-      debugPrint("생성된 게시물 ID: $postId");
-      if (postId == null) {
-        throw Exception('게시물 생성에 실패했습니다.');
-      }
+      // 1. 미디어 업로드 (사진/비디오 + 음성)
+      final mediaResult = await _uploadMediaForPost(payload: payload);
 
-      // 2-3. 미디어 업로드 (사진/비디오)
-      final mediaResult = await _uploadMediaForPost(
-        postId: postId,
-
-        // payload 자체를 전달하여서 필요한 모든 정보를 사용할 수 있도록 함
-        payload: payload,
-      );
-      debugPrint("미디어 업로드 결과: ${mediaResult == null ? '실패' : '성공'}");
       if (mediaResult == null) {
         throw Exception('미디어 업로드에 실패했습니다.');
       }
 
-      // 4. 최종적으로 post 업데이트
-      await _finalizePostUpload(
-        postId: postId,
+      // 2. 업로드된 키로 게시물 생성
+      final createSuccess = await _createPostWithMedia(
+        categoryIds: categoryIds,
         payload: payload,
         mediaResult: mediaResult,
       );
 
-      // 성능 최적화: 파일 삭제를 백그라운드에서 실행 (사용자가 기다릴 필요 없음)
+      if (!createSuccess) {
+        throw Exception('게시물 생성에 실패했습니다.');
+      }
+
+      // 성능 최적화: 임시 파일(미디어 및 오디오) 삭제를 백그라운드에서 실행 (사용자가 기다릴 필요 없음)
       unawaited(_deleteTemporaryFilesInBackground(payload));
 
+      // 이미지 캐시 정리
       _clearImageCache();
       if (!mounted) return;
       LoadingPopupWidget.hide(context);
       if (!mounted) return;
+
+      // 홈 화면으로 이동
       _navigateToHome();
     } catch (e) {
       debugPrint('업로드 실패: $e');
@@ -707,17 +723,17 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         // 이미 압축이 완료된 파일이 있으면 바로 사용
         if (_compressedFile != null && _lastCompressedPath == filePath) {
           mediaFile = _compressedFile!;
-          debugPrint('✅ 캐시된 압축 파일 사용');
+          debugPrint('캐시된 압축 파일 사용');
         }
         // 압축 작업이 진행 중이면 완료될 때까지 대기
         else if (_compressionTask != null && _lastCompressedPath == filePath) {
-          debugPrint('⏳ 백그라운드 압축 완료 대기 중...');
+          debugPrint('백그라운드 압축 완료 대기 중...');
           mediaFile = await _compressionTask!;
-          debugPrint('✅ 백그라운드 압축 완료, 사용');
+          debugPrint('백그라운드 압축 완료, 사용');
         }
         // 캐시나 진행 중인 작업이 없으면 즉시 압축 (폴백)
         else {
-          debugPrint('⚠️ 캐시 없음, 즉시 압축 시작');
+          debugPrint('캐시 없음, 즉시 압축 시작');
           mediaFile = await _compressImageIfNeeded(mediaFile);
         }
       } catch (e) {
@@ -744,7 +760,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
     // 캡션 텍스트 준비
     final captionText = _captionController.text.trim();
-    final caption = captionText.isNotEmpty ? captionText : null;
+    final caption = captionText.isNotEmpty ? captionText : '';
+    final hasCaption = caption.isNotEmpty;
 
     // 음성 파형 데이터 준비
     final waveform = (!isVideo && _recordedWaveformData != null)
@@ -756,6 +773,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         ? _audioController.recordingDuration
         : null;
 
+    // 캡션이 존재하면 음성 첨부를 생략
+    final shouldIncludeAudio = !hasCaption && audioFile != null;
+
     // 모든 준비가 완료된 업로드 페이로드 반환
     return _UploadPayload(
       userId: currentUser.id,
@@ -763,12 +783,152 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       mediaFile: mediaFile,
       mediaPath: mediaFile.path,
       isVideo: isVideo,
-      audioFile: audioFile,
-      audioPath: audioPath,
+      audioFile: shouldIncludeAudio ? audioFile : null,
+      audioPath: shouldIncludeAudio ? audioPath : null,
       caption: caption,
-      waveformData: waveform,
-      audioDurationSeconds: duration,
+      waveformData: shouldIncludeAudio ? waveform : null,
+      audioDurationSeconds: shouldIncludeAudio ? duration : null,
+      usageCount: _selectedCategoryIds.isNotEmpty
+          ? _selectedCategoryIds.length
+          : 1,
     );
+  }
+
+  /// 미디어 파일 업로드 메서드(UI용 메소드)
+  Future<_MediaUploadResult?> _uploadMediaForPost({
+    required _UploadPayload payload,
+  }) async {
+    final files = <http.MultipartFile>[];
+    final types = <MediaType>[];
+    final usageTypes = <MediaUsageType>[];
+
+    // 사진/비디오 파일을 Multipart로 변환
+    final mediaMultipart = await _mediaController.fileToMultipart(
+      payload.mediaFile,
+    );
+
+    // 미디어 파일 추가
+    files.add(mediaMultipart);
+
+    // 미디어 타입 및 사용 용도 설정
+    types.add(payload.isVideo ? MediaType.video : MediaType.image);
+    usageTypes.add(MediaUsageType.post);
+
+    // 음성 파일이 있으면 추가
+    if (payload.audioFile != null) {
+      // 음성 파일을 Multipart로 변환
+      final audioMultipart = await _mediaController.fileToMultipart(
+        payload.audioFile!,
+      );
+
+      // 음성 파일 추가
+      files.add(audioMultipart);
+
+      // 음성 타입 설정
+      types.add(MediaType.audio);
+
+      // 음성도 게시물 용도로 설정
+      usageTypes.add(MediaUsageType.post);
+    }
+
+    // 미디어 업로드 호출
+    final keys = await _mediaController.uploadMedia(
+      files: files,
+      types: types,
+      usageTypes: usageTypes,
+      userId: payload.userId,
+      refId: payload.userId,
+      usageCount: payload.usageCount,
+    );
+
+    if (keys.isEmpty) {
+      return null;
+    }
+
+    final mediaKeys = <String>[];
+    final audioKeys = <String>[];
+    final perTypeCount = payload.usageCount <= 0 ? 1 : payload.usageCount;
+    var index = 0;
+
+    for (var i = 0; i < perTypeCount && index < keys.length; i++) {
+      mediaKeys.add(keys[index++]);
+    }
+
+    if (payload.audioFile != null) {
+      for (var i = 0; i < perTypeCount && index < keys.length; i++) {
+        audioKeys.add(keys[index++]);
+      }
+    }
+
+    if (mediaKeys.length < perTypeCount ||
+        (payload.audioFile != null && audioKeys.length < perTypeCount)) {
+      debugPrint('[PhotoEditor] 반환된 미디어 키 수가 기대치와 다릅니다. keys: $keys');
+      return null;
+    }
+
+    return _MediaUploadResult(mediaKeys: mediaKeys, audioKeys: audioKeys);
+  }
+
+  // 화면 전환 메서드
+  void _navigateToHome() {
+    if (!mounted || _isDisposing) return;
+
+    _audioController.stopRealtimeAudio();
+    _audioController.clearCurrentRecording();
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => HomePageNavigationBar(currentPageIndex: 2),
+        settings: RouteSettings(name: '/home_navigation_screen'),
+      ),
+      (route) => false,
+    );
+
+    if (_draggableScrollController.isAttached) {
+      _draggableScrollController.jumpTo(0.0);
+    }
+  }
+
+  /// 업로드된 키를 포함해 게시물을 최종 생성
+  Future<bool> _createPostWithMedia({
+    required List<int> categoryIds,
+    required _UploadPayload payload,
+    required _MediaUploadResult mediaResult,
+  }) async {
+    final waveformJson = (!payload.isVideo)
+        ? _encodeWaveformData(payload.waveformData)
+        : null;
+
+    debugPrint(
+      "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: ${categoryIds}\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
+    );
+
+    final success = await _postController.createPost(
+      userId: payload.userId,
+      nickName: payload.nickName,
+      content: payload.caption,
+      postFileKey: mediaResult.mediaKeys,
+      audioFileKey: mediaResult.audioKeys,
+      categoryIds: categoryIds,
+      waveformData: waveformJson,
+      duration: payload.audioDurationSeconds,
+    );
+
+    debugPrint('[PhotoEditor] 게시물 생성 결과: $success');
+
+    return success;
+  }
+
+  /// 파형 데이터를 JSON 문자열로 인코딩
+  String? _encodeWaveformData(List<double>? waveformData) {
+    if (waveformData == null || waveformData.isEmpty) {
+      return null;
+    }
+    final normalized = waveformData
+        .map((value) => double.parse(value.toStringAsFixed(6)))
+        .map((value) => value.toString())
+        .toList();
+    return normalized.join(', ');
   }
 
   // ========== 성능 최적화: 사전 압축 ==========
@@ -789,16 +949,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     if (_lastCompressedPath == filePath && _compressionTask != null) return;
 
     // 백그라운드에서 압축 시작
-    debugPrint('🚀 백그라운드 압축 시작: $filePath');
     _lastCompressedPath = filePath;
     _compressionTask = _compressImageIfNeeded(File(filePath))
         .then((compressed) {
           _compressedFile = compressed;
-          debugPrint('✅ 백그라운드 압축 완료: ${compressed.path}');
           return compressed;
         })
         .catchError((error) {
-          debugPrint('⚠️ 백그라운드 압축 실패: $error');
+          debugPrint('백그라운드 압축 실패: $error');
           // 압축 실패 시 원본 파일 사용
           _compressedFile = File(filePath);
           return File(filePath);
@@ -902,138 +1060,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     );
 
     return compressedXFile != null ? File(compressedXFile.path) : null;
-  }
-
-  Future<int?> _createDraftPost({
-    required List<int> categoryIds,
-    required _UploadPayload payload,
-  }) {
-    debugPrint("payload.caption: ${payload.caption}");
-    debugPrint("categoryIds: $categoryIds");
-    debugPrint("payload.waveformData: ${payload.waveformData}");
-    debugPrint("payload.audioDurationSeconds: ${payload.audioDurationSeconds}");
-    debugPrint("payload.isVideo: ${payload.isVideo}");
-    debugPrint("payload.nickName: ${payload.nickName}");
-    debugPrint("payload.userId: ${payload.userId}");
-
-    return _postController.createPostAndReturnId(
-      id: payload.userId,
-      nickName: payload.nickName,
-      content: "",
-      categoryIds: categoryIds,
-      postFileKey: "",
-      audioFileKey: "",
-      waveformData: "",
-      duration: 0,
-    );
-  }
-
-  /// 미디어 파일 업로드 메서드(UI용 메소드)
-  Future<_MediaUploadResult?> _uploadMediaForPost({
-    required int postId,
-    required _UploadPayload payload,
-  }) async {
-    // 미디어 파일을 Multipart로 변환
-
-    final mediaMultipart = await _mediaController.fileToMultipart(
-      payload.mediaFile,
-    );
-
-    String? mediaKey;
-    // ======== 미디어 타입에 따라 업로드 처리 =========
-
-    // 비디오 업로드
-    debugPrint("업로드할 미디어 타입: ${payload.isVideo ? '비디오' : '이미지'}");
-    if (payload.isVideo) {
-      final keys = await _mediaController.uploadMedia(
-        files: [mediaMultipart],
-        types: [MediaType.video],
-        usageTypes: [MediaUsageType.post],
-        userId: _userController.currentUser!.id,
-        refId: postId,
-      );
-      debugPrint("비디오 업로드 완료, 키: ${keys.isNotEmpty ? keys.first : '없음'}");
-      if (keys.isNotEmpty) {
-        mediaKey = keys.first;
-      }
-    }
-    // 이미지 업로드
-    else {
-      mediaKey = await _mediaController.uploadPostImage(
-        file: mediaMultipart,
-        userId: _userController.currentUser!.id,
-        refId: postId,
-      );
-      debugPrint("오디오 업로드 완료, 키: $mediaKey");
-    }
-
-    if (mediaKey == null) return null;
-
-    String? audioKey;
-
-    // 오디오 업로드
-    debugPrint("업로드할 미디어 타입: ${payload.isVideo ? '비디오' : '이미지'}");
-    if (payload.audioFile != null) {
-      final audioMultipart = await _mediaController.fileToMultipart(
-        payload.audioFile!,
-      );
-      debugPrint("audioMultipart 준비 완료: ${audioMultipart.filename}");
-
-      // 오디오 파일 업로드 후에 키 받기
-      audioKey = await _mediaController.uploadPostAudio(
-        file: audioMultipart,
-        userId: _userController.currentUser!.id,
-        refId: postId,
-      );
-      debugPrint("오디오 업로드 완료, 키: $audioKey");
-    }
-
-    return _MediaUploadResult(mediaKey: mediaKey, audioKey: audioKey);
-  }
-
-  /// 게시물 업로드 최종화: 내용 및 미디어 키 업데이트
-  Future<void> _finalizePostUpload({
-    required int postId,
-    required _UploadPayload payload,
-    required _MediaUploadResult mediaResult,
-  }) async {
-    final waveformJson = (!payload.isVideo && payload.waveformData != null)
-        ? jsonEncode(payload.waveformData)
-        : null;
-
-    // 게시물 업데이트
-    final success = await _postController.updatePost(
-      postId: postId,
-      content: payload.caption,
-      postFileKey: mediaResult.mediaKey,
-      audioFileKey: mediaResult.audioKey,
-      waveformData: waveformJson,
-      duration: payload.audioDurationSeconds,
-    );
-
-    if (!success) {
-      throw Exception('게시물 업데이트에 실패했습니다.');
-    }
-  }
-
-  // 화면 전환 메서드
-  void _navigateToHome() {
-    if (!mounted || _isDisposing) return;
-
-    _audioController.stopRealtimeAudio();
-    _audioController.clearCurrentRecording();
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => HomePageNavigationBar(currentPageIndex: 2),
-        settings: RouteSettings(name: '/home_navigation_screen'),
-      ),
-      (route) => false,
-    );
-
-    if (_draggableScrollController.isAttached) {
-      _draggableScrollController.jumpTo(0.0);
-    }
   }
 
   @override

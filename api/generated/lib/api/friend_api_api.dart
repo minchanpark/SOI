@@ -193,7 +193,9 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [int] id (required):
-  Future<Response> getAllFriendWithHttpInfo(int id,) async {
+  ///
+  /// * [String] friendStatus (required):
+  Future<Response> getAllFriendWithHttpInfo(int id, String friendStatus,) async {
     // ignore: prefer_const_declarations
     final path = r'/friend/get-all';
 
@@ -205,6 +207,7 @@ class FriendAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'id', id));
+      queryParams.addAll(_queryParams('', 'friendStatus', friendStatus));
 
     const contentTypes = <String>[];
 
@@ -227,8 +230,10 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [int] id (required):
-  Future<ApiResponseDtoListUserFindRespDto?> getAllFriend(int id,) async {
-    final response = await getAllFriendWithHttpInfo(id,);
+  ///
+  /// * [String] friendStatus (required):
+  Future<ApiResponseDtoListUserFindRespDto?> getAllFriend(int id, String friendStatus,) async {
+    final response = await getAllFriendWithHttpInfo(id, friendStatus,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -363,7 +368,7 @@ class FriendAPIApi {
 
   /// 친구 상태 업데이트
   ///
-  /// 친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+  /// 친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -397,7 +402,7 @@ class FriendAPIApi {
 
   /// 친구 상태 업데이트
   ///
-  /// 친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+  /// 친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
   ///
   /// Parameters:
   ///

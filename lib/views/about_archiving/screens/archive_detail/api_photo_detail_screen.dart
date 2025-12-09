@@ -24,14 +24,14 @@ import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
 /// Firebase 버전의 PhotoDetailScreen과 동일한 디자인을 유지하면서
 /// REST API와 공통 위젯을 사용합니다.
 class ApiPhotoDetailScreen extends StatefulWidget {
-  final List<Post> posts;
+  final List<Post> allPosts;
   final int initialIndex;
   final String categoryName;
   final int categoryId;
 
   const ApiPhotoDetailScreen({
     super.key,
-    required this.posts,
+    required this.allPosts,
     required this.initialIndex,
     required this.categoryName,
     required this.categoryId,
@@ -63,6 +63,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   final Map<String, String> _userNames = {};
   final Map<int, PendingApiVoiceComment> _pendingVoiceComments = {};
   final Map<int, bool> _pendingTextComments = {};
+  final Map<int, String> _resolvedAudioUrls = {};
 
   static const List<Offset> _autoPlacementPattern = [
     Offset(0.5, 0.5),
@@ -77,6 +78,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   ];
 
   final Map<int, int> _autoPlacementIndices = {};
+  static const int _kMaxWaveformSamples = 30;
 
   @override
   void initState() {
@@ -88,7 +90,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _loadUserProfileImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _loadCommentsForPost(widget.posts[_currentIndex].id);
+
+      // 초기 댓글 로드
+      _loadCommentsForPost(widget.allPosts[_currentIndex].id);
     });
   }
 
@@ -126,14 +130,20 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               padding: EdgeInsets.only(right: 23.w),
               child: IconButton(
                 onPressed: () async {
-                  final currentPost = widget.posts[_currentIndex];
+                  // 현재 게시물 정보 가져오기
+                  final currentPost = widget.allPosts[_currentIndex];
+
+                  // 오디오 재생 시간 계산
                   Duration audioDuration = Duration(
                     seconds: currentPost.durationInSeconds,
                   );
 
+                  // 현재 게시물이 오디오를 포함하는 경우 재생 시간 업데이트
                   if (currentPost.hasAudio) {
-                    if (_audioController.currentAudioUrl ==
-                        currentPost.audioUrl) {
+                    final resolvedUrl = _resolvedAudioUrls[currentPost.id] ??
+                        currentPost.audioUrl;
+                    if (resolvedUrl != null &&
+                        _audioController.currentAudioUrl == resolvedUrl) {
                       audioDuration = _audioController.totalDuration;
                     }
                   }
@@ -153,11 +163,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
                   }
 
                   if (!mounted) return;
+                  // 공유 화면으로 이동
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => ShareScreen(
-                        imageUrl: currentPost.postFileUrl ?? '',
+                        imageUrl: currentPost.userProfileImageKey ?? '',
                         waveformData: waveformData,
                         audioDuration: audioDuration,
                         categoryName: widget.categoryName,
@@ -176,11 +187,11 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         ),
         body: PageView.builder(
           controller: _pageController,
-          itemCount: widget.posts.length,
+          itemCount: widget.allPosts.length,
           scrollDirection: Axis.vertical,
           onPageChanged: _onPageChanged,
           itemBuilder: (context, index) {
-            final post = widget.posts[index];
+            final post = widget.allPosts[index];
             final currentUserId = _userController?.currentUser?.userId;
             final isOwner = currentUserId == post.nickName;
 
@@ -191,9 +202,15 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               _userNames[post.nickName] = _userName;
             }
 
+            // post 사진 카드 위젯 반환
+            // post 사진, 카테고리 이름, 카테고리 ID 등 전달
             return ApiPhotoCardWidget(
               post: post,
+
+              // APICategoryPhotosScreen에서 받아온 categoryName을 전달합니다.
               categoryName: widget.categoryName,
+
+              // APICategoryPhotosScreen에서 받아온 categoryId를 전달합니다.
               categoryId: widget.categoryId,
               index: index,
               isOwner: isOwner,
@@ -251,12 +268,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
     _stopAudio();
     _loadUserProfileImage();
-    _loadCommentsForPost(widget.posts[index].id);
+    _loadCommentsForPost(widget.allPosts[index].id);
   }
 
   /// 현재 게시물 작성자의 프로필 이미지 로드
   Future<void> _loadUserProfileImage() async {
-    final currentPost = widget.posts[_currentIndex];
+    final currentPost = widget.allPosts[_currentIndex];
     try {
       final userId = int.tryParse(currentPost.nickName);
       api_user.User? user;
@@ -340,10 +357,20 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
-  void _toggleAudio(Post post) async {
+  Future<void> _toggleAudio(Post post) async {
     if (!post.hasAudio) return;
+    final audioKey = post.audioUrl;
+    if (audioKey == null || audioKey.isEmpty) return;
     try {
-      await _audioController.togglePlayPause(post.audioUrl!);
+      var resolved = audioKey;
+      final uri = Uri.tryParse(audioKey);
+      if (uri == null || !uri.hasScheme) {
+        final mediaController = context.read<MediaController>();
+        resolved = await mediaController.getPresignedUrl(audioKey) ?? '';
+      }
+      if (resolved.isEmpty) return;
+      _resolvedAudioUrls[post.id] = resolved;
+      await _audioController.togglePlayPause(resolved);
     } catch (e) {
       debugPrint('오디오 토글 실패: $e');
     }
@@ -506,14 +533,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         }
 
         // 댓글 생성
-        String? waveformJson;
-        if (pending.waveformData != null) {
-          // 소수점 4자리로 반올림하여 문자열 길이 줄이기 (서버 제한 대응)
-          final roundedWaveform = pending.waveformData!
-              .map((v) => double.parse(v.toStringAsFixed(4)))
-              .toList();
-          waveformJson = jsonEncode(roundedWaveform);
-        }
+        final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성
         success = await commentController.createAudioComment(
@@ -603,6 +623,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     return _clampOffset(offsetWithJitter);
   }
 
+  // 위치를 0.05 ~ 0.95 범위로 제한
   Offset _clampOffset(Offset offset) {
     const double min = 0.05;
     const double max = 0.95;
@@ -612,6 +633,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     );
   }
 
+  // 기존 위치와 너무 가까운지 확인
   bool _isPositionTooClose(Offset candidate, List<Offset> occupied) {
     const double threshold = 0.04;
     for (final existing in occupied) {
@@ -623,6 +645,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     return false;
   }
 
+  // 게시물 삭제 처리
   Future<void> _deletePost(Post post) async {
     // 삭제 확인 다이얼로그 표시
     final confirmed = await showDialog<bool>(
@@ -684,11 +707,14 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         context,
         listen: false,
       );
+      // 삭제를 요청하고 결과 대기
       final success = await postController.deletePost(post.id);
 
       if (!mounted) return;
       if (success) {
         _showSnackBar('사진이 삭제되었습니다.');
+
+        // 삭제 후 처리
         _handleSuccessfulDeletion(post);
       } else {
         _showSnackBar('삭제 중 오류가 발생했습니다.');
@@ -698,23 +724,49 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
+  // 삭제 후 상태 업데이트 처리
   void _handleSuccessfulDeletion(Post post) {
-    if (widget.posts.length <= 1) {
+    if (widget.allPosts.length <= 1) {
       Navigator.of(context).pop();
       return;
     }
     setState(() {
-      widget.posts.removeWhere((p) => p.id == post.id);
-      if (_currentIndex >= widget.posts.length) {
-        _currentIndex = widget.posts.length - 1;
+      // 현재 인덱스 조정
+      widget.allPosts.removeWhere((p) => p.id == post.id);
+      if (_currentIndex >= widget.allPosts.length) {
+        _currentIndex = widget.allPosts.length - 1;
       }
     });
+
+    // profile 이미지 및 댓글 재로딩
     _loadUserProfileImage();
-    _loadCommentsForPost(widget.posts[_currentIndex].id);
+    _loadCommentsForPost(widget.allPosts[_currentIndex].id);
   }
 
   Future<void> _stopAudio() async {
     await _audioController.stopRealtimeAudio();
+  }
+
+  // 스낵바 틀 함수
+  String? _encodeWaveformForRequest(List<double>? waveformData) {
+    if (waveformData == null || waveformData.isEmpty) return null;
+    final sampled = _sampleWaveformData(
+      waveformData,
+      _kMaxWaveformSamples,
+    );
+    final rounded = sampled
+        .map((value) => double.parse(value.toStringAsFixed(4)))
+        .toList();
+    return jsonEncode(rounded);
+  }
+
+  List<double> _sampleWaveformData(List<double> source, int maxLength) {
+    if (source.length <= maxLength) return source;
+    final step = source.length / maxLength;
+    return List<double>.generate(
+      maxLength,
+      (index) => source[(index * step).floor()],
+    );
   }
 
   void _showSnackBar(String message, {Color? backgroundColor}) {

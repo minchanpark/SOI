@@ -129,7 +129,6 @@ class _ApiArchiveProfileRowWidgetState
       if (url != null && mounted) {
         setState(() {
           _presignedUrlCache[key] = url;
-          debugPrint("프로필 이미지 캐시: ${_presignedUrlCache[key]}");
         });
       }
     }

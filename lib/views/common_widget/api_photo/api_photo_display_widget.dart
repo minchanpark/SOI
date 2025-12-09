@@ -129,13 +129,27 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     if (waveformString == null || waveformString.isEmpty) {
       return null;
     }
+
+    final trimmed = waveformString.trim();
+    if (trimmed.isEmpty) return null;
+
     try {
-      final decoded = jsonDecode(waveformString);
+      final decoded = jsonDecode(trimmed);
       if (decoded is List) {
         return decoded.map((e) => (e as num).toDouble()).toList();
       }
     } catch (_) {
-      // 문자열 파싱이 실패해도 앱이 죽지 않도록 무시
+      final sanitized = trimmed.replaceAll('[', '').replaceAll(']', '').trim();
+      if (sanitized.isEmpty) return null;
+      final parts = sanitized
+          .split(RegExp(r'[,\s]+'))
+          .where((part) => part.isNotEmpty);
+      try {
+        final values = parts.map((part) => double.parse(part)).toList();
+        return values.isEmpty ? null : values;
+      } catch (_) {
+        return null;
+      }
     }
     return null;
   }
@@ -337,14 +351,21 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 SizedBox(width: 14.w),
-                Icon(Icons.delete, color: Colors.redAccent, size: 18.w),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 1.h),
+                  child: Image.asset(
+                    'assets/trash_red.png',
+                    width: (12.2).w,
+                    height: (13.6).w,
+                  ),
+                ),
                 SizedBox(width: 12.w),
                 Text(
                   '댓글 삭제',
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
-                    color: Colors.redAccent,
+                    color: Color(0xFFFF0000),
                     fontFamily: 'Pretendard',
                   ),
                 ),
@@ -661,23 +682,19 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
                         borderRadius: BorderRadius.circular(16),
                         child: _buildMediaContent(),
                       ),
-                      if (_isShowingComments && !_showActionOverlay)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.35),
-                            ),
-                          ),
-                        ),
+
+                      // 댓글 액션 오버레이
                       if (_showActionOverlay)
                         Positioned.fill(
                           child: GestureDetector(
                             onTap: _dismissOverlay,
                             child: Container(
-                              color: Colors.black.withValues(alpha: 0.45),
+                              color: Colors.black.withValues(alpha: 0.6),
                             ),
                           ),
                         ),
+
+                      // 카테고리 라벨
                       if (!widget.isArchive)
                         Positioned(
                           top: 11.h,
@@ -686,6 +703,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
                             onTap: _navigateToCategory,
                           ),
                         ),
+
+                      // 오디오 컨트롤 위젯
                       if (widget.post.hasAudio)
                         Positioned(
                           left: 18.w,
@@ -697,7 +716,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
                             onPressed: () => widget.onToggleAudio(widget.post),
                           ),
                         ),
-                      if (_hasComments)
+                      /* if (_hasComments)
                         Positioned(
                           bottom: 18.h,
                           right: 18.w,
@@ -723,7 +742,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
                               ),
                             ),
                           ),
-                        ),
+                        ),*/
                       if (_hasCaption && !widget.post.hasAudio)
                         Positioned(
                           left: 16.w,

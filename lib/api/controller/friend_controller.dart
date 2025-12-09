@@ -87,12 +87,18 @@ class FriendController extends ChangeNotifier {
   ///
   /// Returns:
   ///   - [List<User>]: 친구 목록 (실패 시 빈 리스트)
-  Future<List<User>> getAllFriends({required int userId}) async {
+  Future<List<User>> getAllFriends({
+    required int userId,
+    FriendStatus status = FriendStatus.accepted,
+  }) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final friends = await _friendService.getAllFriends(userId: userId);
+      final friends = await _friendService.getAllFriends(
+        userId: userId,
+        status: status,
+      );
       _setLoading(false);
       return friends;
     } catch (e) {

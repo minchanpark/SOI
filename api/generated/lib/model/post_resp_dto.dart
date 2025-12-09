@@ -17,8 +17,8 @@ class PostRespDto {
     this.nickname,
     this.content,
     this.userProfileImageKey,
-    this.postFileUrl,
-    this.audioFileUrl,
+    this.postFileKey,
+    this.audioFileKey,
     this.waveformData,
     this.duration,
     this.isActive,
@@ -63,7 +63,7 @@ class PostRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? postFileUrl;
+  String? postFileKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -71,7 +71,7 @@ class PostRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? audioFileUrl;
+  String? audioFileKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -111,8 +111,8 @@ class PostRespDto {
     other.nickname == nickname &&
     other.content == content &&
     other.userProfileImageKey == userProfileImageKey &&
-    other.postFileUrl == postFileUrl &&
-    other.audioFileUrl == audioFileUrl &&
+    other.postFileKey == postFileKey &&
+    other.audioFileKey == audioFileKey &&
     other.waveformData == waveformData &&
     other.duration == duration &&
     other.isActive == isActive &&
@@ -125,15 +125,15 @@ class PostRespDto {
     (nickname == null ? 0 : nickname!.hashCode) +
     (content == null ? 0 : content!.hashCode) +
     (userProfileImageKey == null ? 0 : userProfileImageKey!.hashCode) +
-    (postFileUrl == null ? 0 : postFileUrl!.hashCode) +
-    (audioFileUrl == null ? 0 : audioFileUrl!.hashCode) +
+    (postFileKey == null ? 0 : postFileKey!.hashCode) +
+    (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (isActive == null ? 0 : isActive!.hashCode) +
     (createdAt == null ? 0 : createdAt!.hashCode);
 
   @override
-  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, postFileUrl=$postFileUrl, audioFileUrl=$audioFileUrl, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
+  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, postFileKey=$postFileKey, audioFileKey=$audioFileKey, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -157,15 +157,15 @@ class PostRespDto {
     } else {
       json[r'userProfileImageKey'] = null;
     }
-    if (this.postFileUrl != null) {
-      json[r'postFileUrl'] = this.postFileUrl;
+    if (this.postFileKey != null) {
+      json[r'postFileKey'] = this.postFileKey;
     } else {
-      json[r'postFileUrl'] = null;
+      json[r'postFileKey'] = null;
     }
-    if (this.audioFileUrl != null) {
-      json[r'audioFileUrl'] = this.audioFileUrl;
+    if (this.audioFileKey != null) {
+      json[r'audioFileKey'] = this.audioFileKey;
     } else {
-      json[r'audioFileUrl'] = null;
+      json[r'audioFileKey'] = null;
     }
     if (this.waveformData != null) {
       json[r'waveformData'] = this.waveformData;
@@ -213,8 +213,8 @@ class PostRespDto {
         nickname: mapValueOfType<String>(json, r'nickname'),
         content: mapValueOfType<String>(json, r'content'),
         userProfileImageKey: mapValueOfType<String>(json, r'userProfileImageKey'),
-        postFileUrl: mapValueOfType<String>(json, r'postFileUrl'),
-        audioFileUrl: mapValueOfType<String>(json, r'audioFileUrl'),
+        postFileKey: mapValueOfType<String>(json, r'postFileKey'),
+        audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),
         waveformData: mapValueOfType<String>(json, r'waveformData'),
         duration: mapValueOfType<int>(json, r'duration'),
         isActive: mapValueOfType<bool>(json, r'is_active'),

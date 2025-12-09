@@ -62,10 +62,11 @@ class PostController extends ChangeNotifier {
   ///   - true: 생성 성공
   ///   - false: 생성 실패
   Future<bool> createPost({
+    int? userId,
     required String nickName,
     String? content,
-    String? postFileKey,
-    String? audioFileKey,
+    List<String> postFileKey = const [],
+    List<String> audioFileKey = const [],
     List<int> categoryIds = const [],
     String? waveformData,
     int? duration,
@@ -73,8 +74,13 @@ class PostController extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
+    debugPrint(
+      "[PostController]\nuserId: $userId\nnickName: $nickName\ncontent: $content\npostFileKey: $postFileKey\naudioFileKey: $audioFileKey\ncategoryIds: $categoryIds\nwaveformData: $waveformData\nduration: $duration",
+    );
+
     try {
       final result = await _postService.createPost(
+        userId: userId,
         nickName: nickName,
         content: content,
         postFileKey: postFileKey,
@@ -83,6 +89,7 @@ class PostController extends ChangeNotifier {
         waveformData: waveformData,
         duration: duration,
       );
+      debugPrint("[PostController] 게시물 생성 결과: $result");
       _setLoading(false);
       return result;
     } catch (e) {
@@ -94,7 +101,7 @@ class PostController extends ChangeNotifier {
 
   /// 게시물 생성 후 ID 반환 (UI 전용)
   Future<int?> createPostAndReturnId({
-    required int id,
+    required int userId,
     required String nickName,
     String? content,
     List<int> categoryIds = const [],
@@ -113,7 +120,7 @@ class PostController extends ChangeNotifier {
       debugPrint("[PostController] 전달된 waveformData: $waveformData");
       debugPrint("[PostController] 전달된 duration: $duration");
       return await _postService.createPostAndReturnId(
-        id: id,
+        userId: userId,
         nickName: nickName,
         content: content,
         categoryIds: categoryIds,
@@ -140,11 +147,13 @@ class PostController extends ChangeNotifier {
   /// Parameters:
   /// - [userId]: 사용자 ID
   /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
+  /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getMainFeedPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
+    int page = 0,
   }) async {
     _setLoading(true);
     _clearError();
@@ -153,6 +162,7 @@ class PostController extends ChangeNotifier {
       final posts = await _postService.getMainFeedPosts(
         userId: userId,
         postStatus: postStatus,
+        page: page,
       );
       _setLoading(false);
       return posts;
@@ -170,11 +180,13 @@ class PostController extends ChangeNotifier {
   /// Parameters:
   /// - [categoryId]: 카테고리 ID
   /// - [userId]: 요청 사용자 ID (권한 확인용)(int)
+  /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,
+    int page = 0,
   }) async {
     _setLoading(true);
     _clearError();
@@ -183,6 +195,7 @@ class PostController extends ChangeNotifier {
       final posts = await _postService.getPostsByCategory(
         categoryId: categoryId,
         userId: userId,
+        page: page,
       );
       _setLoading(false);
       return posts;
@@ -343,6 +356,7 @@ class PostController extends ChangeNotifier {
   }
 
   void _setError(String message) {
+    debugPrint("[PostController] 에러 발생: $message");
     _errorMessage = message;
     notifyListeners();
   }

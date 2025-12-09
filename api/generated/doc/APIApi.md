@@ -57,7 +57,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **uploadMedia**
-> ApiResponseDtoListString uploadMedia(types, usageTypes, userId, refId, files)
+> ApiResponseDtoListString uploadMedia(types, usageTypes, userId, refId, usageCount, files)
 
 미디어 업로드
 
@@ -72,10 +72,11 @@ final types = []; // List<String> |
 final usageTypes = []; // List<String> | 
 final userId = 789; // int | 
 final refId = 789; // int | 
+final usageCount = 789; // int | 
 final files = [/path/to/file.txt]; // List<MultipartFile> | 
 
 try {
-    final result = api_instance.uploadMedia(types, usageTypes, userId, refId, files);
+    final result = api_instance.uploadMedia(types, usageTypes, userId, refId, usageCount, files);
     print(result);
 } catch (e) {
     print('Exception when calling APIApi->uploadMedia: $e\n');
@@ -90,6 +91,7 @@ Name | Type | Description  | Notes
  **usageTypes** | [**List<String>**](String.md)|  | [default to const []]
  **userId** | **int**|  | 
  **refId** | **int**|  | 
+ **usageCount** | **int**|  | 
  **files** | [**List<MultipartFile>**](MultipartFile.md)|  | 
 
 ### Return type

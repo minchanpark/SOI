@@ -91,6 +91,7 @@ class MediaController extends ChangeNotifier {
     required List<MediaUsageType> usageTypes,
     required int userId,
     required int refId,
+    required int usageCount,
   }) async {
     _setLoading(true);
     _setUploadProgress(0.0);
@@ -103,6 +104,7 @@ class MediaController extends ChangeNotifier {
         usageTypes: usageTypes,
         userId: userId,
         refId: refId,
+        usageCount: usageCount,
       );
       _setUploadProgress(1.0);
       _setLoading(false);
@@ -114,7 +116,7 @@ class MediaController extends ChangeNotifier {
     }
   }
 
-  Future<String?> uploadPostImage({
+  /* Future<String?> uploadPostImage({
     required http.MultipartFile file,
     required int userId,
     required int refId,
@@ -128,6 +130,7 @@ class MediaController extends ChangeNotifier {
         file: file,
         userId: userId,
         refId: refId,
+        usageCount: 1,
       );
       _setUploadProgress(1.0);
       _setLoading(false);
@@ -137,9 +140,9 @@ class MediaController extends ChangeNotifier {
       _setLoading(false);
       return null;
     }
-  }
+  }*/
 
-  Future<String?> uploadPostAudio({
+  /* Future<String?> uploadPostAudio({
     required http.MultipartFile file,
     required int userId,
     required int refId,
@@ -162,7 +165,7 @@ class MediaController extends ChangeNotifier {
       _setLoading(false);
       return null;
     }
-  }
+  }*/
 
   Future<String?> uploadProfileImage({
     required http.MultipartFile file,
@@ -265,7 +268,8 @@ class MediaController extends ChangeNotifier {
     }
 
     final phase = SchedulerBinding.instance.schedulerPhase;
-    if (phase == SchedulerPhase.idle || phase == SchedulerPhase.postFrameCallbacks) {
+    if (phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks) {
       runUpdate();
     } else {
       SchedulerBinding.instance.addPostFrameCallback((_) {

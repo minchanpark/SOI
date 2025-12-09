@@ -132,7 +132,7 @@ class PostAPIApi {
 
   /// 전체 게시물 조회
   ///
-  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
+  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌  page에 원하는 페이지 번호를 입력 0부터 시작
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -141,7 +141,9 @@ class PostAPIApi {
   /// * [int] userId (required):
   ///
   /// * [String] postStatus (required):
-  Future<Response> findAllByUserIdWithHttpInfo(int userId, String postStatus,) async {
+  ///
+  /// * [int] page:
+  Future<Response> findAllByUserIdWithHttpInfo(int userId, String postStatus, { int? page, }) async {
     // ignore: prefer_const_declarations
     final path = r'/post/find-all';
 
@@ -154,6 +156,9 @@ class PostAPIApi {
 
       queryParams.addAll(_queryParams('', 'userId', userId));
       queryParams.addAll(_queryParams('', 'postStatus', postStatus));
+    if (page != null) {
+      queryParams.addAll(_queryParams('', 'page', page));
+    }
 
     const contentTypes = <String>[];
 
@@ -171,15 +176,17 @@ class PostAPIApi {
 
   /// 전체 게시물 조회
   ///
-  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
+  /// 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌  page에 원하는 페이지 번호를 입력 0부터 시작
   ///
   /// Parameters:
   ///
   /// * [int] userId (required):
   ///
   /// * [String] postStatus (required):
-  Future<ApiResponseDtoListPostRespDto?> findAllByUserId(int userId, String postStatus,) async {
-    final response = await findAllByUserIdWithHttpInfo(userId, postStatus,);
+  ///
+  /// * [int] page:
+  Future<ApiResponseDtoListPostRespDto?> findAllByUserId(int userId, String postStatus, { int? page, }) async {
+    final response = await findAllByUserIdWithHttpInfo(userId, postStatus,  page: page, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -195,7 +202,7 @@ class PostAPIApi {
 
   /// 카테고리에 해당하는 게시물 조회
   ///
-  /// 카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.
+  /// 카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.  page에 원하는 페이지 번호를 입력 0부터 시작
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -204,7 +211,9 @@ class PostAPIApi {
   /// * [int] categoryId (required):
   ///
   /// * [int] userId (required):
-  Future<Response> findByCategoryIdWithHttpInfo(int categoryId, int userId,) async {
+  ///
+  /// * [int] page:
+  Future<Response> findByCategoryIdWithHttpInfo(int categoryId, int userId, { int? page, }) async {
     // ignore: prefer_const_declarations
     final path = r'/post/find-by/category';
 
@@ -217,6 +226,9 @@ class PostAPIApi {
 
       queryParams.addAll(_queryParams('', 'categoryId', categoryId));
       queryParams.addAll(_queryParams('', 'userId', userId));
+    if (page != null) {
+      queryParams.addAll(_queryParams('', 'page', page));
+    }
 
     const contentTypes = <String>[];
 
@@ -234,15 +246,17 @@ class PostAPIApi {
 
   /// 카테고리에 해당하는 게시물 조회
   ///
-  /// 카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.
+  /// 카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.  page에 원하는 페이지 번호를 입력 0부터 시작
   ///
   /// Parameters:
   ///
   /// * [int] categoryId (required):
   ///
   /// * [int] userId (required):
-  Future<ApiResponseDtoListPostRespDto?> findByCategoryId(int categoryId, int userId,) async {
-    final response = await findByCategoryIdWithHttpInfo(categoryId, userId,);
+  ///
+  /// * [int] page:
+  Future<ApiResponseDtoListPostRespDto?> findByCategoryId(int categoryId, int userId, { int? page, }) async {
+    final response = await findByCategoryIdWithHttpInfo(categoryId, userId,  page: page, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

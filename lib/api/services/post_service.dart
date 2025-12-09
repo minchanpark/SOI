@@ -63,16 +63,18 @@ class PostService {
   /// - [BadRequestException]: 필수 정보 누락
   /// - [SoiApiException]: 게시물 생성 실패
   Future<bool> createPost({
+    int? userId,
     required String nickName,
     String? content,
-    String? postFileKey,
-    String? audioFileKey,
+    List<String> postFileKey = const [],
+    List<String> audioFileKey = const [],
     List<int> categoryIds = const [],
     String? waveformData,
     int? duration,
   }) async {
     try {
       final dto = PostCreateReqDto(
+        userId: userId,
         nickname: nickName,
         content: content,
         postFileKey: postFileKey,
@@ -107,7 +109,7 @@ class PostService {
   ///
   /// 게시물을 생성하고 서버에서 반환한 게시물 ID를 그대로 돌려줍니다.
   Future<int?> createPostAndReturnId({
-    required int id,
+    required int userId,
     required String nickName,
     String? content,
     List<int> categoryIds = const [],
@@ -118,12 +120,12 @@ class PostService {
   }) async {
     try {
       final dto = PostCreateReqDto(
-        id: id,
+        userId: userId,
         nickname: nickName,
         content: content,
         categoryId: categoryIds,
-        postFileKey: postFileKey,
-        audioFileKey: audioFileKey,
+        postFileKey: _wrapFileKey(postFileKey),
+        audioFileKey: _wrapFileKey(audioFileKey),
         waveformData: waveformData,
         duration: duration,
       );
@@ -183,14 +185,20 @@ class PostService {
   /// Parameters:
   /// - [userId]: 사용자 ID
   /// - [postStatus]: 게시물 상태 (기본값: ACTIVE)
+  /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getMainFeedPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
+    int page = 0,
   }) async {
     try {
-      final response = await _postApi.findAllByUserId(userId, postStatus.value);
+      final response = await _postApi.findAllByUserId(
+        userId,
+        postStatus.value,
+        page: page,
+      );
 
       if (response == null) {
         return [];
@@ -218,14 +226,20 @@ class PostService {
   /// Parameters:
   /// - [categoryId]: 카테고리 ID
   /// - [userId]: 요청 사용자 ID (권한 확인용)
+  /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
     required int categoryId,
     required int userId,
+    int page = 0,
   }) async {
     try {
-      final response = await _postApi.findByCategoryId(categoryId, userId);
+      final response = await _postApi.findByCategoryId(
+        categoryId,
+        userId,
+        page: page,
+      );
 
       if (response == null) {
         return [];
@@ -461,5 +475,10 @@ class PostService {
           originalException: e,
         );
     }
+  }
+
+  List<String> _wrapFileKey(String? key) {
+    if (key == null || key.isEmpty) return const [];
+    return [key];
   }
 }

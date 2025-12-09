@@ -13,11 +13,11 @@ part of openapi.api;
 class PostCreateReqDto {
   /// Returns a new [PostCreateReqDto] instance.
   PostCreateReqDto({
-    this.id,
+    this.userId,
     this.nickname,
     this.content,
-    this.postFileKey,
-    this.audioFileKey,
+    this.postFileKey = const [],
+    this.audioFileKey = const [],
     this.categoryId = const [],
     this.waveformData,
     this.duration,
@@ -29,7 +29,7 @@ class PostCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  int? id;
+  int? userId;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -47,21 +47,9 @@ class PostCreateReqDto {
   ///
   String? content;
 
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  String? postFileKey;
+  List<String> postFileKey;
 
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  String? audioFileKey;
+  List<String> audioFileKey;
 
   List<int> categoryId;
 
@@ -83,11 +71,11 @@ class PostCreateReqDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostCreateReqDto &&
-    other.id == id &&
+    other.userId == userId &&
     other.nickname == nickname &&
     other.content == content &&
-    other.postFileKey == postFileKey &&
-    other.audioFileKey == audioFileKey &&
+    _deepEquality.equals(other.postFileKey, postFileKey) &&
+    _deepEquality.equals(other.audioFileKey, audioFileKey) &&
     _deepEquality.equals(other.categoryId, categoryId) &&
     other.waveformData == waveformData &&
     other.duration == duration;
@@ -95,24 +83,24 @@ class PostCreateReqDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (id == null ? 0 : id!.hashCode) +
+    (userId == null ? 0 : userId!.hashCode) +
     (nickname == null ? 0 : nickname!.hashCode) +
     (content == null ? 0 : content!.hashCode) +
-    (postFileKey == null ? 0 : postFileKey!.hashCode) +
-    (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
+    (postFileKey.hashCode) +
+    (audioFileKey.hashCode) +
     (categoryId.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode);
 
   @override
-  String toString() => 'PostCreateReqDto[id=$id, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration]';
+  String toString() => 'PostCreateReqDto[userId=$userId, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.id != null) {
-      json[r'id'] = this.id;
+    if (this.userId != null) {
+      json[r'userId'] = this.userId;
     } else {
-      json[r'id'] = null;
+      json[r'userId'] = null;
     }
     if (this.nickname != null) {
       json[r'nickname'] = this.nickname;
@@ -124,16 +112,8 @@ class PostCreateReqDto {
     } else {
       json[r'content'] = null;
     }
-    if (this.postFileKey != null) {
       json[r'postFileKey'] = this.postFileKey;
-    } else {
-      json[r'postFileKey'] = null;
-    }
-    if (this.audioFileKey != null) {
       json[r'audioFileKey'] = this.audioFileKey;
-    } else {
-      json[r'audioFileKey'] = null;
-    }
       json[r'categoryId'] = this.categoryId;
     if (this.waveformData != null) {
       json[r'waveformData'] = this.waveformData;
@@ -167,11 +147,15 @@ class PostCreateReqDto {
       }());
 
       return PostCreateReqDto(
-        id: mapValueOfType<int>(json, r'id'),
+        userId: mapValueOfType<int>(json, r'userId'),
         nickname: mapValueOfType<String>(json, r'nickname'),
         content: mapValueOfType<String>(json, r'content'),
-        postFileKey: mapValueOfType<String>(json, r'postFileKey'),
-        audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),
+        postFileKey: json[r'postFileKey'] is Iterable
+            ? (json[r'postFileKey'] as Iterable).cast<String>().toList(growable: false)
+            : const [],
+        audioFileKey: json[r'audioFileKey'] is Iterable
+            ? (json[r'audioFileKey'] as Iterable).cast<String>().toList(growable: false)
+            : const [],
         categoryId: json[r'categoryId'] is Iterable
             ? (json[r'categoryId'] as Iterable).cast<int>().toList(growable: false)
             : const [],

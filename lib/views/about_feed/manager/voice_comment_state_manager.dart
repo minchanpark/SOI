@@ -24,6 +24,7 @@ import '../../common_widget/api_photo/pending_api_voice_comment.dart';
 ///   - [autoPlacementIndices]: 게시물 ID별 자동 배치 인덱스 맵
 ///   - [onStateChanged]: 상태 변경 시 호출되는 콜백 함수
 class VoiceCommentStateManager {
+  static const int _kMaxWaveformSamples = 30;
   final Map<int, bool> _voiceCommentActiveStates = {};
   final Map<int, bool> _voiceCommentSavedStates = {};
   final Map<int, PendingApiVoiceComment> _pendingVoiceComments = {};
@@ -265,14 +266,8 @@ class VoiceCommentStateManager {
           return;
         }
 
-        // 파형 데이터를 JSON 문자열로 변환
-        String? waveformJson;
-        if (pending.waveformData != null) {
-          final roundedWaveform = pending.waveformData!
-              .map((value) => double.parse(value.toStringAsFixed(4)))
-              .toList();
-          waveformJson = jsonEncode(roundedWaveform);
-        }
+        // 파형 데이터를 JSON 문자열로 변환 (서버 제한을 고려해 축소)
+        final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성하고 그 결과를 success에 할당
         success = await commentController.createAudioComment(
@@ -415,6 +410,28 @@ class VoiceCommentStateManager {
   void _clearPendingState(int postId) {
     _pendingVoiceComments.remove(postId);
     _pendingTextComments.remove(postId);
+  }
+
+  // 음성 파형 데이터를 서버 요청용으로 인코딩
+  // (샘플링 및 JSON 인코딩)
+  String? _encodeWaveformForRequest(List<double>? waveformData) {
+    if (waveformData == null || waveformData.isEmpty) return null;
+    final sampled = _sampleWaveformData(waveformData, _kMaxWaveformSamples);
+    final rounded = sampled
+        .map((value) => double.parse(value.toStringAsFixed(4)))
+        .toList();
+    return jsonEncode(rounded);
+  }
+
+  // 파형 데이터 샘플링
+  // (최대 길이로 샘플링하여 데이터 크기 축소)
+  List<double> _sampleWaveformData(List<double> source, int maxLength) {
+    if (source.length <= maxLength) return source;
+    final step = source.length / maxLength;
+    return List<double>.generate(
+      maxLength,
+      (index) => source[(index * step).floor()],
+    );
   }
 
   void _showSnackBar(

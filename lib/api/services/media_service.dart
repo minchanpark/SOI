@@ -35,7 +35,10 @@ enum MediaUsageType {
   /// 카테고리 프로필 이미지
   categoryProfile('CATEGORY_PROFILE'),
 
-  /// 게시물 관련 (이미지, 오디오, 댓글 오디오 등)
+  /// 댓글 오디오를 넣을 때 사용
+  comment('COMMENT'),
+
+  /// 게시물 관련 미디어
   post('POST');
 
   final String value;
@@ -134,6 +137,7 @@ class MediaService {
     required List<MediaUsageType> usageTypes,
     required int userId,
     required int refId,
+    required int usageCount,
   }) async {
     try {
       final typeStrings = types.map((t) => t.value).toList();
@@ -154,6 +158,7 @@ class MediaService {
         usageTypeStrings,
         userId,
         refId,
+        usageCount,
         files,
       );
 
@@ -179,7 +184,7 @@ class MediaService {
   /// 이미지 파일 업로드 (편의 메서드)
   ///
   /// 게시물용 이미지를 업로드합니다.
-  Future<String?> uploadPostImage({
+  /*Future<String?> uploadPostImage({
     required http.MultipartFile file,
     required int userId,
     required int refId,
@@ -192,12 +197,12 @@ class MediaService {
       refId: refId,
     );
     return keys.isNotEmpty ? keys.first : null;
-  }
+  }*/
 
   /// 오디오 파일 업로드 (편의 메서드)
   ///
   /// 게시물용 음성메모를 업로드합니다.
-  Future<String?> uploadPostAudio({
+  /* Future<String?> uploadPostAudio({
     required http.MultipartFile file,
     required int userId,
     required int refId,
@@ -210,7 +215,7 @@ class MediaService {
       refId: refId,
     );
     return keys.isNotEmpty ? keys.first : null;
-  }
+  }*/
 
   /// 프로필 이미지 업로드 (편의 메서드)
   Future<String?> uploadProfileImage({
@@ -223,6 +228,7 @@ class MediaService {
       usageTypes: [MediaUsageType.userProfile],
       userId: userId,
       refId: userId, // 프로필은 userId를 refId로 사용
+      usageCount: 1,
     );
     return keys.isNotEmpty ? keys.first : null;
   }
@@ -241,6 +247,7 @@ class MediaService {
       usageTypes: [MediaUsageType.post],
       userId: userId,
       refId: postId,
+      usageCount: 1,
     );
     return keys.isNotEmpty ? keys.first : null;
   }

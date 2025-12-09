@@ -98,9 +98,15 @@ class FriendService {
   /// [userId]의 모든 친구 목록을 조회합니다.
   ///
   /// Returns: 친구 목록 (List<User>)
-  Future<List<User>> getAllFriends({required int userId}) async {
+  Future<List<User>> getAllFriends({
+    required int userId,
+    FriendStatus status = FriendStatus.accepted,
+  }) async {
     try {
-      final response = await _friendApi.getAllFriend(userId);
+      final response = await _friendApi.getAllFriend(
+        userId,
+        _mapStatusToQueryParam(status),
+      );
 
       if (response == null) {
         return [];
@@ -380,6 +386,21 @@ class FriendService {
         return FriendUpdateRespDtoStatusEnum.CANCELLED;
       case FriendStatus.none:
         return null;
+    }
+  }
+
+  String _mapStatusToQueryParam(FriendStatus status) {
+    switch (status) {
+      case FriendStatus.pending:
+        return 'PENDING';
+      case FriendStatus.accepted:
+        return 'ACCEPTED';
+      case FriendStatus.blocked:
+        return 'BLOCKED';
+      case FriendStatus.cancelled:
+        return 'CANCELLED';
+      case FriendStatus.none:
+        return 'NONE';
     }
   }
 }

@@ -3,7 +3,7 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../../api_firebase/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 
 /// 녹음 상태를 나타내는 enum입니다.
@@ -38,6 +38,7 @@ class AudioRecorderWidget extends StatefulWidget {
 
   // 동작 설정
   final bool autoStart;
+  final AudioController? audioController;
 
   const AudioRecorderWidget({
     super.key,
@@ -47,6 +48,7 @@ class AudioRecorderWidget extends StatefulWidget {
     this.initialRecordingPath,
     this.initialWaveformData,
     this.autoStart = false,
+    this.audioController,
   });
 
   @override
@@ -81,6 +83,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
   @override
   void initState() {
     super.initState();
+    _resolveAudioController();
     _initializeAudioControllers();
     _initializeState();
     _handleAutoStart();
@@ -89,7 +92,9 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _audioController = Provider.of<AudioController>(context, listen: false);
+    if (widget.audioController == null) {
+      _audioController = Provider.of<AudioController>(context, listen: false);
+    }
   }
 
   @override
@@ -101,6 +106,11 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
   }
 
   // ========== 초기화 메서드들 ==========
+  void _resolveAudioController() {
+    _audioController = widget.audioController ??
+        Provider.of<AudioController>(context, listen: false);
+  }
+
   void _initializeAudioControllers() {
     recorderController = RecorderController()
       ..overrideAudioSession = false
@@ -111,7 +121,6 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
     recorderController.checkPermission();
     playerController = PlayerController();
-    _audioController = Provider.of<AudioController>(context, listen: false);
   }
 
   // 초기 상태 설정하는 메소드

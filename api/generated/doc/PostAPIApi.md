@@ -105,11 +105,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findAllByUserId**
-> ApiResponseDtoListPostRespDto findAllByUserId(userId, postStatus)
+> ApiResponseDtoListPostRespDto findAllByUserId(userId, postStatus, page)
 
 전체 게시물 조회
 
-사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌
+사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌  page에 원하는 페이지 번호를 입력 0부터 시작
 
 ### Example
 ```dart
@@ -118,9 +118,10 @@ import 'package:soi_api_client/api.dart';
 final api_instance = PostAPIApi();
 final userId = 789; // int | 
 final postStatus = postStatus_example; // String | 
+final page = 56; // int | 
 
 try {
-    final result = api_instance.findAllByUserId(userId, postStatus);
+    final result = api_instance.findAllByUserId(userId, postStatus, page);
     print(result);
 } catch (e) {
     print('Exception when calling PostAPIApi->findAllByUserId: $e\n');
@@ -133,6 +134,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **userId** | **int**|  | 
  **postStatus** | **String**|  | 
+ **page** | **int**|  | [optional] [default to 0]
 
 ### Return type
 
@@ -150,11 +152,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findByCategoryId**
-> ApiResponseDtoListPostRespDto findByCategoryId(categoryId, userId)
+> ApiResponseDtoListPostRespDto findByCategoryId(categoryId, userId, page)
 
 카테고리에 해당하는 게시물 조회
 
-카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.
+카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.  page에 원하는 페이지 번호를 입력 0부터 시작
 
 ### Example
 ```dart
@@ -163,9 +165,10 @@ import 'package:soi_api_client/api.dart';
 final api_instance = PostAPIApi();
 final categoryId = 789; // int | 
 final userId = 789; // int | 
+final page = 56; // int | 
 
 try {
-    final result = api_instance.findByCategoryId(categoryId, userId);
+    final result = api_instance.findByCategoryId(categoryId, userId, page);
     print(result);
 } catch (e) {
     print('Exception when calling PostAPIApi->findByCategoryId: $e\n');
@@ -178,6 +181,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **categoryId** | **int**|  | 
  **userId** | **int**|  | 
+ **page** | **int**|  | [optional] [default to 0]
 
 ### Return type
 

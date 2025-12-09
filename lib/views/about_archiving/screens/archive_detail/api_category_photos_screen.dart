@@ -93,7 +93,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         return;
       }
 
-      // 카테고리 내 포스트 조회 (서버가 이미 presigned URL 반환)
+      // 카테고리 내 포스트 조회
       final posts = await postController!.getPostsByCategory(
         categoryId: _currentCategory.id,
         userId: currentUser.id,
