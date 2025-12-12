@@ -78,8 +78,6 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 이전 녹음 상태 (애니메이션 제어용)
   VoiceCommentState? _lastState;
   final Map<String, Future<String?>> _profileUrlFutures = {};
-  bool get _isTextCommentMode =>
-      widget.startInPlacingMode && (_waveformData == null || _waveformData!.isEmpty);
 
   // ============================================================
   // 여러 가지 생명주기 관련 메서드
@@ -759,8 +757,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     _releaseParentScroll();
     setState(() {
       _lastState = _currentState;
-      _currentState =
-          _isTextCommentMode ? VoiceCommentState.saved : VoiceCommentState.recorded;
+      _currentState = VoiceCommentState.recorded;
     });
   }
 

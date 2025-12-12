@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -205,16 +206,32 @@ class VoiceCommentStateManager {
     );
 
     _voiceCommentSavedStates[postId] = true;
-    _pendingVoiceComments.remove(postId);
+    _pendingVoiceComments[postId] = pendingCopy;
     _pendingTextComments.remove(postId);
     _voiceCommentActiveStates[postId] = false;
     _notifyStateChanged();
 
-    await _saveCommentToServer(postId, userId, pendingCopy, context);
+    Future.microtask(() async {
+      final didSave = await _saveCommentToServer(
+        postId,
+        userId,
+        pendingCopy,
+        context,
+      );
+
+      if (!didSave) {
+        _voiceCommentSavedStates[postId] = false;
+        _notifyStateChanged();
+        return;
+      }
+
+      _pendingVoiceComments.remove(postId);
+      _notifyStateChanged();
+    });
   }
 
   /// 댓글을 서버에 저장하는 내부 메서드
-  Future<void> _saveCommentToServer(
+  Future<bool> _saveCommentToServer(
     int postId,
     int userId,
     PendingApiVoiceComment pending,
@@ -263,7 +280,7 @@ class VoiceCommentStateManager {
             '음성 업로드에 실패했습니다.',
             backgroundColor: Colors.red,
           );
-          return;
+          return false;
         }
 
         // 파형 데이터를 JSON 문자열로 변환 (서버 제한을 고려해 축소)
@@ -284,9 +301,11 @@ class VoiceCommentStateManager {
       if (success) {
         // 댓글 저장 성공 시 댓글 목록 새로고침
         await loadCommentsForPost(postId, context);
-      } else {
-        _showSnackBar(context, '댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
+        return true;
       }
+
+      _showSnackBar(context, '댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
+      return false;
     } catch (e) {
       debugPrint('댓글 저장 실패(postId: $postId): $e');
       _showSnackBar(
@@ -294,6 +313,7 @@ class VoiceCommentStateManager {
         '댓글 저장 중 오류가 발생했습니다.',
         backgroundColor: Colors.red,
       );
+      return false;
     }
   }
 
