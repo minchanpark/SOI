@@ -45,7 +45,7 @@ class CommentController extends ChangeNotifier {
   // ============================================
 
   /// 댓글 생성
-  Future<bool> createComment({
+  Future<CommentCreationResult> createComment({
     required int postId,
     required int userId,
     String? text,
@@ -74,12 +74,12 @@ class CommentController extends ChangeNotifier {
     } catch (e) {
       _setError('댓글 생성 실패: $e');
       _setLoading(false);
-      return false;
+      return const CommentCreationResult.failure();
     }
   }
 
   /// 텍스트 댓글 생성
-  Future<bool> createTextComment({
+  Future<CommentCreationResult> createTextComment({
     required int postId,
     required int userId,
     required String text,
@@ -102,12 +102,12 @@ class CommentController extends ChangeNotifier {
     } catch (e) {
       _setError('텍스트 댓글 생성 실패: $e');
       _setLoading(false);
-      return false;
+      return const CommentCreationResult.failure();
     }
   }
 
   /// 음성 댓글 생성
-  Future<bool> createAudioComment({
+  Future<CommentCreationResult> createAudioComment({
     required int postId,
     required int userId,
     required String audioKey,
@@ -134,7 +134,7 @@ class CommentController extends ChangeNotifier {
     } catch (e) {
       _setError('음성 댓글 생성 실패: $e');
       _setLoading(false);
-      return false;
+      return const CommentCreationResult.failure();
     }
   }
 

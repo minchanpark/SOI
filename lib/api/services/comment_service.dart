@@ -54,7 +54,7 @@ class CommentService {
   /// Throws:
   /// - [BadRequestException]: 필수 정보 누락
   /// - [NotFoundException]: 게시물을 찾을 수 없음
-  Future<bool> createComment({
+  Future<CommentCreationResult> createComment({
     required int postId,
     required int userId,
     String? text,
@@ -109,7 +109,11 @@ class CommentService {
         throw SoiApiException(message: response.message ?? '댓글 생성 실패');
       }
 
-      return true;
+      final parsedComment = _parseCommentFromResponse(response);
+      return CommentCreationResult(
+        success: true,
+        comment: parsedComment,
+      );
     } on ApiException catch (e) {
       throw _handleApiException(e);
     } on SocketException catch (e) {
@@ -121,7 +125,7 @@ class CommentService {
   }
 
   /// 텍스트 댓글 생성 (편의 메서드)
-  Future<bool> createTextComment({
+  Future<CommentCreationResult> createTextComment({
     required int postId,
     required int userId,
     required String text,
@@ -142,7 +146,7 @@ class CommentService {
   }
 
   /// 음성 댓글 생성 (편의 메서드)
-  Future<bool> createAudioComment({
+  Future<CommentCreationResult> createAudioComment({
     required int postId,
     required int userId,
     required String audioKey,
@@ -205,6 +209,38 @@ class CommentService {
       if (e is SoiApiException) rethrow;
       throw SoiApiException(message: '이모지 댓글 생성 실패: $e', originalException: e);
     }
+  }
+
+  Comment? _parseCommentFromResponse(ApiResponseDtoObject response) {
+    final data = response.data;
+    if (data == null) {
+      debugPrint('댓글 생성 응답에 data가 없습니다.');
+      return null;
+    }
+
+    if (data is CommentRespDto) {
+      return Comment.fromDto(data);
+    }
+
+    if (data is Map<String, dynamic>) {
+      final dto = CommentRespDto.fromJson(data);
+      if (dto != null) return Comment.fromDto(dto);
+    }
+
+    if (data is Map) {
+      final dto = CommentRespDto.fromJson(Map<String, dynamic>.from(data));
+      if (dto != null) return Comment.fromDto(dto);
+    }
+
+    if (data is List) {
+      final list = CommentRespDto.listFromJson(data);
+      if (list.isNotEmpty) {
+        return Comment.fromDto(list.first);
+      }
+    }
+
+    debugPrint('댓글 생성 응답 data 파싱 실패: ${data.runtimeType}');
+    return null;
   }
 
   // ============================================

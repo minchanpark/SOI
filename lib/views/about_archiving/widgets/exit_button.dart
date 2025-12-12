@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api_firebase/controllers/category_member_controller.dart';
-import '../../../api_firebase/controllers/auth_controller.dart';
-import '../../../api_firebase/models/category_data_model.dart';
+import 'package:soi/api/controller/category_controller.dart'
+    as api_category;
+import 'package:soi/api/controller/user_controller.dart';
+import '../../../api/models/category.dart';
 
 class ExitButton extends StatelessWidget {
-  final CategoryDataModel category;
+  final Category category;
 
   const ExitButton({super.key, required this.category});
 
@@ -94,24 +95,36 @@ class ExitButton extends StatelessWidget {
                         Navigator.of(sheetContext).pop();
 
                         final categoryController = context
-                            .read<CategoryMemberController>();
-                        final authController = context.read<AuthController>();
-                        final userId = authController.getUserId;
+                            .read<api_category.CategoryController>();
+                        final userController =
+                            context.read<UserController>();
+                        final currentUser = userController.currentUser;
 
-                        if (userId != null) {
-                          await categoryController.leaveCategoryByUid(
-                            category.id,
-                            userId,
-                          );
-
-                          if (categoryController.error == null) {
-                            navigator.popUntil((route) => route.isFirst);
-                          }
-                        } else {
+                        if (currentUser == null) {
                           scaffoldMessenger.showSnackBar(
                             const SnackBar(
                               content: Text('사용자 정보를 확인할 수 없습니다.'),
                               backgroundColor: Color(0xFFcccccc),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final success = await categoryController.leaveCategory(
+                          userId: currentUser.id,
+                          categoryId: category.id,
+                        );
+
+                        if (success) {
+                          navigator.popUntil((route) => route.isFirst);
+                        } else {
+                          scaffoldMessenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                categoryController.errorMessage ??
+                                    '카테고리에서 나갈 수 없습니다.',
+                              ),
+                              backgroundColor: const Color(0xFFcccccc),
                             ),
                           );
                         }

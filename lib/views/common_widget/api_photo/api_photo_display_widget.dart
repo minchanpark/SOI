@@ -30,6 +30,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final Function(int, Offset) onProfileImageDragged;
   final Function(Post) onToggleAudio;
   final Map<int, PendingApiVoiceComment> pendingVoiceComments;
+  final Future<void> Function(int postId)? onCommentsReloadRequested;
 
   const ApiPhotoDisplayWidget({
     super.key,
@@ -41,6 +42,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
     required this.onProfileImageDragged,
     required this.onToggleAudio,
     this.pendingVoiceComments = const {},
+    this.onCommentsReloadRequested,
   });
 
   @override
@@ -582,6 +584,12 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     );
   }
 
+  /// 댓글 길게 눌렀을 때, 삭제 액션 오버레이 표시
+  ///
+  /// Parameters:
+  ///   - [key]: 선택된 댓글의 고유 키
+  ///   - [commentId]: 선택된 댓글의 ID
+  ///   - [position]: 댓글 아바타의 절대 위치
   void _handleCommentLongPress({
     required String key,
     required int? commentId,
@@ -592,9 +600,16 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
       return;
     }
     setState(() {
+      // 선택된 댓글 정보 저장
       _selectedCommentKey = key;
+
+      // 댓글 ID와 위치 저장
       _selectedCommentId = commentId;
+
+      // 댓글 아바타의 위치 저장
       _selectedCommentPosition = position;
+
+      // 액션 오버레이 표시
       _showActionOverlay = true;
     });
   }
@@ -611,6 +626,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
       final success = await commentController.deleteComment(targetId);
       if (!mounted) return;
       if (success) {
+        _removeCommentFromCache(targetId);
+        await widget.onCommentsReloadRequested?.call(widget.post.id);
         _showSnackBar('댓글이 삭제되었습니다.');
         _dismissOverlay();
       } else {
@@ -620,6 +637,19 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
       if (!mounted) return;
       _showSnackBar('댓글 삭제 중 오류가 발생했습니다.');
     }
+  }
+
+  /// 댓글 캐시에서 제거
+  /// 댓글 삭제 후 UI 즉시 반영을 위해 사용
+  ///
+  /// Parameters:
+  ///   - [commentId]: 삭제할 댓글의 ID
+  void _removeCommentFromCache(int commentId) {
+    final updated = List<Comment>.from(
+      widget.postComments[widget.post.id] ?? const <Comment>[],
+    )..removeWhere((comment) => comment.id == commentId);
+    widget.postComments[widget.post.id] = updated;
+    setState(() {});
   }
 
   /// 카테고리 화면으로 네비게이트

@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/views/about_archiving/screens/category_edit/category_editor_screen.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
 import 'package:soi/views/about_friends/friend_list_add_screen.dart';
 
@@ -251,11 +252,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             // 메뉴 버튼
             IconButton(
               onPressed: () {
-                // TODO: API 버전 카테고리 편집 화면
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('카테고리 편집 (API 버전 구현 예정)'),
-                    duration: Duration(seconds: 1),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        CategoryEditorScreen(category: _currentCategory),
                   ),
                 );
               },

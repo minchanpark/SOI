@@ -1,15 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../api_firebase/models/category_data_model.dart';
-
 class CategoryCoverSection extends StatelessWidget {
-  final CategoryDataModel category;
+  final String? imageUrl;
   final VoidCallback onTap;
 
   const CategoryCoverSection({
     super.key,
-    required this.category,
+    required this.imageUrl,
     required this.onTap,
   });
 
@@ -21,14 +19,11 @@ class CategoryCoverSection extends StatelessWidget {
         width: double.infinity,
         height: 173.h,
         decoration: BoxDecoration(
-          // 기존 색상을 유지하면서 이미지를 배경으로 추가
           color: const Color(0xFF5A5A5A),
           borderRadius: BorderRadius.circular(8),
-          image:
-              category.categoryPhotoUrl != null &&
-                  category.categoryPhotoUrl!.isNotEmpty
+          image: imageUrl != null && imageUrl!.isNotEmpty
               ? DecorationImage(
-                  image: CachedNetworkImageProvider(category.categoryPhotoUrl!),
+                  image: CachedNetworkImageProvider(imageUrl!),
                   fit: BoxFit.cover,
                 )
               : null,

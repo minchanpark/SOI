@@ -40,6 +40,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
   final Future<void> Function(int) onSaveRequested;
   final Function(int) onSaveCompleted;
   final VoidCallback onDeletePressed;
+  final Future<void> Function(int postId)? onCommentsReloadRequested;
 
   const ApiPhotoCardWidget({
     super.key,
@@ -64,6 +65,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
     required this.onSaveRequested,
     required this.onSaveCompleted,
     required this.onDeletePressed,
+    this.onCommentsReloadRequested,
   });
 
   @override
@@ -109,6 +111,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 onProfileImageDragged: widget.onProfileImageDragged,
                 onToggleAudio: widget.onToggleAudio,
                 pendingVoiceComments: widget.pendingVoiceComments,
+                onCommentsReloadRequested: widget.onCommentsReloadRequested,
               ),
               SizedBox(height: 12.h),
 

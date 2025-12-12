@@ -78,6 +78,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 이전 녹음 상태 (애니메이션 제어용)
   VoiceCommentState? _lastState;
   final Map<String, Future<String?>> _profileUrlFutures = {};
+  bool _isTextCommentPlacement = false; // 텍스트 댓글 배치 여부
 
   // ============================================================
   // 여러 가지 생명주기 관련 메서드
@@ -95,6 +96,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
     // Placing 모드로 시작해야 하는 경우 (텍스트 댓글용)
     if (widget.startInPlacingMode) {
+      _isTextCommentPlacement = true;
       _currentState = VoiceCommentState.placing;
       _initializeControllers(); // 컨트롤러 초기화 (dispose에서 필요)
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -755,6 +757,11 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     }
 
     _releaseParentScroll();
+
+    if (_isTextCommentPlacement) {
+      return;
+    }
+
     setState(() {
       _lastState = _currentState;
       _currentState = VoiceCommentState.recorded;
@@ -769,6 +776,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     setState(() {
       _lastState = _currentState;
       _currentState = VoiceCommentState.saved;
+      _isTextCommentPlacement = false;
     });
 
     // 상태 변경 후 컨트롤러들을 정리 (애니메이션 후에)
@@ -857,6 +865,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         child: Opacity(opacity: 0.8, child: profileWidget),
       ),
       childWhenDragging: Opacity(opacity: 0.3, child: profileWidget),
+      onDragStarted: isPlacementMode ? _holdParentScroll : null,
       onDraggableCanceled: (velocity, offset) {
         if (!isPlacementMode) {
           return;

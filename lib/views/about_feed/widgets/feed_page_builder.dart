@@ -26,6 +26,7 @@ class FeedPageBuilder extends StatelessWidget {
   final Function(int) onPageChanged;
   final VoidCallback onStopAllAudio;
   final String? currentUserNickname;
+  final Future<void> Function(int postId) onReloadComments; // 댓글 다시 불러오기 콜백 함수
 
   const FeedPageBuilder({
     super.key,
@@ -49,6 +50,7 @@ class FeedPageBuilder extends StatelessWidget {
     required this.onPageChanged,
     required this.onStopAllAudio,
     this.currentUserNickname,
+    required this.onReloadComments,
   });
 
   @override
@@ -93,6 +95,7 @@ class FeedPageBuilder extends StatelessWidget {
           onSaveRequested: onSaveRequested,
           onSaveCompleted: onSaveCompleted,
           onDeletePressed: () => onDeletePost(index, feedItem),
+          onCommentsReloadRequested: onReloadComments,
         );
       },
     );

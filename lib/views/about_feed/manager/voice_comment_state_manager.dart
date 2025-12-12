@@ -10,6 +10,7 @@ import '../../../api/controller/comment_controller.dart';
 import '../../../api/controller/media_controller.dart' as api_media;
 import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
+import '../../../api/models/comment_creation_result.dart';
 import '../../../utils/position_converter.dart';
 import '../../common_widget/api_photo/pending_api_voice_comment.dart';
 
@@ -244,11 +245,12 @@ class VoiceCommentStateManager {
         listen: false,
       );
 
-      bool success = false;
+      CommentCreationResult creationResult =
+          const CommentCreationResult.failure();
 
       if (pending.isTextComment && pending.text != null) {
         // 텍스트 댓글 저장하고 그 결과를 success에 할당
-        success = await commentController.createTextComment(
+        creationResult = await commentController.createTextComment(
           postId: postId,
           userId: userId,
           text: pending.text!,
@@ -287,7 +289,7 @@ class VoiceCommentStateManager {
         final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성하고 그 결과를 success에 할당
-        success = await commentController.createAudioComment(
+        creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
           audioKey: audioKey,
@@ -298,9 +300,12 @@ class VoiceCommentStateManager {
         );
       }
 
-      if (success) {
-        // 댓글 저장 성공 시 댓글 목록 새로고침
-        await loadCommentsForPost(postId, context);
+      if (creationResult.success) {
+        if (creationResult.comment != null) {
+          _addCommentToCache(postId, creationResult.comment!);
+        } else {
+          await loadCommentsForPost(postId, context);
+        }
         return true;
       }
 
@@ -315,6 +320,14 @@ class VoiceCommentStateManager {
       );
       return false;
     }
+  }
+
+  void _addCommentToCache(int postId, Comment comment) {
+    final existing = List<Comment>.from(_postComments[postId] ?? const []);
+    existing.add(comment);
+    _postComments[postId] = existing;
+    _voiceCommentSavedStates[postId] = true;
+    _notifyStateChanged();
   }
 
   /// 음성/텍스트 댓글이 삭제되었을 때 호출되는 메서드

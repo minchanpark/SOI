@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../api_firebase/models/category_data_model.dart';
 
 class AddFriendButton extends StatelessWidget {
-  final CategoryDataModel category;
   final VoidCallback onPressed;
 
-  const AddFriendButton({
-    super.key,
-    required this.category,
-    required this.onPressed,
-  });
+  const AddFriendButton({super.key, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {

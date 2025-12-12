@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import '../../../../api_firebase/controllers/auth_controller.dart';
-import '../../../../api_firebase/models/category_data_model.dart';
+import '../../../../api/models/category.dart';
 
 class CategoryInfoSection extends StatelessWidget {
-  final CategoryDataModel category;
+  final Category category;
 
   const CategoryInfoSection({super.key, required this.category});
 
   @override
   Widget build(BuildContext context) {
-    final userId =
-        Provider.of<AuthController>(context, listen: false).getUserId ??
-        '카테고리 이름 오류';
     return Container(
       width: double.infinity,
       height: 62.h,
@@ -37,7 +32,7 @@ class CategoryInfoSection extends StatelessWidget {
           ),
           Flexible(
             child: Text(
-              category.getDisplayName(userId),
+              category.name,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16.sp,

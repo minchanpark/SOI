@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
+import '../../../../api/models/comment_creation_result.dart';
 import '../../../../api/models/user.dart' as api_user;
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
@@ -140,7 +141,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
                   // 현재 게시물이 오디오를 포함하는 경우 재생 시간 업데이트
                   if (currentPost.hasAudio) {
-                    final resolvedUrl = _resolvedAudioUrls[currentPost.id] ??
+                    final resolvedUrl =
+                        _resolvedAudioUrls[currentPost.id] ??
                         currentPost.audioUrl;
                     if (resolvedUrl != null &&
                         _audioController.currentAudioUrl == resolvedUrl) {
@@ -252,6 +254,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               onSaveRequested: _onSaveRequested,
               onSaveCompleted: _onSaveCompleted,
               onDeletePressed: () => _deletePost(post),
+              onCommentsReloadRequested: _loadCommentsForPost,
             );
           },
         ),
@@ -339,6 +342,22 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
   }
 
+  /// 댓글 캐시에 새 댓글 추가
+  ///
+  /// Parameters:
+  ///   - [postId]: 댓글이 추가될 게시물 ID
+  ///   - [comment]: 추가할 댓글 객체
+  void _addCommentToCache(int postId, Comment comment) {
+    if (!mounted) return;
+    setState(() {
+      final updatedList = List<Comment>.from(
+        _postComments[postId] ?? const <Comment>[],
+      )..add(comment);
+      _postComments[postId] = updatedList;
+      _voiceCommentSavedStates[postId] = true;
+    });
+  }
+
   /// 프로필 이미지 드래그 시 위치 업데이트 처리
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
     final imageSize = Size(354.w, 500.h);
@@ -357,6 +376,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
+  /// 오디오 토글 처리
+  ///
+  /// Parameters:
+  ///   - [post]: 오디오 토글할 게시물 객체
   Future<void> _toggleAudio(Post post) async {
     if (!post.hasAudio) return;
     final audioKey = post.audioUrl;
@@ -376,6 +399,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
+  /// 음성 댓글 토글 처리
+  ///
+  /// Parameters:
+  ///   - [postId]: 음성 댓글 토글할 게시물 ID
   void _toggleVoiceComment(int postId) {
     setState(() {
       _voiceCommentActiveStates[postId] =
@@ -383,14 +410,21 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
   }
 
+  /// 텍스트 댓글 생성 처리
+  ///
+  /// Parameters:
+  ///   - [postId]: 댓글이 생성될 게시물 ID
+  /// - [text]: 생성할 텍스트 댓글 내용
   Future<void> _onTextCommentCreated(int postId, String text) async {
     try {
       final userId = _userController?.currentUser?.id;
       if (userId == null) return;
 
+      // 임시 댓글 데이터에 추가
       final currentUserProfileImageUrl =
           _userController?.currentUser?.profileImageUrlKey;
 
+      // 임시 댓글 데이터에 추가
       _pendingVoiceComments[postId] = PendingApiVoiceComment(
         text: text,
         isTextComment: true,
@@ -399,12 +433,15 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         duration: null,
         recorderUserId: userId,
         profileImageUrl: currentUserProfileImageUrl,
-        relativePosition: null, // 사용자가 드래그로 위치 지정
+        relativePosition: null,
       );
 
       if (mounted) {
         setState(() {
+          // 댓글이 pending 상태임을 표시
           _pendingTextComments[postId] = true;
+
+          // 음성 댓글 위젯 비활성화
           _voiceCommentSavedStates[postId] = false;
         });
       }
@@ -413,6 +450,13 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
+  /// 음성 댓글 녹음 완료 처리
+  ///
+  /// Parameters:
+  ///   - [postId]: 댓글이 생성될 게시물 ID
+  ///   - [audioPath]: 녹음된 오디오 파일 경로
+  ///   - [waveformData]: 녹음된 오디오의 파형 데이터
+  ///   - [duration]: 녹음된 오디오의 길이 (밀리초)
   Future<void> _onVoiceCommentRecordingFinished(
     int postId,
     String audioPath,
@@ -497,12 +541,13 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         listen: false,
       );
 
-      bool success = false;
+      CommentCreationResult creationResult =
+          const CommentCreationResult.failure();
 
       // 텍스트 댓글 저장 부분
       if (pending.isTextComment && pending.text != null) {
         // 텍스트 댓글 저장
-        success = await commentController.createTextComment(
+        creationResult = await commentController.createTextComment(
           postId: postId,
           userId: userId,
           text: pending.text!,
@@ -536,7 +581,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성
-        success = await commentController.createAudioComment(
+        creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
           audioKey: audioKey,
@@ -547,9 +592,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         );
       }
 
-      if (success) {
-        // 댓글 목록 새로고침
-        await _loadCommentsForPost(postId);
+      if (creationResult.success) {
+        if (creationResult.comment != null) {
+          _addCommentToCache(postId, creationResult.comment!);
+        } else {
+          await _loadCommentsForPost(postId);
+        }
       } else {
         _showSnackBar('댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
       }
@@ -750,10 +798,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   // 스낵바 틀 함수
   String? _encodeWaveformForRequest(List<double>? waveformData) {
     if (waveformData == null || waveformData.isEmpty) return null;
-    final sampled = _sampleWaveformData(
-      waveformData,
-      _kMaxWaveformSamples,
-    );
+    final sampled = _sampleWaveformData(waveformData, _kMaxWaveformSamples);
     final rounded = sampled
         .map((value) => double.parse(value.toStringAsFixed(4)))
         .toList();

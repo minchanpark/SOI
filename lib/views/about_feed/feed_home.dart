@@ -288,6 +288,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         onPageChanged: _handlePageChanged,
         onStopAllAudio: _stopAllAudio,
         currentUserNickname: _userController?.currentUser?.userId,
+        onReloadComments: (postId) =>
+            _voiceCommentStateManager!.loadCommentsForPost(postId, context),
       ),
     );
   }

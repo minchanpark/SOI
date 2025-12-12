@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:soi/api_firebase/controllers/category_cover_photo_controller.dart';
-import '../../../../api_firebase/controllers/auth_controller.dart';
-import '../../../../api_firebase/controllers/category_controller.dart';
-import '../../../../api_firebase/models/auth_model.dart';
-import '../../../../api_firebase/models/category_data_model.dart';
+import 'package:provider/provider.dart';
+
+import '../../../../api/controller/category_controller.dart' as api_category;
+import '../../../../api/controller/media_controller.dart';
+import '../../../../api/controller/user_controller.dart';
+import '../../../../api/models/category.dart';
+import '../../../../api/models/user.dart';
+import '../../../../api/services/media_service.dart';
 import '../../../about_friends/friend_list_add_screen.dart';
 import '../../widgets/exit_button.dart';
 import '../../widgets/category_edit_widget/add_friend_button.dart';
@@ -18,8 +21,14 @@ import '../../widgets/category_edit_widget/friends_list_widget.dart';
 import '../../widgets/category_edit_widget/notification_setting_section.dart';
 import 'category_cover_photo_selector_screen.dart';
 
+/// 카테고리 편집 화면
+///
+/// 카테고리의 표지사진, 이름, 알림설정, 친구 추가/삭제 등을 관리합니다.
+///
+/// Parameters:
+///  - [category]: 편집할 카테고리 데이터 모델
 class CategoryEditorScreen extends StatefulWidget {
-  final CategoryDataModel category;
+  final Category category;
 
   const CategoryEditorScreen({super.key, required this.category});
 
@@ -31,15 +40,21 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
     with WidgetsBindingObserver {
   bool _isExpanded = false;
 
-  // 친구 정보 캐시
-  Map<String, AuthModel> _friendsInfo = {};
+  // 멤버 정보 캐시 (API 기반)
+  List<CategoryMemberViewModel> _members = [];
   bool _isLoadingFriends = false;
+
+  // 표지사진 URL(Resolved) 캐시
+  String? _coverPhotoUrl;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadFriendsInfo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshCategoryCoverPhoto();
+      _loadMembers();
+    });
   }
 
   @override
@@ -52,7 +67,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
   // 외부에서 호출 가능한 친구 정보 새로고침 메서드
   void refreshFriendsInfo() {
     if (mounted) {
-      _loadFriendsInfo();
+      _loadMembers();
     }
   }
 
@@ -62,7 +77,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
 
     // 앱이 다시 활성화될 때 친구 정보 새로고침
     if (state == AppLifecycleState.resumed && mounted) {
-      _loadFriendsInfo();
+      _refreshCategoryCoverPhoto();
+      _loadMembers();
     }
   }
 
@@ -70,166 +86,122 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
   void didUpdateWidget(CategoryEditorScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 카테고리가 변경되었거나 mates가 변경된 경우 친구 정보 다시 로드
-    if (oldWidget.category.id != widget.category.id ||
-        !_listsEqual(oldWidget.category.mates, widget.category.mates)) {
-      _loadFriendsInfo();
+    if (oldWidget.category.id != widget.category.id) {
+      _refreshCategoryCoverPhoto();
+      _loadMembers();
     }
   }
 
-  // 리스트 비교 헬퍼 함수
-  bool _listsEqual<T>(List<T> list1, List<T> list2) {
-    if (list1.length != list2.length) return false;
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return false;
-    }
-    return true;
+  Category _getCurrentCategory(api_category.CategoryController controller) {
+    return controller.getCategoryById(widget.category.id) ?? widget.category;
   }
 
-  // 친구 정보 로드 (재시도 로직 포함)
-  Future<void> _loadFriendsInfo({int retryCount = 0}) async {
-    // CategoryController에서 최신 카테고리 정보 가져오기
-    final categoryController = context.read<CategoryController>();
-    final currentCategory = categoryController.userCategories.firstWhere(
-      (cat) => cat.id == widget.category.id,
-      orElse: () => widget.category,
-    );
+  Future<void> _refreshCategoryCoverPhoto() async {
+    final controller = context.read<api_category.CategoryController>();
+    final currentCategory = _getCurrentCategory(controller);
+    final photoKey = currentCategory.photoUrl;
 
-    final currentMates = currentCategory.mates;
-
-    if (currentMates.isEmpty) {
-      setState(() {
-        _isLoadingFriends = false;
-        _friendsInfo = {};
-      });
+    if (photoKey == null || photoKey.isEmpty) {
+      if (!mounted) return;
+      setState(() => _coverPhotoUrl = null);
       return;
     }
 
-    setState(() {
-      _isLoadingFriends = true;
-    });
+    final uri = Uri.tryParse(photoKey);
+    if (uri != null && uri.hasScheme) {
+      if (!mounted) return;
+      setState(() => _coverPhotoUrl = photoKey);
+      return;
+    }
+
+    final mediaController = context.read<MediaController>();
+    final url = await mediaController.getPresignedUrl(photoKey);
+    if (!mounted) return;
+    setState(() => _coverPhotoUrl = url);
+  }
+
+  Future<void> _loadMembers() async {
+    if (!mounted) return;
+    setState(() => _isLoadingFriends = true);
 
     try {
-      final authController = context.read<AuthController>();
-      final Map<String, AuthModel> friendsInfo = {};
-      final List<String> failedUids = [];
+      final categoryController = context.read<api_category.CategoryController>();
+      final userController = context.read<UserController>();
+      final mediaController = context.read<MediaController>();
 
-      // 각 친구 정보를 순차적으로 로드 (최신 mates 사용)
-      for (String mateUid in currentMates) {
-        try {
-          final userInfo = await _getUserInfoWithRetry(authController, mateUid);
-          if (userInfo != null) {
-            friendsInfo[mateUid] = userInfo;
-          } else {
-            failedUids.add(mateUid);
-          }
-        } catch (e) {
-          failedUids.add(mateUid);
-        }
-      }
+      final currentCategory = _getCurrentCategory(categoryController);
+      final nicknames = currentCategory.nickNames;
+      final profileKeys = currentCategory.usersProfileKey;
 
-      if (mounted) {
+      if (nicknames.isEmpty) {
+        if (!mounted) return;
         setState(() {
-          _friendsInfo = friendsInfo;
+          _members = const [];
           _isLoadingFriends = false;
         });
+        return;
       }
 
-      // 실패한 항목이 있고 첫 번째 재시도인 경우 재시도
-      if (failedUids.isNotEmpty && retryCount == 0) {
-        Future.delayed(Duration(seconds: 3), () {
-          if (mounted) {
-            _retryFailedUsers(failedUids);
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingFriends = false;
-        });
+      final futures = <Future<CategoryMemberViewModel>>[];
+      for (int i = 0; i < nicknames.length; i++) {
+        futures.add(_buildMemberViewModel(
+          nickname: nicknames[i],
+          profileKey: i < profileKeys.length ? profileKeys[i] : null,
+          userController: userController,
+          mediaController: mediaController,
+        ));
       }
 
-      // 전체 재시도 (최대 1회)
-      if (retryCount == 0) {
-        Future.delayed(Duration(seconds: 5), () {
-          if (mounted) {
-            _loadFriendsInfo(retryCount: 1);
-          }
-        });
-      }
+      final resolvedMembers = await Future.wait(futures);
+      if (!mounted) return;
+      setState(() {
+        _members = resolvedMembers;
+        _isLoadingFriends = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingFriends = false);
     }
   }
 
-  // 개별 사용자 정보 로드 (재시도 포함)
-  Future<AuthModel?> _getUserInfoWithRetry(
-    AuthController authController,
-    String uid, {
-    int maxRetries = 2,
+  Future<CategoryMemberViewModel> _buildMemberViewModel({
+    required String nickname,
+    required String? profileKey,
+    required UserController userController,
+    required MediaController mediaController,
   }) async {
-    for (int attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        final userInfo = await authController.getUserInfo(uid);
-
-        if (userInfo != null) {
-          return userInfo;
-        }
-
-        // null인 경우 잠시 대기 후 재시도
-        if (attempt < maxRetries) {
-          final delay = 500 * (attempt + 1);
-
-          await Future.delayed(Duration(milliseconds: delay));
-        }
-      } catch (e) {
-        if (attempt < maxRetries) {
-          final delay = 1000 * (attempt + 1);
-
-          await Future.delayed(Duration(milliseconds: delay));
-        }
+    String? profileUrl;
+    if (profileKey != null && profileKey.isNotEmpty) {
+      final uri = Uri.tryParse(profileKey);
+      if (uri != null && uri.hasScheme) {
+        profileUrl = profileKey;
+      } else {
+        profileUrl = await mediaController.getPresignedUrl(profileKey);
       }
     }
 
-    return null;
-  }
-
-  // 실패한 사용자들만 재시도
-  Future<void> _retryFailedUsers(List<String> failedUids) async {
-    if (failedUids.isEmpty) return;
-
+    User? user;
     try {
-      final authController = context.read<AuthController>();
-      final Map<String, AuthModel> updatedFriendsInfo = Map.from(_friendsInfo);
+      user = await userController.getUserByNickname(nickname);
+    } catch (_) {}
 
-      for (String uid in failedUids) {
-        try {
-          final userInfo = await _getUserInfoWithRetry(authController, uid);
-          if (userInfo != null) {
-            updatedFriendsInfo[uid] = userInfo;
-          }
-        } catch (e) {
-          // 재시도 실패 시 무시
-        }
-      }
+    final displayName = (user != null && user.name.isNotEmpty)
+        ? user.name
+        : nickname;
+    final subtitle = user?.userId ?? nickname;
 
-      if (mounted) {
-        setState(() {
-          _friendsInfo = updatedFriendsInfo;
-        });
-      }
-    } catch (e) {
-      // 전체 재시도 실패 시 무시
-    }
+    return CategoryMemberViewModel(
+      displayName: displayName,
+      profileImageUrl: profileUrl,
+      subtitle: subtitle,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<CategoryController>(
+    return Consumer<api_category.CategoryController>(
       builder: (context, categoryController, child) {
-        final currentCategory = categoryController.userCategories.firstWhere(
-          (cat) => cat.id == widget.category.id,
-          orElse: () => widget.category,
-        );
+        final currentCategory = _getCurrentCategory(categoryController);
 
         return Scaffold(
           backgroundColor: const Color(0xFF111111),
@@ -262,7 +234,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                 children: [
                   // 표지사진 수정 섹션
                   CategoryCoverSection(
-                    category: currentCategory,
+                    imageUrl: _coverPhotoUrl,
                     onTap: () => _showCoverPhotoBottomSheet(context),
                   ),
 
@@ -278,10 +250,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   SizedBox(height: 24.h),
 
                   // 친구 추가 섹션
-                  currentCategory.mates.isNotEmpty
+                  currentCategory.nickNames.isNotEmpty
                       ? FriendsListWidget(
-                          category: currentCategory,
-                          friendsInfo: _friendsInfo,
+                          members: _members,
                           isLoadingFriends: _isLoadingFriends,
                           isExpanded: _isExpanded,
                           onExpandToggle: () {
@@ -294,30 +265,13 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                               _isExpanded = false;
                             });
                           },
-                          onFriendAdded: () {
-                            // 친구 추가 후 정보 새로고침
-                            if (mounted) {
-                              _loadFriendsInfo();
-                            }
-                          },
+                          onFriendAdded: () => _navigateToAddFriends(
+                            currentCategory,
+                          ),
                         )
                       : AddFriendButton(
-                          category: currentCategory,
                           onPressed: () async {
-                            // FriendListAddScreen으로 이동
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => FriendListAddScreen(
-                                  categoryId: currentCategory.id,
-                                  categoryMemberUids: currentCategory.mates,
-                                ),
-                              ),
-                            );
-
-                            // 돌아온 후 친구 정보만 새로고침
-                            if (mounted) {
-                              _loadFriendsInfo();
-                            }
+                            await _navigateToAddFriends(currentCategory);
                           },
                         ),
                   SizedBox(height: 24.h),
@@ -543,85 +497,123 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       ),
     );
 
-    if (result != null && mounted) {
-      final categoryController = context.read<CategoryController>();
-      final authController = context.read<AuthController>();
-      final userId = authController.getUserId;
-      if (userId != null) {
-        await categoryController.loadUserCategories(userId, forceReload: true);
-      }
+    if (!mounted) return;
+    if (result != null) {
+      await _reloadCategoryCache();
     }
   }
 
   /// 갤러리/카메라에서 선택한 파일로 표지사진 업데이트
   Future<void> _updateCoverPhoto(File imageFile) async {
-    final categoryPhotoController = context
-        .read<CategoryCoverPhotoController>();
-    final categoryController = context.read<CategoryController>();
-
-    final success = await categoryPhotoController.updateCoverPhotoFromGallery(
-      categoryId: widget.category.id,
-      imageFile: imageFile,
-    );
-
-    if (success && mounted) {
-      // 카테고리 데이터 다시 로드
-      final authController = context.read<AuthController>();
-      final userId = authController.getUserId;
-      if (userId != null) {
-        await categoryController.loadUserCategories(userId, forceReload: true);
+    try {
+      final userController = context.read<UserController>();
+      final currentUser = userController.currentUser;
+      if (currentUser == null) {
+        _showSnackBar('로그인이 필요합니다.');
+        return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '표지사진이 변경되었습니다.',
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Color(0xFF5a5a5a),
-        ),
+      final mediaController = context.read<MediaController>();
+      final multipart = await mediaController.fileToMultipart(imageFile);
+      final keys = await mediaController.uploadMedia(
+        files: [multipart],
+        types: [MediaType.image],
+        usageTypes: [MediaUsageType.categoryProfile],
+        userId: currentUser.id,
+        refId: widget.category.id,
+        usageCount: 1,
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(categoryController.error ?? '표지사진 변경에 실패했습니다.'),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
+
+      if (keys.isEmpty) {
+        _showSnackBar('표지사진 업로드에 실패했습니다.');
+        return;
+      }
+
+      final categoryController = context.read<api_category.CategoryController>();
+      final success = await categoryController.updateCustomProfile(
+        categoryId: widget.category.id,
+        userId: currentUser.id,
+        profileImageKey: keys.first,
       );
+
+      if (!success) {
+        _showSnackBar(
+          categoryController.errorMessage ?? '표지사진 변경에 실패했습니다.',
+        );
+        return;
+      }
+
+      await _reloadCategoryCache();
+      _showSnackBar('표지사진이 변경되었습니다.');
+    } catch (_) {
+      _showSnackBar('표지사진 변경 중 오류가 발생했습니다.');
     }
   }
 
   /// 표지사진 삭제
   Future<void> _deleteCoverPhoto() async {
-    final categoryPhotoController = context
-        .read<CategoryCoverPhotoController>();
-    final categoryController = context.read<CategoryController>();
-
-    final success = await categoryPhotoController.deleteCoverPhoto(
-      widget.category.id,
-    );
-
-    if (success && mounted) {
-      // 카테고리 데이터 다시 로드
-      final authController = context.read<AuthController>();
-      final userId = authController.getUserId;
-      if (userId != null) {
-        await categoryController.loadUserCategories(userId, forceReload: true);
+    try {
+      final userController = context.read<UserController>();
+      final currentUser = userController.currentUser;
+      if (currentUser == null) {
+        _showSnackBar('로그인이 필요합니다.');
+        return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('표지사진이 삭제되었습니다.'),
-          backgroundColor: Color(0xFF5a5a5a),
-        ),
+      final categoryController = context.read<api_category.CategoryController>();
+      final success = await categoryController.updateCustomProfile(
+        categoryId: widget.category.id,
+        userId: currentUser.id,
+        profileImageKey: '',
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(categoryController.error ?? '표지사진 삭제에 실패했습니다.'),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
-      );
+
+      if (!success) {
+        _showSnackBar(
+          categoryController.errorMessage ?? '표지사진 삭제에 실패했습니다.',
+        );
+        return;
+      }
+
+      await _reloadCategoryCache();
+      _showSnackBar('표지사진이 삭제되었습니다.');
+    } catch (_) {
+      _showSnackBar('표지사진 삭제 중 오류가 발생했습니다.');
     }
+  }
+
+  Future<void> _navigateToAddFriends(Category category) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => FriendListAddScreen(
+          categoryId: category.id.toString(),
+          categoryMemberUids: category.nickNames,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _reloadCategoryCache();
+  }
+
+  Future<void> _reloadCategoryCache() async {
+    final userController = context.read<UserController>();
+    final currentUser = userController.currentUser;
+    if (currentUser == null) return;
+
+    final categoryController = context.read<api_category.CategoryController>();
+    await categoryController.loadCategories(currentUser.id, forceReload: true);
+
+    if (!mounted) return;
+    await _refreshCategoryCoverPhoto();
+    await _loadMembers();
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF5a5a5a),
+      ),
+    );
   }
 }
