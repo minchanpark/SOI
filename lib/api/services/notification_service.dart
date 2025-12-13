@@ -31,6 +31,15 @@ class NotificationService {
     : _notificationApi =
           notificationApi ?? SoiApiClient.instance.notificationApi;
 
+  void _validatePagingParams({required int userId, required int page}) {
+    if (userId <= 0) {
+      throw const BadRequestException(message: 'userId는 1 이상이어야 합니다.');
+    }
+    if (page < 0) {
+      throw const BadRequestException(message: 'page는 0 이상이어야 합니다.');
+    }
+  }
+
   // ============================================
   // 알림 조회
   // ============================================
@@ -53,6 +62,8 @@ class NotificationService {
     int page = 0,
   }) async {
     try {
+      // 파라미터 검증
+      _validatePagingParams(userId: userId, page: page);
       final response = await _notificationApi.getAll(userId, page);
 
       if (response == null) {
@@ -95,6 +106,8 @@ class NotificationService {
     int page = 0,
   }) async {
     try {
+      // 파라미터 검증
+      _validatePagingParams(userId: userId, page: page);
       final response = await _notificationApi.getFriend(userId, page);
 
       if (response == null) {

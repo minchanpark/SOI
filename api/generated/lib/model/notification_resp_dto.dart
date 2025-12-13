@@ -13,6 +13,7 @@ part of openapi.api;
 class NotificationRespDto {
   /// Returns a new [NotificationRespDto] instance.
   NotificationRespDto({
+    this.id,
     this.text,
     this.name,
     this.nickname,
@@ -23,6 +24,14 @@ class NotificationRespDto {
     this.categoryIdForPost,
     this.relatedId,
   });
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? id;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -92,6 +101,7 @@ class NotificationRespDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is NotificationRespDto &&
+    other.id == id &&
     other.text == text &&
     other.name == name &&
     other.nickname == nickname &&
@@ -105,6 +115,7 @@ class NotificationRespDto {
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
+    (id == null ? 0 : id!.hashCode) +
     (text == null ? 0 : text!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
     (nickname == null ? 0 : nickname!.hashCode) +
@@ -116,10 +127,15 @@ class NotificationRespDto {
     (relatedId == null ? 0 : relatedId!.hashCode);
 
   @override
-  String toString() => 'NotificationRespDto[text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, type=$type, isRead=$isRead, categoryIdForPost=$categoryIdForPost, relatedId=$relatedId]';
+  String toString() => 'NotificationRespDto[id=$id, text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, type=$type, isRead=$isRead, categoryIdForPost=$categoryIdForPost, relatedId=$relatedId]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
+    if (this.id != null) {
+      json[r'id'] = this.id;
+    } else {
+      json[r'id'] = null;
+    }
     if (this.text != null) {
       json[r'text'] = this.text;
     } else {
@@ -187,6 +203,7 @@ class NotificationRespDto {
       }());
 
       return NotificationRespDto(
+        id: mapValueOfType<int>(json, r'id'),
         text: mapValueOfType<String>(json, r'text'),
         name: mapValueOfType<String>(json, r'name'),
         nickname: mapValueOfType<String>(json, r'nickname'),

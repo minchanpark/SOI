@@ -8,7 +8,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 import '../../api_firebase/controllers/notification_controller.dart';
-import '../../api_firebase/services/camera_service.dart';
+import '../../api/services/camera_service.dart';
 import 'widgets/circular_video_progress_indicator.dart';
 import 'widgets/camera_app_bar.dart';
 import 'widgets/camera_preview_container.dart';
@@ -144,10 +144,7 @@ class _CameraScreenState extends State<CameraScreen>
 
       // 갤러리 및 줌 레벨 로딩을 동시에 비동기 실행하여 O(1) 초기화 유지
       unawaited(
-        Future.wait([
-          _loadFirstGalleryImage(),
-          _loadAvailableZoomLevels(),
-        ]),
+        Future.wait([_loadFirstGalleryImage(), _loadAvailableZoomLevels()]),
       );
     } catch (e) {
       if (mounted) {

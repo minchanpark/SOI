@@ -8,6 +8,7 @@ import 'package:soi_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**id** | **int** |  | [optional] 
 **text** | **String** |  | [optional] 
 **name** | **String** |  | [optional] 
 **nickname** | **String** |  | [optional] 

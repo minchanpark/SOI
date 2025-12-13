@@ -446,6 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _performDeleteAccount() async {
     try {
       final authController = context.read<AuthController>();
+      final apiUserController = context.read<UserController>();
 
       // 로딩 표시
       if (mounted) {
@@ -459,7 +460,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       // 계정 삭제 실행 (비동기 시작)
-      final deletion = authController.deleteUser();
+      final deletion = apiUserController.deleteUser(
+        apiUserController.currentUser!.id,
+      );
 
       // 로컬 로그인 상태는 즉시 정리하여 자동로그인 방지
       try {
@@ -484,7 +487,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // 로딩 다이얼로그 닫기
         Navigator.of(context).pop();
 
-        // debugPrint('계정 삭제 실패: $e');
         // 에러 메시지 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

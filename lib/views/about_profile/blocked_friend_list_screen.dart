@@ -21,6 +21,8 @@ class BlockedFriendListScreen extends StatefulWidget {
 class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
   final List<User> _blockedUsers = [];
   final Map<int, String> _resolvedProfileUrlsByUserId = {};
+  final Map<String, String> _presignedUrlCacheByKey = {};
+  int _shimmerPlaceholderCount = 6;
   bool _isLoading = true;
   String? _error;
 
@@ -38,6 +40,9 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      if (_blockedUsers.isNotEmpty) {
+        _shimmerPlaceholderCount = _blockedUsers.length;
+      }
     });
 
     try {
@@ -80,6 +85,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
         _resolvedProfileUrlsByUserId
           ..clear()
           ..addAll(resolvedProfileUrlsByUserId);
+        _shimmerPlaceholderCount = blockedUsers.length;
         _isLoading = false;
       });
     } catch (e) {
@@ -91,48 +97,59 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     }
   }
 
-  /// 사용자 목록에서 프로필 이미지 URL을 해상합니다.
+  /// 사용자 목록에서 프로필 이미지 URL을 매핑해서 반환합니다.
+  ///
+  /// Parameters:
+  ///   - [users]: 프로필 이미지 URL을 해상할 사용자 목록
+  ///   - [mediaController]: 미디어 컨트롤러 인스턴스
   Future<Map<int, String>> _resolveProfileUrlsByUserId(
     List<User> users, {
     required MediaController mediaController,
   }) async {
-    final resolved = <int, String>{};
-
-    final keysToResolve = <String>[];
-    final userIdsByKey = <String, List<int>>{};
+    final resolvedByUserId = <int, String>{};
+    final keysToResolve = <String>{}; // insertion-ordered
+    final keyByUserId = <int, String>{};
 
     for (final user in users) {
-      final raw = user.profileImageUrlKey;
-      if (raw == null || raw.isEmpty) continue;
+      final keyOrUrl = user.profileImageUrlKey;
+      if (keyOrUrl == null || keyOrUrl.isEmpty) continue;
 
-      final uri = Uri.tryParse(raw);
+      final uri = Uri.tryParse(keyOrUrl);
       if (uri != null && uri.hasScheme) {
-        resolved[user.id] = raw;
+        resolvedByUserId[user.id] = keyOrUrl;
         continue;
       }
 
-      final userIds = userIdsByKey.putIfAbsent(raw, () => <int>[]);
-      if (userIds.isEmpty) {
-        keysToResolve.add(raw);
+      final cachedUrl = _presignedUrlCacheByKey[keyOrUrl];
+      if (cachedUrl != null && cachedUrl.isNotEmpty) {
+        resolvedByUserId[user.id] = cachedUrl;
+        continue;
       }
-      userIds.add(user.id);
+
+      keyByUserId[user.id] = keyOrUrl;
+      keysToResolve.add(keyOrUrl);
     }
 
-    if (keysToResolve.isEmpty) return resolved;
+    if (keysToResolve.isNotEmpty) {
+      final keys = keysToResolve.toList(growable: false);
+      final urls = await mediaController.getPresignedUrls(keys);
+      final int count = urls.length < keys.length ? urls.length : keys.length;
 
-    final urls = await mediaController.getPresignedUrls(keysToResolve);
-    for (int i = 0; i < keysToResolve.length; i++) {
-      if (i >= urls.length) break;
-      final url = urls[i];
-      if (url.isEmpty) continue;
-      final userIds = userIdsByKey[keysToResolve[i]];
-      if (userIds == null) continue;
-      for (final userId in userIds) {
-        resolved[userId] = url;
+      for (int i = 0; i < count; i++) {
+        final url = urls[i];
+        if (url.isEmpty) continue;
+        _presignedUrlCacheByKey[keys[i]] = url;
       }
+
+      keyByUserId.forEach((userId, key) {
+        final url = _presignedUrlCacheByKey[key];
+        if (url != null && url.isNotEmpty) {
+          resolvedByUserId[userId] = url;
+        }
+      });
     }
 
-    return resolved;
+    return resolvedByUserId;
   }
 
   Future<void> _unblockUser(User user) async {
@@ -275,7 +292,9 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
   }
 
   Widget _buildLoadingShimmer() {
-    const placeholderCount = 6;
+    final int placeholderCount = _shimmerPlaceholderCount == 0
+        ? 6
+        : (_shimmerPlaceholderCount > 20 ? 20 : _shimmerPlaceholderCount);
 
     return Padding(
       padding: EdgeInsets.all(16.w),

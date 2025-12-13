@@ -104,16 +104,31 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       debugPrint("[ApiCategoryPhotosScreen] 카테고리 ID: ${_currentCategory.id}");
       debugPrint("[ApiCategoryPhotosScreen] 로드된 포스트: $posts");
 
-      final postFileKeys = posts
-          .where((post) => post.hasImage)
-          .map((e) => e.postFileKey!)
-          .toList();
+      // 사진이 포함된 포스트 필터링
+      // --> post의 개수와 사진의 개수가 다를 수 있기 때문에, 사진의 개수만 별도로 관리
+      final imagePosts = posts
+          .where(
+            (post) => post.hasImage && (post.postFileKey?.isNotEmpty ?? false),
+          )
+          .toList(growable: false);
 
-      _postImageUrls = await mediaController!.getPresignedUrls(postFileKeys);
+      // 사진 파일 키 목록 생성
+      final postFileKeys = imagePosts.map((e) => e.postFileKey!).toList();
+
+      // Presigned URL 발급
+      final urls = await mediaController!.getPresignedUrls(postFileKeys);
+
+      // post와 URL 정렬 맞추기
+      final alignedUrls = List<String>.generate(
+        imagePosts.length,
+        (index) => index < urls.length ? urls[index] : '',
+        growable: false,
+      );
 
       if (mounted) {
         setState(() {
-          _posts = posts;
+          _posts = imagePosts;
+          _postImageUrls = alignedUrls;
           _isLoading = false;
         });
       }
@@ -343,7 +358,9 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
-          final postImage = _postImageUrls[index];
+          final postImage = index < _postImageUrls.length
+              ? _postImageUrls[index]
+              : '';
 
           return ApiPhotoGridItem(
             post: post,
