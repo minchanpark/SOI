@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../api/controller/friend_controller.dart';
+import '../../api/controller/media_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/friend.dart';
 import '../../api/models/user.dart';
@@ -19,15 +20,20 @@ class BlockedFriendListScreen extends StatefulWidget {
 
 class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
   final List<User> _blockedUsers = [];
+  final Map<int, String> _resolvedProfileUrlsByUserId = {};
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadBlockedFriends();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadBlockedFriends();
+    });
   }
 
+  /// 차단된 사용자 목록을 불러옵니다.
   Future<void> _loadBlockedFriends() async {
     setState(() {
       _isLoading = true;
@@ -35,8 +41,10 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     });
 
     try {
+      // 컨트롤러 인스턴스 가져오기
       final userController = context.read<UserController>();
       final friendController = context.read<FriendController>();
+      final mediaController = context.read<MediaController>();
       final currentUserId = userController.currentUserId;
 
       if (currentUserId == null) {
@@ -47,16 +55,31 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
         return;
       }
 
+      // 차단된 친구 목록 불러오기
       final blockedUsers = await friendController.getAllFriends(
         userId: currentUserId,
         status: FriendStatus.blocked,
       );
 
+      // 프로필 이미지 URL 해상
+      final resolvedProfileUrlsByUserId = await _resolveProfileUrlsByUserId(
+        blockedUsers,
+        mediaController: mediaController,
+      );
+
       if (!mounted) return;
       setState(() {
+        // 차단된 사용자 목록 업데이트
+        // 기존 목록을 클리어하고 새로 불러온 목록으로 교체
         _blockedUsers
           ..clear()
           ..addAll(blockedUsers);
+
+        // 프로필 이미지 URL 매핑 업데이트
+        // 기존 매핑을 클리어하고 새로 해상된 매핑으로 교체
+        _resolvedProfileUrlsByUserId
+          ..clear()
+          ..addAll(resolvedProfileUrlsByUserId);
         _isLoading = false;
       });
     } catch (e) {
@@ -66,6 +89,50 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  /// 사용자 목록에서 프로필 이미지 URL을 해상합니다.
+  Future<Map<int, String>> _resolveProfileUrlsByUserId(
+    List<User> users, {
+    required MediaController mediaController,
+  }) async {
+    final resolved = <int, String>{};
+
+    final keysToResolve = <String>[];
+    final userIdsByKey = <String, List<int>>{};
+
+    for (final user in users) {
+      final raw = user.profileImageUrlKey;
+      if (raw == null || raw.isEmpty) continue;
+
+      final uri = Uri.tryParse(raw);
+      if (uri != null && uri.hasScheme) {
+        resolved[user.id] = raw;
+        continue;
+      }
+
+      final userIds = userIdsByKey.putIfAbsent(raw, () => <int>[]);
+      if (userIds.isEmpty) {
+        keysToResolve.add(raw);
+      }
+      userIds.add(user.id);
+    }
+
+    if (keysToResolve.isEmpty) return resolved;
+
+    final urls = await mediaController.getPresignedUrls(keysToResolve);
+    for (int i = 0; i < keysToResolve.length; i++) {
+      if (i >= urls.length) break;
+      final url = urls[i];
+      if (url.isEmpty) continue;
+      final userIds = userIdsByKey[keysToResolve[i]];
+      if (userIds == null) continue;
+      for (final userId in userIds) {
+        resolved[userId] = url;
+      }
+    }
+
+    return resolved;
   }
 
   Future<void> _unblockUser(User user) async {
@@ -82,6 +149,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     if (success && mounted) {
       setState(() {
         _blockedUsers.removeWhere((u) => u.id == user.id);
+        _resolvedProfileUrlsByUserId.remove(user.id);
       });
     }
   }
@@ -114,9 +182,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
+      return _buildLoadingShimmer();
     }
 
     if (_error != null) {
@@ -195,6 +261,8 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
             for (int i = 0; i < _blockedUsers.length; i++) ...[
               _BlockedUserItem(
                 user: _blockedUsers[i],
+                profileImageUrl:
+                    _resolvedProfileUrlsByUserId[_blockedUsers[i].id],
                 onUnblock: () => _unblockUser(_blockedUsers[i]),
               ),
               if (i < _blockedUsers.length - 1)
@@ -205,20 +273,105 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
       ),
     );
   }
+
+  Widget _buildLoadingShimmer() {
+    const placeholderCount = 6;
+
+    return Padding(
+      padding: EdgeInsets.all(16.w),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1C),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (int i = 0; i < placeholderCount; i++) ...[
+              const _BlockedUserShimmerItem(),
+              if (i < placeholderCount - 1)
+                Divider(color: const Color(0xFF333333), height: 24.h),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BlockedUserShimmerItem extends StatelessWidget {
+  const _BlockedUserShimmerItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF333333),
+      highlightColor: const Color(0xFF555555),
+      child: Row(
+        children: [
+          Container(
+            width: 44.w,
+            height: 44.w,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF333333),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 14.h,
+                  width: 120.w,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF333333),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Container(
+                  height: 10.h,
+                  width: 80.w,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF333333),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Container(
+            width: 84.w,
+            height: 29,
+            decoration: BoxDecoration(
+              color: const Color(0xFF333333),
+              borderRadius: BorderRadius.circular(13.r),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BlockedUserItem extends StatelessWidget {
   final User user;
   final VoidCallback onUnblock;
+  final String? profileImageUrl;
 
   const _BlockedUserItem({
     required this.user,
     required this.onUnblock,
+    this.profileImageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    final profileUrl = user.profileImageUrlKey ?? '';
+    final profileUrl = profileImageUrl ?? user.profileImageUrlKey ?? '';
 
     return Row(
       children: [
@@ -246,7 +399,8 @@ class _BlockedUserItem extends StatelessWidget {
                         ),
                       ),
                     ),
-                    errorWidget: (context, url, error) => const _ProfileFallback(),
+                    errorWidget: (context, url, error) =>
+                        const _ProfileFallback(),
                   ),
                 )
               : const _ProfileFallback(),
