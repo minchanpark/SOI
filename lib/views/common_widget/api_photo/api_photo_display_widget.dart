@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../api/controller/category_controller.dart' as api_category;
 import '../../../api/controller/comment_controller.dart';
@@ -20,7 +22,22 @@ import 'api_voice_comment_list_sheet.dart';
 import 'pending_api_voice_comment.dart';
 import 'package:soi/api/controller/media_controller.dart';
 
-/// Firebase 버전의 PhotoDisplayWidget 디자인을 API 버전에서도 동일하게 유지
+/// API 사진/비디오 표시 위젯
+/// 게시물의 사진 또는 비디오를 표시하고, 댓글 아바타 및 캡션 오버레이를 관리합니다.
+///
+/// Parameters:
+///   - [post]: 표시할 게시물 데이터
+///   - [categoryId]: 게시물이 속한 카테고리 ID
+///   - [categoryName]: 게시물이 속한 카테고리 이름
+///   - [isArchive]: 아카이브 모드 여부
+///   - [postComments]: 게시물 ID별 댓글 맵
+///   - [onProfileImageDragged]: 프로필 이미지 드래그 콜백
+///   - [onToggleAudio]: 오디오 토글 콜백
+///   - [pendingVoiceComments]: 업로드 중인 음성 댓글 맵
+///   - [onCommentsReloadRequested]: 댓글 재로딩 요청 콜백
+///
+/// Returns:
+///   - [ApiPhotoDisplayWidget]: API 사진/비디오 표시 위젯 인스턴스
 class ApiPhotoDisplayWidget extends StatefulWidget {
   final Post post;
   final int categoryId;
@@ -49,7 +66,8 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   State<ApiPhotoDisplayWidget> createState() => _ApiPhotoDisplayWidgetState();
 }
 
-class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
+class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
+    with WidgetsBindingObserver {
   static const double _avatarSize = 27.0;
   static const double _avatarRadius = 13.5;
   static const double _imageWidth = 354.0;
@@ -66,26 +84,74 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
   bool _isProfileLoading = false;
   late final MediaController _mediaController;
 
+  /// 댓글 목록을 해당 게시물 ID로부터 가져오는 getter
   List<Comment> get _postComments =>
       widget.postComments[widget.post.id] ?? const <Comment>[];
 
+  /// 댓글 존재 여부를 체크해서 return하는 getter
   bool get _hasComments => _postComments.isNotEmpty;
 
+  /// 게시글 존재 여부를 체크해서 return하는 getter
   bool get _hasCaption => widget.post.content?.isNotEmpty ?? false;
 
+  /// 게시물 이미지 또는 비디오의 URL을 저장하는 변수
   String? postImageUrl;
 
+  /// 비디오 컨트롤러
+  /// 비디오 재생 및 제어를 담당하는 VideoPlayerController 인스턴스 입니다.
+  VideoPlayerController? _videoController;
+
+  /// 비디오가 초기화되었는 지를 나타내는 Future로 선언된 변수
+  /// 비디오 컨트롤러의 초기화 상태를 나타냅니다.
+  /// initialize()가 끝날 때까지 기다리는 “초기화 작업 핸들러” 역할을 합니다.
+  ///   --> initialize() 메서드는 비디오의 메타데이터를 로드하고 재생 준비를 완료하는 "비동기 작업"이기 때문에,
+  ///       이 Future를 사용하여 초기화가 완료될 때까지 기다릴 수 있습니다.
+  Future<void>? _videoInitialization;
+
+  /// 비디오가 BoxFit.cover 모드인지 여부
+  bool _isVideoCoverMode = true;
+
+  /// 비디오가 화면에 보이는지 여부
+  bool _isVideoVisible = true;
+
+  /// 초기화 메서드
   @override
   void initState() {
     super.initState();
-    _isShowingComments = _hasComments;
-    _mediaController = Provider.of<MediaController>(context, listen: false);
-    _scheduleProfileLoad(widget.post.userProfileImageKey);
+    WidgetsBinding.instance.addObserver(this); // 앱의 라이프사이클의 변화를 감지하기 위해 옵저버 등록
+    _isShowingComments = _hasComments; // 댓글이 있으면 댓글 표시
+    _mediaController = Provider.of<MediaController>(
+      context,
+      listen: false,
+    ); // 미디어 컨트롤러 인스턴스 가져오기
+    _scheduleProfileLoad(widget.post.userProfileImageKey); // 프로필 이미지 로드 예약
+
     if (widget.post.postFileKey?.isNotEmpty ?? false) {
-      _loadPostImage(widget.post.postFileKey!);
+      _loadPostImage(widget.post.postFileKey!); // 게시물 이미지 로드
     } else {
-      postImageUrl = null;
+      postImageUrl = null; // 게시물 이미지 키가 없으면 null로 설정
     }
+    _ensureVideoController(); // 비디오 컨트롤러 초기화
+  }
+
+  /// 앱 라이프사이클 상태 변경 처리
+  /// 비디오 게시물의 경우, 앱이 백그라운드로 전환될 때 비디오를 일시정지합니다.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!widget.post.isVideo) return;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _pauseVideo();
+    }
+  }
+
+  @override
+  void deactivate() {
+    if (widget.post.isVideo) {
+      _pauseVideo();
+    }
+    super.deactivate();
   }
 
   @override
@@ -97,57 +163,185 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         _autoOpenedOnce = true;
       });
     }
+    // 프로필 이미지 키가 변경되었는지 확인
     if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
+      // 프로필 이미지가 변경되었으므로 프레임 콜백으로 로드 예약
       _scheduleProfileLoad(widget.post.userProfileImageKey);
     }
+
+    // 게시물 이미지 키가 변경되었는지 확인
     if (oldWidget.post.postFileKey != widget.post.postFileKey) {
+      // 게시물 이미지가 변경되었으므로 새로 로드
       _loadPostImage(widget.post.postFileKey!);
+
+      // 비디오 컨트롤러 갱신
+      _ensureVideoController(forceRecreate: true);
+    }
+    // 게시물 이미지 키가 동일한 경우
+    else {
+      // 비디오 컨트롤러 갱신
+      _ensureVideoController();
     }
   }
 
+  /// 게시물 이미지 로드
+  ///
+  /// Parameters:
+  ///   - [key]: 미디어 파일의 키
   Future<void> _loadPostImage(String key) async {
+    // 키가 비어있는 경우 처리
     if (widget.post.postFileKey == null || widget.post.postFileKey!.isEmpty) {
       setState(() {
+        // 이미지 URL을 null로 설정
         postImageUrl = null;
       });
       return;
     }
 
     try {
+      // 미디어 컨트롤러를 사용하여 presignedURL 가져오기
       final url = await _mediaController.getPresignedUrl(key);
       if (!mounted) return;
       setState(() {
+        // 가지고 온 URL을 postImageUrl에 설정
         postImageUrl = url;
       });
+
+      // 비디오 컨트롤러 갱신
+      _ensureVideoController();
     } catch (_) {
       if (!mounted) return;
       setState(() {
+        // 오류 발생 시 이미지 URL을 null로 설정
         postImageUrl = null;
       });
     }
   }
 
+  /// 비디오 컨트롤러 초기화 및 갱신
+  ///
+  /// Parameters:
+  ///   - [forceRecreate]: 강제로 컨트롤러를 재생성할지 여부
+  void _ensureVideoController({bool forceRecreate = false}) {
+    // 비디오가 아닌 경우
+    if (!widget.post.isVideo) {
+      // 기존 비디오 컨트롤러 해제
+      _disposeVideoController();
+      return;
+    }
+
+    // 비디오 URL 가져오기
+    final url = postImageUrl;
+    if (url == null || url.isEmpty) return;
+
+    // 현재 비디오 컨트롤러의 데이터 소스 가져오기
+    final currentUrl = _videoController?.dataSource;
+
+    // 같은 URL이고 강제 재생성이 아닌 경우 리턴
+    if (!forceRecreate && _videoController != null && currentUrl == url) {
+      return;
+    }
+
+    // 기존 비디오 컨트롤러 해제
+    _disposeVideoController();
+
+    // 새로운 비디오 컨트롤러 생성
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+
+    // 새로운 비디오 컨트롤러 설정 및 초기화
+    _videoController = controller;
+
+    // 비디오 초기화 Future 설정
+    _videoInitialization = controller.initialize().then((_) async {
+      // video 초기화 완료 후 반복 재생 설정
+      await controller.setLooping(true);
+      // 비디오가 보이는 상태라면 재생 시작
+      if (_isVideoVisible) {
+        await controller.play();
+      }
+      // 상태 업데이트
+      if (mounted) setState(() {});
+    });
+  }
+
+  /// 비디오 컨트롤러 해제
+  /// 비디오 컨트롤러를 해제하고 관련 리소스를 정리합니다.
+  void _disposeVideoController() {
+    _videoController?.dispose();
+    _videoController = null;
+    _videoInitialization = null;
+  }
+
+  void _pauseVideo() {
+    final controller = _videoController;
+    if (controller == null) return;
+    if (!controller.value.isInitialized) return;
+    if (controller.value.isPlaying) {
+      controller.pause();
+    }
+  }
+
+  void _playVideoIfReady() {
+    final controller = _videoController;
+    if (controller == null) return;
+    if (!controller.value.isInitialized) return;
+    if (!controller.value.isPlaying) {
+      controller.play();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _disposeVideoController();
+    super.dispose();
+  }
+
+  /// String 형태의 웨이브폼 데이터를 `List<double>` 형태로 파싱
+  ///
+  /// Parameters:
+  ///   - [waveformString]: 웨이브폼 데이터 문자열
+  ///
+  /// Returns:
+  ///   - `List<double>`: 파싱된 웨이브폼 데이터 리스트 (없으면 null)
+  ///     - null: 파싱 실패 또는 데이터 없음
   List<double>? _parseWaveformData(String? waveformString) {
+    // 입력 문자열이 null이거나 비어있는 경우 null 반환
     if (waveformString == null || waveformString.isEmpty) {
       return null;
     }
 
+    // 문자열 양쪽 공백 제거
+    // 양쪽의 대괄호([]) 제거 --> waveform을 String으로 저장해두기 때문에
     final trimmed = waveformString.trim();
     if (trimmed.isEmpty) return null;
 
     try {
+      // JSON 디코딩 시도
       final decoded = jsonDecode(trimmed);
+
+      // 디코딩된 결과가 리스트인 경우, 각 요소를 double로 변환하여 리스트로 반환
       if (decoded is List) {
+        // 각 요소를 double로 변환하여 리스트로 반환
         return decoded.map((e) => (e as num).toDouble()).toList();
       }
     } catch (_) {
+      // JSON 디코딩 실패 시 수동 파싱 시도 --> 대괄호([]) 제거 후 쉼표 또는 공백으로 분리
       final sanitized = trimmed.replaceAll('[', '').replaceAll(']', '').trim();
+
+      // 대괄호 제거 후 남은 문자열이 비어있는지 확인
+      // 비어있으면 null 반환
       if (sanitized.isEmpty) return null;
+
+      // 문자열을 쉼표 또는 공백으로 분리하여 double로 변환
       final parts = sanitized
           .split(RegExp(r'[,\s]+'))
           .where((part) => part.isNotEmpty);
       try {
+        // 각 부분을 double로 변환하여 리스트로 반환
         final values = parts.map((part) => double.parse(part)).toList();
+
+        // 변환된 값이 비어있으면 null 반환, 아니면 값 반환
         return values.isEmpty ? null : values;
       } catch (_) {
         return null;
@@ -156,9 +350,15 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     return null;
   }
 
+  /// 프로필 이미지 로드
+  ///
+  /// Parameters:
+  ///  - [key]: 프로필 이미지의 미디어 키
   Future<void> _loadProfileImage(String? key) async {
+    // 키가 없거나 비어있는 경우 처리
     if (key == null || key.isEmpty) {
       setState(() {
+        // 프로필 이미지 URL을 null로 설정
         _uploaderProfileImageUrl = null;
         _isProfileLoading = false;
       });
@@ -182,6 +382,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
     }
   }
 
+  /// 프로필 이미지 로드를 프레임 콜백으로 예약
   void _scheduleProfileLoad(String? key) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -192,6 +393,70 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
 
   /// 미디어(이미지 또는 비디오) 콘텐츠 빌드
   Widget _buildMediaContent() {
+    if (widget.post.isVideo) {
+      if (postImageUrl == null || postImageUrl!.isEmpty) {
+        // postImageUrl가 아직 로드되지 않았거나 비어있는 경우에 띄울 위젯 빌드
+        return _buildMediaPlaceholder();
+      }
+
+      // 비디오 컨트롤러 사용
+      final controller = _videoController;
+
+      // 비디오 컨트롤러와 초기화 Future가 준비되지 않은 경우
+      final init = _videoInitialization;
+
+      // 컨트롤러나 초기화 Future가 null인 경우 지원되지 않는 미디어 위젯 빌드
+      if (controller == null || init == null) {
+        return _buildUnsupportedMedia();
+      }
+
+      return FutureBuilder(
+        future: init,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done ||
+              !controller.value.isInitialized) {
+            return _buildMediaPlaceholder();
+          }
+
+          // 비디오를 VisibilityDetector로 감싸서 화면에 보이는지 감지
+          // 60% 이상 보일 때 재생, 그렇지 않으면 일시정지
+          return VisibilityDetector(
+            key: ValueKey('api_video_${widget.post.id}'),
+            onVisibilityChanged: (info) {
+              final visible = info.visibleFraction >= 0.6; // 60% 이상 보이는지 여부
+              if (_isVideoVisible == visible) return; // 상태가 변경되지 않은 경우 리턴
+              _isVideoVisible = visible; // 상태 업데이트 --> 재생/일시정지 제어
+              if (visible) {
+                _playVideoIfReady(); // 비디오가 60% 이상 보이면 재생
+              } else {
+                _pauseVideo(); // 비디오가 60% 미만이면 일시정지
+              }
+            },
+            child: GestureDetector(
+              onDoubleTap: () {
+                if (!mounted) return;
+                setState(() {
+                  _isVideoCoverMode = !_isVideoCoverMode;
+                });
+              },
+              child: SizedBox(
+                width: _imageWidth.w,
+                height: _imageHeight.h,
+                child: FittedBox(
+                  fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
+                  child: SizedBox(
+                    width: controller.value.size.width,
+                    height: controller.value.size.height,
+                    child: VideoPlayer(controller),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     if (widget.post.hasImage) {
       return CachedNetworkImage(
         imageUrl: postImageUrl ?? '',
@@ -218,6 +483,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
       );
     }
 
+    return _buildUnsupportedMedia();
+  }
+
+  Widget _buildUnsupportedMedia() {
     return Container(
       width: _imageWidth.w,
       height: _imageHeight.h,
@@ -226,6 +495,18 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
         Icons.image_not_supported,
         color: Colors.grey[600],
         size: 50.w,
+      ),
+    );
+  }
+
+  Widget _buildMediaPlaceholder() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[800]!,
+      highlightColor: Colors.grey[600]!,
+      child: Container(
+        width: _imageWidth.w,
+        height: _imageHeight.h,
+        color: Colors.grey[800],
       ),
     );
   }
@@ -344,6 +625,34 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget> {
           decoration: BoxDecoration(
             color: const Color(0xFF1C1C1C),
             borderRadius: BorderRadius.circular(14),
+            // 그림자 효과 --> 프로필을 3D로 띄워주는 효과
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.55),
+                offset: const Offset(0, 8),
+                blurRadius: 16,
+                spreadRadius: -6,
+              ),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.06),
+                offset: const Offset(0, -2),
+                blurRadius: 6,
+                spreadRadius: -2,
+              ),
+            ],
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.08),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.18),
+              ],
+              stops: const [0.0, 0.55, 1.0],
+            ),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),

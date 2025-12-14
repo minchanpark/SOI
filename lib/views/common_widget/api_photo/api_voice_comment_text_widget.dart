@@ -79,6 +79,33 @@ class _ApiVoiceCommentTextWidgetState extends State<ApiVoiceCommentTextWidget> {
         color: const Color(0xff161616),
         borderRadius: BorderRadius.circular(21.5),
         border: Border.all(color: const Color(0x66D9D9D9), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21.5),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.18),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ),
       ),
       padding: EdgeInsets.only(left: 11.w),
       child: Row(
