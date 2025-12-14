@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,34 @@ class AllArchivesScreen extends StatefulWidget {
 
   @override
   State<AllArchivesScreen> createState() => _AllArchivesScreenState();
+}
+
+class _AllArchivesCategoryViewState {
+  final List<int> categoryIds;
+  final bool isInitialLoading;
+  final String? fatalErrorMessage;
+
+  const _AllArchivesCategoryViewState({
+    required this.categoryIds,
+    required this.isInitialLoading,
+    required this.fatalErrorMessage,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AllArchivesCategoryViewState &&
+          runtimeType == other.runtimeType &&
+          isInitialLoading == other.isInitialLoading &&
+          fatalErrorMessage == other.fatalErrorMessage &&
+          listEquals(categoryIds, other.categoryIds);
+
+  @override
+  int get hashCode => Object.hash(
+    isInitialLoading,
+    fatalErrorMessage,
+    Object.hashAll(categoryIds),
+  );
 }
 
 class _AllArchivesScreenState extends State<AllArchivesScreen>
@@ -110,24 +139,46 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      body: Consumer<CategoryController>(
-        builder: (context, categoryController, child) {
-          final categories = categoryController.allCategories;
+
+      // 카테고리 목록
+      // Selector로 부분 갱신이 되도록 함.
+      body: Selector<CategoryController, _AllArchivesCategoryViewState>(
+        selector: (context, categoryController) {
+          final categoryIds = categoryController.allCategories
+              .map((c) => c.id)
+              .toList(growable: false);
+
+          // "목록이 비어있는 상태"에서만 로딩/에러 UI가 필요하므로 파생 상태로 구독한다.
+          final isInitialLoading =
+              categoryController.isLoading && categoryIds.isEmpty;
+          final fatalErrorMessage = categoryIds.isEmpty
+              ? categoryController.errorMessage
+              : null;
+
+          return _AllArchivesCategoryViewState(
+            categoryIds: categoryIds,
+            isInitialLoading: isInitialLoading,
+            fatalErrorMessage: fatalErrorMessage,
+          );
+        },
+        builder: (context, state, child) {
           final searchController = context.watch<CategorySearchController>();
           final isSearchActive =
               searchController.searchQuery.isNotEmpty &&
               searchController.activeFilter == CategoryFilter.all;
-          final displayCategories = isSearchActive
+          final displayCategoryIds = isSearchActive
               ? searchController.filteredCategories
-              : categories;
+                    .map((c) => c.id)
+                    .toList(growable: false)
+              : state.categoryIds;
 
-          // 로딩 중
-          if (categoryController.isLoading && categories.isEmpty) {
+          // 로딩 중 (카테고리 목록이 비어있는 경우에만)
+          if (state.isInitialLoading) {
             return _buildShimmerGrid();
           }
 
-          // 에러가 있을 때
-          if (categoryController.errorMessage != null && categories.isEmpty) {
+          // 에러가 있을 때 (카테고리 목록이 비어있는 경우에만)
+          if (state.fatalErrorMessage != null) {
             return Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 40.h),
@@ -151,7 +202,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
           }
 
           // 카테고리가 없는 경우
-          if (displayCategories.isEmpty) {
+          if (displayCategoryIds.isEmpty) {
             if (isSearchActive) {
               return Center(
                 child: Padding(
@@ -184,11 +235,11 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
             backgroundColor: const Color(0xFF1C1C1C),
             child: widget.layoutMode == ArchiveLayoutMode.grid
                 ? _buildGridView(
-                    displayCategories,
+                    displayCategoryIds,
                     searchController.searchQuery,
                   )
                 : _buildListView(
-                    displayCategories,
+                    displayCategoryIds,
                     searchController.searchQuery,
                   ),
           );
@@ -197,9 +248,9 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     );
   }
 
-  Widget _buildGridView(List<Category> categories, String searchQuery) {
+  Widget _buildGridView(List<int> categoryIds, String searchQuery) {
     return GridView.builder(
-      key: ValueKey('grid_${categories.length}_$searchQuery'),
+      key: ValueKey('grid_${categoryIds.length}_$searchQuery'),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -208,26 +259,31 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
         mainAxisSpacing: 15.sp,
         crossAxisSpacing: 15.sp,
       ),
-      itemCount: categories.length,
+      itemCount: categoryIds.length,
       itemBuilder: (context, index) {
-        final category = categories[index];
+        final categoryId = categoryIds[index];
+        final categoryController = context.read<CategoryController>();
+        final category = categoryController.getCategoryById(categoryId);
+        if (category == null) return const SizedBox.shrink();
 
         return ApiArchiveCardWidget(
-          key: ValueKey('archive_card_${category.id}'),
+          key: ValueKey('archive_card_$categoryId'),
           category: category,
           layoutMode: ArchiveLayoutMode.grid,
           isEditMode: widget.isEditMode,
           isEditing:
               widget.isEditMode &&
-              widget.editingCategoryId == category.id.toString(),
+              widget.editingCategoryId == categoryId.toString(),
           editingController:
               widget.isEditMode &&
-                  widget.editingCategoryId == category.id.toString()
+                  widget.editingCategoryId == categoryId.toString()
               ? widget.editingController
               : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
-              widget.onStartEdit!(category.id.toString(), category.name);
+              final latest =
+                  categoryController.getCategoryById(categoryId) ?? category;
+              widget.onStartEdit!(categoryId.toString(), latest.name);
             }
           },
         );
@@ -235,36 +291,41 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     );
   }
 
-  Widget _buildListView(List<Category> categories, String searchQuery) {
+  Widget _buildListView(List<int> categoryIds, String searchQuery) {
     return ListView.separated(
-      key: ValueKey('list_${categories.length}_$searchQuery'),
+      key: ValueKey('list_${categoryIds.length}_$searchQuery'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
       itemBuilder: (context, index) {
-        final category = categories[index];
+        final categoryId = categoryIds[index];
+        final categoryController = context.read<CategoryController>();
+        final category = categoryController.getCategoryById(categoryId);
+        if (category == null) return const SizedBox.shrink();
 
         return ApiArchiveCardWidget(
-          key: ValueKey('archive_list_card_${category.id}'),
+          key: ValueKey('archive_list_card_$categoryId'),
           category: category,
           layoutMode: ArchiveLayoutMode.list,
           isEditMode: widget.isEditMode,
           isEditing:
               widget.isEditMode &&
-              widget.editingCategoryId == category.id.toString(),
+              widget.editingCategoryId == categoryId.toString(),
           editingController:
               widget.isEditMode &&
-                  widget.editingCategoryId == category.id.toString()
+                  widget.editingCategoryId == categoryId.toString()
               ? widget.editingController
               : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
-              widget.onStartEdit!(category.id.toString(), category.name);
+              final latest =
+                  categoryController.getCategoryById(categoryId) ?? category;
+              widget.onStartEdit!(categoryId.toString(), latest.name);
             }
           },
         );
       },
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemCount: categories.length,
+      itemCount: categoryIds.length,
     );
   }
 

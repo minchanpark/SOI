@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
-import '../../../../api/models/category.dart';
+import '../../../../api/controller/category_controller.dart';
+import '../../../../api/models/category.dart' as api_category;
 import '../../screens/archive_detail/api_category_photos_screen.dart';
 import 'api_archive_profile_row_widget.dart';
 import 'api_archive_popup_menu_widget.dart';
@@ -17,7 +20,7 @@ import 'api_archive_popup_menu_widget.dart';
 /// [onStartEdit]: 편집 시작 콜백
 /// [layoutMode]: 아카이브 레이아웃 모드
 class ApiArchiveCardWidget extends StatelessWidget {
-  final Category category;
+  final api_category.Category category;
   final bool isEditMode;
   final bool isEditing;
   final TextEditingController? editingController;
@@ -51,12 +54,17 @@ class ApiArchiveCardWidget extends StatelessWidget {
         onTap: isEditMode
             ? null
             : () {
+                final latestCategory =
+                    context.read<CategoryController>().getCategoryById(
+                      category.id,
+                    ) ??
+                    category;
                 // REST API 버전의 CategoryPhotosScreen으로 이동
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        ApiCategoryPhotosScreen(category: category),
+                        ApiCategoryPhotosScreen(category: latestCategory),
                   ),
                 );
               },
@@ -95,9 +103,22 @@ class ApiArchiveCardWidget extends StatelessWidget {
             SizedBox(height: (16.87).h),
             Padding(
               padding: EdgeInsets.only(left: 14),
-              child: ApiArchiveProfileRowWidget(
-                profileUrlKeys: category.usersProfileKey,
-                totalUserCount: category.totalUserCount,
+              child: Selector<CategoryController, _CategoryProfileRowData>(
+                selector: (_, controller) {
+                  final latest = controller.getCategoryById(category.id);
+                  return _CategoryProfileRowData(
+                    profileUrlKeys:
+                        latest?.usersProfileKey ?? category.usersProfileKey,
+                    totalUserCount:
+                        latest?.totalUserCount ?? category.totalUserCount,
+                  );
+                },
+                builder: (context, data, _) {
+                  return ApiArchiveProfileRowWidget(
+                    profileUrlKeys: data.profileUrlKeys,
+                    totalUserCount: data.totalUserCount,
+                  );
+                },
               ),
             ),
           ],
@@ -133,17 +154,23 @@ class ApiArchiveCardWidget extends StatelessWidget {
       );
     }
 
-    return Text(
-      category.name,
-      style: TextStyle(
-        color: const Color(0xFFF9F9F9),
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        fontFamily: 'Pretendard',
-        letterSpacing: -0.4,
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    return Selector<CategoryController, String>(
+      selector: (_, controller) =>
+          controller.getCategoryById(category.id)?.name ?? category.name,
+      builder: (context, name, _) {
+        return Text(
+          name,
+          style: TextStyle(
+            color: const Color(0xFFF9F9F9),
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Pretendard',
+            letterSpacing: -0.4,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      },
     );
   }
 
@@ -164,88 +191,139 @@ class ApiArchiveCardWidget extends StatelessWidget {
     required double height,
     required double borderRadius,
   }) {
-    if (category.hasPhoto) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: CachedNetworkImage(
-          key: ValueKey('${category.id}_${category.photoUrl}_$layoutMode'),
-          imageUrl: category.photoUrl!,
-          cacheKey: '${category.id}_${category.photoUrl}',
-          fadeInDuration: Duration.zero,
-          fadeOutDuration: Duration.zero,
-          useOldImageOnUrlChange: true,
-          width: width,
-          height: height,
-          memCacheWidth: (width * 2).round(),
-          maxWidthDiskCache: (width * 2).round(),
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: Colors.grey.shade800,
-            highlightColor: Colors.grey.shade700,
-            period: const Duration(milliseconds: 1500),
-            child: Container(
+    return Selector<CategoryController, String?>(
+      selector: (_, controller) =>
+          controller.getCategoryById(category.id)?.photoUrl ??
+          category.photoUrl,
+      builder: (context, photoUrl, _) {
+        final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+        if (hasPhoto) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: CachedNetworkImage(
+              key: ValueKey('${category.id}_${photoUrl}_$layoutMode'),
+              imageUrl: photoUrl,
+              cacheKey: '${category.id}_$photoUrl',
+              fadeInDuration: Duration.zero,
+              fadeOutDuration: Duration.zero,
+              useOldImageOnUrlChange: true,
               width: width,
               height: height,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: BorderRadius.circular(borderRadius),
+              memCacheWidth: (width * 2).round(),
+              maxWidthDiskCache: (width * 2).round(),
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Shimmer.fromColors(
+                baseColor: Colors.grey.shade800,
+                highlightColor: Colors.grey.shade700,
+                period: const Duration(milliseconds: 1500),
+                child: Container(
+                  width: width,
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(borderRadius),
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCACACA).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(borderRadius),
+                ),
+                child: Icon(
+                  Icons.image,
+                  color: const Color(0xff5a5a5a),
+                  size: 32,
+                ),
               ),
             ),
-          ),
-          errorWidget: (context, url, error) => Container(
+          );
+        }
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Container(
             width: width,
             height: height,
-            decoration: BoxDecoration(
-              color: const Color(0xFFCACACA).withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
+            color: const Color(0xFFCACACA).withValues(alpha: 0.9),
             child: Icon(Icons.image, color: const Color(0xff5a5a5a), size: 32),
           ),
-        ),
-      );
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        width: width,
-        height: height,
-        color: const Color(0xFFCACACA).withValues(alpha: 0.9),
-        child: Icon(Icons.image, color: const Color(0xff5a5a5a), size: 32),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildPinnedBadge({double? top, double? left, double? right}) {
-    if (!category.isPinned) {
-      return const SizedBox.shrink();
-    }
+    return Selector<CategoryController, bool>(
+      selector: (_, controller) =>
+          controller.getCategoryById(category.id)?.isPinned ??
+          category.isPinned,
+      builder: (context, isPinned, _) {
+        if (!isPinned) {
+          return const SizedBox.shrink();
+        }
 
-    return Positioned(
-      top: top,
-      left: left,
-      right: right,
-      child: Container(
-        padding: EdgeInsets.all(4.w),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        child: Image.asset('assets/pin_icon.png', width: 9, height: 9),
-      ),
+        return Positioned(
+          top: top,
+          left: left,
+          right: right,
+          child: Container(
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: Image.asset('assets/pin_icon.png', width: 9, height: 9),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildNewBadge({double? top, double? left, double? right}) {
-    if (!category.isNew) {
-      return const SizedBox.shrink();
-    }
+    return Selector<CategoryController, bool>(
+      selector: (_, controller) =>
+          controller.getCategoryById(category.id)?.isNew ?? category.isNew,
+      builder: (context, isNew, _) {
+        if (!isNew) {
+          return const SizedBox.shrink();
+        }
 
-    return Positioned(
-      top: top,
-      left: left,
-      right: right,
-      child: Image.asset('assets/new_icon.png', width: 13.87, height: 13.87),
+        return Positioned(
+          top: top,
+          left: left,
+          right: right,
+          child: Image.asset(
+            'assets/new_icon.png',
+            width: 13.87,
+            height: 13.87,
+          ),
+        );
+      },
     );
   }
+}
+
+class _CategoryProfileRowData {
+  final List<String> profileUrlKeys;
+  final int totalUserCount;
+
+  const _CategoryProfileRowData({
+    required this.profileUrlKeys,
+    required this.totalUserCount,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _CategoryProfileRowData &&
+          runtimeType == other.runtimeType &&
+          totalUserCount == other.totalUserCount &&
+          listEquals(profileUrlKeys, other.profileUrlKeys);
+
+  @override
+  int get hashCode =>
+      Object.hash(totalUserCount, Object.hashAll(profileUrlKeys));
 }

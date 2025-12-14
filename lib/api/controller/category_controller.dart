@@ -255,11 +255,27 @@ class CategoryController extends ChangeNotifier {
 
   /// ID로 캐시된 카테고리 조회
   model.Category? getCategoryById(int categoryId) {
-    try {
-      return _currentCategories.firstWhere((c) => c.id == categoryId);
-    } catch (_) {
-      return null;
+    // 1) 현재 표시 중인 목록에서 우선 검색
+    for (final c in _currentCategories) {
+      if (c.id == categoryId) return c;
     }
+
+    // 2) ALL 캐시(전체 목록)에서 검색 (화면/필터가 바뀐 경우를 대비)
+    final allCache = _categoriesCache[model.CategoryFilter.all];
+    if (allCache != null) {
+      for (final c in allCache) {
+        if (c.id == categoryId) return c;
+      }
+    }
+
+    // 3) 기타 필터 캐시에서 검색
+    for (final list in _categoriesCache.values) {
+      for (final c in list) {
+        if (c.id == categoryId) return c;
+      }
+    }
+
+    return null;
   }
 
   /// 카테고리 생성
@@ -526,6 +542,23 @@ class CategoryController extends ChangeNotifier {
         userId: userId,
         profileImageKey: profileImageKey,
       );
+
+      // 서버에는 반영되지만 UI가 바로 갱신되지 않는 경우가 있어,
+      // 성공 시 로컬 캐시도 즉시 갱신하여 화면에 바로 반영한다.
+      if (result) {
+        // 프로필 이미지 키가 null이거나 빈 문자열인 경우 null로 정규화
+        final normalized =
+            (profileImageKey == null || profileImageKey.trim().isEmpty)
+            ? null
+            : profileImageKey.trim();
+
+        // 카테고리 캐시 갱신
+        _updateCachedCategory(
+          categoryId,
+          (category) => category.copyWith(photoUrl: normalized),
+        );
+      }
+
       _setLoading(false);
       return result;
     } catch (e) {

@@ -108,9 +108,9 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       debugPrint("[ApiCategoryPhotosScreen] 로드된 포스트: $posts");
 
       // 미디어(사진/비디오)가 포함된 포스트 필터링
-      final mediaPosts = posts.where((post) => post.hasMedia).toList(
-        growable: false,
-      );
+      final mediaPosts = posts
+          .where((post) => post.hasMedia)
+          .toList(growable: false);
 
       // 파일 키 목록 생성
       final postFileKeys = mediaPosts.map((e) => e.postFileKey!).toList();
@@ -271,14 +271,17 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             ),
             // 메뉴 버튼
             IconButton(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
                         CategoryEditorScreen(category: _currentCategory),
                   ),
                 );
+                if (!mounted) return;
+                // 카테고리 정보 갱신
+                await _refreshCategory();
               },
               icon: const Icon(Icons.menu),
             ),
