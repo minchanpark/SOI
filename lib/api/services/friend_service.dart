@@ -298,11 +298,13 @@ class FriendService {
   Future<FriendRespDto> updateFriendStatus({
     required int friendId,
     required FriendStatus status,
+    int notificationId = 0,
   }) async {
     try {
       final dto = FriendUpdateRespDto(
         id: friendId,
         status: _toFriendStatusEnum(status),
+        notificationId: notificationId == 0 ? null : notificationId,
       );
 
       final response = await _friendApi.update(dto);

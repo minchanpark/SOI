@@ -104,6 +104,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   bool _categoriesLoaded = false;
   bool _shouldAutoOpenCategorySheet = true;
   bool _isDisposing = false;
+  bool _uploadStarted = false;
 
   // ========== 바텀시트 크기 상수 ==========
   static const double _kInitialSheetExtent = 0.0;
@@ -611,11 +612,13 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   ///   - [categoryIds]: 업로드할 게시물에 연결할 카테고리 ID 목록
   Future<void> _uploadThenNavigate(List<int> categoryIds) async {
     if (!mounted) return;
+    if (_uploadStarted) return;
 
     // post 저장에 필요한 데이터를 미리 준비
-    final payload = await _prepareUploadPayload();
+    final payload = await _prepareUploadPayload(categoryIds: categoryIds);
     if (payload == null) return;
     if (!mounted) return;
+    _uploadStarted = true;
 
     try {
       // 성능 최적화: 병렬 처리 가능한 작업들을 동시 실행
@@ -630,39 +633,49 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 오디오 녹음 데이터 초기화
       _audioController.clearCurrentRecording();
 
-      // 1. 미디어 업로드 (사진/비디오 + 음성)
-      final mediaResult = await _uploadMediaForPost(payload: payload);
+      // Home으로 네비게이트
+      _navigateToHome();
 
+      // 백그라운드에서 업로드 실행
+      unawaited(
+        _uploadPostInBackground(categoryIds: categoryIds, payload: payload),
+      );
+    } catch (e) {
+      debugPrint('업로드 실패: $e');
+      _clearImageCache();
+      _handleUploadError(e);
+      _uploadStarted = false;
+    }
+  }
+
+  /// 백그라운드에서 게시물을 업로드하는 메서드입니다.
+  ///
+  /// Parameters:
+  ///   - [categoryIds]: 업로드할 게시물에 연결할 카테고리 ID 목록
+  ///   - [payload]: 업로드에 필요한 데이터 묶음
+  Future<void> _uploadPostInBackground({
+    required List<int> categoryIds,
+    required _UploadPayload payload,
+  }) async {
+    try {
+      final mediaResult = await _uploadMediaForPost(payload: payload);
       if (mediaResult == null) {
         throw Exception('미디어 업로드에 실패했습니다.');
       }
 
-      // 2. 업로드된 키로 게시물 생성
+      // 게시물 생성
       final createSuccess = await _createPostWithMedia(
         categoryIds: categoryIds,
         payload: payload,
         mediaResult: mediaResult,
       );
-
       if (!createSuccess) {
         throw Exception('게시물 생성에 실패했습니다.');
       }
 
-      // 성능 최적화: 임시 파일(미디어 및 오디오) 삭제를 백그라운드에서 실행 (사용자가 기다릴 필요 없음)
       unawaited(_deleteTemporaryFilesInBackground(payload));
-
-      // 이미지 캐시 정리
-      _clearImageCache();
-      if (!mounted) return;
-      LoadingPopupWidget.hide(context);
-      if (!mounted) return;
-
-      // 홈 화면으로 이동
-      _navigateToHome();
     } catch (e) {
-      debugPrint('업로드 실패: $e');
-      _clearImageCache();
-      _handleUploadError(e);
+      debugPrint('[PhotoEditor] 백그라운드 업로드 실패: $e');
     }
   }
 
@@ -688,7 +701,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   /// - 이미지인 경우 압축 처리
   /// - 음성 파일 확인 및 준비
   /// - 캡션, 파형 데이터 등 부가 정보 준비
-  Future<_UploadPayload?> _prepareUploadPayload() async {
+  Future<_UploadPayload?> _prepareUploadPayload({
+    required List<int> categoryIds,
+  }) async {
     // 로그인 확인
     final currentUser = _userController.currentUser;
     if (currentUser == null) {
@@ -763,18 +778,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     final caption = captionText.isNotEmpty ? captionText : '';
     final hasCaption = caption.isNotEmpty;
 
-    // 음성 파형 데이터 준비
-    final waveform = (!isVideo && _recordedWaveformData != null)
-        ? List<double>.from(_recordedWaveformData!)
-        : null;
-
     // 음성 재생 시간 준비
-    final duration = (!isVideo && _audioController.recordingDuration > 0)
-        ? _audioController.recordingDuration
-        : null;
+    final duration = _audioController.recordingDuration;
 
     // 캡션이 존재하면 음성 첨부를 생략
     final shouldIncludeAudio = !hasCaption && audioFile != null;
+    final waveform = shouldIncludeAudio && _recordedWaveformData != null
+        ? List<double>.from(_recordedWaveformData!)
+        : null;
 
     // 모든 준비가 완료된 업로드 페이로드 반환
     return _UploadPayload(
@@ -786,11 +797,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       audioFile: shouldIncludeAudio ? audioFile : null,
       audioPath: shouldIncludeAudio ? audioPath : null,
       caption: caption,
-      waveformData: shouldIncludeAudio ? waveform : null,
+      waveformData: waveform,
       audioDurationSeconds: shouldIncludeAudio ? duration : null,
-      usageCount: _selectedCategoryIds.isNotEmpty
-          ? _selectedCategoryIds.length
-          : 1,
+      usageCount: categoryIds.isNotEmpty ? categoryIds.length : 1,
     );
   }
 
@@ -869,7 +878,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     return _MediaUploadResult(mediaKeys: mediaKeys, audioKeys: audioKeys);
   }
 
-  // 화면 전환 메서드
+  /// 화면 전환 메서드
   void _navigateToHome() {
     if (!mounted || _isDisposing) return;
 
@@ -895,14 +904,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     required _UploadPayload payload,
     required _MediaUploadResult mediaResult,
   }) async {
-    final waveformJson = (!payload.isVideo)
-        ? _encodeWaveformData(payload.waveformData)
-        : null;
+    // 파형 데이터를 JSON 문자열로 인코딩
+    final waveformJson = _encodeWaveformData(payload.waveformData);
 
     debugPrint(
       "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: ${categoryIds}\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
     );
 
+    // 게시물 생성 API 호출
     final success = await _postController.createPost(
       userId: payload.userId,
       nickName: payload.nickName,

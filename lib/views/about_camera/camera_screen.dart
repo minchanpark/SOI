@@ -570,6 +570,12 @@ class _CameraScreenState extends State<CameraScreen>
     _videoProgress.value = 0.0;
   }
 
+  /// 스낵바 표시
+  ///
+  /// Parameters:
+  ///   - [message]: 스낵바에 표시할 메시지
+  ///   - [backgroundColor]: 스낵바 배경색 (기본값: 어두운 회색)
+  ///   - [duration]: 스낵바 표시 시간 (기본값: 2초)
   void _showSnackBar(
     String message, {
     Color backgroundColor = const Color(0xFF5A5A5A),
@@ -588,7 +594,7 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 
-  // cameraservice에 카메라 전환 요청
+  /// cameraservice에 카메라 전환 요청
   Future<void> _switchCamera() async {
     if (_isVideoRecording && !_supportsLiveSwitch) {
       _showSnackBar('이 기기에서는 녹화 중 카메라 전환을 지원하지 않습니다.');
@@ -616,7 +622,11 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // 줌 레벨 변경 요청
+  /// 줌 레벨 설정
+  ///
+  /// Parameters:
+  ///   - [zoomValue]: 설정할 줌 값 (예: 1.0, 2.0 등)
+  ///   - [zoomLabel]: 설정할 줌 레벨의 라벨 (예: '1x', '2x' 등)
   Future<void> _setZoomLevel(double zoomValue, String zoomLabel) async {
     try {
       await _cameraService.setZoom(zoomValue);

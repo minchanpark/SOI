@@ -47,6 +47,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   UserController? userController;
   MediaController? mediaController;
 
+  Category get _currentCategory => _category ?? widget.category;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +82,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     });
 
     try {
+      // 컨트롤러 인스턴스 가져오기
       postController = Provider.of<PostController>(context, listen: false);
       userController = Provider.of<UserController>(context, listen: false);
       mediaController = Provider.of<MediaController>(context, listen: false);
@@ -104,30 +107,27 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       debugPrint("[ApiCategoryPhotosScreen] 카테고리 ID: ${_currentCategory.id}");
       debugPrint("[ApiCategoryPhotosScreen] 로드된 포스트: $posts");
 
-      // 사진이 포함된 포스트 필터링
-      // --> post의 개수와 사진의 개수가 다를 수 있기 때문에, 사진의 개수만 별도로 관리
-      final imagePosts = posts
-          .where(
-            (post) => post.hasImage && (post.postFileKey?.isNotEmpty ?? false),
-          )
-          .toList(growable: false);
+      // 미디어(사진/비디오)가 포함된 포스트 필터링
+      final mediaPosts = posts.where((post) => post.hasMedia).toList(
+        growable: false,
+      );
 
-      // 사진 파일 키 목록 생성
-      final postFileKeys = imagePosts.map((e) => e.postFileKey!).toList();
+      // 파일 키 목록 생성
+      final postFileKeys = mediaPosts.map((e) => e.postFileKey!).toList();
 
       // Presigned URL 발급
       final urls = await mediaController!.getPresignedUrls(postFileKeys);
 
       // post와 URL 정렬 맞추기
       final alignedUrls = List<String>.generate(
-        imagePosts.length,
+        mediaPosts.length,
         (index) => index < urls.length ? urls[index] : '',
         growable: false,
       );
 
       if (mounted) {
         setState(() {
-          _posts = imagePosts;
+          _posts = mediaPosts;
           _postImageUrls = alignedUrls;
           _isLoading = false;
         });
@@ -149,18 +149,23 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     _startAutoRefreshTimer();
   }
 
+  /// 자동 새로고침 타이머 시작
   void _startAutoRefreshTimer() {
+    // 기존 타이머 취소
     _autoRefreshTimer?.cancel();
+
+    // 새 타이머 시작
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) async {
       if (!mounted) {
+        // 화면이 더 이상 존재하지 않으면 타이머 취소
         _autoRefreshTimer?.cancel();
         return;
       }
+
+      // 데이터 새로고침
       await _loadPosts();
     });
   }
-
-  Category get _currentCategory => _category ?? widget.category;
 
   Future<void> _handleAddFriends() async {
     final category = _currentCategory;

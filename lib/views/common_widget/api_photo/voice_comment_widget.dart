@@ -449,15 +449,45 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 녹음 중 UI (AudioRecorderWidget과 동일)
   /// 실시간 파형, 녹음 시간, 중지 버튼을 표시
   Widget _buildRecordingUI(String duration) {
+    final borderRadius = BorderRadius.circular(21.5);
     return Container(
       width: 353, // 텍스트 필드와 동일한 너비
       height: 46, // 텍스트 필드와 동일한 높이
       decoration: BoxDecoration(
         color: const Color(0xffd9d9d9).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(21.5),
+        borderRadius: borderRadius,
         border: Border.all(
           color: const Color(0x66D9D9D9).withValues(alpha: 0.4),
           width: 1,
+        ),
+        // 3D: 떠있는 느낌(아래 그림자 + 위쪽 하이라이트)
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      // 3D: 상단 하이라이트/하단 음영 오버레이(기존 색 유지)
+      foregroundDecoration: BoxDecoration(
+        borderRadius: borderRadius,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.18),
+          ],
+          stops: const [0.0, 0.55, 1.0],
         ),
       ),
       child: Row(
@@ -514,7 +544,24 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       curve: Curves.easeInOut,
       width: 353,
       height: 46,
-      decoration: BoxDecoration(borderRadius: borderRadius),
+      // 3D: 바깥쪽 그림자로 태그처럼 떠 보이게
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -534,6 +581,26 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
                       width: 1,
                     ),
                     borderRadius: borderRadius,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              // 3D: 상단 하이라이트/하단 음영 오버레이(기존 배경색은 그대로)
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: borderRadius,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.08),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.18),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
@@ -932,10 +999,42 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   }
 
   Widget _buildAvatarFromUrl(String? imageUrl) {
+    // 3D: 프로필 태그가 떠 보이도록 원형 그림자 + 하이라이트
+    final avatar3dShadow = [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.55),
+        offset: const Offset(0, 10),
+        blurRadius: 18,
+        spreadRadius: -8,
+      ),
+      BoxShadow(
+        color: Colors.white.withValues(alpha: 0.06),
+        offset: const Offset(0, -2),
+        blurRadius: 6,
+        spreadRadius: -2,
+      ),
+    ];
+
     return Container(
       width: 54,
       height: 54,
-      decoration: const BoxDecoration(shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: avatar3dShadow,
+      ),
+      foregroundDecoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.06),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.10),
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        ),
+      ),
       child: imageUrl != null && imageUrl.isNotEmpty
           ? ClipOval(
               child: CachedNetworkImage(

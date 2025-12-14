@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -153,7 +155,8 @@ class _ApiAudioControlWidgetState extends State<ApiAudioControlWidget> {
       return Consumer<AudioController>(
         builder: (context, audioController, child) {
           final audioSource = _effectiveAudioUrl;
-          final isPlaying = audioSource != null &&
+          final isPlaying =
+              audioSource != null &&
               audioController.currentAudioUrl == audioSource;
           final progress =
               isPlaying && audioController.totalDuration.inMilliseconds > 0
@@ -250,60 +253,100 @@ class _AudioControlSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool disableTap = isAudioLoading;
+    final borderRadius = BorderRadius.circular(13.6);
     return GestureDetector(
       onTap: disableTap ? null : onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(20.r),
+          borderRadius: borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.55),
+              offset: const Offset(0, 10),
+              blurRadius: 18,
+              spreadRadius: -8,
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.06),
+              offset: const Offset(0, -2),
+              blurRadius: 6,
+              spreadRadius: -2,
+            ),
+          ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildProfileImage(),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: SizedBox(
-                height: 30.h,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (waveformData != null)
-                      CustomWaveformWidget(
-                        waveformData: waveformData!,
-                        progress: progress,
-                        activeColor: Colors.white,
-                        color: Colors.grey[600]!,
-                      )
-                    else
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.grey[600],
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
-                        ),
-                      ),
-                    if (isAudioLoading)
-                      const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  width: 1,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.10),
+                    Colors.black.withValues(alpha: 0.25),
                   ],
                 ),
               ),
-            ),
-            SizedBox(width: 8.w),
-            Text(
-              _format(duration),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11.sp,
-                fontFamily: 'Pretendard',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildProfileImage(),
+                  SizedBox(width: (13.79).w),
+
+                  // 파형 및 진행률
+                  Expanded(
+                    child: SizedBox(
+                      height: 30.h,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (waveformData != null)
+                            CustomWaveformWidget(
+                              waveformData: waveformData!,
+                              progress: progress,
+                              activeColor: Colors.white,
+                              color: Colors.grey[600]!,
+                            )
+                          else
+                            LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.grey[600],
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          if (isAudioLoading)
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: (15.33).w),
+                  Text(
+                    _format(duration),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.sp,
+                      fontFamily: 'Pretendard',
+                    ),
+                  ),
+                  SizedBox(width: (15).w),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -336,8 +379,8 @@ class _AudioControlSurface extends StatelessWidget {
     return ClipOval(
       child: CachedNetworkImage(
         imageUrl: profileImageUrl!,
-        width: 30.w,
-        height: 30.w,
+        width: 27.sp,
+        height: 27.sp,
         fit: BoxFit.cover,
       ),
     );
@@ -345,8 +388,8 @@ class _AudioControlSurface extends StatelessWidget {
 
   Widget _placeholderAvatar() {
     return Container(
-      width: 30.w,
-      height: 30.w,
+      width: 27.sp,
+      height: 27.sp,
       decoration: const BoxDecoration(
         color: Colors.grey,
         shape: BoxShape.circle,

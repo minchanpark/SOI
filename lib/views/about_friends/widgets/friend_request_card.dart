@@ -13,10 +13,7 @@ import '../../../api/models/notification.dart';
 class FriendRequestCard extends StatefulWidget {
   final double scale;
 
-  const FriendRequestCard({
-    super.key,
-    required this.scale,
-  });
+  const FriendRequestCard({super.key, required this.scale});
 
   @override
   State<FriendRequestCard> createState() => _FriendRequestCardState();
@@ -59,9 +56,9 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
     }
 
     try {
-      await context
-          .read<NotificationController>()
-          .getFriendNotifications(userId: userId);
+      await context.read<NotificationController>().getFriendNotifications(
+        userId: userId,
+      );
       if (mounted) {
         setState(() {
           _errorMessage = null;
@@ -86,6 +83,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
     AppNotification notification,
     FriendStatus status,
   ) async {
+    final userId = context.read<UserController>().currentUserId;
     final friendId = notification.relatedId;
     if (friendId == null) {
       _showSnackBar('요청 정보를 찾을 수 없습니다.');
@@ -94,21 +92,29 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
 
     setState(() => _processingFriendIds.add(friendId));
     final friendController = context.read<FriendController>();
+
+    // 친구 상태 업데이트
     final result = await friendController.updateFriendStatus(
       friendId: friendId,
       status: status,
+      notificationId: notification.id!,
     );
 
     if (!mounted) return;
 
     setState(() => _processingFriendIds.remove(friendId));
 
-    if (result != null) {
+    if (result != null && mounted) {
+      // 친구 요청 목록 갱신
       await _loadFriendRequests();
+
+      // userId가 null이 아닐 때만 친구 목록 갱신
+      if (userId != null && mounted) {
+        // 친구 목록 갱신
+        await friendController.refreshFriends(userId: userId);
+      }
       _showSnackBar(
-        status == FriendStatus.accepted
-            ? '친구 요청을 수락했습니다'
-            : '친구 요청을 거절했습니다',
+        status == FriendStatus.accepted ? '친구 요청을 수락했습니다' : '친구 요청을 거절했습니다',
       );
     } else {
       _showSnackBar('요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -166,10 +172,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
       child: Center(
         child: Text(
           message,
-          style: TextStyle(
-            color: const Color(0xff666666),
-            fontSize: 14.sp,
-          ),
+          style: TextStyle(color: const Color(0xff666666), fontSize: 14.sp),
         ),
       ),
     );
@@ -232,10 +235,8 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
                   backgroundColor: const Color(0xff333333),
                   textColor: const Color(0xff999999),
                   onTap: canRespond
-                      ? () => _handleRequest(
-                            notification,
-                            FriendStatus.cancelled,
-                          )
+                      ? () =>
+                            _handleRequest(notification, FriendStatus.cancelled)
                       : null,
                 ),
                 SizedBox(width: 8.w),
@@ -244,10 +245,8 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
                   backgroundColor: const Color(0xfff9f9f9),
                   textColor: const Color(0xff1c1c1c),
                   onTap: canRespond
-                      ? () => _handleRequest(
-                            notification,
-                            FriendStatus.accepted,
-                          )
+                      ? () =>
+                            _handleRequest(notification, FriendStatus.accepted)
                       : null,
                 ),
               ],
@@ -272,10 +271,8 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
                 height: (44).w,
                 memCacheHeight: (44 * 4).round(),
                 maxWidthDiskCache: (44 * 4).round(),
-                errorWidget: (_, __, ___) => const Icon(
-                  Icons.person,
-                  color: Colors.white,
-                ),
+                errorWidget: (_, __, ___) =>
+                    const Icon(Icons.person, color: Colors.white),
               )
             : const Icon(Icons.person, color: Colors.white),
       ),

@@ -79,6 +79,7 @@ class _ApiVoiceCommentTextWidgetState extends State<ApiVoiceCommentTextWidget> {
         color: const Color(0xff161616),
         borderRadius: BorderRadius.circular(21.5),
         border: Border.all(color: const Color(0x66D9D9D9), width: 1),
+        // 3D: 댓글 입력 태그가 떠 보이도록(아래 그림자 + 위쪽 하이라이트)
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.55),
@@ -94,6 +95,7 @@ class _ApiVoiceCommentTextWidgetState extends State<ApiVoiceCommentTextWidget> {
           ),
         ],
       ),
+      // 3D: 상단 하이라이트/하단 음영 오버레이(기존 색 유지)
       foregroundDecoration: BoxDecoration(
         borderRadius: BorderRadius.circular(21.5),
         gradient: LinearGradient(

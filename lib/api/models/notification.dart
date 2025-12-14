@@ -38,6 +38,7 @@ class AppNotification {
   /// 친구 관련 알림일 경우 --> 친구 요청 ID
   /// 게시물 관련 알림일 경우 --> Post ID
   /// 댓글 관련 알림일 경우 --> Comment ID
+  ///   - TODO: 댓글 관련 알림일 경우에도 Post ID를 리턴하도록 API 수정 필요(서버에 요청하였음)
   final int? relatedId;
 
   const AppNotification({

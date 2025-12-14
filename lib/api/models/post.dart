@@ -106,7 +106,13 @@ class Post {
   }
 
   /// 이미지 유무 확인
-  bool get hasImage => postFileKey != null && postFileKey!.isNotEmpty;
+  bool get hasImage => hasMedia && !isVideo;
+
+  /// 미디어(이미지/비디오) 유무 확인
+  bool get hasMedia => postFileKey != null && postFileKey!.isNotEmpty;
+
+  /// 비디오 여부 (postFileKey 확장자 기반)
+  bool get isVideo => _isVideoKey(postFileKey);
 
   /// 오디오 유무 확인
   bool get hasAudio => audioUrl != null && audioUrl!.isNotEmpty;
@@ -155,5 +161,61 @@ class Post {
   @override
   String toString() {
     return 'Post{nickName: $nickName, hasImage: $hasImage, hasAudio: $hasAudio}';
+  }
+
+  /// 비디오 확장자 집합
+  static const Set<String> _videoExtensions = {
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.mkv',
+    '.m4v',
+    '.webm',
+    '.3gp',
+  };
+
+  /// 비디오 키인지 확인
+  ///
+  /// Parameters:
+  ///   - [key]: 미디어 파일의 키 또는 URL
+  ///
+  /// Returns:
+  ///   - [bool]: 비디오 파일인지 여부
+  ///   - true: 비디오 파일
+  ///   - false: 비디오 파일 아님
+  static bool _isVideoKey(String? key) {
+    final extension = _extractExtension(key);
+    if (extension == null) return false;
+    return _videoExtensions.contains(extension);
+  }
+
+  /// 확장자 추출
+  ///
+  /// Parameters:
+  ///  - [raw]: 파일 키 또는 URL 문자열
+  ///
+  /// Returns:
+  ///  - [String]: 추출된 확장자 (없으면 null)
+  static String? _extractExtension(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+
+    var value = raw;
+    final queryIndex = value.indexOf('?');
+    if (queryIndex != -1) {
+      value = value.substring(0, queryIndex);
+    }
+
+    final hashIndex = value.indexOf('#');
+    if (hashIndex != -1) {
+      value = value.substring(0, hashIndex);
+    }
+
+    // S3 key or URL path both supported
+    final lastDot = value.lastIndexOf('.');
+    if (lastDot == -1 || lastDot == value.length - 1) return null;
+
+    final ext = value.substring(lastDot).toLowerCase();
+    if (ext.length > 8) return null;
+    return ext;
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -68,16 +69,34 @@ class CommentService {
     try {
       final commentTypeEnum = _toCommentTypeEnum(type);
 
+      final normalizedText = (text?.trim().isEmpty ?? true)
+          ? null
+          : text!.trim();
+      final normalizedAudioKey = (audioKey?.trim().isEmpty ?? true)
+          ? null
+          : audioKey!.trim();
+      final normalizedWaveform = (waveformData?.trim().isEmpty ?? true)
+          ? null
+          : waveformData!.trim();
+
       final dto = CommentReqDto(
         postId: postId,
         userId: userId,
-        text: text ?? '',
-        audioKey: audioKey ?? '',
-        waveformData: waveformData ?? '',
-        duration: duration ?? 0,
-        locationX: locationX ?? 0.0,
-        locationY: locationY ?? 0.0,
-        emojiId: 0,
+        // 서버에서 commentType별 분기 처리 시, 불필요한 필드는 null로 보내는 게 안전합니다.
+        text: commentTypeEnum == CommentReqDtoCommentTypeEnum.TEXT
+            ? normalizedText
+            : null,
+        audioKey: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
+            ? normalizedAudioKey
+            : null,
+        waveformData: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
+            ? normalizedWaveform
+            : null,
+        duration: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
+            ? duration
+            : null,
+        locationX: locationX,
+        locationY: locationY,
         commentType: commentTypeEnum,
       );
 
@@ -86,19 +105,27 @@ class CommentService {
       debugPrint('commentType: ${commentTypeEnum.value}');
       debugPrint('audioKey: $audioKey');
       debugPrint('text: $text');
-      debugPrint('waveformData type: ${waveformData.runtimeType}');
+      debugPrint('waveformData type: ${waveformData?.runtimeType}');
       debugPrint('waveformData value: $waveformData');
-      debugPrint(
-        'waveformData first 50 chars: ${waveformData?.substring(0, waveformData.length > 50 ? 50 : waveformData.length)}',
-      );
+      if (waveformData != null && waveformData.isNotEmpty) {
+        final end = waveformData.length > 50 ? 50 : waveformData.length;
+        debugPrint(
+          'waveformData first 50 chars: ${waveformData.substring(0, end)}',
+        );
+      }
 
       final jsonMap = dto.toJson();
+      final waveformValue = jsonMap['waveformData'];
+      // 백엔드가 `waveFormData`(F 대문자)로 필드를 받을 수 있어 호환을 위해 함께 전송합니다.
+      if (waveformValue is String && waveformValue.trim().isNotEmpty) {
+        jsonMap['waveFormData'] = waveformValue;
+      }
       debugPrint('DTO JSON map: $jsonMap');
       debugPrint(
         'waveformData in JSON type: ${jsonMap['waveformData'].runtimeType}',
       );
 
-      final response = await _commentApi.create2(dto);
+      final response = await _createComment(jsonMap);
       debugPrint("댓글 생성 응답: $response");
 
       if (response == null) {
@@ -110,10 +137,7 @@ class CommentService {
       }
 
       final parsedComment = _parseCommentFromResponse(response);
-      return CommentCreationResult(
-        success: true,
-        comment: parsedComment,
-      );
+      return CommentCreationResult(success: true, comment: parsedComment);
     } on ApiException catch (e) {
       throw _handleApiException(e);
     } on SocketException catch (e) {
@@ -138,9 +162,6 @@ class CommentService {
       text: text,
       locationX: locationX,
       locationY: locationY,
-      audioKey: "",
-      waveformData: "",
-      duration: 0,
       type: CommentType.text,
     );
   }
@@ -163,7 +184,6 @@ class CommentService {
       duration: duration,
       locationX: locationX,
       locationY: locationY,
-      text: "",
       type: CommentType.audio,
     );
   }
@@ -181,12 +201,12 @@ class CommentService {
         postId: postId,
         userId: userId,
         emojiId: emojiId,
-        text: '',
-        audioKey: '',
-        waveformData: '',
-        duration: 0,
-        locationX: locationX ?? 0.0,
-        locationY: locationY ?? 0.0,
+        text: null,
+        audioKey: null,
+        waveformData: null,
+        duration: null,
+        locationX: locationX,
+        locationY: locationY,
         commentType: CommentReqDtoCommentTypeEnum.EMOJI,
       );
 
@@ -376,5 +396,31 @@ class CommentService {
           originalException: e,
         );
     }
+  }
+
+  Future<ApiResponseDtoObject?> _createComment(Map<String, dynamic> body) async {
+    final apiClient = SoiApiClient.instance.apiClient;
+    final response = await apiClient.invokeAPI(
+      '/comment/create',
+      'POST',
+      const <QueryParam>[],
+      body,
+      <String, String>{},
+      <String, String>{},
+      'application/json',
+    );
+
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, utf8.decode(response.bodyBytes));
+    }
+
+    if (response.bodyBytes.isEmpty ||
+        response.statusCode == HttpStatus.noContent) {
+      return null;
+    }
+
+    final decodedBody = utf8.decode(response.bodyBytes);
+    return await apiClient.deserializeAsync(decodedBody, 'ApiResponseDtoObject')
+        as ApiResponseDtoObject?;
   }
 }

@@ -267,6 +267,7 @@ class MyApp extends StatelessWidget {
           initialRoute: hasSeenLaunchVideo ? '/' : '/launch_video',
           navigatorObservers: [appRouteObserver],
           debugShowCheckedModeBanner: false,
+
           builder: (context, child) {
             // 텍스트 크기 조정 제한을 위해서 디바이스의 MediaQuery를 가지고 온다.
             // 그리고 그 값을 복사하여 textScaler의 scale 값을 1.0에서 1.1 사이로 제한한다.

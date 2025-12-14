@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:soi_api_client/api.dart';
 
 import '../../api/controller/notification_controller.dart' as api;
+import '../../api/controller/category_controller.dart';
+import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/notification.dart';
+import '../../api/models/post.dart';
+import '../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
+import '../about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import 'widgets/api_notification_item_widget.dart';
 
 /// 알림 메인 화면 (API 버전)
@@ -20,8 +26,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   late ScrollController _scrollController;
 
   bool _isLoading = false;
+  bool _isFriendRequestLoading = false;
   String? _error;
   NotificationGetAllResult? _notificationResult;
+  int? _friendRequestCount; // 친구추가 요청 개수
 
   @override
   void initState() {
@@ -29,7 +37,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _scrollController = ScrollController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadNotifications();
+      _loadFriendRequestCountFromGetFriendApi(); // 친구 요청 개수 로드(get-friend)
+      _loadNotifications(); // 알림 로드
     });
   }
 
@@ -79,13 +88,56 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  /// 친구 요청 개수 로드 (알림 리스트와 독립)
+  Future<void> _loadFriendRequestCountFromGetFriendApi() async {
+    final userController = context.read<UserController>();
+    final user = userController.currentUser;
+
+    if (user == null) {
+      return;
+    }
+
+    setState(() {
+      _isFriendRequestLoading = true;
+    });
+
+    try {
+      final notificationController = context.read<api.NotificationController>();
+      final friendNotifications =
+          await notificationController.getAllFriendNotifications(
+        userId: user.id,
+      );
+      final uniqueKeys = <String>{};
+      for (final n in friendNotifications) {
+        final key = n.relatedId ?? n.id;
+        if (key != null) {
+          uniqueKeys.add(key.toString());
+        }
+      }
+      final count = uniqueKeys.isNotEmpty
+          ? uniqueKeys.length
+          : friendNotifications.length;
+      if (!mounted) return;
+      setState(() {
+        _friendRequestCount = count;
+        _isFriendRequestLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isFriendRequestLoading = false;
+      });
+    }
+  }
+
   /// 새로고침 처리
   Future<void> _onRefresh() async {
     final userController = context.read<UserController>();
     final user = userController.currentUser;
 
     if (user != null) {
-      _notificationController.invalidateCache();
+      context.read<api.NotificationController>().invalidateCache();
+      await _loadFriendRequestCountFromGetFriendApi();
       await _loadNotifications();
     }
   }
@@ -130,44 +182,55 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   /// Body 구성
   Widget _buildBody() {
+    // 친구 요청 섹션은 알림 데이터 로딩/에러/빈 상태와 상관없이 항상 노출
+    final showNotificationList =
+        _notificationResult != null && _notificationResult!.hasNotifications;
+
+    Widget body;
     if (_isLoading && _notificationResult == null) {
-      return _buildLoadingState();
-    }
-
-    if (_error != null) {
-      return _buildErrorState();
-    }
-
-    if (_notificationResult == null || !_notificationResult!.hasNotifications) {
-      return _buildEmptyState();
+      body = _buildLoadingState();
+    } else if (_error != null) {
+      body = _buildErrorState();
+    } else if (!showNotificationList) {
+      body = _buildEmptyState();
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 19.w),
+            child: Text(
+              "최근 7일",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.02.sp,
+                fontFamily: 'Pretendard Variable',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(child: _buildNotificationList()),
+        ],
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 친구 요청 섹션
         _buildFriendRequestSection(),
         SizedBox(height: 24.h),
-        Padding(
-          padding: EdgeInsets.only(left: 19.w),
-          child: Text(
-            "최근 7일",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.02.sp,
-              fontFamily: 'Pretendard Variable',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        Expanded(child: _buildNotificationList()),
+        Expanded(child: body),
       ],
     );
   }
 
   /// 친구 요청 섹션
   Widget _buildFriendRequestSection() {
-    final requestCount = _notificationResult?.friendRequestCount ?? 0;
+    final requestCount =
+        _friendRequestCount ?? _notificationResult?.friendRequestCount ?? 0;
+    final subtitle = _isFriendRequestLoading || _isLoading
+        ? '불러오는 중...'
+        : (requestCount > 0 ? '보류 중인 요청 $requestCount명' : '받은 요청이 없습니다');
 
     return GestureDetector(
       onTap: () {
@@ -206,9 +269,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   ),
                   Text(
-                    requestCount > 0
-                        ? '보류 중인 요청 $requestCount명'
-                        : '받은 요청이 없습니다',
+                    subtitle,
                     style: TextStyle(
                       color: const Color(0xFFCBCBCB),
                       fontSize: 13.sp,
@@ -377,11 +438,191 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   /// 알림 탭 처리
-  void _onNotificationTap(AppNotification notification) {
-    // relatedId를 사용하여 관련 화면으로 이동
-    if (notification.relatedId != null) {
-      // TODO: relatedId에 따라 적절한 화면으로 이동
-      debugPrint('알림 탭: relatedId=${notification.relatedId}');
+  ///
+  /// Parameters:
+  ///   - [notification]: 탭된 알림 객체
+  Future<void> _onNotificationTap(AppNotification notification) async {
+    final userController = context.read<UserController>();
+    final currentUser = userController.currentUser;
+    if (currentUser == null) {
+      _showSnackBar('로그인이 필요합니다.');
+      return;
     }
+
+    // 알림 타입을 받아온다.
+    final type = notification.type;
+    if (type == null) {
+      _showSnackBar('알림 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    // 친구 요청일 경우, 친구 요청 화면으로 이동
+    if (type == NotificationRespDtoTypeEnum.FRIEND_REQUEST ||
+        type == NotificationRespDtoTypeEnum.FRIEND_RESPOND) {
+      Navigator.of(context).pushNamed('/friend_requests');
+      return;
+    }
+
+    // 카테고리 초대일 경우, 아카이빙 탭으로 이동
+    if (type == NotificationRespDtoTypeEnum.CATEGORY_INVITE) {
+      Navigator.of(context).pushNamed('/archiving');
+      _showSnackBar('카테고리 초대는 아카이빙 탭에서 확인해주세요.');
+      return;
+    }
+
+    // 카테고리 추가 알림일 경우, 해당 카테고리로 이동
+    if (type == NotificationRespDtoTypeEnum.CATEGORY_ADDED) {
+      final categoryId =
+          notification.relatedId ?? notification.categoryIdForPost;
+      if (categoryId == null) {
+        _showSnackBar('카테고리 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      await _openCategory(categoryId: categoryId, userId: currentUser.id);
+      return;
+    }
+
+    if (type == NotificationRespDtoTypeEnum.PHOTO_ADDED ||
+        type == NotificationRespDtoTypeEnum.COMMENT_ADDED ||
+        type == NotificationRespDtoTypeEnum.COMMENT_AUDIO_ADDED) {
+      final postId = notification.relatedId;
+      final categoryId = notification.categoryIdForPost;
+
+      if (postId == null || categoryId == null) {
+        _showSnackBar('게시물 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      await _openPostDetail(
+        categoryId: categoryId,
+        postId: postId,
+        userId: currentUser.id,
+        notificationId: notification.id,
+      );
+      return;
+    }
+
+    debugPrint('지원하지 않는 알림 타입: ${type.value}');
+    _showSnackBar('지원하지 않는 알림 타입입니다.');
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xff1c1c1c),
+      ),
+    );
+  }
+
+  void _showBlockingLoading() {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xff634D45)),
+      ),
+    );
+  }
+
+  void _hideBlockingLoading() {
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
+  Future<void> _openCategory({
+    required int categoryId,
+    required int userId,
+  }) async {
+    final categoryController = context.read<CategoryController>();
+
+    _showBlockingLoading();
+    try {
+      await categoryController.loadCategories(userId);
+    } finally {
+      _hideBlockingLoading();
+    }
+
+    if (!mounted) return;
+
+    final category = categoryController.getCategoryById(categoryId);
+    if (category == null) {
+      Navigator.of(context).pushNamed('/archiving');
+      _showSnackBar('카테고리를 찾을 수 없습니다.');
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ApiCategoryPhotosScreen(category: category),
+      ),
+    );
+  }
+
+  Future<void> _openPostDetail({
+    required int categoryId,
+    required int postId,
+    required int userId,
+    int? notificationId,
+  }) async {
+    final categoryController = context.read<CategoryController>();
+    final postController = context.read<PostController>();
+
+    _showBlockingLoading();
+    late final List<Post> posts;
+    try {
+      await categoryController.loadCategories(userId);
+      posts = await postController.getPostsByCategory(
+        categoryId: categoryId,
+        userId: userId,
+        notificationId: notificationId,
+      );
+    } finally {
+      _hideBlockingLoading();
+    }
+
+    if (!mounted) return;
+
+    final category = categoryController.getCategoryById(categoryId);
+    if (category == null) {
+      Navigator.of(context).pushNamed('/archiving');
+      _showSnackBar('카테고리를 찾을 수 없습니다.');
+      return;
+    }
+
+    final imagePosts = posts
+        .where((post) => post.hasImage)
+        .toList(growable: false);
+    final initialIndex = imagePosts.indexWhere((post) => post.id == postId);
+
+    if (initialIndex < 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => ApiCategoryPhotosScreen(category: category),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ApiPhotoDetailScreen(
+          allPosts: imagePosts,
+          initialIndex: initialIndex,
+          categoryName: category.name,
+          categoryId: category.id,
+        ),
+      ),
+    );
   }
 }

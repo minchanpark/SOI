@@ -94,6 +94,7 @@ class NotificationController extends ChangeNotifier {
   /// Returns: 친구 관련 알림 목록 (List<AppNotification>)
   Future<List<AppNotification>> getFriendNotifications({
     required int userId,
+    int page = 0,
   }) async {
     _setLoading(true);
     _clearError();
@@ -101,6 +102,7 @@ class NotificationController extends ChangeNotifier {
     try {
       final notifications = await _notificationService.getFriendNotifications(
         userId: userId,
+        page: page,
       );
 
       // 캐시 저장
@@ -108,6 +110,38 @@ class NotificationController extends ChangeNotifier {
 
       _setLoading(false);
       return notifications;
+    } catch (e) {
+      _setError('친구 알림 조회 실패: $e');
+      _setLoading(false);
+      return [];
+    }
+  }
+
+  /// 친구 관련 알림 전체 조회 (페이지 순회)
+  ///
+  /// 알림 API의 get-friend 응답을 페이지 단위로 전부 가져와서 반환합니다.
+  /// 친구 요청 개수는 이 리스트의 길이로 계산할 수 있습니다.
+  Future<List<AppNotification>> getAllFriendNotifications({
+    required int userId,
+    int maxPages = 20,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final all = <AppNotification>[];
+      for (var page = 0; page < maxPages; page++) {
+        final items = await _notificationService.getFriendNotifications(
+          userId: userId,
+          page: page,
+        );
+        if (items.isEmpty) break;
+        all.addAll(items);
+      }
+
+      _cachedFriendNotifications = all;
+      _setLoading(false);
+      return all;
     } catch (e) {
       _setError('친구 알림 조회 실패: $e');
       _setLoading(false);

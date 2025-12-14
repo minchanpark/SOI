@@ -22,22 +22,32 @@ import '../services/friend_service.dart';
 /// final friends = await controller.getAllFriends(userId: 1);
 /// ```
 class FriendController extends ChangeNotifier {
-  final FriendService _friendService;
-
-  bool _isLoading = false;
-  String? _errorMessage;
-
   /// 생성자
   ///
   /// [friendService]를 주입받아 사용합니다. 테스트 시 MockFriendService를 주입할 수 있습니다.
   FriendController({FriendService? friendService})
     : _friendService = friendService ?? FriendService();
 
+  // 캐시된 친구 목록 (FriendListCard 즉시 갱신용)
+  List<User> _cachedFriends = const [];
+  int? _cachedFriendsUserId;
+
+  final FriendService _friendService;
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
   /// 로딩 상태
   bool get isLoading => _isLoading;
 
   /// 에러 메시지
   String? get errorMessage => _errorMessage;
+
+  /// 캐시된 친구 목록
+  List<User> get cachedFriends => _cachedFriends;
+
+  /// 캐시된 친구 목록이 어떤 userId 기준인지
+  int? get cachedFriendsUserId => _cachedFriendsUserId;
 
   // ============================================
   // 친구 추가
@@ -105,6 +115,30 @@ class FriendController extends ChangeNotifier {
       _setError('친구 목록 조회 실패: $e');
       _setLoading(false);
       return [];
+    }
+  }
+
+  /// 친구 목록 새로고침 + 캐시 업데이트
+  ///
+  /// FriendListCard 같은 UI가 바로 갱신되도록 캐시를 갱신합니다.
+  Future<void> refreshFriends({
+    required int userId,
+    FriendStatus status = FriendStatus.accepted,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final friends = await _friendService.getAllFriends(
+        userId: userId,
+        status: status,
+      );
+      _cachedFriendsUserId = userId;
+      _cachedFriends = friends;
+      _setLoading(false);
+    } catch (e) {
+      _setError('친구 목록 조회 실패: $e');
+      _setLoading(false);
     }
   }
 
@@ -258,6 +292,7 @@ class FriendController extends ChangeNotifier {
   Future<Friend?> updateFriendStatus({
     required int friendId,
     required FriendStatus status,
+    int notificationId = 0,
   }) async {
     _setLoading(true);
     _clearError();
@@ -266,6 +301,7 @@ class FriendController extends ChangeNotifier {
       final result = await _friendService.updateFriendStatus(
         friendId: friendId,
         status: status,
+        notificationId: notificationId,
       );
       _setLoading(false);
       // DTO를 Friend 모델로 변환

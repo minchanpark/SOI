@@ -625,34 +625,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
           decoration: BoxDecoration(
             color: const Color(0xFF1C1C1C),
             borderRadius: BorderRadius.circular(14),
-            // 그림자 효과 --> 프로필을 3D로 띄워주는 효과
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
-                offset: const Offset(0, 8),
-                blurRadius: 16,
-                spreadRadius: -6,
-              ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.06),
-                offset: const Offset(0, -2),
-                blurRadius: 6,
-                spreadRadius: -2,
-              ),
-            ],
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white.withValues(alpha: 0.08),
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.18),
-              ],
-              stops: const [0.0, 0.55, 1.0],
-            ),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
@@ -845,9 +817,46 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       );
     }
 
+    // 3D: 댓글에 태그되는 프로필이 사진 위에서 떠 보이도록(원형 그림자 + 하이라이트)
+    final avatar3d = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 1.0),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            //color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.06),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.10),
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        ),
+      ),
+      child: avatarContent,
+    );
+
     return opacity < 1.0
-        ? Opacity(opacity: opacity, child: avatarContent)
-        : avatarContent;
+        ? Opacity(opacity: opacity, child: avatar3d)
+        : avatar3d;
   }
 
   void _handleBaseTap() {
@@ -1048,14 +1057,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                         Positioned(
                           left: 18.w,
                           right: 18.w,
-                          bottom: _hasCaption ? 82.h : 22.h,
+                          bottom: 22.h,
                           child: ApiAudioControlWidget(
                             post: widget.post,
                             waveformData: waveformData,
                             onPressed: () => widget.onToggleAudio(widget.post),
                           ),
                         ),
-                      /* if (_hasComments)
+                      if (_hasComments)
                         Positioned(
                           bottom: 18.h,
                           right: 18.w,
@@ -1065,23 +1074,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                                 _isShowingComments = !_isShowingComments;
                               });
                             },
-                            child: Container(
-                              width: 42.w,
-                              height: 42.w,
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.55),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                _isShowingComments
-                                    ? Icons.close
-                                    : Icons.chat_bubble_outline,
-                                color: Colors.white,
-                                size: 20.w,
-                              ),
+                            child: Image.asset(
+                              "assets/comment_profile_icon.png",
+                              width: 25,
+                              height: 25,
                             ),
                           ),
-                        ),*/
+                        ),
                       if (_hasCaption && !widget.post.hasAudio)
                         Positioned(
                           left: 16.w,

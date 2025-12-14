@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../../api/models/post.dart';
 import '../../../api/controller/audio_controller.dart';
 import '../../../api/controller/media_controller.dart';
@@ -47,6 +49,8 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   String? _profileImageUrl;
   bool _isLoadingProfile = true;
   late final MediaController _mediaController;
+  Uint8List? _videoThumbnailBytes;
+  bool _isVideoThumbnailLoading = false;
 
   @override
   void initState() {
@@ -54,6 +58,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     _initializeWaveformData();
     _mediaController = Provider.of<MediaController>(context, listen: false);
     _loadAudioUrl(widget.post.audioUrl);
+    _loadVideoThumbnailIfNeeded();
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProfileImage(widget.post.userProfileImageKey);
@@ -69,9 +74,57 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     if (oldWidget.post.audioUrl != widget.post.audioUrl) {
       _loadAudioUrl(widget.post.audioUrl);
     }
+    if (oldWidget.postUrl != widget.postUrl ||
+        oldWidget.post.postFileKey != widget.post.postFileKey) {
+      _loadVideoThumbnailIfNeeded(forceReload: true);
+    }
   }
 
-  /// waveformData String을 List<double>로 파싱
+  Future<void> _loadVideoThumbnailIfNeeded({bool forceReload = false}) async {
+    if (!widget.post.isVideo) {
+      if (!mounted) return;
+      if (_videoThumbnailBytes == null && !_isVideoThumbnailLoading) return;
+      setState(() {
+        _videoThumbnailBytes = null;
+        _isVideoThumbnailLoading = false;
+      });
+      return;
+    }
+
+    if (!forceReload &&
+        (_videoThumbnailBytes != null || _isVideoThumbnailLoading)) {
+      return;
+    }
+
+    final url = widget.postUrl;
+    if (url.isEmpty) return;
+
+    if (!mounted) return;
+    setState(() => _isVideoThumbnailLoading = true);
+
+    try {
+      final bytes = await VideoThumbnail.thumbnailData(
+        video: url,
+        imageFormat: ImageFormat.JPEG,
+        maxWidth: 350,
+        quality: 70,
+      );
+      if (!mounted) return;
+      setState(() {
+        _videoThumbnailBytes = bytes;
+        _isVideoThumbnailLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[ApiPhotoGridItem] 비디오 썸네일 생성 실패: $e');
+      if (!mounted) return;
+      setState(() {
+        _videoThumbnailBytes = null;
+        _isVideoThumbnailLoading = false;
+      });
+    }
+  }
+
+  /// waveformData String을 `List<double>`로 파싱
   void _initializeWaveformData() {
     // 넘겨 받은 오디오 URL을 가지고 온다.
     final audioUrl = widget.post.audioUrl;
@@ -107,12 +160,12 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     });
   }
 
-  /// waveformData 문자열을 List<double>로 파싱
+  /// waveformData 문자열을 `List<double>`로 파싱
   ///
   /// Parameters:
   /// - [raw]: 파싱할 문자열
   ///
-  /// Returns: 파싱된 List<double> 또는 null
+  /// Returns: 파싱된 `List<double>` 또는 null
   List<double>? _parseWaveformString(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
@@ -222,43 +275,45 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          // 사진 이미지
+          // 미디어(사진/비디오 썸네일)
           SizedBox(
             width: 175,
             height: 232,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: widget.postUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: widget.postUrl,
-                      memCacheWidth: (175 * 2).round(),
-                      maxWidthDiskCache: (175 * 2).round(),
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Shimmer.fromColors(
-                        baseColor: Colors.grey.shade800,
-                        highlightColor: Colors.grey.shade700,
-                        period: const Duration(milliseconds: 1500),
-                        child: Container(color: Colors.grey.shade800),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey.shade800,
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.image,
-                          color: Colors.grey.shade600,
-                          size: 32.sp,
-                        ),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.grey.shade800,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.image,
-                        color: Colors.grey.shade600,
-                        size: 32.sp,
-                      ),
-                    ),
+              child: widget.post.isVideo
+                  ? _buildVideoThumbnail()
+                  : (widget.postUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: widget.postUrl,
+                            memCacheWidth: (175 * 2).round(),
+                            maxWidthDiskCache: (175 * 2).round(),
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Shimmer.fromColors(
+                              baseColor: Colors.grey.shade800,
+                              highlightColor: Colors.grey.shade700,
+                              period: const Duration(milliseconds: 1500),
+                              child: Container(color: Colors.grey.shade800),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey.shade800,
+                              alignment: Alignment.center,
+                              child: Icon(
+                                Icons.image,
+                                color: Colors.grey.shade600,
+                                size: 32.sp,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: Colors.grey.shade800,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.image,
+                              color: Colors.grey.shade600,
+                              size: 32.sp,
+                            ),
+                          )),
             ),
           ),
 
@@ -306,6 +361,35 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVideoThumbnail() {
+    if (_videoThumbnailBytes != null) {
+      return Image.memory(
+        _videoThumbnailBytes!,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+      );
+    }
+
+    if (_isVideoThumbnailLoading) {
+      return Shimmer.fromColors(
+        baseColor: Colors.grey.shade800,
+        highlightColor: Colors.grey.shade700,
+        period: const Duration(milliseconds: 1500),
+        child: Container(color: Colors.grey.shade800),
+      );
+    }
+
+    return Container(
+      color: Colors.grey.shade800,
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image,
+        color: Colors.grey.shade600,
+        size: 32.sp,
       ),
     );
   }
