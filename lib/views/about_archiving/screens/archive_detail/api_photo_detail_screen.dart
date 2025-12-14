@@ -62,7 +62,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   final Map<String, String> _userProfileImages = {};
   final Map<String, bool> _profileLoadingStates = {};
   final Map<String, String> _userNames = {};
-  final Map<int, PendingApiVoiceComment> _pendingVoiceComments = {};
+  final Map<int, PendingApiCommentDraft> _pendingCommentDrafts = {};
+  final Map<int, PendingApiCommentMarker> _pendingCommentMarkers = {};
   final Map<int, bool> _pendingTextComments = {};
   final Map<int, String> _resolvedAudioUrls = {};
 
@@ -223,7 +224,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               voiceCommentActiveStates: _voiceCommentActiveStates,
               voiceCommentSavedStates: _voiceCommentSavedStates,
               pendingTextComments: _pendingTextComments,
-              pendingVoiceComments: _pendingVoiceComments,
+              pendingVoiceComments: _pendingCommentMarkers,
               onToggleAudio: _toggleAudio,
               onToggleVoiceComment: _toggleVoiceComment,
               onVoiceCommentCompleted:
@@ -245,7 +246,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               onVoiceCommentDeleted: (postId) {
                 setState(() {
                   _voiceCommentActiveStates[postId] = false;
-                  _pendingVoiceComments.remove(postId);
+                  _pendingCommentDrafts.remove(postId);
+                  _pendingCommentMarkers.remove(postId);
+                  _pendingTextComments.remove(postId);
                 });
               },
               onProfileImageDragged: (postId, absolutePosition) {
@@ -366,14 +369,17 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       imageSize,
     );
 
-    final pending = _pendingVoiceComments[postId];
+    final draft = _pendingCommentDrafts[postId];
+    if (draft == null) return;
 
-    if (pending != null) {
-      _pendingVoiceComments[postId] = pending.copyWith(
+    setState(() {
+      final previousProgress = _pendingCommentMarkers[postId]?.progress;
+      _pendingCommentMarkers[postId] = (
         relativePosition: relativePosition,
+        profileImageUrlKey: draft.profileImageUrlKey,
+        progress: previousProgress,
       );
-      return;
-    }
+    });
   }
 
   /// 오디오 토글 처리
@@ -424,16 +430,14 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       final currentUserProfileImageUrl =
           _userController?.currentUser?.profileImageUrlKey;
 
-      // 임시 댓글 데이터에 추가
-      _pendingVoiceComments[postId] = PendingApiVoiceComment(
-        text: text,
+      _pendingCommentDrafts[postId] = (
         isTextComment: true,
+        text: text,
         audioPath: null,
         waveformData: null,
         duration: null,
         recorderUserId: userId,
-        profileImageUrl: currentUserProfileImageUrl,
-        relativePosition: null,
+        profileImageUrlKey: currentUserProfileImageUrl,
       );
 
       if (mounted) {
@@ -470,13 +474,14 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       final currentUserProfileImageUrl =
           _userController?.currentUser?.profileImageUrlKey;
 
-      _pendingVoiceComments[postId] = PendingApiVoiceComment(
+      _pendingCommentDrafts[postId] = (
+        isTextComment: false,
+        text: null,
         audioPath: audioPath,
         waveformData: waveformData,
         duration: duration,
         recorderUserId: userId,
-        profileImageUrl: currentUserProfileImageUrl,
-        relativePosition: null, // 사용자가 드래그로 위치 지정
+        profileImageUrlKey: currentUserProfileImageUrl,
       );
 
       if (mounted) {
@@ -491,8 +496,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   }
 
   Future<void> _onSaveRequested(int postId) async {
-    final pending = _pendingVoiceComments[postId];
-    if (pending == null) {
+    final draft = _pendingCommentDrafts[postId];
+    if (draft == null) {
       throw StateError('임시 댓글이 없습니다. postId: $postId');
     }
 
@@ -503,39 +508,36 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
     // 위치가 지정되지 않은 경우 자동 위치 할당 (fallback)
     final finalPosition =
-        pending.relativePosition ?? _generateAutoProfilePosition(postId);
+        _pendingCommentMarkers[postId]?.relativePosition ??
+        _generateAutoProfilePosition(postId);
 
-    // 백그라운드 저장을 위해 pending 데이터 복사
-    final pendingCopy = PendingApiVoiceComment(
-      audioPath: pending.audioPath,
-      waveformData: pending.waveformData,
-      duration: pending.duration,
-      text: pending.text,
-      isTextComment: pending.isTextComment,
+    // 저장 중에도 UI 마커가 유지되도록 최종 위치를 마커에 기록
+    _pendingCommentMarkers[postId] = (
       relativePosition: finalPosition,
-      recorderUserId: pending.recorderUserId,
-      profileImageUrl: pending.profileImageUrl,
+      profileImageUrlKey: draft.profileImageUrlKey,
+      progress: 0.0,
     );
 
     // UI 먼저 업데이트 (낙관적 업데이트)
     setState(() {
       _voiceCommentSavedStates[postId] = true;
-      _pendingVoiceComments.remove(postId);
       _pendingTextComments.remove(postId);
       _voiceCommentActiveStates[postId] = false;
     });
 
     // 백그라운드에서 API 호출하여 댓글 저장
-    unawaited(_saveCommentToServer(postId, userId, pendingCopy));
+    unawaited(_saveCommentToServer(postId, userId, draft, finalPosition));
   }
 
   /// 백그라운드에서 댓글을 서버에 저장
   Future<void> _saveCommentToServer(
     int postId,
     int userId,
-    PendingApiVoiceComment pending,
+    PendingApiCommentDraft pending,
+    Offset relativePosition,
   ) async {
     try {
+      _updatePendingProgress(postId, 0.05);
       final commentController = Provider.of<CommentController>(
         context,
         listen: false,
@@ -547,13 +549,15 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       // 텍스트 댓글 저장 부분
       if (pending.isTextComment && pending.text != null) {
         // 텍스트 댓글 저장
+        _updatePendingProgress(postId, 0.4);
         creationResult = await commentController.createTextComment(
           postId: postId,
           userId: userId,
           text: pending.text!,
-          locationX: pending.relativePosition!.dx,
-          locationY: pending.relativePosition!.dy,
+          locationX: relativePosition.dx,
+          locationY: relativePosition.dy,
         );
+        _updatePendingProgress(postId, 0.85);
       }
       // 음성 댓글 저장 부분
       else if (pending.audioPath != null) {
@@ -563,7 +567,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           listen: false,
         );
 
+        _updatePendingProgress(postId, 0.15);
         final audioFile = File(pending.audioPath!);
+        _updatePendingProgress(postId, 0.25);
         final multipartFile = await mediaController.fileToMultipart(audioFile);
         final audioKey = await mediaController.uploadCommentAudio(
           file: multipartFile,
@@ -578,25 +584,36 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         }
 
         // 댓글 생성
+        _updatePendingProgress(postId, 0.75);
         final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성
+        _updatePendingProgress(postId, 0.85);
         creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
           audioFileKey: audioKey,
           waveformData: waveformJson!,
           duration: pending.duration!,
-          locationX: pending.relativePosition!.dx,
-          locationY: pending.relativePosition!.dy,
+          locationX: relativePosition.dx,
+          locationY: relativePosition.dy,
         );
+        _updatePendingProgress(postId, 0.95);
       }
 
       if (creationResult.success) {
+        _updatePendingProgress(postId, 1.0);
         if (creationResult.comment != null) {
           _addCommentToCache(postId, creationResult.comment!);
         } else {
           await _loadCommentsForPost(postId);
+        }
+
+        if (mounted) {
+          setState(() {
+            _pendingCommentDrafts.remove(postId);
+            _pendingCommentMarkers.remove(postId);
+          });
         }
       } else {
         _showSnackBar('댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
@@ -609,10 +626,23 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
+  void _updatePendingProgress(int postId, double progress) {
+    final marker = _pendingCommentMarkers[postId];
+    if (marker == null) return;
+    final clamped = progress.clamp(0.0, 1.0).toDouble();
+    if (!mounted) return;
+    setState(() {
+      _pendingCommentMarkers[postId] = (
+        relativePosition: marker.relativePosition,
+        profileImageUrlKey: marker.profileImageUrlKey,
+        progress: clamped,
+      );
+    });
+  }
+
   void _onSaveCompleted(int postId) {
     setState(() {
       _voiceCommentActiveStates[postId] = false;
-      _pendingVoiceComments.remove(postId);
       _pendingTextComments.remove(postId);
     });
   }
@@ -629,9 +659,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       }
     }
 
-    final pending = _pendingVoiceComments[postId];
-    if (pending?.relativePosition != null) {
-      occupiedPositions.add(pending!.relativePosition!);
+    final pending = _pendingCommentMarkers[postId];
+    if (pending != null) {
+      occupiedPositions.add(pending.relativePosition);
     }
 
     const maxAttempts = 30;
