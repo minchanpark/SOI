@@ -396,13 +396,34 @@ class _ApiCommentRow extends StatelessWidget {
       return [];
     }
 
+    // waveformString의 앞뒤 공백 제거
+    final trimmed = waveformString.trim();
+    if (trimmed.isEmpty) return [];
+
     try {
-      final decoded = jsonDecode(waveformString);
+      // JSON 배열로 파싱 시도
+      final decoded = jsonDecode(trimmed);
       if (decoded is List) {
         return decoded.map((e) => (e as num).toDouble()).toList();
       }
-    } catch (e) {
-      debugPrint('waveformData 파싱 실패: $e');
+    }
+    // JSON 파싱 실패 시, 대괄호 및 공백 제거 후 쉼표/공백 기준으로 분리
+    catch (e) {
+      final sanitized = trimmed.replaceAll('[', '').replaceAll(']', '').trim();
+      if (sanitized.isEmpty) return [];
+
+      // 쉼표 또는 공백으로 분리
+      final parts = sanitized
+          .split(RegExp(r'[,\s]+'))
+          .where((part) => part.isNotEmpty);
+
+      try {
+        // 각 부분을 double로 변환
+        final values = parts.map((part) => double.parse(part)).toList();
+        return values;
+      } catch (_) {
+        debugPrint('waveformData 파싱 실패: $e');
+      }
     }
 
     return [];

@@ -633,10 +633,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 오디오 녹음 데이터 초기화
       _audioController.clearCurrentRecording();
 
-      // Home으로 네비게이트
+      // home_navigation_screen으로 먼저 이동
       _navigateToHome();
 
-      // 백그라운드에서 업로드 실행
+      // 백그라운드에서 Post 업로드 실행
       unawaited(
         _uploadPostInBackground(categoryIds: categoryIds, payload: payload),
       );
@@ -671,6 +671,17 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       );
       if (!createSuccess) {
         throw Exception('게시물 생성에 실패했습니다.');
+      }
+
+      // 카테고리 대표 사진(썸네일) 등 최신 상태가 아카이브 메인에 즉시 반영되도록 강제 갱신
+      // (PhotoEditor는 화면 전환 후 dispose될 수 있으므로 context/mounted 의존 없이 컨트롤러만 사용)
+      try {
+        await _categoryController.loadCategories(
+          payload.userId,
+          forceReload: true,
+        );
+      } catch (e) {
+        debugPrint('[PhotoEditor] 카테고리 강제 갱신 실패(무시): $e');
       }
 
       unawaited(_deleteTemporaryFilesInBackground(payload));

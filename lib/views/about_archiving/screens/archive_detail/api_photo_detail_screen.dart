@@ -551,8 +551,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           postId: postId,
           userId: userId,
           text: pending.text!,
-          locationX: pending.relativePosition?.dx,
-          locationY: pending.relativePosition?.dy,
+          locationX: pending.relativePosition!.dx,
+          locationY: pending.relativePosition!.dy,
         );
       }
       // 음성 댓글 저장 부분
@@ -584,11 +584,11 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
-          audioKey: audioKey,
-          waveformData: waveformJson,
-          duration: pending.duration,
-          locationX: pending.relativePosition?.dx,
-          locationY: pending.relativePosition?.dy,
+          audioFileKey: audioKey,
+          waveformData: waveformJson!,
+          duration: pending.duration!,
+          locationX: pending.relativePosition!.dx,
+          locationY: pending.relativePosition!.dy,
         );
       }
 

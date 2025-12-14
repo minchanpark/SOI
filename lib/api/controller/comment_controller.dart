@@ -48,26 +48,54 @@ class CommentController extends ChangeNotifier {
   Future<CommentCreationResult> createComment({
     required int postId,
     required int userId,
+    int? emojiId,
     String? text,
     String? audioKey,
     String? waveformData,
     int? duration,
     double? locationX,
     double? locationY,
+    CommentType? type,
   }) async {
     _setLoading(true);
     _clearError();
 
     try {
+      final inferredType =
+          type ??
+          (emojiId != null
+              ? CommentType.emoji
+              : (audioKey != null ? CommentType.audio : CommentType.text));
+
+      final normalizedText = (text?.trim().isEmpty ?? true) ? null : text!.trim();
+      final normalizedAudioKey =
+          (audioKey?.trim().isEmpty ?? true) ? null : audioKey!.trim();
+      final normalizedWaveform =
+          (waveformData?.trim().isEmpty ?? true) ? null : waveformData!.trim();
+
+      // Swagger에서 동작하는 형태에 맞춰, 서버가 null 값에 민감할 수 있는 필드들을 기본값으로 맞춥니다.
+      final payloadText =
+          inferredType == CommentType.emoji ? '' : normalizedText;
+      final payloadAudioKey = inferredType == CommentType.audio
+          ? (normalizedAudioKey ?? '')
+          : '';
+      final payloadWaveform = inferredType == CommentType.audio
+          ? (normalizedWaveform ?? '')
+          : '';
+      final payloadDuration =
+          inferredType == CommentType.audio ? (duration ?? 0) : 0;
+
       final result = await _commentService.createComment(
         postId: postId,
         userId: userId,
-        text: text,
-        audioKey: audioKey,
-        waveformData: waveformData,
-        duration: duration,
+        emojiId: inferredType == CommentType.emoji ? emojiId : null,
+        text: payloadText,
+        audioFileKey: payloadAudioKey,
+        waveformData: payloadWaveform,
+        duration: payloadDuration,
         locationX: locationX,
         locationY: locationY,
+        type: inferredType,
       );
       _setLoading(false);
       return result;
@@ -83,8 +111,8 @@ class CommentController extends ChangeNotifier {
     required int postId,
     required int userId,
     required String text,
-    double? locationX,
-    double? locationY,
+    required double locationX,
+    required double locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -110,11 +138,11 @@ class CommentController extends ChangeNotifier {
   Future<CommentCreationResult> createAudioComment({
     required int postId,
     required int userId,
-    required String audioKey,
-    String? waveformData,
-    int? duration,
-    double? locationX,
-    double? locationY,
+    required String audioFileKey,
+    required String waveformData,
+    required int duration,
+    required double locationX,
+    required double locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -123,7 +151,7 @@ class CommentController extends ChangeNotifier {
       final result = await _commentService.createAudioComment(
         postId: postId,
         userId: userId,
-        audioKey: audioKey,
+        audioFileKey: audioFileKey,
         waveformData: waveformData,
         duration: duration,
         locationX: locationX,
@@ -139,12 +167,12 @@ class CommentController extends ChangeNotifier {
   }
 
   /// 이모지 댓글 생성
-  Future<bool> createEmojiComment({
+  Future<CommentCreationResult> createEmojiComment({
     required int postId,
     required int userId,
     required int emojiId,
-    double? locationX,
-    double? locationY,
+    required double locationX,
+    required double locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -162,7 +190,7 @@ class CommentController extends ChangeNotifier {
     } catch (e) {
       _setError('이모지 댓글 생성 실패: $e');
       _setLoading(false);
-      return false;
+      return const CommentCreationResult.failure();
     }
   }
 

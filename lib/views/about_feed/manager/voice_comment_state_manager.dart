@@ -212,6 +212,8 @@ class VoiceCommentStateManager {
     _voiceCommentActiveStates[postId] = false;
     _notifyStateChanged();
 
+    // 비동기적으로 서버에 댓글 저장
+    // UI 스레드를 차단하지 않도록 함
     Future.microtask(() async {
       final didSave = await _saveCommentToServer(
         postId,
@@ -226,7 +228,10 @@ class VoiceCommentStateManager {
         return;
       }
 
+      // 저장이 성공하면 대기 중인 댓글 제거
       _pendingVoiceComments.remove(postId);
+
+      // 상태 변경 알림
       _notifyStateChanged();
     });
   }
@@ -254,8 +259,8 @@ class VoiceCommentStateManager {
           postId: postId,
           userId: userId,
           text: pending.text!,
-          locationX: pending.relativePosition?.dx,
-          locationY: pending.relativePosition?.dy,
+          locationX: pending.relativePosition!.dx,
+          locationY: pending.relativePosition!.dy,
         );
       } else if (pending.audioPath != null) {
         // media 컨트롤러 가져오기
@@ -292,11 +297,11 @@ class VoiceCommentStateManager {
         creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
-          audioKey: audioKey,
-          waveformData: waveformJson,
-          duration: pending.duration,
-          locationX: pending.relativePosition?.dx,
-          locationY: pending.relativePosition?.dy,
+          audioFileKey: audioKey,
+          waveformData: waveformJson!,
+          duration: pending.duration!,
+          locationX: pending.relativePosition!.dx,
+          locationY: pending.relativePosition!.dy,
         );
       }
 

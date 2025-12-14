@@ -58,8 +58,9 @@ class CommentService {
   Future<CommentCreationResult> createComment({
     required int postId,
     required int userId,
+    int? emojiId,
     String? text,
-    String? audioKey,
+    String? audioFileKey,
     String? waveformData,
     int? duration,
     double? locationX,
@@ -69,32 +70,14 @@ class CommentService {
     try {
       final commentTypeEnum = _toCommentTypeEnum(type);
 
-      final normalizedText = (text?.trim().isEmpty ?? true)
-          ? null
-          : text!.trim();
-      final normalizedAudioKey = (audioKey?.trim().isEmpty ?? true)
-          ? null
-          : audioKey!.trim();
-      final normalizedWaveform = (waveformData?.trim().isEmpty ?? true)
-          ? null
-          : waveformData!.trim();
-
       final dto = CommentReqDto(
         postId: postId,
         userId: userId,
-        // 서버에서 commentType별 분기 처리 시, 불필요한 필드는 null로 보내는 게 안전합니다.
-        text: commentTypeEnum == CommentReqDtoCommentTypeEnum.TEXT
-            ? normalizedText
-            : null,
-        audioKey: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
-            ? normalizedAudioKey
-            : null,
-        waveformData: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
-            ? normalizedWaveform
-            : null,
-        duration: commentTypeEnum == CommentReqDtoCommentTypeEnum.AUDIO
-            ? duration
-            : null,
+        emojiId: emojiId,
+        text: text,
+        audioKey: audioFileKey,
+        waveformData: waveformData,
+        duration: duration,
         locationX: locationX,
         locationY: locationY,
         commentType: commentTypeEnum,
@@ -103,7 +86,7 @@ class CommentService {
       debugPrint('=== 댓글 생성 요청 ===');
       debugPrint('postId: $postId, userId: $userId');
       debugPrint('commentType: ${commentTypeEnum.value}');
-      debugPrint('audioKey: $audioKey');
+      debugPrint('audioFileKey: $audioFileKey');
       debugPrint('text: $text');
       debugPrint('waveformData type: ${waveformData?.runtimeType}');
       debugPrint('waveformData value: $waveformData');
@@ -117,13 +100,22 @@ class CommentService {
       final jsonMap = dto.toJson();
       final waveformValue = jsonMap['waveformData'];
       // 백엔드가 `waveFormData`(F 대문자)로 필드를 받을 수 있어 호환을 위해 함께 전송합니다.
-      if (waveformValue is String && waveformValue.trim().isNotEmpty) {
+      if (waveformValue is String) {
         jsonMap['waveFormData'] = waveformValue;
       }
       debugPrint('DTO JSON map: $jsonMap');
       debugPrint(
         'waveformData in JSON type: ${jsonMap['waveformData'].runtimeType}',
       );
+      try {
+        final encoded = jsonEncode(jsonMap);
+        final preview = encoded.length > 300
+            ? encoded.substring(0, 300)
+            : encoded;
+        debugPrint('DTO JSON encoded (preview): $preview');
+      } catch (_) {
+        // ignore: empty_catches
+      }
 
       final response = await _createComment(jsonMap);
       debugPrint("댓글 생성 응답: $response");
@@ -153,13 +145,18 @@ class CommentService {
     required int postId,
     required int userId,
     required String text,
-    double? locationX,
-    double? locationY,
+    required double locationX,
+    required double locationY,
   }) async {
     return createComment(
       postId: postId,
       userId: userId,
+      // TEXT 댓글은 서버가 null/empty 처리에 민감할 수 있어 Swagger 입력 형태로 맞춥니다.
+      emojiId: 0,
       text: text,
+      audioFileKey: '',
+      waveformData: '',
+      duration: 0,
       locationX: locationX,
       locationY: locationY,
       type: CommentType.text,
@@ -170,16 +167,18 @@ class CommentService {
   Future<CommentCreationResult> createAudioComment({
     required int postId,
     required int userId,
-    required String audioKey,
-    String? waveformData,
-    int? duration,
-    double? locationX,
-    double? locationY,
+    required String audioFileKey,
+    required String waveformData,
+    required int duration,
+    required double locationX,
+    required double locationY,
   }) async {
     return createComment(
       postId: postId,
       userId: userId,
-      audioKey: audioKey,
+      emojiId: 0,
+      text: '',
+      audioFileKey: audioFileKey,
       waveformData: waveformData,
       duration: duration,
       locationX: locationX,
@@ -189,48 +188,33 @@ class CommentService {
   }
 
   /// 이모지 댓글 생성 (편의 메서드)
-  Future<bool> createEmojiComment({
+  Future<CommentCreationResult> createEmojiComment({
     required int postId,
     required int userId,
     required int emojiId,
-    double? locationX,
-    double? locationY,
+    required double locationX,
+    required double locationY,
   }) async {
-    try {
-      final dto = CommentReqDto(
-        postId: postId,
-        userId: userId,
-        emojiId: emojiId,
-        text: null,
-        audioKey: null,
-        waveformData: null,
-        duration: null,
-        locationX: locationX,
-        locationY: locationY,
-        commentType: CommentReqDtoCommentTypeEnum.EMOJI,
-      );
-
-      final response = await _commentApi.create2(dto);
-
-      if (response == null) {
-        throw const DataValidationException(message: '이모지 댓글 생성 응답이 없습니다.');
-      }
-
-      if (response.success != true) {
-        throw SoiApiException(message: response.message ?? '이모지 댓글 생성 실패');
-      }
-
-      return true;
-    } on ApiException catch (e) {
-      throw _handleApiException(e);
-    } on SocketException catch (e) {
-      throw NetworkException(originalException: e);
-    } catch (e) {
-      if (e is SoiApiException) rethrow;
-      throw SoiApiException(message: '이모지 댓글 생성 실패: $e', originalException: e);
-    }
+    return createComment(
+      postId: postId,
+      userId: userId,
+      emojiId: emojiId,
+      text: '',
+      audioFileKey: '',
+      waveformData: '',
+      duration: 0,
+      locationX: locationX,
+      locationY: locationY,
+      type: CommentType.emoji,
+    );
   }
 
+  /// 댓글 생성 응답에서 Comment 객체 파싱
+  ///
+  /// Parameters:
+  ///   - [response]: API 응답 객체
+  ///
+  /// Returns: 파싱된 Comment 객체 (없을 경우 null)
   Comment? _parseCommentFromResponse(ApiResponseDtoObject response) {
     final data = response.data;
     if (data == null) {
@@ -398,7 +382,9 @@ class CommentService {
     }
   }
 
-  Future<ApiResponseDtoObject?> _createComment(Map<String, dynamic> body) async {
+  Future<ApiResponseDtoObject?> _createComment(
+    Map<String, dynamic> body,
+  ) async {
     final apiClient = SoiApiClient.instance.apiClient;
     final response = await apiClient.invokeAPI(
       '/comment/create',
