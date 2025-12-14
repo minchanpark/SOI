@@ -155,18 +155,13 @@ class _ApiAudioControlWidgetState extends State<ApiAudioControlWidget> {
       return Consumer<AudioController>(
         builder: (context, audioController, child) {
           final audioSource = _effectiveAudioUrl;
-          final isPlaying =
+          final isCurrentAudio =
               audioSource != null &&
               audioController.currentAudioUrl == audioSource;
-          final progress =
-              isPlaying && audioController.totalDuration.inMilliseconds > 0
-              ? (audioController.currentPosition.inMilliseconds /
-                        audioController.totalDuration.inMilliseconds)
-                    .clamp(0.0, 1.0)
-              : 0.0;
+          final progress = isCurrentAudio ? audioController.progress : 0.0;
 
           return _AudioControlSurface(
-            isPlaying: isPlaying,
+            isPlaying: isCurrentAudio && audioController.isPlaying,
             progress: progress,
             waveformData: widget.waveformData,
             duration: Duration(seconds: widget.post.durationInSeconds),
@@ -178,11 +173,8 @@ class _ApiAudioControlWidgetState extends State<ApiAudioControlWidget> {
             onTap: () {
               final url = _effectiveAudioUrl;
               if (url == null || url.isEmpty) return;
-              if (widget.onPressed != null) {
-                widget.onPressed!();
-              } else if (widget.post.hasAudio) {
-                audioController.togglePlayPause(url);
-              }
+              // 파형 진행률 계산을 위해, 위젯 내부에서 resolve한 URL로 동일하게 재생/일시정지 처리한다.
+              audioController.togglePlayPause(url);
             },
           );
         },

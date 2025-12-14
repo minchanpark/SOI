@@ -12,6 +12,7 @@ import '../../../../api/models/comment_creation_result.dart';
 import '../../../../api/models/user.dart' as api_user;
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
+import '../../../../api/controller/category_controller.dart' as api_category;
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/media_controller.dart';
 import '../../../../api/controller/audio_controller.dart';
@@ -45,7 +46,12 @@ class ApiPhotoDetailScreen extends StatefulWidget {
 class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   late final PageController _pageController;
   late int _currentIndex;
+  late List<Post> _posts;
   late final AudioController _audioController;
+
+  final Set<int> _deletedPostIds =
+      <int>{}; // 삭제된 게시물 ID 추적 --> 상위 위젯에 전달하기 위해 사용됩니다.
+  bool _allowPopWithDeletionResult = false;
 
   // 사용자 프로필 관련
   String _userProfileImageUrl = '';
@@ -86,6 +92,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _posts = List<Post>.from(
+      widget.allPosts,
+    ); // 자식 위젯에서 부모가 건네준 allPosts 수정을 방지하기 위해서, 복사본 생성
     _pageController = PageController(initialPage: _currentIndex);
     _audioController = AudioController();
     _userController = Provider.of<UserController>(context, listen: false);
@@ -94,7 +103,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       if (!mounted) return;
 
       // 초기 댓글 로드
-      _loadCommentsForPost(widget.allPosts[_currentIndex].id);
+      _loadCommentsForPost(_posts[_currentIndex].id);
     });
   }
 
@@ -112,154 +121,162 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AudioController>.value(
       value: _audioController,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        resizeToAvoidBottomInset: true,
-        appBar: AppBar(
-          iconTheme: const IconThemeData(color: Colors.white),
+      child: PopScope(
+        canPop: _deletedPostIds.isEmpty || _allowPopWithDeletionResult,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (_deletedPostIds.isEmpty) return;
+          _popWithDeletionResult();
+        },
+        child: Scaffold(
           backgroundColor: Colors.black,
-          title: Text(
-            widget.categoryName,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20.sp,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: EdgeInsets.only(right: 23.w),
-              child: IconButton(
-                onPressed: () async {
-                  // 현재 게시물 정보 가져오기
-                  final currentPost = widget.allPosts[_currentIndex];
-
-                  // 오디오 재생 시간 계산
-                  Duration audioDuration = Duration(
-                    seconds: currentPost.durationInSeconds,
-                  );
-
-                  // 현재 게시물이 오디오를 포함하는 경우 재생 시간 업데이트
-                  if (currentPost.hasAudio) {
-                    final resolvedUrl =
-                        _resolvedAudioUrls[currentPost.id] ??
-                        currentPost.audioUrl;
-                    if (resolvedUrl != null &&
-                        _audioController.currentAudioUrl == resolvedUrl) {
-                      audioDuration = _audioController.totalDuration;
-                    }
-                  }
-
-                  // waveformData 파싱
-                  List<double>? waveformData;
-                  if (currentPost.waveformData != null &&
-                      currentPost.waveformData!.isNotEmpty) {
-                    try {
-                      final decoded = jsonDecode(currentPost.waveformData!);
-                      if (decoded is List) {
-                        waveformData = decoded
-                            .map((e) => (e as num).toDouble())
-                            .toList();
-                      }
-                    } catch (_) {}
-                  }
-
-                  if (!mounted) return;
-                  // 공유 화면으로 이동
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ShareScreen(
-                        imageUrl: currentPost.userProfileImageKey ?? '',
-                        waveformData: waveformData,
-                        audioDuration: audioDuration,
-                        categoryName: widget.categoryName,
-                      ),
-                    ),
-                  );
-                },
-                icon: Image.asset(
-                  'assets/share_icon.png',
-                  width: 20.w,
-                  height: 20.h,
-                ),
+          resizeToAvoidBottomInset: true,
+          appBar: AppBar(
+            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: Colors.black,
+            title: Text(
+              widget.categoryName,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20.sp,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
-        body: PageView.builder(
-          controller: _pageController,
-          itemCount: widget.allPosts.length,
-          scrollDirection: Axis.vertical,
-          onPageChanged: _onPageChanged,
-          itemBuilder: (context, index) {
-            final post = widget.allPosts[index];
-            final currentUserId = _userController?.currentUser?.userId;
-            final isOwner = currentUserId == post.nickName;
+            actions: [
+              Padding(
+                padding: EdgeInsets.only(right: 23.w),
+                child: IconButton(
+                  onPressed: () async {
+                    // 현재 게시물 정보 가져오기
+                    final currentPost = _posts[_currentIndex];
 
-            // 사용자 캐시 채우기
-            if (!_userProfileImages.containsKey(post.nickName)) {
-              _userProfileImages[post.nickName] = _userProfileImageUrl;
-              _profileLoadingStates[post.nickName] = _isLoadingProfile;
-              _userNames[post.nickName] = _userName;
-            }
+                    // 오디오 재생 시간 계산
+                    Duration audioDuration = Duration(
+                      seconds: currentPost.durationInSeconds,
+                    );
 
-            // post 사진 카드 위젯 반환
-            // post 사진, 카테고리 이름, 카테고리 ID 등 전달
-            return ApiPhotoCardWidget(
-              post: post,
-
-              // APICategoryPhotosScreen에서 받아온 categoryName을 전달합니다.
-              categoryName: widget.categoryName,
-
-              // APICategoryPhotosScreen에서 받아온 categoryId를 전달합니다.
-              categoryId: widget.categoryId,
-              index: index,
-              isOwner: isOwner,
-              isArchive: true,
-              isCategory: true,
-              postComments: _postComments,
-
-              voiceCommentActiveStates: _voiceCommentActiveStates,
-              voiceCommentSavedStates: _voiceCommentSavedStates,
-              pendingTextComments: _pendingTextComments,
-              pendingVoiceComments: _pendingCommentMarkers,
-              onToggleAudio: _toggleAudio,
-              onToggleVoiceComment: _toggleVoiceComment,
-              onVoiceCommentCompleted:
-                  (postId, audioPath, waveformData, duration) {
-                    if (audioPath != null &&
-                        waveformData != null &&
-                        duration != null) {
-                      _onVoiceCommentRecordingFinished(
-                        postId,
-                        audioPath,
-                        waveformData,
-                        duration,
-                      );
+                    // 현재 게시물이 오디오를 포함하는 경우 재생 시간 업데이트
+                    if (currentPost.hasAudio) {
+                      final resolvedUrl =
+                          _resolvedAudioUrls[currentPost.id] ??
+                          currentPost.audioUrl;
+                      if (resolvedUrl != null &&
+                          _audioController.currentAudioUrl == resolvedUrl) {
+                        audioDuration = _audioController.totalDuration;
+                      }
                     }
+
+                    // waveformData 파싱
+                    List<double>? waveformData;
+                    if (currentPost.waveformData != null &&
+                        currentPost.waveformData!.isNotEmpty) {
+                      try {
+                        final decoded = jsonDecode(currentPost.waveformData!);
+                        if (decoded is List) {
+                          waveformData = decoded
+                              .map((e) => (e as num).toDouble())
+                              .toList();
+                        }
+                      } catch (_) {}
+                    }
+
+                    if (!mounted) return;
+                    // 공유 화면으로 이동
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ShareScreen(
+                          imageUrl: currentPost.userProfileImageKey ?? '',
+                          waveformData: waveformData,
+                          audioDuration: audioDuration,
+                          categoryName: widget.categoryName,
+                        ),
+                      ),
+                    );
                   },
-              onTextCommentCompleted: (postId, text) async {
-                await _onTextCommentCreated(postId, text);
-              },
-              onVoiceCommentDeleted: (postId) {
-                setState(() {
-                  _voiceCommentActiveStates[postId] = false;
-                  _pendingCommentDrafts.remove(postId);
-                  _pendingCommentMarkers.remove(postId);
-                  _pendingTextComments.remove(postId);
-                });
-              },
-              onProfileImageDragged: (postId, absolutePosition) {
-                _onProfileImageDragged(postId, absolutePosition);
-              },
-              onSaveRequested: _onSaveRequested,
-              onSaveCompleted: _onSaveCompleted,
-              onDeletePressed: () => _deletePost(post),
-              onCommentsReloadRequested: _loadCommentsForPost,
-            );
-          },
+                  icon: Image.asset(
+                    'assets/share_icon.png',
+                    width: 20.w,
+                    height: 20.h,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          body: PageView.builder(
+            controller: _pageController,
+            itemCount: _posts.length,
+            scrollDirection: Axis.vertical,
+            onPageChanged: _onPageChanged,
+            itemBuilder: (context, index) {
+              final post = _posts[index];
+              final currentUserId = _userController?.currentUser?.userId;
+              final isOwner = currentUserId == post.nickName;
+
+              // 사용자 캐시 채우기
+              if (!_userProfileImages.containsKey(post.nickName)) {
+                _userProfileImages[post.nickName] = _userProfileImageUrl;
+                _profileLoadingStates[post.nickName] = _isLoadingProfile;
+                _userNames[post.nickName] = _userName;
+              }
+
+              // post 사진 카드 위젯 반환
+              // post 사진, 카테고리 이름, 카테고리 ID 등 전달
+              return ApiPhotoCardWidget(
+                post: post,
+
+                // APICategoryPhotosScreen에서 받아온 categoryName을 전달합니다.
+                categoryName: widget.categoryName,
+
+                // APICategoryPhotosScreen에서 받아온 categoryId를 전달합니다.
+                categoryId: widget.categoryId,
+                index: index,
+                isOwner: isOwner,
+                isArchive: true,
+                isCategory: true,
+                postComments: _postComments,
+
+                voiceCommentActiveStates: _voiceCommentActiveStates,
+                voiceCommentSavedStates: _voiceCommentSavedStates,
+                pendingTextComments: _pendingTextComments,
+                pendingVoiceComments: _pendingCommentMarkers,
+                onToggleAudio: _toggleAudio,
+                onToggleVoiceComment: _toggleVoiceComment,
+                onVoiceCommentCompleted:
+                    (postId, audioPath, waveformData, duration) {
+                      if (audioPath != null &&
+                          waveformData != null &&
+                          duration != null) {
+                        _onVoiceCommentRecordingFinished(
+                          postId,
+                          audioPath,
+                          waveformData,
+                          duration,
+                        );
+                      }
+                    },
+                onTextCommentCompleted: (postId, text) async {
+                  await _onTextCommentCreated(postId, text);
+                },
+                onVoiceCommentDeleted: (postId) {
+                  setState(() {
+                    _voiceCommentActiveStates[postId] = false;
+                    _pendingCommentDrafts.remove(postId);
+                    _pendingCommentMarkers.remove(postId);
+                    _pendingTextComments.remove(postId);
+                  });
+                },
+                onProfileImageDragged: (postId, absolutePosition) {
+                  _onProfileImageDragged(postId, absolutePosition);
+                },
+                onSaveRequested: _onSaveRequested,
+                onSaveCompleted: _onSaveCompleted,
+                onDeletePressed: () => _deletePost(post),
+                onCommentsReloadRequested: _loadCommentsForPost,
+              );
+            },
+          ),
         ),
       ),
     );
@@ -274,12 +291,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
     _stopAudio();
     _loadUserProfileImage();
-    _loadCommentsForPost(widget.allPosts[index].id);
+    _loadCommentsForPost(_posts[index].id);
   }
 
   /// 현재 게시물 작성자의 프로필 이미지 로드
   Future<void> _loadUserProfileImage() async {
-    final currentPost = widget.allPosts[_currentIndex];
+    final currentPost = _posts[_currentIndex];
     try {
       final userId = int.tryParse(currentPost.nickName);
       api_user.User? user;
@@ -725,100 +742,86 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   // 게시물 삭제 처리
   Future<void> _deletePost(Post post) async {
-    // 삭제 확인 다이얼로그 표시
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        title: Text(
-          '삭제 확인',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18.sp,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          '이 사진을 삭제하시겠습니까?',
-          style: TextStyle(
-            color: Colors.grey[300],
-            fontSize: 14.sp,
-            fontFamily: 'Pretendard',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              '취소',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 14.sp,
-                fontFamily: 'Pretendard',
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              '삭제',
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 14.sp,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
     try {
       final postController = Provider.of<PostController>(
         context,
         listen: false,
       );
-      // 삭제를 요청하고 결과 대기
-      final success = await postController.deletePost(post.id);
+
+      debugPrint("사진 삭제 시도: postId=${post.id}");
+
+      // MoreMenuButton의 '사진 삭제' 바텀시트에서 이미 확인을 받았으므로,
+      // 여기서는 추가 다이얼로그 없이 바로 상태를 DELETED로 변경합니다.
+      final success = await postController.setPostStatus(
+        postId: post.id,
+        postStatus: PostStatus.deleted,
+      );
 
       if (!mounted) return;
       if (success) {
+        _deletedPostIds.add(post.id);
         _showSnackBar('사진이 삭제되었습니다.');
 
         // 삭제 후 처리
         _handleSuccessfulDeletion(post);
+
+        final userId = _userController?.currentUser?.id;
+        if (userId != null) {
+          unawaited(
+            Provider.of<api_category.CategoryController>(
+              context,
+              listen: false,
+            ).loadCategories(userId, forceReload: true),
+          );
+        }
       } else {
         _showSnackBar('삭제 중 오류가 발생했습니다.');
       }
     } catch (e) {
       _showSnackBar('삭제 중 오류가 발생했습니다: $e');
+      debugPrint('사진 삭제 실패: $e');
     }
+  }
+
+  void _popWithDeletionResult() {
+    if (_allowPopWithDeletionResult) return;
+    setState(() => _allowPopWithDeletionResult = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pop(_deletedPostIds.toList(growable: false));
+    });
   }
 
   // 삭제 후 상태 업데이트 처리
   void _handleSuccessfulDeletion(Post post) {
-    if (widget.allPosts.length <= 1) {
-      Navigator.of(context).pop();
+    if (_posts.length <= 1) {
+      if (_deletedPostIds.isEmpty) {
+        Navigator.of(context).pop();
+      } else {
+        _popWithDeletionResult();
+      }
       return;
     }
     setState(() {
       // 현재 인덱스 조정
-      widget.allPosts.removeWhere((p) => p.id == post.id);
-      if (_currentIndex >= widget.allPosts.length) {
-        _currentIndex = widget.allPosts.length - 1;
+      _posts.removeWhere((p) => p.id == post.id);
+      if (_currentIndex >= _posts.length) {
+        _currentIndex = _posts.length - 1;
       }
     });
 
+    if (_pageController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!_pageController.hasClients) return;
+        if (_currentIndex < 0 || _currentIndex >= _posts.length) return;
+        _pageController.jumpToPage(_currentIndex);
+      });
+    }
+
     // profile 이미지 및 댓글 재로딩
     _loadUserProfileImage();
-    _loadCommentsForPost(widget.allPosts[_currentIndex].id);
+    _loadCommentsForPost(_posts[_currentIndex].id);
   }
 
   Future<void> _stopAudio() async {

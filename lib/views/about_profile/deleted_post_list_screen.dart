@@ -2,10 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/api_firebase/controllers/auth_controller.dart';
-import '../../api_firebase/controllers/media_controller.dart';
-import '../../api_firebase/models/photo_data_model.dart';
+import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/post_controller.dart';
+import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/api/models/post.dart';
 
 class DeletedPostListScreen extends StatefulWidget {
   const DeletedPostListScreen({super.key});
@@ -15,38 +17,24 @@ class DeletedPostListScreen extends StatefulWidget {
 }
 
 class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
-  List<MediaDataModel> _deletedPosts = [];
-  List<MediaDataModel> selectedPosts = [];
-  Map<MediaDataModel, bool> isSelected = {};
+  List<Post> _deletedPosts = [];
+  final Set<int> _selectedPostIds = <int>{};
+  final Map<int, String> _imageUrlByPostId = <int, String>{};
   bool _isLoading = true;
   String? _error;
-
-  // Controllers 주입을 늦춰서 initState에서 초기화
-  late final PhotoController _photoController;
-  late final AuthController _authController;
 
   @override
   void initState() {
     super.initState();
-
-    // 여기서 컨트롤러들을 초기화 하여서 해당 위젯에서만 컨트롤러를 사용하도록 한다.
-    _photoController = PhotoController();
-    _authController = AuthController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDeletedPosts();
     });
   }
 
-  @override
-  void dispose() {
-    _photoController.dispose();
-    _authController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadDeletedPosts() async {
-    final user = _authController.currentUser;
-    if (user == null) {
+    final userController = context.read<UserController>();
+    final user = userController.currentUser;
+    if (user == null || user.id == 0) {
       setState(() {
         _error = '로그인이 필요합니다.';
         _isLoading = false;
@@ -60,14 +48,52 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     });
 
     try {
-      // PhotoController를 통해 삭제된 사진 로드
-      await _photoController.loadDeletedPhotosByUser(user.uid);
+      final postController = context.read<PostController>();
+      final mediaController = context.read<MediaController>();
 
+      final posts = await postController.getAllPosts(
+        userId: user.id,
+        postStatus: PostStatus.deleted,
+      );
+
+      final imageKeysToResolve = <String>[];
+      final postIdsForResolvedKeys = <int>[];
+
+      _imageUrlByPostId.clear();
+      for (final post in posts) {
+        final keyOrUrl = post.postFileKey;
+        if (keyOrUrl == null || keyOrUrl.isEmpty) continue;
+
+        final uri = Uri.tryParse(keyOrUrl);
+        if (uri != null && uri.hasScheme) {
+          _imageUrlByPostId[post.id] = keyOrUrl;
+          continue;
+        }
+
+        imageKeysToResolve.add(keyOrUrl);
+        postIdsForResolvedKeys.add(post.id);
+      }
+
+      if (imageKeysToResolve.isNotEmpty) {
+        final urls = await mediaController.getPresignedUrls(imageKeysToResolve);
+        final count = urls.length < postIdsForResolvedKeys.length
+            ? urls.length
+            : postIdsForResolvedKeys.length;
+        for (var i = 0; i < count; i++) {
+          _imageUrlByPostId[postIdsForResolvedKeys[i]] = urls[i];
+        }
+      }
+
+      if (!mounted) return;
       setState(() {
-        _deletedPosts = _photoController.deletedPhotos;
+        _deletedPosts = posts;
+        _selectedPostIds.removeWhere(
+          (id) => !_deletedPosts.any((post) => post.id == id),
+        );
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -113,11 +139,11 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
               width: 349.w,
               height: 50.h,
               child: ElevatedButton(
-                onPressed: selectedPosts.isNotEmpty
+                onPressed: _selectedPostIds.isNotEmpty
                     ? _restoreSelectedPosts
                     : () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedPosts.isNotEmpty
+                  backgroundColor: _selectedPostIds.isNotEmpty
                       ? Colors.white
                       : const Color(0xFF595959),
 
@@ -129,7 +155,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
                 child: Text(
                   '게시물에 표시',
                   style: TextStyle(
-                    color: selectedPosts.isNotEmpty
+                    color: _selectedPostIds.isNotEmpty
                         ? Colors.black
                         : Colors.white,
                     fontSize: 18,
@@ -228,12 +254,13 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     );
   }
 
-  Widget _buildDeletedPostItem(MediaDataModel photo, int index) {
-    final bool isPhotoSelected = isSelected[photo] ?? false;
+  Widget _buildDeletedPostItem(Post post, int index) {
+    final bool isPostSelected = _selectedPostIds.contains(post.id);
+    final imageUrl = _imageUrlByPostId[post.id];
 
     return GestureDetector(
       onTap: () {
-        _togglePhotoSelection(photo);
+        _togglePostSelection(post.id);
       },
       child: Container(
         width: 175,
@@ -246,39 +273,49 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
           borderRadius: BorderRadius.circular(8),
           child: Stack(
             children: [
-              CachedNetworkImage(
-                imageUrl: photo.imageUrl,
-                fit: BoxFit.cover,
-                width: 175,
-                height: 233,
-                memCacheWidth: (175 * 2).round(),
-                maxWidthDiskCache: (175 * 2).round(),
-                placeholder: (context, url) => Shimmer.fromColors(
-                  baseColor: const Color(0xFF333333),
-                  highlightColor: const Color(0xFF555555),
-                  child: Container(
-                    width: 175,
-                    height: 233,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
-                      borderRadius: BorderRadius.circular(8.r),
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  width: 175,
+                  height: 233,
+                  memCacheWidth: (175 * 2).round(),
+                  maxWidthDiskCache: (175 * 2).round(),
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: const Color(0xFF333333),
+                    highlightColor: const Color(0xFF555555),
+                    child: Container(
+                      width: 175,
+                      height: 233,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF333333),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
                     ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
+                  errorWidget: (context, url, error) => Container(
+                    color: const Color(0xFF333333),
+                    child: Icon(
+                      Icons.image,
+                      color: Colors.white54,
+                      size: 48.sp,
+                    ),
+                  ),
+                )
+              else
+                Container(
                   color: const Color(0xFF333333),
                   child: Icon(Icons.image, color: Colors.white54, size: 48.sp),
                 ),
-              ),
               // 선택 오버레이
-              if (isPhotoSelected)
+              if (isPostSelected)
                 Container(
                   width: 175,
                   height: 233,
                   color: Colors.black.withValues(alpha: 0.3),
                 ),
               // 체크마크
-              if (isPhotoSelected)
+              if (isPostSelected)
                 Positioned(
                   top: 8.h,
                   left: 8.w,
@@ -299,38 +336,34 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     );
   }
 
-  void _togglePhotoSelection(MediaDataModel photo) {
+  void _togglePostSelection(int postId) {
     setState(() {
-      final bool currentlySelected = isSelected[photo] ?? false;
-      if (currentlySelected) {
-        isSelected[photo] = false;
-        selectedPosts.remove(photo);
+      if (_selectedPostIds.contains(postId)) {
+        _selectedPostIds.remove(postId);
       } else {
-        isSelected[photo] = true;
-        selectedPosts.add(photo);
+        _selectedPostIds.add(postId);
       }
     });
   }
 
   Future<void> _restoreSelectedPosts() async {
-    final user = _authController.currentUser;
-    if (user == null) return;
+    if (context.read<UserController>().currentUserId == null) return;
 
-    if (selectedPosts.isEmpty) return;
+    if (_selectedPostIds.isEmpty) return;
 
     setState(() {
       _isLoading = true;
     });
 
+    final postController = context.read<PostController>();
     int successCount = 0;
     int failCount = 0;
 
-    for (final photo in selectedPosts) {
+    for (final postId in _selectedPostIds.toList()) {
       try {
-        final success = await _photoController.restorePhoto(
-          categoryId: photo.categoryId,
-          photoId: photo.id,
-          userId: user.uid,
+        final success = await postController.setPostStatus(
+          postId: postId,
+          postStatus: PostStatus.active,
         );
 
         if (success) {
@@ -344,10 +377,8 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
       }
     }
     // 선택 상태 초기화
-    setState(() {
-      selectedPosts.clear();
-      isSelected.clear();
-    });
+    if (!mounted) return;
+    setState(_selectedPostIds.clear);
 
     // 삭제된 사진 목록 다시 로드
     await _loadDeletedPosts();
@@ -356,11 +387,11 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     if (mounted) {
       String message;
       if (failCount == 0) {
-        message = '${successCount}개의 게시물이 복원되었습니다';
+        message = '$successCount개의 게시물이 복원되었습니다';
       } else if (successCount == 0) {
         message = '게시물 복원에 실패했습니다';
       } else {
-        message = '${successCount}개 복원 성공, ${failCount}개 실패';
+        message = '$successCount개 복원 성공, $failCount개 실패';
       }
 
       Fluttertoast.showToast(

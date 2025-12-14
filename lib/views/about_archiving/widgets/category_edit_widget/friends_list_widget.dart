@@ -4,11 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 
 class CategoryMemberViewModel {
+  final int? userId;
   final String displayName;
   final String? profileImageUrl;
   final String? subtitle;
 
   const CategoryMemberViewModel({
+    this.userId,
     required this.displayName,
     this.profileImageUrl,
     this.subtitle,

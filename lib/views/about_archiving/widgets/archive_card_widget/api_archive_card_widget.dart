@@ -1,15 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/models/category.dart' as api_category;
 import '../../screens/archive_detail/api_category_photos_screen.dart';
 import 'api_archive_profile_row_widget.dart';
 import 'api_archive_popup_menu_widget.dart';
+import 'archive_card_models.dart';
+import 'archive_card_placeholders.dart';
 
 /// REST API 기반 아카이브 카드 위젯
 ///
@@ -103,10 +103,10 @@ class ApiArchiveCardWidget extends StatelessWidget {
             SizedBox(height: (16.87).h),
             Padding(
               padding: EdgeInsets.only(left: 14),
-              child: Selector<CategoryController, _CategoryProfileRowData>(
+              child: Selector<CategoryController, CategoryProfileRowData>(
                 selector: (_, controller) {
                   final latest = controller.getCategoryById(category.id);
-                  return _CategoryProfileRowData(
+                  return CategoryProfileRowData(
                     profileUrlKeys:
                         latest?.usersProfileKey ?? category.usersProfileKey,
                     totalUserCount:
@@ -212,18 +212,13 @@ class ApiArchiveCardWidget extends StatelessWidget {
               memCacheWidth: (width * 2).round(),
               maxWidthDiskCache: (width * 2).round(),
               fit: BoxFit.cover,
-              placeholder: (context, url) => Shimmer.fromColors(
-                baseColor: Colors.grey.shade800,
-                highlightColor: Colors.grey.shade700,
-                period: const Duration(milliseconds: 1500),
-                child: Container(
-                  width: width,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade800,
-                    borderRadius: BorderRadius.circular(borderRadius),
-                  ),
-                ),
+              // shimmer placeholder 및 에러 위젯 처리
+              // shimmer는 한번만 보여주고, 이후에는 기본 아이콘을 보여줍니다.
+              placeholder: (context, url) => ShimmerOnceThenFallbackIcon(
+                key: ValueKey('ph_${category.id}_$photoUrl'),
+                width: width,
+                height: height,
+                borderRadius: borderRadius,
               ),
               errorWidget: (context, url, error) => Container(
                 width: width,
@@ -304,26 +299,4 @@ class ApiArchiveCardWidget extends StatelessWidget {
       },
     );
   }
-}
-
-class _CategoryProfileRowData {
-  final List<String> profileUrlKeys;
-  final int totalUserCount;
-
-  const _CategoryProfileRowData({
-    required this.profileUrlKeys,
-    required this.totalUserCount,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _CategoryProfileRowData &&
-          runtimeType == other.runtimeType &&
-          totalUserCount == other.totalUserCount &&
-          listEquals(profileUrlKeys, other.profileUrlKeys);
-
-  @override
-  int get hashCode =>
-      Object.hash(totalUserCount, Object.hashAll(profileUrlKeys));
 }

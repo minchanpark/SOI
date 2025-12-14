@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../api/controller/category_controller.dart' as api_category;
 import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
+import '../../api/models/post.dart' show PostStatus;
 import 'manager/feed_audio_manager.dart';
 import 'manager/feed_data_manager.dart';
 import 'manager/voice_comment_state_manager.dart';
@@ -80,7 +82,15 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         context,
         listen: false,
       );
-      final success = await postController.deletePost(item.post.id);
+      final categoryController = Provider.of<api_category.CategoryController>(
+        context,
+        listen: false,
+      );
+      final userId = _userController?.currentUser?.id;
+      final success = await postController.setPostStatus(
+        postId: item.post.id,
+        postStatus: PostStatus.deleted,
+      );
       if (!mounted) return;
       if (success) {
         setState(() {
@@ -94,6 +104,11 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
             item.post.id,
           );
         });
+        if (userId != null) {
+          unawaited(
+            categoryController.loadCategories(userId, forceReload: true),
+          );
+        }
         _showSnackBar('사진이 삭제되었습니다.');
       } else {
         _showSnackBar('사진 삭제에 실패했습니다.', isError: true);
@@ -201,6 +216,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     unawaited(
       // 사용자 카테고리 및 사진 로드
       _feedDataManager?.loadUserCategoriesAndPhotos(context).then((_) {
+        if (!mounted) return;
         final refreshedPosts = _feedDataManager?.allPosts ?? [];
         for (final item in refreshedPosts) {
           // 각 게시물에 대한 댓글 로드

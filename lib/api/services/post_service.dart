@@ -188,7 +188,7 @@ class PostService {
   /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
-  Future<List<Post>> getMainFeedPosts({
+  Future<List<Post>> getAllPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
     int page = 0,
@@ -367,7 +367,7 @@ class PostService {
   /// 게시물 상태 변경
   ///
   /// [postId]에 해당하는 게시물의 상태를 변경합니다.
-  /// ACTIVE: 활성화, SOFTDELETE: 삭제(휴지통), INACTIVE: 비활성화
+  /// ACTIVE: 활성화, DELETED: 삭제(휴지통), INACTIVE: 비활성화
   ///
   /// Parameters:
   /// - [postId]: 게시물 ID

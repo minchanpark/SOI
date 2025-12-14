@@ -28,7 +28,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
   final Map<int, bool>? pendingTextComments;
-  final Map<int, PendingApiVoiceComment> pendingVoiceComments;
+  final Map<int, PendingApiCommentMarker> pendingVoiceComments;
 
   // 콜백 함수들
   final Function(Post) onToggleAudio;

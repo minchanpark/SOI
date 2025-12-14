@@ -23,6 +23,8 @@ class ApiPhotoGridItem extends StatefulWidget {
   final int currentIndex; // 현재 인덱스 -> 상세 화면으로 전달하기 위해 받아옵니다.
   final String categoryName; // 카테고리 이름 -> 상세 화면으로 전달하기 위해 받아옵니다.
   final int categoryId; // 카테고리 ID -> 상세 화면으로 전달하기 위해 받아옵니다.
+  final ValueChanged<List<int>>?
+  onPostsDeleted; // 사진 삭제 후 콜백 --> 삭제된 게시물 ID 리스트를 전달하는 이유는 상위 위젯에서 해당 게시물을 제거하기 위함입니다.
 
   const ApiPhotoGridItem({
     super.key,
@@ -32,6 +34,7 @@ class ApiPhotoGridItem extends StatefulWidget {
     required this.currentIndex,
     required this.categoryName,
     required this.categoryId,
+    this.onPostsDeleted,
   });
 
   @override
@@ -260,7 +263,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     return GestureDetector(
       onTap: () {
         // API 버전의 PhotoDetailScreen으로 이동
-        Navigator.push(
+        Navigator.push<List<int>>(
           context,
           MaterialPageRoute(
             builder: (_) => ApiPhotoDetailScreen(
@@ -270,7 +273,10 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
               categoryId: widget.categoryId,
             ),
           ),
-        );
+        ).then((deletedPostIds) {
+          if (deletedPostIds == null || deletedPostIds.isEmpty) return;
+          widget.onPostsDeleted?.call(deletedPostIds);
+        });
       },
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -386,11 +392,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     return Container(
       color: Colors.grey.shade800,
       alignment: Alignment.center,
-      child: Icon(
-        Icons.image,
-        color: Colors.grey.shade600,
-        size: 32.sp,
-      ),
+      child: Icon(Icons.image, color: Colors.grey.shade600, size: 32.sp),
     );
   }
 

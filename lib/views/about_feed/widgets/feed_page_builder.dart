@@ -12,7 +12,7 @@ class FeedPageBuilder extends StatelessWidget {
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
   final Map<int, bool> pendingTextComments;
-  final Map<int, PendingApiVoiceComment> pendingVoiceComments;
+  final Map<int, PendingApiCommentMarker> pendingVoiceComments;
   final Function(FeedPostItem) onToggleAudio;
   final Function(int) onToggleVoiceComment;
   final Future<void> Function(int, String?, List<double>?, int?)

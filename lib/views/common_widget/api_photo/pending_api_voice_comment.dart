@@ -1,37 +1,21 @@
 import 'dart:ui';
 
-/// API 버전 Pending 음성/텍스트 댓글 상태
-class PendingApiVoiceComment {
-  final String? audioPath;
-  final List<double>? waveformData;
-  final int? duration;
-  final String? text;
-  final bool isTextComment;
-  final Offset? relativePosition;
-  final int? recorderUserId;
-  final String? profileImageUrl;
+/// API 버전 pending 댓글 "마커" 데이터 (UI 표시에 필요한 최소 정보)
+/// - 사진 위에 프로필 태그를 띄우기 위한 위치/프로필 키만 보관합니다.
+typedef PendingApiCommentMarker = ({
+  Offset relativePosition,
+  String? profileImageUrlKey,
+  double? progress,
+});
 
-  const PendingApiVoiceComment({
-    this.audioPath,
-    this.waveformData,
-    this.duration,
-    this.text,
-    this.isTextComment = false,
-    this.relativePosition,
-    this.recorderUserId,
-    this.profileImageUrl,
-  });
-
-  PendingApiVoiceComment copyWith({Offset? relativePosition}) {
-    return PendingApiVoiceComment(
-      audioPath: audioPath,
-      waveformData: waveformData,
-      duration: duration,
-      text: text,
-      isTextComment: isTextComment,
-      relativePosition: relativePosition ?? this.relativePosition,
-      recorderUserId: recorderUserId,
-      profileImageUrl: profileImageUrl,
-    );
-  }
-}
+/// API 버전 pending 댓글 "작성 초안" 데이터 (서버 저장에 필요한 최소 정보)
+/// - UI 마커 위치는 [PendingApiCommentMarker]로 별도 관리합니다.
+typedef PendingApiCommentDraft = ({
+  bool isTextComment,
+  String? text,
+  String? audioPath,
+  List<double>? waveformData,
+  int? duration,
+  int recorderUserId,
+  String? profileImageUrlKey,
+});

@@ -125,7 +125,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
     setState(() => _isLoadingFriends = true);
 
     try {
-      final categoryController = context.read<api_category.CategoryController>();
+      final categoryController = context
+          .read<api_category.CategoryController>();
       final userController = context.read<UserController>();
       final mediaController = context.read<MediaController>();
 
@@ -144,12 +145,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
 
       final futures = <Future<CategoryMemberViewModel>>[];
       for (int i = 0; i < nicknames.length; i++) {
-        futures.add(_buildMemberViewModel(
-          nickname: nicknames[i],
-          profileKey: i < profileKeys.length ? profileKeys[i] : null,
-          userController: userController,
-          mediaController: mediaController,
-        ));
+        futures.add(
+          _buildMemberViewModel(
+            nickname: nicknames[i],
+            profileKey: i < profileKeys.length ? profileKeys[i] : null,
+            userController: userController,
+            mediaController: mediaController,
+          ),
+        );
       }
 
       final resolvedMembers = await Future.wait(futures);
@@ -189,8 +192,10 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         ? user.name
         : nickname;
     final subtitle = user?.userId ?? nickname;
+    final resolvedUserId = user?.id ?? int.tryParse(nickname);
 
     return CategoryMemberViewModel(
+      userId: resolvedUserId,
       displayName: displayName,
       profileImageUrl: profileUrl,
       subtitle: subtitle,
@@ -265,9 +270,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                               _isExpanded = false;
                             });
                           },
-                          onFriendAdded: () => _navigateToAddFriends(
-                            currentCategory,
-                          ),
+                          onFriendAdded: () =>
+                              _navigateToAddFriends(currentCategory),
                         )
                       : AddFriendButton(
                           onPressed: () async {
@@ -529,7 +533,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         return;
       }
 
-      final categoryController = context.read<api_category.CategoryController>();
+      final categoryController = context
+          .read<api_category.CategoryController>();
       final success = await categoryController.updateCustomProfile(
         categoryId: widget.category.id,
         userId: currentUser.id,
@@ -537,9 +542,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       );
 
       if (!success) {
-        _showSnackBar(
-          categoryController.errorMessage ?? '표지사진 변경에 실패했습니다.',
-        );
+        _showSnackBar(categoryController.errorMessage ?? '표지사진 변경에 실패했습니다.');
         return;
       }
 
@@ -560,7 +563,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         return;
       }
 
-      final categoryController = context.read<api_category.CategoryController>();
+      final categoryController = context
+          .read<api_category.CategoryController>();
       final success = await categoryController.updateCustomProfile(
         categoryId: widget.category.id,
         userId: currentUser.id,
@@ -568,9 +572,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       );
 
       if (!success) {
-        _showSnackBar(
-          categoryController.errorMessage ?? '표지사진 삭제에 실패했습니다.',
-        );
+        _showSnackBar(categoryController.errorMessage ?? '표지사진 삭제에 실패했습니다.');
         return;
       }
 
@@ -582,11 +584,20 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
   }
 
   Future<void> _navigateToAddFriends(Category category) async {
+    final existingMemberUids = _members
+        .map((member) => member.userId)
+        .whereType<int>()
+        .map((id) => id.toString())
+        .toList(growable: false);
+
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => FriendListAddScreen(
           categoryId: category.id.toString(),
-          categoryMemberUids: category.nickNames,
+          categoryMemberUids: existingMemberUids.isNotEmpty
+              ? existingMemberUids
+              : category.nickNames,
+          allowDeselection: false,
         ),
       ),
     );

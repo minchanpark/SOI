@@ -160,11 +160,13 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
   /// 삭제 액션 처리
   void _handleDeleteAction() {
     _closeMenu();
-    _showDeleteConfirmation();
+    _showDeleteConfirmation(() {
+      widget.onDeletePressed?.call();
+    });
   }
 
   /// 삭제 확인 바텀시트 표시
-  Future<void> _showDeleteConfirmation() async {
+  Future<void> _showDeleteConfirmation(VoidCallback? onDeletePressed) async {
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -208,7 +210,10 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
                 height: 38.h,
                 width: 344.w,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop(true);
+                    onDeletePressed?.call();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xfff5f5f5),
                     foregroundColor: Colors.black,

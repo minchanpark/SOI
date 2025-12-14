@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 
 import 'category_invitee_preview.dart';
 
+/// 카테고리 초대 친구 목록 시트
 class CategoryInviteFriendListSheet extends StatelessWidget {
   final List<CategoryInviteePreview> invitees;
   final ValueChanged<CategoryInviteePreview>? onInviteeTap;
@@ -85,10 +86,9 @@ class CategoryInviteFriendListSheet extends StatelessWidget {
                         fontWeight: FontWeight.w300,
                       ),
                     ),
-                    onTap:
-                        onInviteeTap != null
-                            ? () => onInviteeTap!(invitee)
-                            : null,
+                    onTap: onInviteeTap != null
+                        ? () => onInviteeTap!(invitee)
+                        : null,
                   );
                 },
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -115,17 +115,16 @@ class _FriendAvatar extends StatelessWidget {
       height: 44,
       decoration: const BoxDecoration(shape: BoxShape.circle),
       child: ClipOval(
-        child:
-            imageUrl.isNotEmpty
-                ? CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  memCacheWidth: (44 * 4).round(),
-                  maxWidthDiskCache: (44 * 4).round(),
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => _shimmerPlaceholder(),
-                  errorWidget: (context, url, error) => _placeholder(),
-                )
-                : _placeholder(),
+        child: imageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                memCacheWidth: (44 * 4).round(),
+                maxWidthDiskCache: (44 * 4).round(),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _shimmerPlaceholder(),
+                errorWidget: (context, url, error) => _placeholder(),
+              )
+            : _placeholder(),
       ),
     );
   }

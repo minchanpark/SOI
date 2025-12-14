@@ -29,7 +29,10 @@ class VoiceCommentStateManager {
   static const int _kMaxWaveformSamples = 30;
   final Map<int, bool> _voiceCommentActiveStates = {};
   final Map<int, bool> _voiceCommentSavedStates = {};
-  final Map<int, PendingApiVoiceComment> _pendingVoiceComments = {};
+  final Map<int, PendingApiCommentDraft> _pendingCommentDrafts =
+      {}; // 임시 댓글 초안 저장
+  final Map<int, PendingApiCommentMarker> _pendingCommentMarkers =
+      {}; // UI 마커용 최소 데이터 저장
   final Map<int, List<Comment>> _postComments = {};
   final Map<int, bool> _pendingTextComments = {};
   final Map<int, int> _autoPlacementIndices = {};
@@ -38,8 +41,8 @@ class VoiceCommentStateManager {
 
   Map<int, bool> get voiceCommentActiveStates => _voiceCommentActiveStates;
   Map<int, bool> get voiceCommentSavedStates => _voiceCommentSavedStates;
-  Map<int, PendingApiVoiceComment> get pendingVoiceComments =>
-      _pendingVoiceComments;
+  Map<int, PendingApiCommentMarker> get pendingVoiceComments =>
+      _pendingCommentMarkers;
   Map<int, List<Comment>> get postComments => _postComments;
   Map<int, bool> get pendingTextComments => _pendingTextComments;
 
@@ -99,12 +102,15 @@ class VoiceCommentStateManager {
       return;
     }
 
-    // 텍스트 댓글 대기 상태 설정
-    _pendingVoiceComments[postId] = PendingApiVoiceComment(
-      text: text.trim(),
+    // 텍스트 댓글 초안 저장 (위치는 드래그로 별도 저장)
+    _pendingCommentDrafts[postId] = (
       isTextComment: true,
+      text: text.trim(),
+      audioPath: null,
+      waveformData: null,
+      duration: null,
       recorderUserId: currentUser.id,
-      profileImageUrl: currentUser.profileImageUrlKey,
+      profileImageUrlKey: currentUser.profileImageUrlKey,
     );
 
     // 텍스트 댓글 대기 상태 설정
@@ -135,13 +141,15 @@ class VoiceCommentStateManager {
       return;
     }
 
-    // 음성 댓글 대기 상태 설정
-    _pendingVoiceComments[postId] = PendingApiVoiceComment(
+    // 음성 댓글 초안 저장 (위치는 드래그로 별도 저장)
+    _pendingCommentDrafts[postId] = (
+      isTextComment: false,
+      text: null,
       audioPath: audioPath,
       waveformData: waveformData,
       duration: duration,
       recorderUserId: currentUser.id,
-      profileImageUrl: currentUser.profileImageUrlKey,
+      profileImageUrlKey: currentUser.profileImageUrlKey,
     );
 
     // 저장된 댓글 상태 업데이트
@@ -164,50 +172,43 @@ class VoiceCommentStateManager {
       imageSize,
     );
 
-    // 대기 중인 댓글의 위치 업데이트
-    final pending = _pendingVoiceComments[postId];
-    if (pending != null) {
-      _pendingVoiceComments[postId] = pending.copyWith(
-        relativePosition: relativePosition,
-      );
+    final draft = _pendingCommentDrafts[postId];
+    if (draft == null) return;
 
-      // 상태 변경 알림
-      _notifyStateChanged();
-    }
+    // UI 마커에 필요한 최소 데이터만 저장
+    final previousProgress = _pendingCommentMarkers[postId]?.progress;
+    _pendingCommentMarkers[postId] = (
+      relativePosition: relativePosition,
+      profileImageUrlKey: draft.profileImageUrlKey,
+      progress: previousProgress,
+    );
+
+    _notifyStateChanged();
   }
 
   /// 음성/텍스트 댓글을 서버에 저장하는 메서드
   Future<void> saveVoiceComment(int postId, BuildContext context) async {
-    // 대기 중인 댓글 가져오기
-    final pending = _pendingVoiceComments[postId];
-    if (pending == null) {
+    final draft = _pendingCommentDrafts[postId];
+    if (draft == null) {
       throw StateError('임시 댓글을 찾을 수 없습니다. postId: $postId');
     }
 
     // 로그인된 사용자 ID 가져오기
-    final userId = pending.recorderUserId;
-    if (userId == null) {
-      throw StateError('로그인된 사용자를 찾을 수 없습니다.');
-    }
+    final userId = draft.recorderUserId;
 
     // 최종 위치 결정
     final finalPosition =
-        pending.relativePosition ?? _generateAutoProfilePosition(postId);
+        _pendingCommentMarkers[postId]?.relativePosition ??
+        _generateAutoProfilePosition(postId);
 
-    // 최종 위치가 지정되지 않은 경우 자동 배치 위치 생성
-    final pendingCopy = PendingApiVoiceComment(
-      audioPath: pending.audioPath,
-      waveformData: pending.waveformData,
-      duration: pending.duration,
-      text: pending.text,
-      isTextComment: pending.isTextComment,
+    // 저장 중에도 UI 마커가 유지되도록 최종 위치를 마커에 기록
+    _pendingCommentMarkers[postId] = (
       relativePosition: finalPosition,
-      recorderUserId: pending.recorderUserId,
-      profileImageUrl: pending.profileImageUrl,
+      profileImageUrlKey: draft.profileImageUrlKey,
+      progress: 0.0,
     );
 
     _voiceCommentSavedStates[postId] = true;
-    _pendingVoiceComments[postId] = pendingCopy;
     _pendingTextComments.remove(postId);
     _voiceCommentActiveStates[postId] = false;
     _notifyStateChanged();
@@ -215,10 +216,12 @@ class VoiceCommentStateManager {
     // 비동기적으로 서버에 댓글 저장
     // UI 스레드를 차단하지 않도록 함
     Future.microtask(() async {
+      _updatePendingProgress(postId, 0.05);
       final didSave = await _saveCommentToServer(
         postId,
         userId,
-        pendingCopy,
+        draft,
+        finalPosition,
         context,
       );
 
@@ -228,19 +231,32 @@ class VoiceCommentStateManager {
         return;
       }
 
-      // 저장이 성공하면 대기 중인 댓글 제거
-      _pendingVoiceComments.remove(postId);
+      _pendingCommentDrafts.remove(postId);
+      _pendingCommentMarkers.remove(postId);
 
       // 상태 변경 알림
       _notifyStateChanged();
     });
   }
 
+  void _updatePendingProgress(int postId, double progress) {
+    final marker = _pendingCommentMarkers[postId];
+    if (marker == null) return;
+    final clamped = progress.clamp(0.0, 1.0).toDouble();
+    _pendingCommentMarkers[postId] = (
+      relativePosition: marker.relativePosition,
+      profileImageUrlKey: marker.profileImageUrlKey,
+      progress: clamped,
+    );
+    _notifyStateChanged();
+  }
+
   /// 댓글을 서버에 저장하는 내부 메서드
   Future<bool> _saveCommentToServer(
     int postId,
     int userId,
-    PendingApiVoiceComment pending,
+    PendingApiCommentDraft pending,
+    Offset relativePosition,
     BuildContext context,
   ) async {
     try {
@@ -255,13 +271,15 @@ class VoiceCommentStateManager {
 
       if (pending.isTextComment && pending.text != null) {
         // 텍스트 댓글 저장하고 그 결과를 success에 할당
+        _updatePendingProgress(postId, 0.4);
         creationResult = await commentController.createTextComment(
           postId: postId,
           userId: userId,
           text: pending.text!,
-          locationX: pending.relativePosition!.dx,
-          locationY: pending.relativePosition!.dy,
+          locationX: relativePosition.dx,
+          locationY: relativePosition.dy,
         );
+        _updatePendingProgress(postId, 0.85);
       } else if (pending.audioPath != null) {
         // media 컨트롤러 가져오기
         final mediaController = Provider.of<api_media.MediaController>(
@@ -269,12 +287,15 @@ class VoiceCommentStateManager {
           listen: false,
         );
         // 오디오 파일 객체 생성 --> Stirng으로 되어있는 경로를 File 객체로 변환
+        _updatePendingProgress(postId, 0.15);
         final audioFile = File(pending.audioPath!);
 
         // 파일을 멀티파트로 변환 --> 서버 업로드를 위해
+        _updatePendingProgress(postId, 0.25);
         final multipartFile = await mediaController.fileToMultipart(audioFile);
 
         // 오디오 업로드하고 그 키를 받아옴
+        _updatePendingProgress(postId, 0.35);
         final audioKey = await mediaController.uploadCommentAudio(
           file: multipartFile,
           userId: userId,
@@ -291,21 +312,25 @@ class VoiceCommentStateManager {
         }
 
         // 파형 데이터를 JSON 문자열로 변환 (서버 제한을 고려해 축소)
+        _updatePendingProgress(postId, 0.75);
         final waveformJson = _encodeWaveformForRequest(pending.waveformData);
 
         // 오디오 댓글 생성하고 그 결과를 success에 할당
+        _updatePendingProgress(postId, 0.85);
         creationResult = await commentController.createAudioComment(
           postId: postId,
           userId: userId,
           audioFileKey: audioKey,
           waveformData: waveformJson!,
           duration: pending.duration!,
-          locationX: pending.relativePosition!.dx,
-          locationY: pending.relativePosition!.dy,
+          locationX: relativePosition.dx,
+          locationY: relativePosition.dy,
         );
+        _updatePendingProgress(postId, 0.95);
       }
 
       if (creationResult.success) {
+        _updatePendingProgress(postId, 1.0);
         if (creationResult.comment != null) {
           _addCommentToCache(postId, creationResult.comment!);
         } else {
@@ -346,7 +371,6 @@ class VoiceCommentStateManager {
   /// 음성/텍스트 댓글이 저장이 완료되었을 때 호출되는 메서드
   void onSaveCompleted(int postId) {
     _voiceCommentActiveStates[postId] = false;
-    _clearPendingState(postId);
     _notifyStateChanged();
   }
 
@@ -364,9 +388,9 @@ class VoiceCommentStateManager {
     }
 
     // 현재 대기 중인 댓글의 위치도 포함
-    final pending = _pendingVoiceComments[postId];
-    if (pending?.relativePosition != null) {
-      occupiedPositions.add(pending!.relativePosition!);
+    final pending = _pendingCommentMarkers[postId];
+    if (pending != null) {
+      occupiedPositions.add(pending.relativePosition);
     }
 
     // 자동 배치 패턴
@@ -440,14 +464,16 @@ class VoiceCommentStateManager {
   }
 
   void dispose() {
-    _pendingVoiceComments.clear();
+    _pendingCommentDrafts.clear();
+    _pendingCommentMarkers.clear();
     _pendingTextComments.clear();
     _postComments.clear();
   }
 
   void _clearPendingState(int postId) {
-    _pendingVoiceComments.remove(postId);
-    _pendingTextComments.remove(postId);
+    _pendingCommentDrafts.remove(postId); // 임시 댓글 초안 삭제
+    _pendingCommentMarkers.remove(postId); // UI 마커용 데이터 삭제
+    _pendingTextComments.remove(postId); // 대기 중인 텍스트 댓글 상태 삭제
   }
 
   // 음성 파형 데이터를 서버 요청용으로 인코딩

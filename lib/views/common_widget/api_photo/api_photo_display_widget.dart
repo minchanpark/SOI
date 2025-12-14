@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -15,7 +16,6 @@ import '../../../api/models/comment.dart';
 import '../../../api/models/post.dart';
 import '../../../utils/position_converter.dart';
 import '../../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
-import '../../common_widget/abput_photo/category_label_widget.dart';
 import '../../common_widget/abput_photo/first_line_ellipsis_text.dart';
 import 'api_audio_control_widget.dart';
 import 'api_voice_comment_list_sheet.dart';
@@ -46,7 +46,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final Map<int, List<Comment>> postComments;
   final Function(int, Offset) onProfileImageDragged;
   final Function(Post) onToggleAudio;
-  final Map<int, PendingApiVoiceComment> pendingVoiceComments;
+  final Map<int, PendingApiCommentMarker> pendingVoiceComments;
   final Future<void> Function(int postId)? onCommentsReloadRequested;
 
   const ApiPhotoDisplayWidget({
@@ -73,6 +73,21 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
 
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    // Avoid mutating the element/render tree during layout/paint/semantics work.
+    if (phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(fn);
+      });
+      return;
+    }
+    setState(fn);
+  }
+
   String? _selectedCommentKey;
   int? _selectedCommentId;
   Offset? _selectedCommentPosition;
@@ -87,6 +102,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   /// 댓글 목록을 해당 게시물 ID로부터 가져오는 getter
   List<Comment> get _postComments =>
       widget.postComments[widget.post.id] ?? const <Comment>[];
+
+  /// 대기 중인 음성 댓글의 마커 존재 여부를 체크해서 return하는 getter
+  /// 대기 중인 음성 댓글이 있으면 true, 없으면 false 반환
+  bool get _hasPendingMarker {
+    final pending = widget.pendingVoiceComments[widget.post.id];
+    return pending != null;
+  }
 
   /// 댓글 존재 여부를 체크해서 return하는 getter
   bool get _hasComments => _postComments.isNotEmpty;
@@ -119,7 +141,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this); // 앱의 라이프사이클의 변화를 감지하기 위해 옵저버 등록
-    _isShowingComments = _hasComments; // 댓글이 있으면 댓글 표시
+    _isShowingComments =
+        _hasComments || _hasPendingMarker; // 댓글/대기 마커가 있으면 댓글 표시
     _mediaController = Provider.of<MediaController>(
       context,
       listen: false,
@@ -142,7 +165,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      _pauseVideo();
+      _pauseVideo(); // 앱이 백그라운드로 전환될 때 비디오 일시정지
     }
   }
 
@@ -161,6 +184,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       setState(() {
         _isShowingComments = true;
         _autoOpenedOnce = true;
+      });
+    }
+
+    // 대기 중인 프로필 태그가 생기면(첫 댓글 포함) 즉시 표시하도록 한다.
+    if (_hasPendingMarker && !_isShowingComments) {
+      setState(() {
+        _isShowingComments = true;
       });
     }
     // 프로필 이미지 키가 변경되었는지 확인
@@ -191,7 +221,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   Future<void> _loadPostImage(String key) async {
     // 키가 비어있는 경우 처리
     if (widget.post.postFileKey == null || widget.post.postFileKey!.isEmpty) {
-      setState(() {
+      _safeSetState(() {
         // 이미지 URL을 null로 설정
         postImageUrl = null;
       });
@@ -202,7 +232,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       // 미디어 컨트롤러를 사용하여 presignedURL 가져오기
       final url = await _mediaController.getPresignedUrl(key);
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         // 가지고 온 URL을 postImageUrl에 설정
         postImageUrl = url;
       });
@@ -211,7 +241,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       _ensureVideoController();
     } catch (_) {
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         // 오류 발생 시 이미지 URL을 null로 설정
         postImageUrl = null;
       });
@@ -260,7 +290,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         await controller.play();
       }
       // 상태 업데이트
-      if (mounted) setState(() {});
+      _safeSetState(() {});
     });
   }
 
@@ -357,7 +387,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   Future<void> _loadProfileImage(String? key) async {
     // 키가 없거나 비어있는 경우 처리
     if (key == null || key.isEmpty) {
-      setState(() {
+      _safeSetState(() {
         // 프로필 이미지 URL을 null로 설정
         _uploaderProfileImageUrl = null;
         _isProfileLoading = false;
@@ -365,17 +395,17 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       return;
     }
 
-    setState(() => _isProfileLoading = true);
+    _safeSetState(() => _isProfileLoading = true);
     try {
       final url = await _mediaController.getPresignedUrl(key);
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         _uploaderProfileImageUrl = url;
         _isProfileLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
+      _safeSetState(() {
         _uploaderProfileImageUrl = null;
         _isProfileLoading = false;
       });
@@ -571,13 +601,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   /// 업로드 중인 음성 댓글 마커 빌드
   Widget? _buildPendingMarker() {
     final pending = widget.pendingVoiceComments[widget.post.id];
-    if (pending == null || pending.relativePosition == null) {
+    if (pending == null) {
       return null;
     }
 
     final actualSize = Size(_imageWidth.w, _imageHeight.h);
     final absolute = PositionConverter.toAbsolutePosition(
-      pending.relativePosition!,
+      pending.relativePosition,
       actualSize,
     );
     final clamped = PositionConverter.clampPosition(absolute, actualSize);
@@ -586,13 +616,41 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       left: clamped.dx - _avatarRadius,
       top: clamped.dy - _avatarRadius,
       child: IgnorePointer(
-        child: _buildCircleAvatar(
-          imageUrl: pending.profileImageUrl,
+        child: _buildPendingProgressAvatar(
+          imageUrl: pending.profileImageUrlKey,
           size: _avatarSize,
-          showBorder: true,
-          borderColor: Colors.greenAccent,
+          progress: pending.progress,
           opacity: 0.85,
         ),
+      ),
+    );
+  }
+
+  Widget _buildPendingProgressAvatar({
+    required String? imageUrl,
+    required double size,
+    required double? progress,
+    double opacity = 1.0,
+  }) {
+    final ringSize = size + 6.0;
+    return SizedBox(
+      width: ringSize,
+      height: ringSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: ringSize,
+            height: ringSize,
+            child: CircularProgressIndicator(
+              value: progress?.clamp(0.0, 1.0),
+              strokeWidth: 2.2,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+              backgroundColor: Colors.transparent,
+            ),
+          ),
+          _buildCircleAvatar(imageUrl: imageUrl, size: size, opacity: opacity),
+        ],
       ),
     );
   }
@@ -824,15 +882,15 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 1.0),
-            offset: const Offset(0, 10),
+          /* BoxShadow(
+            //color: Colors.black.withValues(alpha: 1.0),
+            //offset: const Offset(0, 10),
             blurRadius: 18,
             spreadRadius: -8,
-          ),
+          ),*/
           BoxShadow(
-            //color: Colors.white.withValues(alpha: 0.06),
-            offset: const Offset(0, -2),
+            color: Colors.white.withValues(alpha: 1.0),
+            //offset: const Offset(0, -2),
             blurRadius: 6,
             spreadRadius: -2,
           ),
@@ -864,7 +922,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       _dismissOverlay();
       return;
     }
-    if (_hasComments) {
+    if (_hasComments || _hasPendingMarker) {
       setState(() {
         _isShowingComments = !_isShowingComments;
       });
@@ -996,8 +1054,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
 
   @override
   Widget build(BuildContext context) {
+    final categoryTrimmed = widget.categoryName.trim();
+    final isEnglishCategory = categoryTrimmed.isNotEmpty &&
+        RegExp(r'^[A-Za-z\s]+$').hasMatch(categoryTrimmed);
     final waveformData = _parseWaveformData(widget.post.waveformData);
-    final pendingMarker = _isShowingComments ? _buildPendingMarker() : null;
+    final pendingMarker = _buildPendingMarker();
     final deletePopup = _showActionOverlay ? _buildDeleteActionPopup() : null;
 
     return Center(
@@ -1042,15 +1103,43 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                           ),
                         ),
 
-                      // 카테고리 라벨
-                      if (!widget.isArchive)
-                        Positioned(
-                          top: 11.h,
-                          child: CategoryLabelWidget(
-                            categoryName: widget.categoryName,
-                            onTap: _navigateToCategory,
-                          ),
-                        ),
+	                      // 카테고리 라벨
+	                      if (!widget.isArchive)
+	                        Positioned(
+	                          top: 11.h,
+	                          child: GestureDetector(
+	                            onTap: _navigateToCategory,
+	                            child: IntrinsicWidth(
+	                              child: Container(
+	                                height: 25,
+	                                padding: EdgeInsets.only(
+	                                  left: 16.w,
+	                                  right: 16.w,
+	                                  top: isEnglishCategory ? 0 : 2.h,
+	                                  bottom: isEnglishCategory ? 2.h : 0,
+	                                ),
+	                                decoration: BoxDecoration(
+	                                  color: Colors.black.withValues(alpha: 0.5),
+	                                  borderRadius: BorderRadius.circular(16),
+	                                ),
+	                                alignment: Alignment.center,
+	                                child: Text(
+	                                  widget.categoryName,
+	                                  style: TextStyle(
+	                                    color:
+	                                        Colors.white.withValues(alpha: 0.9),
+	                                    fontSize: 16,
+	                                    fontWeight: FontWeight.w600,
+	                                    fontFamily: 'Pretendard',
+	                                  ),
+	                                  overflow: TextOverflow.ellipsis,
+	                                  maxLines: 1,
+	                                  textAlign: TextAlign.center,
+	                                ),
+	                              ),
+	                            ),
+	                          ),
+	                        ),
 
                       // 오디오 컨트롤 위젯
                       if (widget.post.hasAudio)
@@ -1061,7 +1150,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                           child: ApiAudioControlWidget(
                             post: widget.post,
                             waveformData: waveformData,
-                            onPressed: () => widget.onToggleAudio(widget.post),
                           ),
                         ),
                       if (_hasComments)

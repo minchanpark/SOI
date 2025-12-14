@@ -377,6 +377,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             currentIndex: index,
             categoryName: _currentCategory.name,
             categoryId: _currentCategory.id,
+            onPostsDeleted: (_) => _onRefresh(), // 사진 삭제 후 새로고침
           );
         },
       ),

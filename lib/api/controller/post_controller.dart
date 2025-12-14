@@ -150,7 +150,7 @@ class PostController extends ChangeNotifier {
   /// - [page]: 페이지 번호 (기본값: 0)
   ///
   /// Returns: 게시물 목록 (List of Post)
-  Future<List<Post>> getMainFeedPosts({
+  Future<List<Post>> getAllPosts({
     required int userId,
     PostStatus postStatus = PostStatus.active,
     int page = 0,
@@ -159,7 +159,7 @@ class PostController extends ChangeNotifier {
     _clearError();
 
     try {
-      final posts = await _postService.getMainFeedPosts(
+      final posts = await _postService.getAllPosts(
         userId: userId,
         postStatus: postStatus,
         page: page,
@@ -287,7 +287,8 @@ class PostController extends ChangeNotifier {
   // ============================================
 
   /// 게시물 상태 변경
-  /// [postId]에 해당하는 게시물의 상태를 변경합니다.
+  /// - 게시물 삭제는 이 메소드를 사용해서 수행합니다.
+  /// - 게시물 영구 삭제는 30일 후, 서버에서 자동으로 처리됩니다.
   ///
   /// Parameters:
   ///   - [postId]: 게시물 ID
