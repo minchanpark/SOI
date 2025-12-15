@@ -48,16 +48,27 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
     }
   }
 
-  Future<void> _shareInviteLink() async {
+  Future<void> _shareInviteLink(BuildContext context) async {
     try {
+      // iPad에서 공유 시트의 위치를 지정하기 위해 필요
+      final box = context.findRenderObject() as RenderBox?;
+      final sharePositionOrigin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+
       await SharePlus.instance.share(
-        ShareParams(text: _inviteMessage, subject: 'SOI 친구 초대'),
+        ShareParams(
+          text: _inviteMessage,
+          subject: 'SOI 친구 초대',
+          sharePositionOrigin: sharePositionOrigin,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('링크를 공유할 수 없습니다: $e')));
+      debugPrint("링크 공유 실패: $e");
     }
   }
 
@@ -171,45 +182,47 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                   ),
 
                   SizedBox(height: 27.h),
-                  ElevatedButton(
-                    onPressed: _shareInviteLink,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(
-                        Color(0xFF303030),
-                      ),
-                      padding: WidgetStateProperty.all(EdgeInsets.zero),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(33.31),
+                  Builder(
+                    builder: (buttonContext) => ElevatedButton(
+                      onPressed: () => _shareInviteLink(buttonContext),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(
+                          Color(0xFF303030),
+                        ),
+                        padding: WidgetStateProperty.all(EdgeInsets.zero),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(33.31),
+                          ),
+                        ),
+                        overlayColor: WidgetStateProperty.all(
+                          Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
-                      overlayColor: WidgetStateProperty.all(
-                        Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: 185.w,
-                      height: 44,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/icon_share.png',
-                            width: 23.w,
-                            height: 23.h,
-                          ),
-                          SizedBox(width: 11.5.w),
-                          Text(
-                            '친구 링크 공유',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
+                      child: SizedBox(
+                        width: 185.w,
+                        height: 44,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/icon_share.png',
+                              width: 23.w,
+                              height: 23.h,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 11.5.w),
+                            Text(
+                              '친구 링크 공유',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
