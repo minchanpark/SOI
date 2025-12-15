@@ -9,8 +9,8 @@ import 'package:provider/provider.dart';
 import '../../api_firebase/controllers/auth_controller.dart';
 import '../../api_firebase/controllers/notification_controller.dart';
 import '../../api/services/camera_service.dart';
-import 'widgets/circular_video_progress_indicator.dart';
 import 'widgets/camera_app_bar.dart';
+import 'widgets/camera_capture_button.dart';
 import 'widgets/camera_preview_container.dart';
 import 'widgets/camera_zoom_controls.dart';
 import 'widgets/gallery_thumbnail.dart';
@@ -19,7 +19,9 @@ import 'photo_editor_screen.dart';
 enum _PendingVideoAction { none, stop, cancel }
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  const CameraScreen({super.key, this.isActive = true});
+
+  final bool isActive;
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -36,7 +38,7 @@ class _CameraScreenState extends State<CameraScreen>
   ];
 
   // Swift와 통신할 플랫폼 채널
-  final CameraService _cameraService = CameraService();
+  final CameraService _cameraService = CameraService.instance;
 
   // 플래시 상태 추적
   bool isFlashOn = false;
@@ -85,6 +87,8 @@ class _CameraScreenState extends State<CameraScreen>
 
   String? _videoPath;
   bool _isNavigatingToEditor = false;
+  bool _cameraSwitchInFlight = false; // 카메라 전환 중 상태
+  double _cameraSwitchTurns = 0; // 카메라 전환 애니메이션 회전 값
 
   // 0.0 ~ 1.0을 기준으로 두고, 30초로 나누어 증가시킴
   // ValueNotifier로 변경하여 Progress 업데이트 시 전체 위젯 리빌드 방지
@@ -107,15 +111,35 @@ class _CameraScreenState extends State<CameraScreen>
     // 앱 라이프사이클 옵저버 등록
     WidgetsBinding.instance.addObserver(this);
 
-    // 카메라 초기화를 지연시킴 (첫 빌드에서 UI 블로킹 방지)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // FutureBuilder 연동을 위해 Future 보관
+    if (widget.isActive) {
+      // 비동기 카메라 초기화 시작
       _cameraInitialization = _initializeCameraAsync();
+    } else {
+      // 비활성 상태에서는 세션만 준비
+      unawaited(_cameraService.prepareSessionIfPermitted());
+    }
 
-      // 알림 초기화는 전환에 영향 없도록 지연 실행
-      // microtask로 실행하여 다른 작업과 상관없이 실행되도록 한다.
-      Future.microtask(_initializeNotifications);
-    });
+    Future.microtask(_initializeNotifications);
+  }
+
+  @override
+  void didUpdateWidget(covariant CameraScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!oldWidget.isActive && widget.isActive) {
+      if (_isInitialized) {
+        // 초기화되면 카메라 세션 재개
+        unawaited(_cameraService.resumeCamera());
+      } else {
+        // 아직 초기화되지 않은 경우 초기화 시작
+        _cameraInitialization ??= _initializeCameraAsync();
+      }
+      return;
+    }
+
+    if (oldWidget.isActive && !widget.isActive) {
+      unawaited(_cameraService.pauseCamera());
+    }
   }
 
   // 비동기 카메라 초기화
@@ -309,6 +333,8 @@ class _CameraScreenState extends State<CameraScreen>
     // 앱 라이프사이클 옵저버 해제
     WidgetsBinding.instance.removeObserver(this);
 
+    unawaited(_cameraService.pauseCamera());
+
     _videoRecordedSubscription?.cancel();
     _videoErrorSubscription?.cancel();
 
@@ -332,7 +358,7 @@ class _CameraScreenState extends State<CameraScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 앱이 다시 활성화될 때 카메라 세션 복구
     if (state == AppLifecycleState.resumed) {
-      if (_isInitialized) {
+      if (_isInitialized && widget.isActive) {
         _cameraService.resumeCamera();
 
         // 갤러리 미리보기 새로고침 (다른 앱에서 사진을 찍었을 수 있음)
@@ -380,13 +406,8 @@ class _CameraScreenState extends State<CameraScreen>
       return;
     }
 
+    final stopwatch = Stopwatch()..start();
     try {
-      // iOS에서 오디오 세션 충돌 방지를 위한 사전 처리
-      if (Theme.of(context).platform == TargetPlatform.iOS) {
-        // iOS 플랫폼에서만 실행 - 잠시 대기하여 오디오 세션 정리
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
       final String result = await _cameraService.takePicture();
 
       if (result.isEmpty || !mounted) {
@@ -418,6 +439,9 @@ class _CameraScreenState extends State<CameraScreen>
 
       // 사진 촬영 후 갤러리 미리보기 새로고침 (백그라운드에서)
       Future.microtask(() => _loadFirstGalleryImage());
+      debugPrint(
+        'CameraScreen._takePicture end-to-end=${stopwatch.elapsedMilliseconds}ms',
+      );
     } on PlatformException catch (e) {
       // iOS에서 "Cannot Record" 오류가 발생한 경우 추가 정보 제공
       if (e.message?.contains("Cannot Record") == true) {
@@ -622,6 +646,31 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  Future<void> _onSwitchCameraPressed() async {
+    if (_cameraSwitchInFlight) {
+      return;
+    }
+
+    if (_isVideoRecording && !_supportsLiveSwitch) {
+      return;
+    }
+
+    setState(() {
+      _cameraSwitchInFlight = true;
+      _cameraSwitchTurns += 1;
+    });
+
+    try {
+      await _switchCamera();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _cameraSwitchInFlight = false;
+        });
+      }
+    }
+  }
+
   /// 줌 레벨 설정
   ///
   /// Parameters:
@@ -736,64 +785,33 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // 촬영 버튼 및 비디오 녹화 제스처
-                SizedBox(
-                  width: 90.w,
-                  child: Center(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _takePicture,
-                      onLongPress: () async {
-                        await _startVideoRecording();
-                      },
-
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            height: 90.h,
-                            child:
-                                // 비디오 녹화 모드가 ON이 되면, 진행률 표시기로 전환
-                                (_isVideoRecording)
-                                ? ValueListenableBuilder<double>(
-                                    valueListenable: _videoProgress,
-                                    builder: (context, progress, child) {
-                                      return GestureDetector(
-                                        onTap: () {
-                                          _stopVideoRecording();
-                                        },
-                                        child: CircularVideoProgressIndicator(
-                                          progress: progress,
-                                          innerSize: 40.42,
-                                          gap: 15.29,
-                                          strokeWidth: 3.0,
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : Image.asset(
-                                    "assets/take_picture.png",
-                                    width: 65,
-                                    height: 65,
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                // 촬영 버튼 위젯 - 반응형
+                CameraCaptureButton(
+                  isVideoRecording: _isVideoRecording,
+                  videoProgress: _videoProgress,
+                  onTakePicture: _takePicture,
+                  onStartVideoRecording: _startVideoRecording,
+                  onStopVideoRecording: _stopVideoRecording,
                 ),
 
                 // 카메라 전환 버튼 - 개선된 반응형
                 Expanded(
                   child: IconButton(
-                    onPressed: (_isVideoRecording && !_supportsLiveSwitch)
+                    onPressed:
+                        (_isVideoRecording && !_supportsLiveSwitch) ||
+                            _cameraSwitchInFlight
                         ? null
-                        : _switchCamera,
+                        : _onSwitchCameraPressed,
                     color: Color(0xffd9d9d9),
-                    icon: Image.asset(
-                      "assets/switch.png",
-                      width: 67.w,
-                      height: 56.h,
+                    icon: AnimatedRotation(
+                      turns: _cameraSwitchTurns,
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeOut,
+                      child: Image.asset(
+                        "assets/switch.png",
+                        width: 67.w,
+                        height: 56.h,
+                      ),
                     ),
                   ),
                 ),

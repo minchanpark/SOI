@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 // 네이티브 카메라 & 오디오 서비스
@@ -12,9 +13,12 @@ class CameraService {
   static const MethodChannel _cameraChannel = MethodChannel('com.soi.camera');
   static const Duration _defaultVideoMaxDuration = Duration(seconds: 30);
 
-  CameraService() {
+  CameraService._internal() {
     _cameraChannel.setMethodCallHandler(_handleNativeMethodCall);
   }
+
+  static final CameraService instance = CameraService._internal();
+  static bool debugTimings = false; // 성능 타이밍 디버그 플래그
 
   // 카메라 세션 상태 추적
   bool _isSessionActive = false;
@@ -70,9 +74,25 @@ class CameraService {
   Stream<String> get onVideoRecorded => _videoRecordedController.stream;
   Stream<String> get onVideoError => _videoErrorController.stream;
 
+  /// 카메라 세션 준비 (권한 확인 포함)
+  Future<void> prepareSessionIfPermitted() async {
+    final status = await Permission.camera.status; // 카메라 권한 상태 확인
+    if (!status.isGranted) {
+      return;
+    }
+
+    try {
+      // 네이티브 메서드 호출로 카메라 세션 준비
+      await _cameraChannel.invokeMethod('prepareCamera');
+    } on PlatformException {
+      return;
+    }
+  }
+
+  /// 네이티브 메서드 호출 처리
   Future<void> _handleNativeMethodCall(MethodCall call) async {
     switch (call.method) {
-      case 'onVideoRecorded':
+      case 'onVideoRecorded': // 비디오 녹화 완료 콜백
         final Map<dynamic, dynamic>? args =
             call.arguments as Map<dynamic, dynamic>?;
         final String? path = args?['path'] as String?;
@@ -84,7 +104,7 @@ class CameraService {
           }
         }
         break;
-      case 'onVideoError':
+      case 'onVideoError': // 비디오 녹화 오류 콜백
         final Map<dynamic, dynamic>? args =
             call.arguments as Map<dynamic, dynamic>?;
         final String message =
@@ -264,13 +284,6 @@ class CameraService {
     if (Platform.isAndroid) {
       return AndroidView(
         viewType: 'com.soi.camera',
-        onPlatformViewCreated: (int id) {
-          // 안드로이드 카메라 뷰 생성됨
-          // 최소한의 지연으로 즉시 최적화 실행 (800ms → 10ms)
-          Future.delayed(Duration(milliseconds: 10), () {
-            optimizeCamera();
-          });
-        },
         creationParams: <String, dynamic>{
           'useSRGBColorSpace': true,
           // 첫 프레임은 경량으로 시작하고 최적화 단계에서 품질 향상
@@ -282,11 +295,6 @@ class CameraService {
     } else if (Platform.isIOS) {
       return UiKitView(
         viewType: 'com.soi.camera/preview',
-        onPlatformViewCreated: (int id) {
-          // iOS 카메라 뷰 생성됨
-          // iOS도 동일하게 빠른 최적화 적용 (800ms → 10ms)
-          optimizeCamera();
-        },
         creationParams: <String, dynamic>{
           'useSRGBColorSpace': true,
           // 첫 프레임은 경량으로 시작하고 최적화 단계에서 품질 향상
@@ -326,13 +334,12 @@ class CameraService {
 
       // 재활성화가 필요한 경우에만 실행
       if (needsReactivation) {
-        // SurfaceProvider 준비를 위한 최소 지연 (200ms → 10ms)
-        // await Future.delayed(Duration(milliseconds: 10));
-
         await _cameraChannel.invokeMethod('resumeCamera');
         _isSessionActive = true;
+        unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
       } else {
         _isSessionActive = true;
+        unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
       }
     } on PlatformException {
       _isSessionActive = false;
@@ -402,6 +409,7 @@ class CameraService {
     try {
       await _cameraChannel.invokeMethod('resumeCamera');
       _isSessionActive = true;
+      unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
     } on PlatformException {
       _isSessionActive = false;
     }
@@ -469,11 +477,12 @@ class CameraService {
   // 개선된 카메라 초기화 (타이밍 이슈 해결)
   Future<bool> initCamera() async {
     try {
-      // SurfaceProvider 준비 확인을 위한 재시도 로직 (최적화: 500ms → 200ms)
-      bool result = false;
-      int retryCount = 0;
-      const maxRetries = 3;
-      const retryDelay = Duration(milliseconds: 200);
+      bool result = false; // 초기화 결과 변수
+      int retryCount = 0; // 재시도 횟수
+      const maxRetries = 3; // 최대 재시도 횟수
+      const retryDelay = Duration(
+        milliseconds: 80,
+      ); // 재시도 간격 --> 80ms 간격으로 재시도함
 
       while (!result && retryCount < maxRetries) {
         try {
@@ -507,6 +516,7 @@ class CameraService {
 
   // 개선된 사진 촬영 (안정성 강화 + 전면 카메라 좌우반전은 네이티브에서 처리)
   Future<String> takePicture() async {
+    final stopwatch = Stopwatch()..start();
     try {
       // 카메라가 초기화되지 않았으면 먼저 초기화
       if (!_isSessionActive) {
@@ -514,9 +524,6 @@ class CameraService {
         if (!initialized) {
           return '';
         }
-
-        // 초기화 후 안정화를 위한 짧은 대기
-        await Future.delayed(Duration(milliseconds: 200));
       }
 
       final String result = await _cameraChannel.invokeMethod('takePicture');
@@ -527,11 +534,26 @@ class CameraService {
         // 갤러리 미리보기 새로고침 (비동기)
         Future.microtask(() => refreshGalleryPreview());
 
+        if (debugTimings) {
+          debugPrint(
+            'CameraService.takePicture total=${stopwatch.elapsedMilliseconds}ms',
+          );
+        }
         return result;
       }
 
+      if (debugTimings) {
+        debugPrint(
+          'CameraService.takePicture empty total=${stopwatch.elapsedMilliseconds}ms',
+        );
+      }
       return result;
     } on PlatformException {
+      if (debugTimings) {
+        debugPrint(
+          'CameraService.takePicture error total=${stopwatch.elapsedMilliseconds}ms',
+        );
+      }
       return '';
     }
   }
@@ -553,7 +575,6 @@ class CameraService {
       if (!initialized) {
         return false;
       }
-      await Future.delayed(const Duration(milliseconds: 200));
     }
 
     try {
@@ -624,9 +645,6 @@ class CameraService {
         if (!initialized) {
           return;
         }
-
-        // 초기화 후 안정화를 위한 짧은 대기
-        await Future.delayed(Duration(milliseconds: 200));
       }
 
       await _cameraChannel.invokeMethod('switchCamera');

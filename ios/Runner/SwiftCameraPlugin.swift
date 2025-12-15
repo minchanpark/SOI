@@ -35,6 +35,21 @@ public final class SwiftCameraPlugin: NSObject, FlutterPlugin {
                 }
             }
 
+        case "prepareCamera":
+            sessionManager.prepareSession { outcome in
+                DispatchQueue.main.async {
+                    switch outcome {
+                    case .success:
+                        result(true)
+                    case .failure(let error):
+                        result(FlutterError(code: "PREPARE_ERROR", message: error.localizedDescription, details: nil))
+                    }
+                }
+            }
+
+        case "isSessionActive":
+            result(sessionManager.isSessionRunning)
+
         case "takePicture":
             sessionManager.capturePhoto { outcome in
                 DispatchQueue.main.async {
@@ -249,6 +264,8 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     private var deviceCache: [AVCaptureDevice.Position: AVCaptureDevice] = [:]
 
     private var isConfigured = false
+    private var isRecordingPipelineConfigured = false
+    private var isAudioSessionConfigured = false
     private var currentPosition: AVCaptureDevice.Position = .back
     private var flashMode: AVCaptureDevice.FlashMode = .auto
     private var photoCompletion: ((Result<String, Error>) -> Void)?
@@ -278,29 +295,48 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
         availablePositions.count > 1
     }
 
-    func ensureConfigured(completion: @escaping (Result<Void, Error>) -> Void) {
+    var isSessionRunning: Bool {
+        captureSession.isRunning
+    }
+
+    func prepareSession(completion: @escaping (Result<Void, Error>) -> Void) {
+        ensureConfigured(startRunning: false, completion: completion)
+    }
+
+    func ensureConfigured(startRunning: Bool = true, settleDelayMs: Int = 100, completion: @escaping (Result<Void, Error>) -> Void) {
         sessionQueue.async {
             if self.isConfigured {
-                self.startSessionIfNeeded()
-                self.waitForSessionToStart(completion: completion)
+                if startRunning {
+                    self.startSessionIfNeeded()
+                    self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                } else {
+                    completion(.success(()))
+                }
                 return
             }
 
             do {
                 try self.configureSession()
                 self.isConfigured = true
-                self.startSessionIfNeeded()
-                self.waitForSessionToStart(completion: completion)
+                if startRunning {
+                    self.startSessionIfNeeded()
+                    self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                } else {
+                    completion(.success(()))
+                }
             } catch {
                 completion(.failure(error))
             }
         }
     }
     
-    private func waitForSessionToStart(completion: @escaping (Result<Void, Error>) -> Void) {
+    private func waitForSessionToStart(settleDelayMs: Int, completion: @escaping (Result<Void, Error>) -> Void) {
         if captureSession.isRunning {
-            // 세션이 실행 중이면 최소한의 대기로 즉시 프리뷰 표시 (1.0s → 0.1s)
-            sessionQueue.asyncAfter(deadline: .now() + 0.1) {
+            if settleDelayMs <= 0 {
+                completion(.success(()))
+                return
+            }
+            sessionQueue.asyncAfter(deadline: .now() + .milliseconds(settleDelayMs)) {
                 completion(.success(()))
             }
         } else {
@@ -312,8 +348,11 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
             func checkSession() {
                 attempts += 1
                 if self.captureSession.isRunning {
-                    // 최소한의 대기로 즉시 프리뷰 표시 (1.0s → 0.1s)
-                    self.sessionQueue.asyncAfter(deadline: .now() + 0.1) {
+                    if settleDelayMs <= 0 {
+                        completion(.success(()))
+                        return
+                    }
+                    self.sessionQueue.asyncAfter(deadline: .now() + .milliseconds(settleDelayMs)) {
                         completion(.success(()))
                     }
                 } else if attempts < maxAttempts {
@@ -332,7 +371,7 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     }
 
     func capturePhoto(completion: @escaping (Result<String, Error>) -> Void) {
-        ensureConfigured { [weak self] result in
+        ensureConfigured(settleDelayMs: 0) { [weak self] result in
             guard let self else { return }
             switch result {
             case .failure(let error):
@@ -524,6 +563,8 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
             videoInput = nil
             audioInput = nil
             isConfigured = false
+            isRecordingPipelineConfigured = false
+            isAudioSessionConfigured = false
             currentMovieURL = nil
             cancelPendingAudioResume()
             resumeAudioAfterCameraSwitchIfNeeded()
@@ -545,6 +586,7 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
                     }
 
                     do {
+                        try self.configureRecordingPipelineIfNeeded()
                         let url = self.temporaryURL(extension: "mov")
                         self.currentMovieURL = url
                         self.isCancellingRecording = false
@@ -705,12 +747,27 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     func registerPreviewLayer(_ layer: AVCaptureVideoPreviewLayer) {
         layer.videoGravity = .resizeAspectFill
         layer.session = captureSession
-        ensureConfigured { _ in }
+        ensureConfigured(startRunning: false) { _ in }
     }
 
     // MARK: - Private Helpers
     private func configureSession() throws {
-        // AVAudioSession 설정 (AVCaptureSession 설정 전에 필수!)
+        captureSession.sessionPreset = .high
+
+        try replaceVideoInput(position: currentPosition, desiredZoomFactor: 1.0)
+
+        captureSession.beginConfiguration()
+        defer { captureSession.commitConfiguration() }
+
+        if captureSession.canAddOutput(photoOutput) {
+            captureSession.addOutput(photoOutput)
+        }
+
+        updateConnectionMirroring()
+    }
+
+    private func configureAudioSessionIfNeeded() throws {
+        guard !isAudioSessionConfigured else { return }
         let audioSession = AVAudioSession.sharedInstance()
         try audioSession.setCategory(
             .playAndRecord,
@@ -718,13 +775,17 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
             options: [.defaultToSpeaker, .allowBluetooth]
         )
         try audioSession.setActive(true)
-        
+        isAudioSessionConfigured = true
+    }
+
+    private func configureRecordingPipelineIfNeeded() throws {
+        guard !isRecordingPipelineConfigured else { return }
+
+        try configureAudioSessionIfNeeded()
+
         captureSession.beginConfiguration()
-        captureSession.sessionPreset = .high
+        defer { captureSession.commitConfiguration() }
 
-        try replaceVideoInput(position: currentPosition, desiredZoomFactor: 1.0)
-
-        // 오디오 입력 추가 (비디오 녹화에 필수)
         if audioInput == nil, let audioDevice = AVCaptureDevice.default(for: .audio) {
             let input = try AVCaptureDeviceInput(device: audioDevice)
             if captureSession.canAddInput(input) {
@@ -733,11 +794,6 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
             }
         }
 
-        if captureSession.canAddOutput(photoOutput) {
-            captureSession.addOutput(photoOutput)
-        }
-
-                // Configure video output
         videoOutput.setSampleBufferDelegate(self, queue: sessionQueue)
         videoOutput.alwaysDiscardsLateVideoFrames = false
         videoOutput.videoSettings = [
@@ -745,24 +801,15 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
         ]
         if captureSession.canAddOutput(videoOutput) {
             captureSession.addOutput(videoOutput)
-            
-            // Set video orientation to portrait
-            if let connection = videoOutput.connection(with: .video) {
-                connection.videoOrientation = .portrait
-                // 비디오 미러링 설정 (전면 카메라의 경우)
-                if connection.isVideoMirroringSupported {
-                    connection.isVideoMirrored = (currentPosition == .front)
-                }
-            }
         }
 
-        // Configure audio output
         audioOutput.setSampleBufferDelegate(self, queue: sessionQueue)
         if captureSession.canAddOutput(audioOutput) {
             captureSession.addOutput(audioOutput)
         }
 
-        captureSession.commitConfiguration()
+        updateConnectionMirroring()
+        isRecordingPipelineConfigured = true
     }
 
     // 일반 비디오 입력 교체 (녹화 중이 아닐 때)
