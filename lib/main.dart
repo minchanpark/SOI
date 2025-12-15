@@ -203,6 +203,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<ContactController>(
           create: (_) => ContactController(),
         ),
+        ChangeNotifierProvider<AudioController>(
+          create: (_) => AudioController(),
+        ),
       ],
       child: ScreenUtilInit(
         designSize: const Size(393, 852),

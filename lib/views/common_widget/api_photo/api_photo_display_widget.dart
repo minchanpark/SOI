@@ -16,7 +16,7 @@ import '../../../api/models/comment.dart';
 import '../../../api/models/post.dart';
 import '../../../utils/position_converter.dart';
 import '../../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
-import '../../common_widget/abput_photo/first_line_ellipsis_text.dart';
+import 'first_line_ellipsis_text.dart';
 import 'api_audio_control_widget.dart';
 import 'api_voice_comment_list_sheet.dart';
 import 'pending_api_voice_comment.dart';
