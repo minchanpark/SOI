@@ -100,7 +100,7 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
       child: Column(
         children: [
           SizedBox(height: 29.h),
-          ElevatedButton(
+          /* ElevatedButton(
             onPressed: () {
               // 게시물 목록 보기 기능
             },
@@ -138,9 +138,9 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
                 ],
               ),
             ),
-          ),
-          SizedBox(height: 13.h),
+          ),*/
 
+          // SizedBox(height: 13.h),
           ElevatedButton(
             onPressed: () {
               // 아카이브 관리 기능

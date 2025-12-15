@@ -13,7 +13,9 @@ import 'package:path_provider/path_provider.dart';
 /// - photo_editor_screen과의 호환성을 위해 녹음 관련 상태 관리 추가
 /// - 실제 녹음은 audio_recorder_widget에서 처리
 class AudioController extends ChangeNotifier {
-  static const MethodChannel _recorderChannel = MethodChannel('native_recorder');
+  static const MethodChannel _recorderChannel = MethodChannel(
+    'native_recorder',
+  );
 
   // ==================== 상태 관리 ====================
 
@@ -276,10 +278,9 @@ class AudioController extends ChangeNotifier {
         {'filePath': recordingPath},
       );
 
-      _currentRecordingPath =
-          (startedPath != null && startedPath.isNotEmpty)
-              ? startedPath
-              : recordingPath;
+      _currentRecordingPath = (startedPath != null && startedPath.isNotEmpty)
+          ? startedPath
+          : recordingPath;
 
       _recordingDuration = 0;
       _isRecording = true;
@@ -295,19 +296,20 @@ class AudioController extends ChangeNotifier {
   /// 네이티브 녹음을 중지하고 파일 경로를 반환합니다.
   Future<void> stopRecordingSimple() async {
     if (!_isRecording) {
-      debugPrint('⚠️ 녹음이 진행 중이 아닙니다.');
+      debugPrint('녹음이 진행 중이 아닙니다.');
       return;
     }
 
     try {
-      final stoppedPath =
-          await _recorderChannel.invokeMethod<String>('stopRecording');
+      final stoppedPath = await _recorderChannel.invokeMethod<String>(
+        'stopRecording',
+      );
 
       if (stoppedPath != null && stoppedPath.isNotEmpty) {
         _currentRecordingPath = stoppedPath;
       }
 
-      debugPrint('✅ 네이티브 녹음 중지: $_currentRecordingPath');
+      debugPrint('네이티브 녹음 중지: $_currentRecordingPath');
     } catch (e) {
       _setError('네이티브 녹음 중지 실패: $e');
       rethrow;

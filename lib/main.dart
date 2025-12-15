@@ -13,35 +13,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soi/api/controller/audio_controller.dart';
 import 'package:soi/api/controller/category_controller.dart' as api_category;
 import 'package:soi/api/controller/comment_controller.dart';
+import 'package:soi/api/controller/contact_controller.dart';
 import 'package:soi/api/controller/friend_controller.dart' as api_friend;
 import 'package:soi/api/controller/media_controller.dart' as api_media;
 import 'package:soi/api/controller/notification_controller.dart'
     as api_notification;
 import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/views/about_friends/friend_management_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
-import 'api_firebase/controllers/auth_controller.dart';
-import 'api_firebase/controllers/category_controller.dart';
-import 'api_firebase/controllers/category_cover_photo_controller.dart';
-import 'api_firebase/controllers/category_member_controller.dart';
+
 import 'package:soi/api/controller/category_search_controller.dart'
     as api_category_search;
-import 'api_firebase/controllers/comment_audio_controller.dart';
-import 'api_firebase/controllers/comment_record_controller.dart';
-import 'api_firebase/controllers/contact_controller.dart';
-import 'api_firebase/controllers/emoji_reaction_controller.dart';
-import 'api_firebase/controllers/friend_controller.dart';
-import 'api_firebase/controllers/friend_request_controller.dart';
-import 'api_firebase/controllers/media_controller.dart';
-import 'api_firebase/controllers/notification_controller.dart';
-import 'api_firebase/controllers/user_matching_controller.dart';
-import 'api_firebase/repositories/friend_repository.dart';
-import 'api_firebase/repositories/friend_request_repository.dart';
-import 'api_firebase/repositories/user_search_repository.dart';
-import 'api_firebase/services/friend_request_service.dart';
-import 'api_firebase/services/friend_service.dart';
-import 'api_firebase/services/user_matching_service.dart';
+
 // New API Services (Backend REST API)
 import 'api/api.dart' as api;
 import 'firebase_options.dart';
@@ -54,8 +39,6 @@ import 'views/about_camera/camera_screen.dart';
 import 'views/about_feed/feed_home.dart';
 import 'views/about_friends/friend_list_add_screen.dart';
 import 'views/about_friends/friend_list_screen.dart';
-import 'views/about_friends/friend_management_screen.dart';
-import 'views/about_friends/friend_request_screen.dart';
 import 'views/about_login/login_screen.dart';
 import 'views/about_login/register_screen.dart';
 import 'views/about_login/start_screen.dart';
@@ -192,49 +175,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthController()),
-        ChangeNotifierProvider(create: (_) => CategoryController()),
-        ChangeNotifierProvider(create: (_) => AudioController()),
-        ChangeNotifierProvider(create: (_) => CommentAudioController()),
-        ChangeNotifierProvider(create: (_) => CommentRecordController()),
-        ChangeNotifierProvider(create: (_) => PhotoController()),
-        ChangeNotifierProvider(create: (_) => ContactController()),
-        ChangeNotifierProvider(create: (_) => EmojiReactionController()),
-        ChangeNotifierProvider(create: (_) => CategoryMemberController()),
-        ChangeNotifierProvider(create: (_) => CategoryCoverPhotoController()),
-        ChangeNotifierProvider(
-          create: (_) => FriendRequestController(
-            friendRequestService: FriendRequestService(
-              friendRequestRepository: FriendRequestRepository(),
-              friendRepository: FriendRepository(),
-              userSearchRepository: UserSearchRepository(),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => FriendController(
-            friendService: FriendService(
-              friendRepository: FriendRepository(),
-              userSearchRepository: UserSearchRepository(),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => UserMatchingController(
-            userMatchingService: UserMatchingService(
-              userSearchRepository: UserSearchRepository(),
-              friendRepository: FriendRepository(),
-              friendRequestRepository: FriendRequestRepository(),
-            ),
-            friendRequestService: FriendRequestService(
-              friendRequestRepository: FriendRequestRepository(),
-              friendRepository: FriendRepository(),
-              userSearchRepository: UserSearchRepository(),
-            ),
-            userSearchRepository: UserSearchRepository(),
-          ),
-        ),
-        ChangeNotifierProvider(create: (_) => NotificationController()),
         // ============================================
         // New Backend API Services (REST API)
         // ============================================
@@ -259,6 +199,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<api_notification.NotificationController>(
           create: (_) => api_notification.NotificationController(),
+        ),
+        ChangeNotifierProvider<ContactController>(
+          create: (_) => ContactController(),
         ),
       ],
       child: ScreenUtilInit(
@@ -301,7 +244,7 @@ class MyApp extends StatelessWidget {
             '/contact_manager': (context) => const FriendManagementScreen(),
             '/friend_list_add': (context) => const FriendListAddScreen(),
             '/friend_list': (context) => const FriendListScreen(),
-            '/friend_requests': (context) => const FriendRequestScreen(),
+
             '/feed_home': (context) => const FeedHomeScreen(),
             '/profile_screen': (context) => const ProfileScreen(),
             '/privacy_protect': (context) => const PrivacyProtectScreen(),

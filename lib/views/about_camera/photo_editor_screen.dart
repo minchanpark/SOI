@@ -11,13 +11,13 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/models/selected_friend_model.dart';
 import '../../api/controller/audio_controller.dart';
 import '../../api/controller/category_controller.dart' as api_category;
 import '../../api/controller/media_controller.dart' as api_media;
 import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/services/media_service.dart';
-import '../../api_firebase/models/selected_friend_model.dart';
 import '../home_navigator_screen.dart';
 import 'widgets/add_category_widget.dart';
 import 'widgets/audio_recorder_widget.dart';
@@ -134,6 +134,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   bool _hasLockedSheetExtent = false;
   List<double>? _recordedWaveformData;
   String? _recordedAudioPath;
+  int? _recordedAudioDurationSeconds;
   bool _isCaptionEmpty = true;
   bool _showAudioRecorder = false;
 
@@ -488,8 +489,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                 autoStart: true,
                 onRecordingFinished: (audioFilePath, waveformData, duration) {
                   setState(() {
-                    _recordedAudioPath = audioFilePath;
-                    _recordedWaveformData = waveformData;
+                    _recordedAudioPath = audioFilePath; // 녹음된 오디오 파일 경로 저장
+                    _recordedWaveformData = waveformData; // 파형 데이터 저장
+                    _recordedAudioDurationSeconds =
+                        duration.inSeconds; // 녹음 길이 저장
                   });
                 },
                 onRecordingCleared: () {
@@ -497,7 +500,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                     _showAudioRecorder = false;
                     _recordedAudioPath = null;
                     _recordedWaveformData = null;
+                    _recordedAudioDurationSeconds = null;
                   });
+                  _audioController.clearCurrentRecording();
                 },
                 initialRecordingPath: _recordedAudioPath,
                 initialWaveformData: _recordedWaveformData,
@@ -772,8 +777,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     String? audioPath;
 
     // 음성 파일 경로 후보 결정
-    final candidatePath =
-        _recordedAudioPath ?? _audioController.currentRecordingPath;
+    // NOTE: AudioController.currentRecordingPath는 세션 간에 남을 수 있어서,
+    // 이 화면에서 실제로 녹음 완료된 경로(_recordedAudioPath)만 사용합니다.
+    final candidatePath = _recordedAudioPath;
 
     // 음성 파일 존재 여부 확인
     if (candidatePath != null && candidatePath.isNotEmpty) {
@@ -789,11 +795,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     final caption = captionText.isNotEmpty ? captionText : '';
     final hasCaption = caption.isNotEmpty;
 
-    // 음성 재생 시간 준비
-    final duration = _audioController.recordingDuration;
-
     // 캡션이 존재하면 음성 첨부를 생략
-    final shouldIncludeAudio = !hasCaption && audioFile != null;
+    final shouldIncludeAudio =
+        !hasCaption && audioFile != null && _recordedWaveformData != null;
     final waveform = shouldIncludeAudio && _recordedWaveformData != null
         ? List<double>.from(_recordedWaveformData!)
         : null;
@@ -809,7 +813,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       audioPath: shouldIncludeAudio ? audioPath : null,
       caption: caption,
       waveformData: waveform,
-      audioDurationSeconds: shouldIncludeAudio ? duration : null,
+      audioDurationSeconds: shouldIncludeAudio
+          ? _recordedAudioDurationSeconds
+          : null,
       usageCount: categoryIds.isNotEmpty ? categoryIds.length : 1,
     );
   }
@@ -919,7 +925,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     final waveformJson = _encodeWaveformData(payload.waveformData);
 
     debugPrint(
-      "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: ${categoryIds}\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
+      "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: $categoryIds\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
     );
 
     // 게시물 생성 API 호출
@@ -1351,6 +1357,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     });
     _recordedWaveformData = null;
     _recordedAudioPath = null;
+    _recordedAudioDurationSeconds = null;
 
     _clearImageCache();
 

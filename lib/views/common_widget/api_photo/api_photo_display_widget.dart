@@ -718,7 +718,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
-  Widget _buildCaptionOverlay() {
+  Widget _buildCaptionOverlay(bool isCaption) {
     final captionStyle = TextStyle(
       color: Colors.white,
       fontSize: 14.sp,
@@ -730,7 +730,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       onTap: () {
         setState(() => _isCaptionExpanded = !_isCaptionExpanded);
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 1000),
+        curve: Curves.easeInOut,
+        clipBehavior: Clip.hardEdge,
         width: 278.w,
         constraints: BoxConstraints(
           minHeight: 48.h,
@@ -763,7 +766,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                     )
                   : _buildCircleAvatar(
                       imageUrl: _uploaderProfileImageUrl,
-                      size: 32.w,
+                      size: 32,
+                      isCaption: isCaption,
                     ),
             ),
             SizedBox(width: 12.w),
@@ -813,38 +817,43 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     Color? borderColor,
     double borderWidth = 1.5,
     double opacity = 1.0,
+    bool? isCaption,
   }) {
     Widget avatarContent;
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      avatarContent = ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          memCacheWidth: (size * 4).round(),
-          maxWidthDiskCache: (size * 4).round(),
-          placeholder: (context, url) => Shimmer.fromColors(
-            baseColor: const Color(0xFF2A2A2A),
-            highlightColor: const Color(0xFF3A3A3A),
-            child: Container(
+      avatarContent = SizedBox(
+        width: size,
+        height: size,
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            memCacheWidth: (size * 4).round(),
+            maxWidthDiskCache: (size * 4).round(),
+            placeholder: (context, url) => Shimmer.fromColors(
+              baseColor: const Color(0xFF2A2A2A),
+              highlightColor: const Color(0xFF3A3A3A),
+              child: Container(
+                width: size,
+                height: size,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF2A2A2A),
+                ),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
               width: size,
               height: size,
               decoration: const BoxDecoration(
+                color: Color(0xffd9d9d9),
                 shape: BoxShape.circle,
-                color: Color(0xFF2A2A2A),
               ),
+              child: const Icon(Icons.person, color: Colors.white),
             ),
-          ),
-          errorWidget: (context, url, error) => Container(
-            width: size,
-            height: size,
-            decoration: const BoxDecoration(
-              color: Color(0xffd9d9d9),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person, color: Colors.white),
           ),
         ),
       );
@@ -881,6 +890,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
+
         boxShadow: [
           /* BoxShadow(
             //color: Colors.black.withValues(alpha: 1.0),
@@ -888,12 +898,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             blurRadius: 18,
             spreadRadius: -8,
           ),*/
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 1.0),
-            //offset: const Offset(0, -2),
-            blurRadius: 6,
-            spreadRadius: -2,
-          ),
+          if (isCaption != true)
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 1.0),
+              //offset: const Offset(0, -2),
+              blurRadius: 6,
+              spreadRadius: -2,
+            ),
         ],
       ),
       foregroundDecoration: BoxDecoration(
@@ -1055,7 +1066,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   @override
   Widget build(BuildContext context) {
     final categoryTrimmed = widget.categoryName.trim();
-    final isEnglishCategory = categoryTrimmed.isNotEmpty &&
+    final isEnglishCategory =
+        categoryTrimmed.isNotEmpty &&
         RegExp(r'^[A-Za-z\s]+$').hasMatch(categoryTrimmed);
     final waveformData = _parseWaveformData(widget.post.waveformData);
     final pendingMarker = _buildPendingMarker();
@@ -1103,43 +1115,42 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                           ),
                         ),
 
-	                      // 카테고리 라벨
-	                      if (!widget.isArchive)
-	                        Positioned(
-	                          top: 11.h,
-	                          child: GestureDetector(
-	                            onTap: _navigateToCategory,
-	                            child: IntrinsicWidth(
-	                              child: Container(
-	                                height: 25,
-	                                padding: EdgeInsets.only(
-	                                  left: 16.w,
-	                                  right: 16.w,
-	                                  top: isEnglishCategory ? 0 : 2.h,
-	                                  bottom: isEnglishCategory ? 2.h : 0,
-	                                ),
-	                                decoration: BoxDecoration(
-	                                  color: Colors.black.withValues(alpha: 0.5),
-	                                  borderRadius: BorderRadius.circular(16),
-	                                ),
-	                                alignment: Alignment.center,
-	                                child: Text(
-	                                  widget.categoryName,
-	                                  style: TextStyle(
-	                                    color:
-	                                        Colors.white.withValues(alpha: 0.9),
-	                                    fontSize: 16,
-	                                    fontWeight: FontWeight.w600,
-	                                    fontFamily: 'Pretendard',
-	                                  ),
-	                                  overflow: TextOverflow.ellipsis,
-	                                  maxLines: 1,
-	                                  textAlign: TextAlign.center,
-	                                ),
-	                              ),
-	                            ),
-	                          ),
-	                        ),
+                      // 카테고리 라벨
+                      if (!widget.isArchive)
+                        Positioned(
+                          top: 11.h,
+                          child: GestureDetector(
+                            onTap: _navigateToCategory,
+                            child: IntrinsicWidth(
+                              child: Container(
+                                height: 25,
+                                padding: EdgeInsets.only(
+                                  left: 16,
+                                  right: 16,
+                                  top: isEnglishCategory ? 0 : 2,
+                                  bottom: isEnglishCategory ? 2 : 0,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  widget.categoryName,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Pretendard',
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
 
                       // 오디오 컨트롤 위젯
                       if (widget.post.hasAudio)
@@ -1152,7 +1163,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                             waveformData: waveformData,
                           ),
                         ),
-                      if (_hasComments)
+                      /* if (_hasComments)
                         Positioned(
                           bottom: 18.h,
                           right: 18.w,
@@ -1168,13 +1179,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                               height: 25,
                             ),
                           ),
-                        ),
+                        ),*/
                       if (_hasCaption && !widget.post.hasAudio)
                         Positioned(
                           left: 16.w,
                           right: 16.w,
                           bottom: 18.h,
-                          child: _buildCaptionOverlay(),
+                          child: _buildCaptionOverlay(true),
                         ),
                       ..._buildCommentAvatars(),
                       if (pendingMarker != null) pendingMarker,

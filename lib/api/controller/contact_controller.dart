@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../services/contact_service.dart';
 
+export '../services/contact_service.dart'
+    show
+        ContactToggleResult,
+        ContactToggleResultType,
+        ContactInitResult,
+        ContactInitResultType;
+
 /// 연락처 관련 UI 상태 관리를 담당하는 Controller
 class ContactController extends ChangeNotifier {
   final ContactService _contactService = ContactService();

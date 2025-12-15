@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,6 +30,11 @@ class FeedDataManager {
   VoidCallback? _onStateChanged;
   Function(List<FeedPostItem>)? _onPostsLoaded;
 
+  // PostController 구독 관련
+  PostController? _postController;
+  BuildContext? _context;
+  VoidCallback? _postsChangedListener;
+
   List<FeedPostItem> get allPosts => _allPosts;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -43,6 +50,21 @@ class FeedDataManager {
 
   void _notifyStateChanged() {
     _onStateChanged?.call();
+  }
+
+  /// PostController의 게시물 변경을 구독
+  void listenToPostController(PostController postController, BuildContext context) {
+    _postController = postController;
+    _context = context;
+
+    _postsChangedListener = () {
+      if (_context != null && _context!.mounted) {
+        debugPrint('[FeedDataManager] 게시물 변경 감지, 피드 새로고침');
+        unawaited(loadUserCategoriesAndPhotos(_context!));
+      }
+    };
+
+    _postController?.addPostsChangedListener(_postsChangedListener!);
   }
 
   Future<void> loadUserCategoriesAndPhotos(BuildContext context) async {
@@ -165,6 +187,14 @@ class FeedDataManager {
   }
 
   void dispose() {
+    // PostController 리스너 제거
+    if (_postsChangedListener != null && _postController != null) {
+      _postController!.removePostsChangedListener(_postsChangedListener!);
+    }
+    _postController = null;
+    _context = null;
+    _postsChangedListener = null;
+
     _allPosts.clear();
   }
 }

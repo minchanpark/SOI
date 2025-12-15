@@ -56,6 +56,7 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
                 _buildCategoryThumbnail(),
 
                 if (invitees.isNotEmpty) SizedBox(height: 24.h),
+                SizedBox(height: 24.h),
                 Text(
                   '"$categoryName" 카테고리에 초대되었습니다',
                   textAlign: TextAlign.center,
@@ -145,6 +146,9 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
   }
 
   Widget _buildCategoryThumbnail() {
+    if (categoryImageUrl.isEmpty) {
+      return _placeholder();
+    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(6.61),
       child: CachedNetworkImage(
@@ -200,57 +204,38 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
     final containerPadding = 6.0; // 좌우 패딩
 
     // 전체 너비 계산: 패딩 + 프로필들 + 아이콘(겹침) + 패딩
-    // 아이콘도 같은 간격으로 겹치므로 displayInvitees.length만큼 추가
     final contentWidth =
-        profileSize + (displayInvitees.length) * overlapDistance;
+        profileSize + (displayInvitees.length - 1) * overlapDistance;
     final containerWidth = contentWidth + (containerPadding * 2);
 
     return Column(
       children: [
-        GestureDetector(
-          onTap: onViewFriends,
-          child: Container(
-            width: containerWidth,
-            height: 23,
-            decoration: ShapeDecoration(
-              color: const Color(0xFF808080),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-              ),
+        // NOTE: 초대된 유저 목록 보기 기능은 일단 비활성화합니다.
+        Container(
+          width: containerWidth,
+          height: 23,
+          decoration: ShapeDecoration(
+            color: const Color(0xFF808080),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
             ),
-            child: Center(
-              child: SizedBox(
-                height: profileSize,
-                width: contentWidth,
-                child: Stack(
-                  children: [
-                    // 프로필 이미지들
-                    ...displayInvitees.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final invitee = entry.value;
+          ),
+          child: Center(
+            child: SizedBox(
+              height: profileSize,
+              width: contentWidth,
+              child: Stack(
+                children: [
+                  ...displayInvitees.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final invitee = entry.value;
 
-                      return Positioned(
-                        left: index * overlapDistance,
-                        child: _buildInviteeAvatar(invitee),
-                      );
-                    }),
-
-                    // 맨 마지막에 friend_show_icon.png (겹쳐서)
-                    Positioned(
-                      left: displayInvitees.length * overlapDistance,
-                      child: SizedBox(
-                        width: profileSize,
-                        height: profileSize,
-                        child: Image.asset(
-                          'assets/friend_show_icon.png',
-                          width: profileSize,
-                          height: profileSize,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                    return Positioned(
+                      left: index * overlapDistance,
+                      child: _buildInviteeAvatar(invitee),
+                    );
+                  }),
+                ],
               ),
             ),
           ),
@@ -278,17 +263,16 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
       height: 19.31,
       decoration: BoxDecoration(shape: BoxShape.circle),
       child: ClipOval(
-        child:
-            invitee.profileImageUrl.isNotEmpty
-                ? CachedNetworkImage(
-                  imageUrl: invitee.profileImageUrl,
-                  memCacheWidth: (19.31 * 4).round(),
-                  maxWidthDiskCache: (19.31 * 4).round(),
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => _shimmerAvatarPlaceholder(),
-                  errorWidget: (context, url, error) => _avatarPlaceholder(),
-                )
-                : _avatarPlaceholder(),
+        child: invitee.profileImageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: invitee.profileImageUrl,
+                memCacheWidth: (19.31 * 4).round(),
+                maxWidthDiskCache: (19.31 * 4).round(),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _shimmerAvatarPlaceholder(),
+                errorWidget: (context, url, error) => _avatarPlaceholder(),
+              )
+            : _avatarPlaceholder(),
       ),
     );
   }

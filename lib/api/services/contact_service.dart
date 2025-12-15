@@ -1,5 +1,5 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
-import '../repositories/contact_repository.dart';
+import 'package:soi/api/services/contact_repository.dart';
 
 /// 연락처 관련 비즈니스 로직을 담당하는 서비스 클래스
 class ContactService {

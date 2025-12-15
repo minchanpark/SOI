@@ -1,5 +1,5 @@
 // 리액션 행: 댓글 파형 레이아웃과 동일 구조, 가운데 파형 영역을 이모지 박스로 대체
-import 'package:cached_network_image/cached_network_image.dart';
+/*import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -110,3 +110,4 @@ class ReactionRow extends StatelessWidget {
     );
   }
 }
+*/

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/controller/contact_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../api/controller/friend_controller.dart';
 import '../../../api/controller/user_controller.dart';
-import '../../../api_firebase/controllers/contact_controller.dart';
 
 /// 친구 추천 카드
 /// 연락처 동기화가 활성화된 경우, 연락처 목록에서 SOI 사용자들을 추천합니다.
@@ -14,14 +14,12 @@ class FriendSuggestCard extends StatefulWidget {
   final double scale;
   final bool isInitializing;
   final List<Contact> contacts;
-  final Function(Contact) onAddFriend;
 
   const FriendSuggestCard({
     super.key,
     required this.scale,
     required this.isInitializing,
     required this.contacts,
-    required this.onAddFriend,
   });
 
   @override

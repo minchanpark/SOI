@@ -55,6 +55,11 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       _lastProfileImageKey = _userController?.currentUser?.profileImageUrlKey;
       _userControllerListener ??= _handleUserProfileChanged;
       _userController?.addListener(_userControllerListener!);
+
+      // PostController 구독 설정
+      final postController = Provider.of<PostController>(context, listen: false);
+      _feedDataManager?.listenToPostController(postController, context);
+
       _loadInitialData();
     });
   }

@@ -29,6 +29,26 @@ class PostController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // 게시물 변경 리스너 목록
+  final List<VoidCallback> _onPostsChangedListeners = [];
+
+  /// 게시물 변경 리스너 추가
+  void addPostsChangedListener(VoidCallback listener) {
+    _onPostsChangedListeners.add(listener);
+  }
+
+  /// 게시물 변경 리스너 제거
+  void removePostsChangedListener(VoidCallback listener) {
+    _onPostsChangedListeners.remove(listener);
+  }
+
+  /// 게시물 변경 알림
+  void _notifyPostsChanged() {
+    for (final listener in _onPostsChangedListeners) {
+      listener();
+    }
+  }
+
   /// 생성자
   ///
   /// [postService]를 주입받아 사용합니다. 테스트 시 MockPostService를 주입할 수 있습니다.
@@ -91,6 +111,7 @@ class PostController extends ChangeNotifier {
       );
       debugPrint("[PostController] 게시물 생성 결과: $result");
       _setLoading(false);
+      if (result) _notifyPostsChanged();
       return result;
     } catch (e) {
       _setError('게시물 생성 실패: $e');
@@ -274,6 +295,7 @@ class PostController extends ChangeNotifier {
         duration: duration,
       );
       _setLoading(false);
+      if (result) _notifyPostsChanged();
       return result;
     } catch (e) {
       _setError('게시물 수정 실패: $e');
@@ -308,6 +330,7 @@ class PostController extends ChangeNotifier {
         postStatus: postStatus,
       );
       _setLoading(false);
+      if (result) _notifyPostsChanged();
       return result;
     } catch (e) {
       _setError('게시물 상태 변경 실패: $e');
@@ -337,6 +360,7 @@ class PostController extends ChangeNotifier {
     try {
       final result = await _postService.deletePost(postId);
       _setLoading(false);
+      if (result) _notifyPostsChanged();
       return result;
     } catch (e) {
       _setError('게시물 삭제 실패: $e');

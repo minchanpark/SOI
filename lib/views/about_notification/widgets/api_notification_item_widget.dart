@@ -11,6 +11,7 @@ class ApiNotificationItemWidget extends StatelessWidget {
   final String? profileUrl;
   final String? imageUrl;
   final VoidCallback onTap;
+  final VoidCallback? onConfirm;
   final bool isLast;
 
   const ApiNotificationItemWidget({
@@ -19,6 +20,7 @@ class ApiNotificationItemWidget extends StatelessWidget {
     this.profileUrl,
     this.imageUrl,
     required this.onTap,
+    this.onConfirm, // 카테고리 초대 알림 확인 버튼 콜백
     this.isLast = false,
   });
 
@@ -34,10 +36,11 @@ class ApiNotificationItemWidget extends StatelessWidget {
             _buildProfileImage(),
             SizedBox(width: 9.w),
             Expanded(child: _buildNotificationText()),
-            if (notification.hasImage) ...[
-              SizedBox(width: 23.w),
+            SizedBox(width: 12.w),
+            if (notification.type == AppNotificationType.categoryInvite)
+              _buildConfirmButton()
+            else if (notification.hasImage)
               _buildThumbnail(),
-            ],
           ],
         ),
       ),
@@ -84,10 +87,7 @@ class ApiNotificationItemWidget extends StatelessWidget {
       baseColor: const Color(0xFF2A2A2A),
       highlightColor: const Color(0xFF3A3A3A),
       child: Container(
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFF2A2A2A),
-        ),
+        decoration: const BoxDecoration(color: Color(0xFF2A2A2A)),
       ),
     );
   }
@@ -147,6 +147,33 @@ class ApiNotificationItemWidget extends StatelessWidget {
         color: const Color(0xFF323232),
       ),
       child: Icon(Icons.image, size: 24.sp, color: const Color(0xffd9d9d9)),
+    );
+  }
+
+  Widget _buildConfirmButton() {
+    return SizedBox(
+      width: 44.w,
+      height: 29.h,
+      child: TextButton(
+        onPressed: onConfirm ?? onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: const Color(0xFFF3F3F3),
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(19.70),
+          ),
+        ),
+        child: Text(
+          '확인',
+          style: TextStyle(
+            color: const Color(0xFF1C1C1C),
+            fontSize: 12.sp,
+            fontFamily: 'Pretendard Variable',
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.40,
+          ),
+        ),
+      ),
     );
   }
 }

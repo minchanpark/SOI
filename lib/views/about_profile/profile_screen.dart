@@ -6,11 +6,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../api/controller/category_controller.dart';
 import '../../api/controller/media_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/user.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,6 +32,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // 로딩 상태
   bool _isLoading = true;
   bool _isUploadingProfile = false;
+  int _profileImageRetryCount = 0;
+  bool _profileImageLoadFailed = false;
 
   // 알림 설정 상태
   bool _isNotificationEnabled = false;
@@ -78,7 +80,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (!mounted) return;
         setState(() {
           _userInfo = userInfo;
-          _profileImageUrl = presignedUrl;
+          _profileImageUrl = presignedUrl; // 프로필 이미지 URL 설정
+          _profileImageRetryCount = 0; // 재시도 카운트 초기화
+          _profileImageLoadFailed = false; // 프로필 이미지 로드에 실패하였을 때, false로 초기화
           _isLoading = false;
         });
       } catch (e) {
@@ -180,6 +184,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _profileImageUrlKey = resolvedProfileKey;
         _profileImageUrl = newProfileImageUrl;
+        _profileImageRetryCount = 0; // 재시도 카운트 초기화
+        _profileImageLoadFailed = false; // 프로필 이미지 로드에 실패하였을 때, false로 초기화
         _userInfo = refreshedUser ?? updatedUser ?? _userInfo;
       });
 
@@ -445,7 +451,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// 실제 계정 삭제 수행
   Future<void> _performDeleteAccount() async {
     try {
-      final authController = context.read<AuthController>();
       final apiUserController = context.read<UserController>();
 
       // 로딩 표시
@@ -463,11 +468,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final deletion = apiUserController.deleteUser(
         apiUserController.currentUser!.id,
       );
-
-      // 로컬 로그인 상태는 즉시 정리하여 자동로그인 방지
-      try {
-        await authController.clearLoginState();
-      } catch (_) {}
 
       if (mounted) {
         // 로딩 다이얼로그 닫기 후 즉시 시작 화면으로 이동
@@ -567,7 +567,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Stack(
                   children: [
                     // 프로필 이미지 또는 기본 아이콘
-                    _profileImageUrl != null && _profileImageUrl!.isNotEmpty
+                    _profileImageUrl != null &&
+                            _profileImageUrl!.isNotEmpty &&
+                            !_profileImageLoadFailed
                         ? ClipOval(
                             child: CachedNetworkImage(
                               imageUrl: _profileImageUrl!,
@@ -576,7 +578,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               fit: BoxFit.cover,
                               width: 96,
                               height: 96,
+
+                              // 로딩 중일 때는 shimmer 효과 표시
+                              placeholder: (context, url) => Shimmer.fromColors(
+                                baseColor: const Color(0xFF2A2A2A),
+                                highlightColor: const Color(0xFF3A3A3A),
+                                child: Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFF2A2A2A),
+                                  ),
+                                ),
+                              ),
+
+                              // 에러 시 재시도 로직
                               errorWidget: (context, error, stackTrace) {
+                                // 두 번째 시도까지 재시도
+                                if (_profileImageRetryCount < 2) {
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _profileImageRetryCount++;
+                                      });
+                                      // 캐시 클리어 후 다시 로드
+                                      CachedNetworkImage.evictFromCache(
+                                        _profileImageUrl!,
+                                      );
+                                    }
+                                  });
+                                  return Shimmer.fromColors(
+                                    baseColor: const Color(0xFF2A2A2A),
+                                    highlightColor: const Color(0xFF3A3A3A),
+                                    child: Container(
+                                      width: 96,
+                                      height: 96,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(0xFF2A2A2A),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                // 두 번 시도 후 실패하면 아이콘 표시
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _profileImageLoadFailed = true;
+                                    });
+                                  }
+                                });
                                 return Icon(
                                   Icons.person,
                                   size: 76.sp,
@@ -731,8 +787,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Column(
             children: [
-              _buildSettingsItem('알림 설정', hasToggle: true),
-              Divider(height: 1, color: const Color(0xFF323232)),
+              /*  _buildSettingsItem('알림 설정', hasToggle: true),
+              Divider(height: 1, color: const Color(0xFF323232)),*/
               _buildSettingsItem('언어', value: '한국어'),
               Divider(height: 1, color: const Color(0xFF323232)),
               _buildSettingsItem('개인정보 보호', value: ''),

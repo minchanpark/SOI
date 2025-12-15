@@ -44,14 +44,6 @@ class CameraPreviewContainer extends StatelessWidget {
       child: FutureBuilder<void>(
         future: initialization,
         builder: (context, snapshot) {
-          if (isLoading) {
-            return CameraShimmerBox(
-              width: previewWidth,
-              height: previewHeight,
-              borderRadius: 16,
-            );
-          }
-
           if (snapshot.hasError) {
             return Container(
               constraints: const BoxConstraints(maxHeight: double.infinity),
@@ -88,13 +80,21 @@ class CameraPreviewContainer extends StatelessWidget {
                           padding: EdgeInsets.only(bottom: 26.h),
                           child: zoomControls,
                         ),
+                      if (isLoading)
+                        Positioned.fill(
+                          child: CameraShimmerBox(
+                            width: previewWidth,
+                            height: previewHeight,
+                            borderRadius: 16,
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
-              if (isVideoRecording)
+              if (!isLoading && isVideoRecording)
                 Positioned(top: 12.h, child: recordingIndicator),
-              if (!isVideoRecording)
+              if (!isLoading && !isVideoRecording)
                 IconButton(
                   onPressed: onToggleFlash,
                   icon: Icon(

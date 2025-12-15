@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../../../api_firebase/controllers/auth_controller.dart';
-import '../../../../api_firebase/controllers/contact_controller.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../api/controller/contact_controller.dart';
 
 class FriendAddAndSharePage extends StatefulWidget {
   final PageController? pageController;
@@ -20,6 +20,9 @@ class FriendAddAndSharePage extends StatefulWidget {
 }
 
 class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
+  static const String _inviteLink = 'https://soi-sns.web.app';
+  static const String _inviteMessage = 'SOI 앱에서 친구가 되어주세요!\n\n$_inviteLink';
+
   @override
   void initState() {
     super.initState();
@@ -45,15 +48,24 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
     }
   }
 
+  Future<void> _shareInviteLink() async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: _inviteMessage, subject: 'SOI 친구 초대'),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('링크를 공유할 수 없습니다: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ContactController, AuthController>(
-      builder: (context, contactController, authController, _) {
+    return Consumer<ContactController>(
+      builder: (context, contactController, _) {
         final bool isContactLoading = contactController.isLoading;
-        final bool inviteLoading = authController.isInviteLinkLoading;
-        final String? inviteLink = authController.pendingInviteLink;
-        final bool canShareInvite =
-            !inviteLoading && inviteLink != null && inviteLink.isNotEmpty;
 
         return Stack(
           children: [
@@ -160,9 +172,7 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
 
                   SizedBox(height: 27.h),
                   ElevatedButton(
-                    onPressed: canShareInvite
-                        ? () => _shareInviteLink(authController)
-                        : null,
+                    onPressed: _shareInviteLink,
                     style: ButtonStyle(
                       backgroundColor: WidgetStateProperty.all(
                         Color(0xFF303030),
@@ -183,23 +193,11 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (inviteLoading)
-                            SizedBox(
-                              width: 20.w,
-                              height: 20.h,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          else
-                            Image.asset(
-                              'assets/icon_share.png',
-                              width: 23.w,
-                              height: 23.h,
-                            ),
+                          Image.asset(
+                            'assets/icon_share.png',
+                            width: 23.w,
+                            height: 23.h,
+                          ),
                           SizedBox(width: 11.5.w),
                           Text(
                             '친구 링크 공유',
@@ -222,19 +220,5 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
         );
       },
     );
-  }
-
-  Future<void> _shareInviteLink(AuthController authController) async {
-    try {
-      await authController.sharePreparedInviteLink(
-        originContext: context,
-        message: 'SOI에서 함께 친구가 되어볼까요?',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('링크를 공유할 수 없습니다: $e')));
-    }
   }
 }

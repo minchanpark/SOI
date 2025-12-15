@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../api_firebase/models/selected_friend_model.dart';
+import 'package:soi/api/models/selected_friend_model.dart';
 import '../../about_archiving/widgets/overlapping_profiles_widget.dart';
 import '../../about_friends/friend_list_add_screen.dart';
 

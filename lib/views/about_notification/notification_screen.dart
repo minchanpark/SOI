@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:soi_api_client/api.dart';
 
 import '../../api/controller/notification_controller.dart' as api;
 import '../../api/controller/category_controller.dart';
@@ -12,6 +11,7 @@ import '../../api/models/post.dart';
 import '../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
 import '../about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import 'widgets/api_notification_item_widget.dart';
+import 'widgets/category_invite_confirm_sheet.dart';
 
 /// 알림 메인 화면 (API 버전)
 class NotificationScreen extends StatefulWidget {
@@ -30,6 +30,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
   String? _error;
   NotificationGetAllResult? _notificationResult;
   int? _friendRequestCount; // 친구추가 요청 개수
+
+  String? _extractCategoryNameFromNotificationText(String? text) {
+    if (text == null || text.isEmpty) return null;
+    final quoted = RegExp(r'"([^"]+)"').firstMatch(text)?.group(1);
+    if (quoted != null && quoted.isNotEmpty) return quoted;
+    final curlyQuoted = RegExp(r'“([^”]+)”').firstMatch(text)?.group(1);
+    if (curlyQuoted != null && curlyQuoted.isNotEmpty) return curlyQuoted;
+    return null;
+  }
 
   @override
   void initState() {
@@ -103,10 +112,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     try {
       final notificationController = context.read<api.NotificationController>();
-      final friendNotifications =
-          await notificationController.getAllFriendNotifications(
-        userId: user.id,
-      );
+      final friendNotifications = await notificationController
+          .getAllFriendNotifications(userId: user.id);
       final uniqueKeys = <String>{};
       for (final n in friendNotifications) {
         final key = n.relatedId ?? n.id;
@@ -426,6 +433,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     profileUrl: notifications[i].userProfile,
                     imageUrl: notifications[i].imageUrl,
                     onTap: () => _onNotificationTap(notifications[i]),
+                    onConfirm:
+                        notifications[i].type ==
+                            AppNotificationType.categoryInvite
+                        ? () => _onNotificationTap(notifications[i])
+                        : null,
                     isLast: i == notifications.length - 1,
                   ),
                 SizedBox(height: 7.h),
@@ -457,21 +469,82 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
 
     // 친구 요청일 경우, 친구 요청 화면으로 이동
-    if (type == NotificationRespDtoTypeEnum.FRIEND_REQUEST ||
-        type == NotificationRespDtoTypeEnum.FRIEND_RESPOND) {
+    if (type == AppNotificationType.friendRequest ||
+        type == AppNotificationType.friendRespond) {
       Navigator.of(context).pushNamed('/friend_requests');
       return;
     }
 
-    // 카테고리 초대일 경우, 아카이빙 탭으로 이동
-    if (type == NotificationRespDtoTypeEnum.CATEGORY_INVITE) {
-      Navigator.of(context).pushNamed('/archiving');
-      _showSnackBar('카테고리 초대는 아카이빙 탭에서 확인해주세요.');
+    // 카테고리 초대 알림일 경우, 초대 수락/거절 모달 시트 표시
+    if (type == AppNotificationType.categoryInvite) {
+      final categoryId =
+          notification.relatedId ?? notification.categoryIdForPost;
+      if (categoryId == null) {
+        _showSnackBar('카테고리 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      final categoryController = context.read<CategoryController>();
+
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) {
+          return CategoryInviteConfirmSheet(
+            categoryName:
+                _extractCategoryNameFromNotificationText(notification.text) ??
+                '카테고리',
+            categoryImageUrl: notification.imageUrl ?? '',
+            invitees: const [],
+            onAccept: () async {
+              Navigator.of(sheetContext).pop();
+              _showBlockingLoading();
+              try {
+                final ok = await categoryController.acceptInvite(
+                  categoryId: categoryId,
+                  userId: currentUser.id,
+                );
+                if (ok) {
+                  await _onRefresh();
+                  _showSnackBar('카테고리 초대를 수락했습니다.');
+                } else {
+                  _showSnackBar(
+                    categoryController.errorMessage ?? '초대 수락에 실패했습니다.',
+                  );
+                }
+              } finally {
+                _hideBlockingLoading();
+              }
+            },
+            onDecline: () async {
+              Navigator.of(sheetContext).pop();
+              _showBlockingLoading();
+              try {
+                final ok = await categoryController.declineInvite(
+                  categoryId: categoryId,
+                  userId: currentUser.id,
+                );
+                if (ok) {
+                  await _onRefresh();
+                  _showSnackBar('카테고리 초대를 거절했습니다.');
+                } else {
+                  _showSnackBar(
+                    categoryController.errorMessage ?? '초대 거절에 실패했습니다.',
+                  );
+                }
+              } finally {
+                _hideBlockingLoading();
+              }
+            },
+          );
+        },
+      );
       return;
     }
 
     // 카테고리 추가 알림일 경우, 해당 카테고리로 이동
-    if (type == NotificationRespDtoTypeEnum.CATEGORY_ADDED) {
+    if (type == AppNotificationType.categoryAdded) {
       final categoryId =
           notification.relatedId ?? notification.categoryIdForPost;
       if (categoryId == null) {
@@ -483,9 +556,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
       return;
     }
 
-    if (type == NotificationRespDtoTypeEnum.PHOTO_ADDED ||
-        type == NotificationRespDtoTypeEnum.COMMENT_ADDED ||
-        type == NotificationRespDtoTypeEnum.COMMENT_AUDIO_ADDED) {
+    if (type == AppNotificationType.photoAdded ||
+        type == AppNotificationType.commentAdded ||
+        type == AppNotificationType.commentAudioAdded) {
       final postId = notification.relatedId;
       final categoryId = notification.categoryIdForPost;
 

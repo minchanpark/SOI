@@ -6,9 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:soi/api/controller/category_controller.dart' as api_category;
 import 'package:soi/api/controller/friend_controller.dart' as api_friend;
 import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/api/models/selected_friend_model.dart';
 import 'package:soi/api/models/user.dart';
-
-import '../../api_firebase/models/selected_friend_model.dart';
 
 /// 친구 추가 화면 (REST API 버전)
 class FriendListAddScreen extends StatefulWidget {

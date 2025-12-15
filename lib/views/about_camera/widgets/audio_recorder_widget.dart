@@ -107,7 +107,8 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
   // ========== 초기화 메서드들 ==========
   void _resolveAudioController() {
-    _audioController = widget.audioController ??
+    _audioController =
+        widget.audioController ??
         Provider.of<AudioController>(context, listen: false);
   }
 
@@ -253,10 +254,12 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
 
       _stopAudioControllerListener();
 
+      // 중복 정지 방지
       if (recorderController.hasPermission) {
-        await recorderController.stop();
+        await recorderController.stop(); // 녹음 중지
       }
 
+      // 네이티브 녹음을 중지하고 파일 경로를 반환합니다.
       await _audioController.stopRecordingSimple();
 
       if (playerController?.playerState.isPlaying == true) {
@@ -267,6 +270,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
       _previousState = _currentState;
       _recordedFilePath = null;
       _waveformData = null;
+      _audioController.clearCurrentRecording();
 
       debugPrint('녹음 취소 및 초기화 완료');
     } catch (e) {
@@ -275,6 +279,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
       _previousState = _currentState;
       _recordedFilePath = null;
       _waveformData = null;
+      _audioController.clearCurrentRecording();
     }
 
     // 부모 위젯에 알려서 텍스트 필드로 전환
@@ -291,6 +296,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
       _previousState = _currentState;
       _recordedFilePath = null;
       _waveformData = null;
+      _audioController.clearCurrentRecording();
     } catch (e) {
       debugPrint('녹음 파일 삭제 오류: $e');
     }

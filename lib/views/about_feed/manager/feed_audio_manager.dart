@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/controller/comment_audio_controller.dart';
 import '../../../api/models/post.dart';
 import '../../../api/controller/audio_controller.dart';
 import '../../../api/controller/media_controller.dart';
-import '../../../api_firebase/controllers/comment_audio_controller.dart';
 
 class FeedAudioManager {
   Future<void> toggleAudio(Post post, BuildContext context) async {

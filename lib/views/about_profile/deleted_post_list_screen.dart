@@ -263,8 +263,6 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
         _togglePostSelection(post.id);
       },
       child: Container(
-        width: 175,
-        height: 233,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           color: const Color(0xFF1C1C1C),
@@ -272,21 +270,18 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Stack(
+            fit: StackFit.expand,
             children: [
               if (imageUrl != null && imageUrl.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  width: 175,
-                  height: 233,
                   memCacheWidth: (175 * 2).round(),
                   maxWidthDiskCache: (175 * 2).round(),
                   placeholder: (context, url) => Shimmer.fromColors(
                     baseColor: const Color(0xFF333333),
                     highlightColor: const Color(0xFF555555),
                     child: Container(
-                      width: 175,
-                      height: 233,
                       decoration: BoxDecoration(
                         color: const Color(0xFF333333),
                         borderRadius: BorderRadius.circular(8.r),
@@ -310,8 +305,6 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
               // 선택 오버레이
               if (isPostSelected)
                 Container(
-                  width: 175,
-                  height: 233,
                   color: Colors.black.withValues(alpha: 0.3),
                 ),
               // 체크마크
@@ -322,7 +315,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
                   child: Container(
                     width: 24.w,
                     height: 24.h,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.black,
                       shape: BoxShape.circle,
                     ),

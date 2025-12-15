@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/contact.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:soi/api_firebase/controllers/auth_controller.dart';
+import 'package:soi/api/controller/contact_controller.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../api_firebase/controllers/contact_controller.dart';
-import '../../api_firebase/controllers/friend_controller.dart';
-import '../../api_firebase/controllers/user_matching_controller.dart';
-import '../../api_firebase/controllers/friend_request_controller.dart';
-import '../../api_firebase/services/contact_service.dart';
-import '../../api_firebase/services/firebase_deeplink_service.dart';
-import '../../api_firebase/services/user_matching_service.dart';
 import 'widgets/friend_add_options_card.dart';
 import 'widgets/invite_link_card.dart';
 import 'widgets/friend_request_card.dart';
@@ -31,13 +22,12 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
     with AutomaticKeepAliveClientMixin {
   List<Contact> _contacts = [];
 
-  // 백그라운드 로딩을 위한 상태 변수들 추가
+  // ✅ 백그라운드 로딩을 위한 상태 변수들 추가
   bool _isInitializing = false;
   bool _hasInitialized = false;
 
   // ContactController 참조 저장
   ContactController? _contactController;
-  AuthController? _authController;
 
   @override
   bool get wantKeepAlive => true;
@@ -61,7 +51,6 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
       context,
       listen: false,
     );
-    _authController = Provider.of<AuthController>(context, listen: false);
   }
 
   @override
@@ -95,9 +84,6 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
   Future<void> _initializeControllers() async {
     // 백그라운드에서 순차적으로 초기화
     Future.microtask(() async {
-      await _initializeFriendController();
-      await _initializeFriendRequestController();
-
       // 연락처는 필요할 때만 로드
       if (_shouldLoadContacts()) {
         await _initializeContactPermissionInBackground();
@@ -113,76 +99,38 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
     return _contactController!.isActivelySyncing && _contacts.isEmpty;
   }
 
-  /// FriendController 초기화
-  Future<void> _initializeFriendController() async {
-    try {
-      if (!mounted) return;
-
-      final friendController = Provider.of<FriendController>(
-        context,
-        listen: false,
-      );
-
-      // 이미 초기화되어 있으면 스킵
-      if (friendController.isInitialized) return;
-
-      await friendController.initialize();
-    } catch (e) {
-      debugPrint('FriendController 초기화 실패: $e');
-    }
-  }
-
-  /// FriendRequestController 초기화
-  Future<void> _initializeFriendRequestController() async {
-    try {
-      if (!mounted) return;
-
-      final friendRequestController = Provider.of<FriendRequestController>(
-        context,
-        listen: false,
-      );
-
-      // 이미 초기화되어 있으면 스킵
-      if (friendRequestController.isInitialized) return;
-
-      await friendRequestController.initialize();
-      // debugPrint('FriendRequestController 초기화 완료');
-    } catch (e) {
-      // debugPrint('FriendRequestController 초기화 실패: $e');
-    }
-  }
-
-  /// 백그라운드에서 연락처 권한 및 초기화 처리 (화면 전환 지연 방지)
-  /// 최적화: 캐시 기반 조기 반환으로 반복 호출 시 O(1) 속도 달성
+  /// ✅ 백그라운드에서 연락처 권한 및 초기화 처리 (화면 전환 지연 방지)
   Future<void> _initializeContactPermissionInBackground() async {
-    // 1. 조기 반환: 이미 초기화됨 - O(1)
     if (_hasInitialized) return;
 
-    // 2. null 체크 먼저 수행 - O(1)
-    final controller = _contactController;
-    if (!mounted || controller == null) return;
-
-    // 3. 캐시된 권한 상태 확인 - O(1)
-    // 이미 동기화가 활성화되어 있고 연락처가 로드되어 있으면 스킵
-    if (controller.contactSyncEnabled && _contacts.isNotEmpty) {
-      _hasInitialized = true;
-      return;
-    }
-
-    // 4. UI 상태 업데이트 (한 번만)
-    setState(() => _isInitializing = true);
+    setState(() {
+      _isInitializing = true;
+    });
 
     try {
-      // 5. 권한 확인 (비동기 I/O - 불가피)
-      final result = await controller.initializeContactPermission();
+      if (!mounted || _contactController == null) return;
 
-      // 6. 마운트 체크 후 연락처 로드
-      if (result.isEnabled && mounted && controller.isActivelySyncing) {
-        // 캐시 우선 사용 (forceRefresh: false)
-        _contacts = await controller.getContacts(forceRefresh: false);
+      // ✅ 1단계: 권한 확인 (빠른 처리)
+      final result = await _contactController!.initializeContactPermission();
+
+      // ✅ 2단계: 권한이 허용된 경우에만 연락처 로드 (느린 처리)
+      if (result.isEnabled &&
+          mounted &&
+          _contactController!.isActivelySyncing) {
+        try {
+          _contacts = await _contactController!.getContacts(
+            forceRefresh: false,
+          );
+
+          if (mounted) {
+            setState(() {});
+          }
+        } catch (e) {
+          // debugPrint('연락처 로드 실패: $e');
+        }
       }
 
-      // 7. 최종 상태 업데이트 (한 번에 처리)
+      // ✅ 3단계: 초기화 완료 및 메시지 표시
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -367,7 +315,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                     ),
                   ),
                 ),
-                // 친구 요청 카드 (API)
+                // 친구 요청 카드
                 FriendRequestCard(scale: scale),
                 SizedBox(height: 24.h),
                 Padding(
@@ -398,7 +346,6 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                   scale: scale,
                   isInitializing: _isInitializing,
                   contacts: _contacts,
-                  onAddFriend: _addFriendFromContact,
                 ),
                 SizedBox(height: 134.h),
               ],
@@ -407,225 +354,5 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
         },
       ),
     );
-  }
-
-  /// 연락처에서 친구 추가
-  Future<void> _addFriendFromContact(Contact contact) async {
-    try {
-      // UserMatchingController와 FriendRequestController 가져오기
-      final userMatchingController = Provider.of<UserMatchingController>(
-        context,
-        listen: false,
-      );
-      final friendRequestController = Provider.of<FriendRequestController>(
-        context,
-        listen: false,
-      );
-
-      // 1. 해당 연락처가 SOI 사용자인지 확인
-      final contactStatus = await userMatchingController.getContactSearchStatus(
-        contact,
-      );
-
-      switch (contactStatus) {
-        case ContactSearchStatus.canSendRequest:
-          // SOI 사용자이고 친구 요청 가능
-          // UserMatchingController를 통해 사용자 정보 다시 가져오기
-          final matchedUser = await userMatchingController.findUserForContact(
-            contact,
-          );
-
-          if (matchedUser != null) {
-            // debugPrint('매칭된 사용자 찾음: ${matchedUser.uid}, ${matchedUser.id}');
-            final success = await friendRequestController.sendFriendRequest(
-              receiverUid: matchedUser.uid,
-              message: '받은 친구 요청',
-            );
-
-            if (success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${contact.displayName}님에게 친구 요청을 전송했습니다'),
-                  backgroundColor: const Color(0xFF5A5A5A),
-                ),
-              );
-            }
-          } else {
-            // SOI 사용자이지만 정보를 찾을 수 없는 경우
-            // debugPrint('사용자 정보를 찾을 수 없음');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '${contact.displayName}님의 정보를 확인하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
-                  ),
-                  backgroundColor: const Color(0xFF5A5A5A),
-                ),
-              );
-            }
-          }
-          break;
-
-        case ContactSearchStatus.alreadyFriend:
-          // 이미 친구인 경우
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${contact.displayName}님은 이미 친구입니다'),
-                backgroundColor: const Color(0xFF5A5A5A),
-              ),
-            );
-          }
-          break;
-
-        case ContactSearchStatus.requestSent:
-          // 이미 친구 요청을 보낸 경우
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${contact.displayName}님에게 이미 친구 요청을 보냈습니다'),
-                backgroundColor: const Color(0xFF5A5A5A),
-              ),
-            );
-          }
-          break;
-
-        case ContactSearchStatus.requestReceived:
-          // 상대방이 이미 친구 요청을 보낸 경우
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '${contact.displayName}님으로부터 친구 요청이 와있습니다. 친구 요청 목록을 확인해주세요',
-                ),
-                backgroundColor: const Color(0xFF5A5A5A),
-              ),
-            );
-          }
-          break;
-
-        case ContactSearchStatus.notFound:
-          // SOI 사용자가 아닌 경우 - SMS로 앱 설치 링크 전송
-          await _sendInviteSMS(contact);
-          break;
-
-        case ContactSearchStatus.error:
-          // 오류 발생
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${contact.displayName}님 정보를 확인하는 중 오류가 발생했습니다'),
-                backgroundColor: const Color(0xFF5A5A5A),
-              ),
-            );
-          }
-          break;
-      }
-    } catch (e) {
-      // debugPrint('친구 추가 실패: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('친구 추가 중 오류가 발생했습니다: $e'),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
-        );
-      }
-    }
-  }
-
-  /// SMS로 앱 설치 링크 전송
-  Future<void> _sendInviteSMS(Contact contact) async {
-    try {
-      // debugPrint('Contact 정보: ${contact.displayName}');
-      // debugPrint('Contact phones 길이: ${contact.phones.length}');
-
-      // Contact의 전화번호 확인
-      if (contact.phones.isEmpty) {
-        // debugPrint('전화번호가 없는 연락처: ${contact.displayName}');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${contact.displayName}님의 전화번호가 없습니다'),
-              backgroundColor: const Color(0xFF5A5A5A),
-            ),
-          );
-        }
-        return;
-      }
-
-      // 첫 번째 전화번호 가져오기
-      final phone = contact.phones.first;
-      final phoneNumber = phone.number;
-
-      if (phoneNumber.isEmpty) {
-        // debugPrint('빈 전화번호: ${contact.displayName}');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${contact.displayName}님의 유효한 전화번호가 없습니다'),
-              backgroundColor: const Color(0xFF5A5A5A),
-            ),
-          );
-        }
-        return;
-      }
-
-      final currentUserName = await _authController?.getUserName();
-      final currentUserId = _authController?.currentUser?.uid;
-
-      if (currentUserId == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('로그인이 필요합니다'),
-              backgroundColor: const Color(0xFF5A5A5A),
-            ),
-          );
-        }
-        return;
-      }
-
-      // Supabase로 친구 초대 링크 생성
-      final inviteLink = FirebaseDeeplinkService.createFriendInviteLink(
-        inviterName: currentUserName ?? 'Unknown User',
-        inviterId: currentUserId,
-
-        inviterProfileImage: _authController?.currentUser?.photoURL,
-      );
-
-      debugPrint("Inviter Name: $currentUserName");
-
-      final message =
-          '안녕하세요! $currentUserName님이 SOI 앱에서 친구가 되고 싶어해요! 아래 링크로 SOI를 시작해보세요\n\n$inviteLink';
-
-      // URL 인코딩 문제를 방지하기 위해 직접 URI 구성
-      final encodedMessage = Uri.encodeComponent(message);
-      final uri = Uri.parse('sms:$phoneNumber?body=$encodedMessage');
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${contact.displayName}님에게 초대 메시지를 전송했습니다'),
-              backgroundColor: const Color(0xFF5A5A5A),
-            ),
-          );
-        }
-      } else {
-        throw 'SMS 앱을 열 수 없습니다';
-      }
-    } catch (e) {
-      // debugPrint('SMS 전송 실패: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('메시지 전송 실패: $e'),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
-        );
-      }
-    }
   }
 }

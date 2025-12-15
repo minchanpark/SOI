@@ -5,9 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:provider/provider.dart';
-import '../../api_firebase/controllers/auth_controller.dart';
-import '../../api_firebase/controllers/notification_controller.dart';
 import '../../api/services/camera_service.dart';
 import 'widgets/camera_app_bar.dart';
 import 'widgets/camera_capture_button.dart';
@@ -118,8 +115,6 @@ class _CameraScreenState extends State<CameraScreen>
       // 비활성 상태에서는 세션만 준비
       unawaited(_cameraService.prepareSessionIfPermitted());
     }
-
-    Future.microtask(_initializeNotifications);
   }
 
   @override
@@ -235,27 +230,6 @@ class _CameraScreenState extends State<CameraScreen>
         }
       }).toList();
     });
-  }
-
-  // 알림 초기화 - 사용자 ID로 알림 구독 시작
-  Future<void> _initializeNotifications() async {
-    try {
-      final authController = Provider.of<AuthController>(
-        context,
-        listen: false,
-      );
-      final notificationController = Provider.of<NotificationController>(
-        context,
-        listen: false,
-      );
-
-      final userId = authController.getUserId;
-      if (userId != null && userId.isNotEmpty) {
-        await notificationController.startListening(userId);
-      }
-    } catch (_) {
-      return;
-    }
   }
 
   // 비디오 녹화 이벤트 리스너 설정

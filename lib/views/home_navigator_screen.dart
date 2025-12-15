@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:soi/views/about_feed/feed_home.dart';
@@ -6,6 +8,7 @@ import 'about_archiving/screens/api_archive_main_screen.dart';
 import 'about_camera/camera_screen.dart';
 import 'package:antdesign_icons/antdesign_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../api/services/camera_service.dart';
 
 class HomePageNavigationBar extends StatefulWidget {
   final int currentPageIndex;
@@ -23,6 +26,7 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
   void initState() {
     super.initState();
     _currentPageIndex = widget.currentPageIndex;
+    unawaited(CameraService.instance.prepareSessionIfPermitted());
   }
 
   // 잘못된 프로필 이미지 URL을 확인하고 정리하는 함수
@@ -41,6 +45,10 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
             backgroundColor: AppTheme.lightTheme.colorScheme.surface,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             onDestinationSelected: (int index) {
+              if (index == 1) {
+                unawaited(CameraService.instance.activateSession());
+              }
+
               setState(() {
                 _currentPageIndex = index;
               });
@@ -112,7 +120,7 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
           _buildPage(0, const FeedHomeScreen()),
           _buildPage(
             1,
-            _currentPageIndex == 1 ? const CameraScreen() : Container(),
+            CameraScreen(isActive: _currentPageIndex == 1),
           ),
           _buildPage(2, const APIArchiveMainScreen()),
         ],

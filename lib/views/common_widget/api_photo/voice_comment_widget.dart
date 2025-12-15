@@ -1005,13 +1005,13 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         color: Colors.black.withValues(alpha: 0.55),
         offset: const Offset(0, 10),
         blurRadius: 18,
-        spreadRadius: -8,
+        spreadRadius: -10,
       ),
       BoxShadow(
         color: Colors.white.withValues(alpha: 0.06),
         offset: const Offset(0, -2),
         blurRadius: 6,
-        spreadRadius: -2,
+        spreadRadius: -4,
       ),
     ];
 

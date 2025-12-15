@@ -1,5 +1,23 @@
 import 'package:soi_api_client/api.dart';
 
+/// 알림 타입 (앱 모델용)
+///
+/// API generated enum(NotificationRespDtoTypeEnum)에 직접 의존하지 않고,
+/// UI/도메인 레이어에서 쉽게 비교/분기하기 위한 enum입니다.
+enum AppNotificationType {
+  categoryInvite('CATEGORY_INVITE'),
+  categoryAdded('CATEGORY_ADDED'),
+  photoAdded('PHOTO_ADDED'),
+  commentAdded('COMMENT_ADDED'),
+  commentAudioAdded('COMMENT_AUDIO_ADDED'),
+  commentReactAdded('COMMENT_REACT_ADDED'),
+  friendRequest('FRIEND_REQUEST'),
+  friendRespond('FRIEND_RESPOND');
+
+  final String value;
+  const AppNotificationType(this.value);
+}
+
 /// 알림 모델
 ///
 /// API의 NotificationRespDto를 앱 내부에서 사용하기 위한 모델입니다.
@@ -26,7 +44,7 @@ class AppNotification {
   final String? imageUrl;
 
   /// 알림 타입
-  final NotificationRespDtoTypeEnum? type;
+  final AppNotificationType? type;
 
   /// 읽음 여부
   final bool? isRead;
@@ -63,11 +81,35 @@ class AppNotification {
       nickname: dto.nickname,
       userProfileKey: dto.userProfileKey,
       imageUrl: dto.imageUrl,
-      type: dto.type,
+      type: _typeFromDto(dto.type),
       isRead: dto.isRead,
       categoryIdForPost: dto.categoryIdForPost,
       relatedId: dto.relatedId,
     );
+  }
+
+  /// DTO 타입을 AppNotificationType으로 변환
+  static AppNotificationType? _typeFromDto(NotificationRespDtoTypeEnum? type) {
+    switch (type) {
+      case NotificationRespDtoTypeEnum.CATEGORY_INVITE:
+        return AppNotificationType.categoryInvite;
+      case NotificationRespDtoTypeEnum.CATEGORY_ADDED:
+        return AppNotificationType.categoryAdded;
+      case NotificationRespDtoTypeEnum.PHOTO_ADDED:
+        return AppNotificationType.photoAdded;
+      case NotificationRespDtoTypeEnum.COMMENT_ADDED:
+        return AppNotificationType.commentAdded;
+      case NotificationRespDtoTypeEnum.COMMENT_AUDIO_ADDED:
+        return AppNotificationType.commentAudioAdded;
+      case NotificationRespDtoTypeEnum.COMMENT_REACT_ADDED:
+        return AppNotificationType.commentReactAdded;
+      case NotificationRespDtoTypeEnum.FRIEND_REQUEST:
+        return AppNotificationType.friendRequest;
+      case NotificationRespDtoTypeEnum.FRIEND_RESPOND:
+        return AppNotificationType.friendRespond;
+      default:
+        return null;
+    }
   }
 
   /// JSON에서 AppNotification 모델 생성
@@ -82,13 +124,34 @@ class AppNotification {
           (json['userProfileKey'] as String?) ??
           (json['userProfile'] as String?),
       imageUrl: json['imageUrl'] as String?,
-      type: typeValue is String
-          ? NotificationRespDtoTypeEnum.fromJson(typeValue)
-          : null,
+      type: _typeFromString(typeValue as String?),
       isRead: json['isRead'] as bool?,
       categoryIdForPost: json['categoryIdForPost'] as int?,
       relatedId: json['relatedId'] as int?,
     );
+  }
+
+  static AppNotificationType? _typeFromString(String? type) {
+    switch (type?.toUpperCase()) {
+      case 'CATEGORY_INVITE':
+        return AppNotificationType.categoryInvite;
+      case 'CATEGORY_ADDED':
+        return AppNotificationType.categoryAdded;
+      case 'PHOTO_ADDED':
+        return AppNotificationType.photoAdded;
+      case 'COMMENT_ADDED':
+        return AppNotificationType.commentAdded;
+      case 'COMMENT_AUDIO_ADDED':
+        return AppNotificationType.commentAudioAdded;
+      case 'COMMENT_REACT_ADDED':
+        return AppNotificationType.commentReactAdded;
+      case 'FRIEND_REQUEST':
+        return AppNotificationType.friendRequest;
+      case 'FRIEND_RESPOND':
+        return AppNotificationType.friendRespond;
+      default:
+        return null;
+    }
   }
 
   /// AppNotification 모델을 JSON으로 변환
@@ -100,7 +163,7 @@ class AppNotification {
       'nickname': nickname,
       'userProfileKey': userProfileKey,
       'imageUrl': imageUrl,
-      'type': type?.toJson(),
+      'type': type?.value,
       'isRead': isRead,
       'categoryIdForPost': categoryIdForPost,
       'relatedId': relatedId,
@@ -125,7 +188,7 @@ class AppNotification {
     String? nickname,
     String? userProfileKey,
     String? imageUrl,
-    NotificationRespDtoTypeEnum? type,
+    AppNotificationType? type,
     bool? isRead,
     int? categoryIdForPost,
     int? relatedId,
