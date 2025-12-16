@@ -69,7 +69,7 @@ Class | Method | HTTP request | Description
 *CategoryAPIApi* | [**delete**](doc//CategoryAPIApi.md#delete) | **POST** /category/delete | 카테고리 나가기 (삭제)
 *CategoryAPIApi* | [**getCategories**](doc//CategoryAPIApi.md#getcategories) | **POST** /category/find | 유저가 속한 카테고리 리스트를 가져오는 API
 *CategoryAPIApi* | [**inviteResponse**](doc//CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
-*CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가
+*CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가(초대)
 *CommentAPIApi* | [**create2**](doc//CommentAPIApi.md#create2) | **POST** /comment/create | 댓글 추가
 *CommentAPIApi* | [**deleteComment**](doc//CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
 *CommentAPIApi* | [**getComment**](doc//CommentAPIApi.md#getcomment) | **GET** /comment/get | 댓글 조회

@@ -23,7 +23,6 @@ import 'widgets/add_category_widget.dart';
 import 'widgets/audio_recorder_widget.dart';
 import 'widgets/caption_input_widget.dart';
 import 'widgets/category_list_widget.dart';
-import 'widgets/loading_popup_widget.dart';
 import 'widgets/photo_display_widget.dart';
 
 class PhotoEditorScreen extends StatefulWidget {
@@ -78,6 +77,36 @@ class _UploadPayload {
     this.caption,
     this.waveformData,
     this.audioDurationSeconds,
+  });
+}
+
+class _UploadSnapshot {
+  final int userId;
+  final String nickName;
+  final String filePath;
+  final bool isVideo;
+  final String captionText;
+  final String? recordedAudioPath;
+  final List<double>? recordedWaveformData;
+  final int? recordedAudioDurationSeconds;
+  final List<int> categoryIds;
+  final Future<File>? compressionTask;
+  final File? compressedFile;
+  final String? lastCompressedPath;
+
+  const _UploadSnapshot({
+    required this.userId,
+    required this.nickName,
+    required this.filePath,
+    required this.isVideo,
+    required this.captionText,
+    required this.categoryIds,
+    required this.compressionTask,
+    required this.compressedFile,
+    required this.lastCompressedPath,
+    this.recordedAudioPath,
+    this.recordedWaveformData,
+    this.recordedAudioDurationSeconds,
   });
 }
 
@@ -616,39 +645,87 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   /// Parameters:
   ///   - [categoryIds]: 업로드할 게시물에 연결할 카테고리 ID 목록
   Future<void> _uploadThenNavigate(List<int> categoryIds) async {
-    if (!mounted) return;
     if (_uploadStarted) return;
 
-    // post 저장에 필요한 데이터를 미리 준비
-    final payload = await _prepareUploadPayload(categoryIds: categoryIds);
-    if (payload == null) return;
-    if (!mounted) return;
     _uploadStarted = true;
 
     try {
-      // 성능 최적화: 병렬 처리 가능한 작업들을 동시 실행
-      await Future.wait([
-        // 오디오 중지
-        _audioController.stopRealtimeAudio(),
+      final currentUser = _userController.currentUser;
+      if (currentUser == null) {
+        _showErrorSnackBar('로그인 후 다시 시도해주세요.');
+        _uploadStarted = false;
+        return;
+      }
 
-        // 이미지 캐시 정리
-        Future.microtask(() => _clearImageCache()),
-      ]);
+      final filePath = widget.filePath;
+      if (filePath == null || filePath.isEmpty) {
+        _safeSetState(() {
+          _errorMessage = '업로드할 파일을 찾을 수 없습니다.';
+        });
+        _uploadStarted = false;
+        return;
+      }
 
-      // 오디오 녹음 데이터 초기화
-      _audioController.clearCurrentRecording();
+      final snapshot = _UploadSnapshot(
+        userId: currentUser.id,
+        nickName: currentUser.userId,
+        filePath: filePath,
+        isVideo: widget.isVideo ?? false,
+        captionText: _captionController.text.trim(),
+        recordedAudioPath: _recordedAudioPath,
+        recordedWaveformData: _recordedWaveformData != null
+            ? List<double>.from(_recordedWaveformData!)
+            : null,
+        recordedAudioDurationSeconds: _recordedAudioDurationSeconds,
+        categoryIds: List<int>.from(categoryIds),
+        compressionTask: _compressionTask,
+        compressedFile: _compressedFile,
+        lastCompressedPath: _lastCompressedPath,
+      );
 
       // home_navigation_screen으로 먼저 이동
       _navigateToHome();
 
-      // 백그라운드에서 Post 업로드 실행
-      unawaited(
-        _uploadPostInBackground(categoryIds: categoryIds, payload: payload),
-      );
+      // 다음 프레임 이후에 업로드 파이프라인 시작(화면 전환 O(1) 체감)
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        unawaited(_runUploadPipelineAfterNavigation(snapshot));
+      });
     } catch (e) {
       debugPrint('업로드 실패: $e');
-      _clearImageCache();
-      _handleUploadError(e);
+      _uploadStarted = false;
+    }
+  }
+
+  /// 업로드를 실행하는 메서드입니다.
+  /// 업로드 로직을 화면 전환 이후에 실행하여 사용자 경험을 향상시킵니다.
+  ///
+  /// Parameters:
+  ///  - [snapshot]: 업로드에 필요한 모든 데이터를 담은 스냅샷 객체
+  Future<void> _runUploadPipelineAfterNavigation(
+    _UploadSnapshot snapshot,
+  ) async {
+    try {
+      // UI 전환 이후에 무거운 작업들을 시작 (dispose와 무관하게 동작하도록 스냅샷 사용)
+      unawaited(_audioController.stopRealtimeAudio());
+      _audioController.clearCurrentRecording();
+
+      // 캐시는 전체 clear 대신 현재 사용한 이미지 정도만 evict
+      _evictCurrentImageFromCache(filePath: snapshot.filePath);
+
+      // 성능 최적화: 업로드 전에 미리 압축된 파일이 있는지 확인
+      final payload = await _prepareUploadPayloadFromSnapshot(snapshot);
+      if (payload == null) {
+        _uploadStarted = false;
+        return;
+      }
+
+      await _uploadPostInBackground(
+        categoryIds: snapshot.categoryIds,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('[PhotoEditor] 업로드 파이프라인 실패: $e');
+    } finally {
       _uploadStarted = false;
     }
   }
@@ -695,93 +772,36 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
-  /// 업로드 에러 처리 및 사용자에게 알림
-  void _handleUploadError(dynamic error) {
-    final message = error.toString().contains('413')
-        ? '파일 용량이 너무 커서 업로드에 실패했습니다. 촬영 이미지를 다시 선택하거나 압축 후 시도해주세요.'
-        : '업로드 중 오류가 발생했습니다. 다시 시도해주세요.';
+  Future<_UploadPayload?> _prepareUploadPayloadFromSnapshot(
+    _UploadSnapshot snapshot,
+  ) async {
+    final filePath = snapshot.filePath;
 
-    _showErrorSnackBar(message);
-
-    if (!mounted) return;
-    LoadingPopupWidget.hide(context);
-    if (!mounted) return;
-    _navigateToHome();
-  }
-
-  /// 업로드할 데이터를 준비하는 메서드
-  ///
-  /// 다음 작업을 수행합니다:
-  /// - 사용자 로그인 확인
-  /// - 미디어 파일 존재 여부 확인
-  /// - 이미지인 경우 압축 처리
-  /// - 음성 파일 확인 및 준비
-  /// - 캡션, 파형 데이터 등 부가 정보 준비
-  Future<_UploadPayload?> _prepareUploadPayload({
-    required List<int> categoryIds,
-  }) async {
-    // 로그인 확인
-    final currentUser = _userController.currentUser;
-    if (currentUser == null) {
-      _showErrorSnackBar('로그인 후 다시 시도해주세요.');
-      return null;
-    }
-
-    // 파일 경로 확인
-    final filePath = widget.filePath;
-    if (filePath == null || filePath.isEmpty) {
-      _safeSetState(() {
-        _errorMessage = '업로드할 파일을 찾을 수 없습니다.';
-      });
-      return null;
-    }
-
-    // 파일 존재 확인
     var mediaFile = File(filePath);
     if (!await mediaFile.exists()) {
-      _safeSetState(() {
-        _errorMessage = '미디어 파일을 찾을 수 없습니다.';
-      });
+      debugPrint('[PhotoEditor] 미디어 파일을 찾을 수 없습니다: $filePath');
       return null;
     }
 
-    // 비디오인지 여부 확인
-    final isVideo = widget.isVideo ?? false;
-
-    // 이미지인 경우 압축 처리 (성능 최적화: 캐시 사용)
-    if (!isVideo) {
+    if (!snapshot.isVideo) {
       try {
-        // 이미 압축이 완료된 파일이 있으면 바로 사용
-        if (_compressedFile != null && _lastCompressedPath == filePath) {
-          mediaFile = _compressedFile!;
-          debugPrint('캐시된 압축 파일 사용');
-        }
-        // 압축 작업이 진행 중이면 완료될 때까지 대기
-        else if (_compressionTask != null && _lastCompressedPath == filePath) {
-          debugPrint('백그라운드 압축 완료 대기 중...');
-          mediaFile = await _compressionTask!;
-          debugPrint('백그라운드 압축 완료, 사용');
-        }
-        // 캐시나 진행 중인 작업이 없으면 즉시 압축 (폴백)
-        else {
-          debugPrint('캐시 없음, 즉시 압축 시작');
+        if (snapshot.compressedFile != null &&
+            snapshot.lastCompressedPath == filePath) {
+          mediaFile = snapshot.compressedFile!;
+        } else if (snapshot.compressionTask != null &&
+            snapshot.lastCompressedPath == filePath) {
+          mediaFile = await snapshot.compressionTask!;
+        } else {
           mediaFile = await _compressImageIfNeeded(mediaFile);
         }
       } catch (e) {
-        debugPrint('이미지 압축 실패: $e');
+        debugPrint('[PhotoEditor] 이미지 압축 실패(원본 사용): $e');
       }
     }
 
-    // 음성 파일 확인
     File? audioFile;
     String? audioPath;
-
-    // 음성 파일 경로 후보 결정
-    // NOTE: AudioController.currentRecordingPath는 세션 간에 남을 수 있어서,
-    // 이 화면에서 실제로 녹음 완료된 경로(_recordedAudioPath)만 사용합니다.
-    final candidatePath = _recordedAudioPath;
-
-    // 음성 파일 존재 여부 확인
+    final candidatePath = snapshot.recordedAudioPath;
     if (candidatePath != null && candidatePath.isNotEmpty) {
       final file = File(candidatePath);
       if (await file.exists()) {
@@ -790,33 +810,34 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
     }
 
-    // 캡션 텍스트 준비
-    final captionText = _captionController.text.trim();
+    final captionText = snapshot.captionText;
     final caption = captionText.isNotEmpty ? captionText : '';
     final hasCaption = caption.isNotEmpty;
 
-    // 캡션이 존재하면 음성 첨부를 생략
     final shouldIncludeAudio =
-        !hasCaption && audioFile != null && _recordedWaveformData != null;
-    final waveform = shouldIncludeAudio && _recordedWaveformData != null
-        ? List<double>.from(_recordedWaveformData!)
+        !hasCaption &&
+        audioFile != null &&
+        snapshot.recordedWaveformData != null;
+    final waveform = shouldIncludeAudio && snapshot.recordedWaveformData != null
+        ? List<double>.from(snapshot.recordedWaveformData!)
         : null;
 
-    // 모든 준비가 완료된 업로드 페이로드 반환
     return _UploadPayload(
-      userId: currentUser.id,
-      nickName: currentUser.userId,
+      userId: snapshot.userId,
+      nickName: snapshot.nickName,
       mediaFile: mediaFile,
       mediaPath: mediaFile.path,
-      isVideo: isVideo,
+      isVideo: snapshot.isVideo,
       audioFile: shouldIncludeAudio ? audioFile : null,
       audioPath: shouldIncludeAudio ? audioPath : null,
       caption: caption,
       waveformData: waveform,
       audioDurationSeconds: shouldIncludeAudio
-          ? _recordedAudioDurationSeconds
+          ? snapshot.recordedAudioDurationSeconds
           : null,
-      usageCount: categoryIds.isNotEmpty ? categoryIds.length : 1,
+      usageCount: snapshot.categoryIds.isNotEmpty
+          ? snapshot.categoryIds.length
+          : 1,
     );
   }
 
@@ -1328,18 +1349,19 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
   // ========== 리소스 정리 메서드 ==========
   void _clearImageCache() {
-    if (widget.filePath != null) {
-      PaintingBinding.instance.imageCache.evict(
-        FileImage(File(widget.filePath!)),
-      );
+    _evictCurrentImageFromCache(
+      filePath: widget.filePath,
+      downloadUrl: widget.downloadUrl,
+    );
+  }
+
+  void _evictCurrentImageFromCache({String? filePath, String? downloadUrl}) {
+    if (filePath != null && filePath.isNotEmpty) {
+      PaintingBinding.instance.imageCache.evict(FileImage(File(filePath)));
     }
-    if (widget.downloadUrl != null) {
-      PaintingBinding.instance.imageCache.evict(
-        NetworkImage(widget.downloadUrl!),
-      );
+    if (downloadUrl != null && downloadUrl.isNotEmpty) {
+      PaintingBinding.instance.imageCache.evict(NetworkImage(downloadUrl));
     }
-    PaintingBinding.instance.imageCache.clear();
-    PaintingBinding.instance.imageCache.clearLiveImages();
   }
 
   @override

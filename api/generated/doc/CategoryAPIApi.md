@@ -16,7 +16,7 @@ Method | HTTP request | Description
 [**delete**](CategoryAPIApi.md#delete) | **POST** /category/delete | 카테고리 나가기 (삭제)
 [**getCategories**](CategoryAPIApi.md#getcategories) | **POST** /category/find | 유저가 속한 카테고리 리스트를 가져오는 API
 [**inviteResponse**](CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
-[**inviteUser**](CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가
+[**inviteUser**](CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가(초대)
 
 
 # **categoryPinned**
@@ -339,9 +339,9 @@ No authorization required
 # **inviteUser**
 > ApiResponseDtoBoolean inviteUser(categoryInviteReqDto)
 
- 카테고리에 유저 추가
+ 카테고리에 유저 추가(초대)
 
-이미 생성된 카테고리에 유저를 초대할 때 사용합니다.
+이미 생성된 카테고리에 유저를 추가(초대)할 때 사용합니다.
 
 ### Example
 ```dart

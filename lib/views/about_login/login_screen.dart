@@ -276,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   onChanged: (value) {
                     // 6자리 이상 입력 시 버튼 활성화
-                    _hasCode.value = value.length >= 6;
+                    _hasCode.value = value.length >= 5;
                   },
                 ),
               ),
