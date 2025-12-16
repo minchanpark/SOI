@@ -6,7 +6,6 @@ class ApiEmojiButton extends StatefulWidget {
   final double buttonExtent;
   final double emojiFontSize;
   final double previewEmojiFontSize;
-  final Offset previewOffset;
 
   const ApiEmojiButton({
     super.key,
@@ -15,7 +14,6 @@ class ApiEmojiButton extends StatefulWidget {
     this.buttonExtent = 22,
     this.emojiFontSize = 22,
     this.previewEmojiFontSize = 40,
-    this.previewOffset = const Offset(0, -48),
   });
 
   @override
@@ -24,75 +22,8 @@ class ApiEmojiButton extends StatefulWidget {
 
 class _ApiEmojiButtonState extends State<ApiEmojiButton> {
   final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _previewEntry;
   double _pressedScale = 1.0;
   bool _isLongPressing = false;
-
-  @override
-  void dispose() {
-    _removePreview();
-    super.dispose();
-  }
-
-  @override
-  void deactivate() {
-    _removePreview();
-    super.deactivate();
-  }
-
-  void _showPreview() {
-    if (_previewEntry != null) return;
-    final overlay = Overlay.maybeOf(context, rootOverlay: true);
-    if (overlay == null) return;
-
-    _previewEntry = OverlayEntry(
-      builder: (context) {
-        return IgnorePointer(
-          ignoring: true,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Stack(
-              children: [
-                CompositedTransformFollower(
-                  link: _layerLink,
-                  showWhenUnlinked: false,
-                  offset: widget.previewOffset,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.9, end: 1.0),
-                    duration: const Duration(milliseconds: 140),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return Transform.scale(scale: value, child: child);
-                    },
-                    child: Text(
-                      widget.emoji,
-                      style: TextStyle(
-                        fontSize: widget.previewEmojiFontSize,
-                        shadows: const [
-                          Shadow(
-                            blurRadius: 12,
-                            color: Colors.black54,
-                            offset: Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    overlay.insert(_previewEntry!);
-  }
-
-  void _removePreview() {
-    _previewEntry?.remove();
-    _previewEntry = null;
-  }
 
   void _setPressedScale(double value) {
     if (_pressedScale == value) return;
@@ -102,18 +33,18 @@ class _ApiEmojiButtonState extends State<ApiEmojiButton> {
   void _startLongPress() {
     _isLongPressing = true;
     _setPressedScale(widget.previewEmojiFontSize / widget.emojiFontSize);
-    debugPrint('[ApiEmojiButton] 이모지 프리뷰 표시: ${widget.emoji}');
-    _showPreview();
   }
 
   void _endLongPress() {
     _isLongPressing = false;
     _setPressedScale(1.0);
-    _removePreview();
   }
 
   @override
   Widget build(BuildContext context) {
+    // CompositedTransformTarget: 오버레이 위치 지정을 위한 위젯
+    //   -
+    // Semantics: 접근성 향상을 위한 위젯
     return CompositedTransformTarget(
       link: _layerLink,
       child: Semantics(
@@ -124,15 +55,15 @@ class _ApiEmojiButtonState extends State<ApiEmojiButton> {
           onTap: widget.onPressed,
           onTapDown: (_) {
             if (_isLongPressing) return;
-            _setPressedScale(1.12);
+            _setPressedScale(2);
           },
           onTapUp: (_) {
             if (_isLongPressing) return;
-            _setPressedScale(1.0);
+            _setPressedScale(2);
           },
           onTapCancel: () {
             if (_isLongPressing) return;
-            _setPressedScale(1.0);
+            _setPressedScale(2);
           },
           onLongPressStart: (_) => _startLongPress(),
           onLongPressEnd: (_) => _endLongPress(),

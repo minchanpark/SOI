@@ -67,23 +67,29 @@ class CommentController extends ChangeNotifier {
               ? CommentType.emoji
               : (audioKey != null ? CommentType.audio : CommentType.text));
 
-      final normalizedText = (text?.trim().isEmpty ?? true) ? null : text!.trim();
-      final normalizedAudioKey =
-          (audioKey?.trim().isEmpty ?? true) ? null : audioKey!.trim();
-      final normalizedWaveform =
-          (waveformData?.trim().isEmpty ?? true) ? null : waveformData!.trim();
+      final normalizedText = (text?.trim().isEmpty ?? true)
+          ? null
+          : text!.trim();
+      final normalizedAudioKey = (audioKey?.trim().isEmpty ?? true)
+          ? null
+          : audioKey!.trim();
+      final normalizedWaveform = (waveformData?.trim().isEmpty ?? true)
+          ? null
+          : waveformData!.trim();
 
       // Swagger에서 동작하는 형태에 맞춰, 서버가 null 값에 민감할 수 있는 필드들을 기본값으로 맞춥니다.
-      final payloadText =
-          inferredType == CommentType.emoji ? '' : normalizedText;
+      final payloadText = inferredType == CommentType.emoji
+          ? ''
+          : normalizedText;
       final payloadAudioKey = inferredType == CommentType.audio
           ? (normalizedAudioKey ?? '')
           : '';
       final payloadWaveform = inferredType == CommentType.audio
           ? (normalizedWaveform ?? '')
           : '';
-      final payloadDuration =
-          inferredType == CommentType.audio ? (duration ?? 0) : 0;
+      final payloadDuration = inferredType == CommentType.audio
+          ? (duration ?? 0)
+          : 0;
 
       final result = await _commentService.createComment(
         postId: postId,
@@ -171,8 +177,6 @@ class CommentController extends ChangeNotifier {
     required int postId,
     required int userId,
     required int emojiId,
-    required double locationX,
-    required double locationY,
   }) async {
     _setLoading(true);
     _clearError();
@@ -182,8 +186,6 @@ class CommentController extends ChangeNotifier {
         postId: postId,
         userId: userId,
         emojiId: emojiId,
-        locationX: locationX,
-        locationY: locationY,
       );
       _setLoading(false);
       return result;

@@ -120,6 +120,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 post: widget.post,
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
+                onCommentsReloadRequested: widget.onCommentsReloadRequested,
                 onLikePressed: () {
                   // TODO: 이모지 선택 기능 구현
                   debugPrint('이모지 버튼 클릭: postId=${widget.post.id}');

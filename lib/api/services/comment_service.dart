@@ -192,8 +192,6 @@ class CommentService {
     required int postId,
     required int userId,
     required int emojiId,
-    required double locationX,
-    required double locationY,
   }) async {
     return createComment(
       postId: postId,
@@ -203,8 +201,8 @@ class CommentService {
       audioFileKey: '',
       waveformData: '',
       duration: 0,
-      locationX: locationX,
-      locationY: locationY,
+      locationX: 0,
+      locationY: 0,
       type: CommentType.emoji,
     );
   }

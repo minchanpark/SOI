@@ -33,6 +33,13 @@ class ApiVoiceCommentListSheet extends StatefulWidget {
 class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
   late ScrollController _scrollController;
 
+  int? _selectedHashCode(String? selectedCommentId) {
+    if (selectedCommentId == null) return null;
+    final parts = selectedCommentId.split('_');
+    if (parts.length < 2) return null;
+    return int.tryParse(parts.last);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -56,22 +63,18 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
   void _scrollToSelectedComment() {
     if (widget.selectedCommentId == null) return;
 
-    // 필터링된 댓글 리스트에서 인덱스 찾기
-    final filteredComments = widget.comments
-        .where((c) => c.type == CommentType.text || c.type == CommentType.audio)
-        .toList();
+    final targetHash = _selectedHashCode(widget.selectedCommentId);
+    if (targetHash == null) return;
 
-    int? targetIndex;
-    for (int i = 0; i < filteredComments.length; i++) {
-      // selectedCommentId는 "index_hashCode" 형식
-      final commentId = '${i}_${filteredComments[i].hashCode}';
-      if (commentId == widget.selectedCommentId) {
-        targetIndex = i;
-        break;
-      }
-    }
+    // selectedCommentId는 "index_hashCode" 형식이지만, 이모지 댓글이 섞이면 index가 달라질 수 있어
+    // hashCode 기준으로 찾습니다.
+    final filteredComments = widget.comments.toList();
+    final targetIndex = filteredComments.indexWhere(
+      (comment) => comment.hashCode == targetHash,
+    );
+    if (targetIndex < 0) return;
 
-    if (targetIndex != null && _scrollController.hasClients) {
+    if (_scrollController.hasClients) {
       // 아이템 높이 추정 (각 댓글 행의 대략적인 높이 + separator)
       const itemHeight = 80.0;
       const separatorHeight = 12.0;
@@ -122,10 +125,8 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
   }
 
   Widget _buildCommentList() {
-    // 이모지 제외하고 텍스트/오디오 댓글만 필터링
-    final filteredComments = widget.comments
-        .where((c) => c.type == CommentType.text || c.type == CommentType.audio)
-        .toList();
+    // 텍스트/오디오/이모지 댓글 모두 표시
+    final filteredComments = widget.comments.toList();
 
     if (filteredComments.isEmpty) {
       return SizedBox(
@@ -152,8 +153,9 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
         separatorBuilder: (_, __) => SizedBox(height: 12.h),
         itemBuilder: (context, index) {
           final comment = filteredComments[index];
-          final commentId = '${index}_${comment.hashCode}';
-          final isHighlighted = commentId == widget.selectedCommentId;
+          final selectedHash = _selectedHashCode(widget.selectedCommentId);
+          final isHighlighted =
+              selectedHash != null && comment.hashCode == selectedHash;
           return _ApiCommentRow(comment: comment, isHighlighted: isHighlighted);
         },
       ),
@@ -172,12 +174,95 @@ class _ApiCommentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (comment.type) {
       case CommentType.emoji:
-        return const SizedBox.shrink(); // 이모지는 표시하지 않음
+        return _buildEmojiRow(context);
       case CommentType.text:
         return _buildTextRow(context);
       case CommentType.audio:
         return _buildAudioRow(context);
     }
+  }
+
+  String _emojiFromId(int? emojiId) {
+    switch (emojiId) {
+      case 0:
+        return '😀';
+      case 1:
+        return '😍';
+      case 2:
+        return '😭';
+      case 3:
+        return '😡';
+      default:
+        return '❓';
+    }
+  }
+
+  /// 이모지 댓글 UI
+  Widget _buildEmojiRow(BuildContext context) {
+    final profileUrl = comment.userProfile ?? '';
+    final userName = comment.nickname ?? '알 수 없는 사용자';
+    final emoji = _emojiFromId(comment.emojiId);
+
+    final content = Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileImage(profileUrl),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(emoji, style: TextStyle(fontSize: 26.sp)),
+                ],
+              ),
+            ),
+            SizedBox(width: 10.w),
+          ],
+        ),
+        SizedBox(height: 7.h),
+        Row(
+          children: [
+            const Spacer(),
+            Text(
+              _formatRelativeTime(),
+              style: TextStyle(
+                color: const Color(0xFFC4C4C4),
+                fontSize: 10.sp,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.40,
+              ),
+            ),
+            SizedBox(width: 12.w),
+          ],
+        ),
+      ],
+    );
+
+    if (isHighlighted) {
+      return Container(
+        color: const Color(0xff000000).withValues(alpha: 0.23),
+        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
+        child: content,
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 27.w),
+      child: content,
+    );
   }
 
   /// 텍스트 댓글 UI
@@ -247,7 +332,7 @@ class _ApiCommentRow extends StatelessWidget {
 
     if (isHighlighted) {
       return Container(
-        color: const Color(0xff000000).withOpacity(0.23),
+        color: const Color(0xff000000).withValues(alpha: 0.23),
         padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
         child: content,
       );
@@ -346,7 +431,7 @@ class _ApiCommentRow extends StatelessWidget {
 
     if (isHighlighted) {
       return Container(
-        color: const Color(0xff000000).withOpacity(0.23),
+        color: const Color(0xff000000).withValues(alpha: 0.23),
         padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
         child: content,
       );
@@ -390,7 +475,7 @@ class _ApiCommentRow extends StatelessWidget {
     );
   }
 
-  /// waveformData 문자열을 List<double>로 파싱
+  /// waveformData 문자열을 `List<double>`로 파싱
   List<double> _parseWaveformData(String? waveformString) {
     if (waveformString == null || waveformString.isEmpty) {
       return [];
@@ -463,7 +548,7 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF000000).withOpacity(0.4),
+        color: const Color(0xFF000000).withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
