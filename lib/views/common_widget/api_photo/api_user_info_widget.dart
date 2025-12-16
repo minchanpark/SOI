@@ -22,7 +22,7 @@ class ApiUserInfoWidget extends StatefulWidget {
   final VoidCallback? onCommentPressed;
   final Future<void> Function(int postId)?
   onCommentsReloadRequested; // 댓글 새로고침 콜백
-  final ValueChanged<String>? onEmojiSelected; // 부모 상태(postId별 선택값) 즉시 반영용
+  final ValueChanged<String?>? onEmojiSelected; // 부모 상태(postId별 선택값) 즉시 반영용
   final bool isLiked;
   final String? selectedEmoji;
 
@@ -247,15 +247,24 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     final userId = currentUser?.id;
     final currentUserNickname = currentUser?.userId;
     final commentController = context.read<CommentController>();
-    await _closeLikePanel();
     if (emojiId == null) return;
 
+    // 탭하자마자 버튼 이모지가 바뀌도록, 서버 요청 전에 부모 캐시를 먼저 갱신합니다.
+    final previousEmoji = widget.selectedEmoji;
+    widget.onEmojiSelected?.call(emoji);
+
+    await _closeLikePanel();
     if (userId == null) {
+      // 로그인 정보가 없으면 원복
+      widget.onEmojiSelected?.call(previousEmoji);
       messenger?.showSnackBar(
         const SnackBar(content: Text('로그인 정보를 찾을 수 없습니다.')),
       );
       return;
     }
+
+    // 이전 이모지 댓글 삭제 여부 플래그
+    var deletedOldEmoji = false;
 
     // 기존에 선택된 이모지가 있으면(내가 남긴 emoji 댓글), 먼저 삭제하고 댓글을 새로고침합니다.
     if (currentUserNickname != null) {
@@ -270,14 +279,24 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
       // 같은 이모지를 다시 누른 경우는 대체/삭제하지 않습니다.
       if (existingEmojiComment != null &&
           existingEmojiComment.emojiId == emojiId) {
-        widget.onEmojiSelected?.call(emoji); // UI 유지용
         return;
       }
 
       if (existingEmojiComment?.id != null) {
-        await commentController.deleteComment(existingEmojiComment!.id!);
+        final deleted = await commentController.deleteComment(
+          existingEmojiComment!.id!,
+        );
         // 삭제 후 댓글 목록 즉시 갱신
         await widget.onCommentsReloadRequested?.call(widget.post.id);
+        if (!deleted) {
+          // 삭제 실패 시 기존 선택값으로 원복
+          widget.onEmojiSelected?.call(previousEmoji);
+          messenger?.showSnackBar(
+            const SnackBar(content: Text('기존 이모지 삭제에 실패했습니다.')),
+          );
+          return;
+        }
+        deletedOldEmoji = true;
       }
     }
 
@@ -289,14 +308,14 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     );
 
     if (!result.success) {
+      // 생성 실패 시: 기존 이모지를 삭제했다면 선택값을 해제하고, 아니면 이전 값으로 원복합니다.
+      widget.onEmojiSelected?.call(deletedOldEmoji ? null : previousEmoji);
+      await widget.onCommentsReloadRequested?.call(widget.post.id);
       messenger?.showSnackBar(
         const SnackBar(content: Text('이모지 댓글 전송에 실패했습니다.')),
       );
       return;
     }
-
-    // 서버 재조회 전, 선택 이모지를 부모 캐시에 먼저 반영합니다.
-    widget.onEmojiSelected?.call(emoji);
 
     // 댓글 목록 새로고침 요청
     // 댓글이 성공적으로 생성된 후, 댓글 목록을 새로고침합니다.

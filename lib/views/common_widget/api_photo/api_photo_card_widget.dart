@@ -25,7 +25,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
 
   // postId별 선택된 이모지 (부모가 관리)
   final String? selectedEmoji;
-  final ValueChanged<String>? onEmojiSelected; // 부모 캐시 갱신 콜백
+  final ValueChanged<String?>? onEmojiSelected; // 부모 캐시 갱신 콜백
 
   // 상태 관리 관련
   final Map<int, List<Comment>> postComments;

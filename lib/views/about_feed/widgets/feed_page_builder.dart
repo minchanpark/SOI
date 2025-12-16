@@ -28,7 +28,7 @@ class FeedPageBuilder extends StatelessWidget {
   final VoidCallback onStopAllAudio;
   final String? currentUserNickname;
   final Future<void> Function(int postId) onReloadComments; // 댓글 다시 불러오기 콜백 함수
-  final void Function(int postId, String emoji)
+  final void Function(int postId, String? emoji)
   onEmojiSelected; // 이모지 선택 시 캐시 갱신
 
   const FeedPageBuilder({

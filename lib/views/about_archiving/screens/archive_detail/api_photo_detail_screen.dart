@@ -115,10 +115,14 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     return null;
   }
 
-  void _setSelectedEmoji(int postId, String emoji) {
+  void _setSelectedEmoji(int postId, String? emoji) {
     if (!mounted) return;
     setState(() {
-      _selectedEmojisByPostId[postId] = emoji;
+      if (emoji == null) {
+        _selectedEmojisByPostId.remove(postId);
+      } else {
+        _selectedEmojisByPostId[postId] = emoji;
+      }
     });
   }
 

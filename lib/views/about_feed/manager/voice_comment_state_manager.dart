@@ -83,9 +83,13 @@ class VoiceCommentStateManager {
   }
 
   // 이모지 선택 시, 부모 상태(postId별 선택값)를 즉시 갱신하기 위한 메서드
-  void setSelectedEmoji(int postId, String emoji) {
-    _selectedEmojisByPostId[postId] = emoji;
-    _notifyStateChanged();
+  void setSelectedEmoji(int postId, String? emoji) {
+    if (emoji == null) {
+      _selectedEmojisByPostId.remove(postId); // 선택 해제 시 맵에서 제거
+    } else {
+      _selectedEmojisByPostId[postId] = emoji; // 선택된 이모지 저장
+    }
+    _notifyStateChanged(); // 상태 변경 알림
   }
 
   /// 댓글을 특정 게시물에 대해 로드하는 메서드
