@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../../api/controller/comment_controller.dart';
 import '../../../api/controller/user_controller.dart';
+import '../../../api/models/comment.dart';
 import '../../../api/models/post.dart';
 import '../../../utils/format_utils.dart';
 import '../../../utils/app_route_observer.dart';
@@ -17,9 +18,11 @@ class ApiUserInfoWidget extends StatefulWidget {
   final Post post;
   final bool isCurrentUserPost;
   final VoidCallback? onDeletePressed;
-  final VoidCallback? onLikePressed;
+
   final VoidCallback? onCommentPressed;
-  final Future<void> Function(int postId)? onCommentsReloadRequested;
+  final Future<void> Function(int postId)?
+  onCommentsReloadRequested; // 댓글 새로고침 콜백
+  final ValueChanged<String>? onEmojiSelected; // 부모 상태(postId별 선택값) 즉시 반영용
   final bool isLiked;
   final String? selectedEmoji;
 
@@ -28,9 +31,10 @@ class ApiUserInfoWidget extends StatefulWidget {
     required this.post,
     this.isCurrentUserPost = false,
     this.onDeletePressed,
-    this.onLikePressed,
+
     this.onCommentPressed,
     this.onCommentsReloadRequested,
+    this.onEmojiSelected,
     this.isLiked = false,
     this.selectedEmoji,
   });
@@ -143,7 +147,6 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
                         _buildLikeButton(
                           onTap: () {
                             _toggleLikePanel();
-                            widget.onLikePressed?.call();
                           },
                         ),
                       ],
@@ -171,7 +174,7 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     super.initState();
     _likePanelController = AnimationController(
       vsync: this,
-      duration: _likePanelOpenDuration,
+      duration: _likePanelOpenDuration, // 열기 애니메이션 지속 시간
     );
   }
 
@@ -180,25 +183,34 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
+      // Route 구독
+      // Route를 구독하여서 페이지 전환을 감지합니다.
       appRouteObserver.subscribe(this, route);
     }
   }
 
   @override
   void dispose() {
-    _likePanelEntry?.remove();
-    _likePanelEntry = null;
+    _likePanelEntry?.remove(); // 오버레이에서 패널 제거
+    _likePanelEntry = null; // 참조 해제
+
+    // 애니메이션 컨트롤러 해제
+    // 메모리 누수를 방지하기 위해 애니메이션 컨트롤러를 해제합니다.
     _likePanelController.dispose();
+
+    // Route 구독 해제
+    // RouteAware 믹스인을 사용하여 페이지 전환 시 패널을 닫기 위해 구독한 것을 해제합니다.
     appRouteObserver.unsubscribe(this);
     super.dispose();
   }
 
   @override
   void didPushNext() {
-    // 다른 페이지가 위에 올라오면(현재 화면이 가려지면) 패널을 닫아둠
+    // 다른 페이지가 위에 올라오면(현재 화면이 가려지면) 패널을 닫습니다.
     _closeLikePanel();
   }
 
+  /// 이모지 문자열을 이모지 ID로 매핑하는 함수
   int? _emojiIdFromEmoji(String emoji) {
     switch (emoji) {
       case '😀':
@@ -213,10 +225,27 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     return null;
   }
 
+  /// 내가 남긴 가장 최신의 이모지 댓글을 찾는 함수
+  Comment? _findMyLatestEmojiComment({
+    required List<Comment> comments,
+    required String currentUserNickname,
+  }) {
+    // 댓글이 정렬되어 있다고 가정하고, 마지막(가장 최근) emoji 댓글을 찾습니다.
+    for (final comment in comments.reversed) {
+      if (comment.type != CommentType.emoji) continue;
+      if (comment.nickname != currentUserNickname) continue;
+      return comment;
+    }
+    return null;
+  }
+
+  /// 이모지 버튼이 눌렸을 때 호출되는 함수
   Future<void> _onEmojiPressed(String emoji) async {
-    final emojiId = _emojiIdFromEmoji(emoji);
+    final emojiId = _emojiIdFromEmoji(emoji); // 이모지에 해당하는 ID 매핑
     final messenger = ScaffoldMessenger.maybeOf(context);
-    final userId = context.read<UserController>().currentUser?.id;
+    final currentUser = context.read<UserController>().currentUser;
+    final userId = currentUser?.id;
+    final currentUserNickname = currentUser?.userId;
     final commentController = context.read<CommentController>();
     await _closeLikePanel();
     if (emojiId == null) return;
@@ -228,6 +257,31 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
       return;
     }
 
+    // 기존에 선택된 이모지가 있으면(내가 남긴 emoji 댓글), 먼저 삭제하고 댓글을 새로고침합니다.
+    if (currentUserNickname != null) {
+      final existingComments = await commentController.getComments(
+        postId: widget.post.id,
+      );
+      final existingEmojiComment = _findMyLatestEmojiComment(
+        comments: existingComments,
+        currentUserNickname: currentUserNickname,
+      );
+
+      // 같은 이모지를 다시 누른 경우는 대체/삭제하지 않습니다.
+      if (existingEmojiComment != null &&
+          existingEmojiComment.emojiId == emojiId) {
+        widget.onEmojiSelected?.call(emoji); // UI 유지용
+        return;
+      }
+
+      if (existingEmojiComment?.id != null) {
+        await commentController.deleteComment(existingEmojiComment!.id!);
+        // 삭제 후 댓글 목록 즉시 갱신
+        await widget.onCommentsReloadRequested?.call(widget.post.id);
+      }
+    }
+
+    // 이모지 댓글 생성 API 호출
     final result = await commentController.createEmojiComment(
       postId: widget.post.id,
       userId: userId,
@@ -241,6 +295,11 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
       return;
     }
 
+    // 서버 재조회 전, 선택 이모지를 부모 캐시에 먼저 반영합니다.
+    widget.onEmojiSelected?.call(emoji);
+
+    // 댓글 목록 새로고침 요청
+    // 댓글이 성공적으로 생성된 후, 댓글 목록을 새로고침합니다.
     await widget.onCommentsReloadRequested?.call(widget.post.id);
   }
 
@@ -317,7 +376,6 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
                 child: _buildLikeButton(
                   onTap: () {
                     _toggleLikePanel();
-                    widget.onLikePressed?.call();
                   },
                 ),
               ),
@@ -355,16 +413,13 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
         ),
         alignment: Alignment.center,
         child: widget.selectedEmoji != null
-            ? Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child: Text(
-                  widget.selectedEmoji!,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 25.38,
-                    fontFamily: 'Pretendard Variable',
-                    fontWeight: FontWeight.w600,
-                  ),
+            ? Text(
+                widget.selectedEmoji!,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 25.38,
+                  fontFamily: 'Pretendard Variable',
+                  fontWeight: FontWeight.w600,
                 ),
               )
             : Image.asset('assets/like_icon.png', width: 25.38, height: 25.38),

@@ -57,7 +57,10 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       _userController?.addListener(_userControllerListener!);
 
       // PostController 구독 설정
-      final postController = Provider.of<PostController>(context, listen: false);
+      final postController = Provider.of<PostController>(
+        context,
+        listen: false,
+      );
       _feedDataManager?.listenToPostController(postController, context);
 
       _loadInitialData();
@@ -290,6 +293,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         hasMoreData: _feedDataManager!.hasMoreData,
         isLoadingMore: _feedDataManager!.isLoadingMore,
         postComments: _voiceCommentStateManager!.postComments,
+        selectedEmojisByPostId:
+            _voiceCommentStateManager!.selectedEmojisByPostId,
         voiceCommentActiveStates:
             _voiceCommentStateManager!.voiceCommentActiveStates,
         voiceCommentSavedStates:
@@ -311,6 +316,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         currentUserNickname: _userController?.currentUser?.userId,
         onReloadComments: (postId) =>
             _voiceCommentStateManager!.loadCommentsForPost(postId, context),
+        onEmojiSelected: (postId, emoji) =>
+            _voiceCommentStateManager!.setSelectedEmoji(postId, emoji),
       ),
     );
   }

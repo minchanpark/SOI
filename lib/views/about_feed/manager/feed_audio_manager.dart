@@ -7,6 +7,11 @@ import '../../../api/controller/media_controller.dart';
 
 class FeedAudioManager {
   Future<void> toggleAudio(Post post, BuildContext context) async {
+    // async gap 이후에 context를 다시 참조하지 않기 위해 의존성들을 미리 확보합니다.
+    final mediaController = context.read<MediaController>();
+    final audioController = context.read<AudioController>();
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     final audioKey = post.audioUrl;
     if (audioKey == null || audioKey.isEmpty) return;
 
@@ -14,10 +19,6 @@ class FeedAudioManager {
       var resolvedUrl = audioKey;
       final uri = Uri.tryParse(audioKey);
       if (uri == null || !uri.hasScheme) {
-        final mediaController = Provider.of<MediaController>(
-          context,
-          listen: false,
-        );
         resolvedUrl = await mediaController.getPresignedUrl(audioKey) ?? '';
       }
 
@@ -25,12 +26,9 @@ class FeedAudioManager {
         throw Exception('오디오 URL을 가져올 수 없습니다.');
       }
 
-      await Provider.of<AudioController>(
-        context,
-        listen: false,
-      ).togglePlayPause(resolvedUrl);
+      await audioController.togglePlayPause(resolvedUrl);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Text('음성 파일을 재생할 수 없습니다: $e'),
           backgroundColor: const Color(0xFF5A5A5A),

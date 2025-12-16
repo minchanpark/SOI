@@ -174,14 +174,15 @@ class _ApiCommentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (comment.type) {
       case CommentType.emoji:
-        return _buildEmojiRow(context);
+        return _buildEmojiRow(context); // 이모지 댓글
       case CommentType.text:
-        return _buildTextRow(context);
+        return _buildTextRow(context); // 텍스트 댓글
       case CommentType.audio:
-        return _buildAudioRow(context);
+        return _buildAudioRow(context); // 음성 댓글
     }
   }
 
+  /// 이모지 ID를 이모지 문자열로 매핑
   String _emojiFromId(int? emojiId) {
     switch (emojiId) {
       case 0:
@@ -223,8 +224,8 @@ class _ApiCommentRow extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(height: 8.h),
-                  Text(emoji, style: TextStyle(fontSize: 26.sp)),
+                  //  SizedBox(height: 8.h),
+                  Text(emoji, style: TextStyle(fontSize: 22.sp)),
                 ],
               ),
             ),

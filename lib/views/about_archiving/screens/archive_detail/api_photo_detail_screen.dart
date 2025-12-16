@@ -63,6 +63,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   // 상태 맵 (Firebase 버전과 동일한 구조)
   final Map<int, List<Comment>> _postComments = {};
+  final Map<int, String?> _selectedEmojisByPostId = {}; // postId별 내가 선택한 이모지
   final Map<int, bool> _voiceCommentActiveStates = {};
   final Map<int, bool> _voiceCommentSavedStates = {};
   final Map<String, String> _userProfileImages = {};
@@ -87,6 +88,39 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   final Map<int, int> _autoPlacementIndices = {};
   static const int _kMaxWaveformSamples = 30;
+
+  String? _emojiFromId(int? emojiId) {
+    switch (emojiId) {
+      case 0:
+        return '😀';
+      case 1:
+        return '😍';
+      case 2:
+        return '😭';
+      case 3:
+        return '😡';
+    }
+    return null;
+  }
+
+  String? _selectedEmojiFromComments({
+    required List<Comment> comments,
+    required String currentUserNickname,
+  }) {
+    for (final comment in comments.reversed) {
+      if (comment.type != CommentType.emoji) continue;
+      if (comment.nickname != currentUserNickname) continue;
+      return _emojiFromId(comment.emojiId);
+    }
+    return null;
+  }
+
+  void _setSelectedEmoji(int postId, String emoji) {
+    if (!mounted) return;
+    setState(() {
+      _selectedEmojisByPostId[postId] = emoji;
+    });
+  }
 
   @override
   void initState() {
@@ -235,6 +269,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
                 isOwner: isOwner,
                 isArchive: true,
                 isCategory: true,
+                selectedEmoji:
+                    _selectedEmojisByPostId[post.id], // postId별 선택값 표시
+                onEmojiSelected: (emoji) => _setSelectedEmoji(post.id, emoji),
                 postComments: _postComments,
 
                 voiceCommentActiveStates: _voiceCommentActiveStates,
@@ -353,6 +390,17 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
     setState(() {
       _postComments[postId] = comments;
+
+      // 서버 댓글을 바탕으로, 내 이모지 선택값을 복원합니다(있을 때만 덮어쓰기).
+      if (currentUserId != null) {
+        final selected = _selectedEmojiFromComments(
+          comments: comments,
+          currentUserNickname: currentUserId,
+        );
+        if (selected != null) {
+          _selectedEmojisByPostId[postId] = selected;
+        }
+      }
 
       if (comments.isNotEmpty) {
         _voiceCommentSavedStates[postId] = true;

@@ -23,6 +23,10 @@ class ApiPhotoCardWidget extends StatefulWidget {
   final bool isArchive;
   final bool isCategory;
 
+  // postId별 선택된 이모지 (부모가 관리)
+  final String? selectedEmoji;
+  final ValueChanged<String>? onEmojiSelected; // 부모 캐시 갱신 콜백
+
   // 상태 관리 관련
   final Map<int, List<Comment>> postComments;
   final Map<int, bool> voiceCommentActiveStates;
@@ -51,6 +55,8 @@ class ApiPhotoCardWidget extends StatefulWidget {
     required this.isOwner,
     this.isArchive = false,
     this.isCategory = false,
+    this.selectedEmoji,
+    this.onEmojiSelected,
     required this.postComments,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
@@ -121,10 +127,13 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
                 onCommentsReloadRequested: widget.onCommentsReloadRequested,
-                onLikePressed: () {
-                  // TODO: 이모지 선택 기능 구현
-                  debugPrint('이모지 버튼 클릭: postId=${widget.post.id}');
-                },
+
+                // 부모 상태 반영
+                selectedEmoji: widget.selectedEmoji,
+
+                // 부모 상태 갱신
+                onEmojiSelected: widget.onEmojiSelected,
+
                 onCommentPressed: () {
                   // 댓글 리스트 Bottom Sheet 표시
                   final comments = widget.postComments[widget.post.id] ?? [];

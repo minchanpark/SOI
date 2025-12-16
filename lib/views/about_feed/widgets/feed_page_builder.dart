@@ -9,6 +9,7 @@ class FeedPageBuilder extends StatelessWidget {
   final bool hasMoreData;
   final bool isLoadingMore;
   final Map<int, List<Comment>> postComments;
+  final Map<int, String?> selectedEmojisByPostId; // postId별 선택된 이모지(부모가 관리)
   final Map<int, bool> voiceCommentActiveStates;
   final Map<int, bool> voiceCommentSavedStates;
   final Map<int, bool> pendingTextComments;
@@ -27,6 +28,8 @@ class FeedPageBuilder extends StatelessWidget {
   final VoidCallback onStopAllAudio;
   final String? currentUserNickname;
   final Future<void> Function(int postId) onReloadComments; // 댓글 다시 불러오기 콜백 함수
+  final void Function(int postId, String emoji)
+  onEmojiSelected; // 이모지 선택 시 캐시 갱신
 
   const FeedPageBuilder({
     super.key,
@@ -34,6 +37,7 @@ class FeedPageBuilder extends StatelessWidget {
     required this.hasMoreData,
     required this.isLoadingMore,
     required this.postComments,
+    required this.selectedEmojisByPostId,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
     required this.pendingTextComments,
@@ -51,6 +55,7 @@ class FeedPageBuilder extends StatelessWidget {
     required this.onStopAllAudio,
     this.currentUserNickname,
     required this.onReloadComments,
+    required this.onEmojiSelected,
   });
 
   @override
@@ -81,6 +86,8 @@ class FeedPageBuilder extends StatelessWidget {
           categoryId: feedItem.categoryId,
           index: index,
           isOwner: isOwner,
+          selectedEmoji: selectedEmojisByPostId[post.id],
+          onEmojiSelected: (emoji) => onEmojiSelected(post.id, emoji),
           postComments: postComments,
           voiceCommentActiveStates: voiceCommentActiveStates,
           voiceCommentSavedStates: voiceCommentSavedStates,

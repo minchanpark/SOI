@@ -36,6 +36,7 @@ class VoiceCommentStateManager {
   final Map<int, List<Comment>> _postComments = {};
   final Map<int, bool> _pendingTextComments = {};
   final Map<int, int> _autoPlacementIndices = {};
+  final Map<int, String?> _selectedEmojisByPostId = {}; // postId별 내가 선택한 이모지
 
   VoidCallback? _onStateChanged;
 
@@ -45,6 +46,7 @@ class VoiceCommentStateManager {
       _pendingCommentMarkers;
   Map<int, List<Comment>> get postComments => _postComments;
   Map<int, bool> get pendingTextComments => _pendingTextComments;
+  Map<int, String?> get selectedEmojisByPostId => _selectedEmojisByPostId;
 
   void setOnStateChanged(VoidCallback? callback) {
     _onStateChanged = callback;
@@ -54,9 +56,46 @@ class VoiceCommentStateManager {
     _onStateChanged?.call();
   }
 
+  String? _emojiFromId(int? emojiId) {
+    switch (emojiId) {
+      case 0:
+        return '😀';
+      case 1:
+        return '😍';
+      case 2:
+        return '😭';
+      case 3:
+        return '😡';
+    }
+    return null;
+  }
+
+  String? _selectedEmojiFromComments({
+    required List<Comment> comments,
+    required String currentUserNickname,
+  }) {
+    for (final comment in comments.reversed) {
+      if (comment.type != CommentType.emoji) continue;
+      if (comment.nickname != currentUserNickname) continue;
+      return _emojiFromId(comment.emojiId);
+    }
+    return null;
+  }
+
+  // 이모지 선택 시, 부모 상태(postId별 선택값)를 즉시 갱신하기 위한 메서드
+  void setSelectedEmoji(int postId, String emoji) {
+    _selectedEmojisByPostId[postId] = emoji;
+    _notifyStateChanged();
+  }
+
   /// 댓글을 특정 게시물에 대해 로드하는 메서드
   Future<void> loadCommentsForPost(int postId, BuildContext context) async {
     try {
+      final currentUserNickname = context
+          .read<UserController>()
+          .currentUser
+          ?.userId;
+
       // 댓글 컨트롤러 가져오기
       final commentController = Provider.of<CommentController>(
         context,
@@ -67,6 +106,17 @@ class VoiceCommentStateManager {
 
       // 불러온 댓글 저장
       _postComments[postId] = comments;
+
+      // 서버에서 받아온 댓글을 바탕으로, 내 이모지 선택값을 복원합니다.
+      if (currentUserNickname != null) {
+        final selected = _selectedEmojiFromComments(
+          comments: comments,
+          currentUserNickname: currentUserNickname,
+        );
+        if (selected != null) {
+          _selectedEmojisByPostId[postId] = selected;
+        }
+      }
 
       // 저장된 댓글이 있는지 여부 업데이트
       _voiceCommentSavedStates[postId] = comments.isNotEmpty;
@@ -193,6 +243,16 @@ class VoiceCommentStateManager {
       throw StateError('임시 댓글을 찾을 수 없습니다. postId: $postId');
     }
 
+    // async gap 없이 필요한 의존성들을 미리 확보해두면 lint(use_build_context_synchronously)도 피할 수 있습니다.
+    final commentController = context.read<CommentController>();
+    api_media.MediaController? mediaController;
+    try {
+      mediaController = context.read<api_media.MediaController>();
+    } catch (_) {
+      mediaController = null;
+    }
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     // 로그인된 사용자 ID 가져오기
     final userId = draft.recorderUserId;
 
@@ -222,7 +282,9 @@ class VoiceCommentStateManager {
         userId,
         draft,
         finalPosition,
-        context,
+        commentController: commentController,
+        mediaController: mediaController,
+        messenger: messenger,
       );
 
       if (!didSave) {
@@ -256,16 +318,12 @@ class VoiceCommentStateManager {
     int postId,
     int userId,
     PendingApiCommentDraft pending,
-    Offset relativePosition,
-    BuildContext context,
-  ) async {
+    Offset relativePosition, {
+    required CommentController commentController,
+    api_media.MediaController? mediaController,
+    ScaffoldMessengerState? messenger,
+  }) async {
     try {
-      // 댓글 컨트롤러 가져오기
-      final commentController = Provider.of<CommentController>(
-        context,
-        listen: false,
-      );
-
       CommentCreationResult creationResult =
           const CommentCreationResult.failure();
 
@@ -281,11 +339,12 @@ class VoiceCommentStateManager {
         );
         _updatePendingProgress(postId, 0.85);
       } else if (pending.audioPath != null) {
-        // media 컨트롤러 가져오기
-        final mediaController = Provider.of<api_media.MediaController>(
-          context,
-          listen: false,
-        );
+        if (mediaController == null) {
+          messenger?.showSnackBar(
+            const SnackBar(content: Text('미디어 컨트롤러를 찾을 수 없습니다.')),
+          );
+          return false;
+        }
         // 오디오 파일 객체 생성 --> Stirng으로 되어있는 경로를 File 객체로 변환
         _updatePendingProgress(postId, 0.15);
         final audioFile = File(pending.audioPath!);
@@ -303,10 +362,11 @@ class VoiceCommentStateManager {
         );
 
         if (audioKey == null) {
-          _showSnackBar(
-            context,
-            '음성 업로드에 실패했습니다.',
-            backgroundColor: Colors.red,
+          messenger?.showSnackBar(
+            const SnackBar(
+              content: Text('음성 업로드에 실패했습니다.'),
+              backgroundColor: Colors.red,
+            ),
           );
           return false;
         }
@@ -334,19 +394,27 @@ class VoiceCommentStateManager {
         if (creationResult.comment != null) {
           _addCommentToCache(postId, creationResult.comment!);
         } else {
-          await loadCommentsForPost(postId, context);
+          final refreshed = await commentController.getComments(postId: postId);
+          _postComments[postId] = refreshed;
+          _voiceCommentSavedStates[postId] = refreshed.isNotEmpty;
         }
         return true;
       }
 
-      _showSnackBar(context, '댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text('댓글 저장에 실패했습니다.'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return false;
     } catch (e) {
       debugPrint('댓글 저장 실패(postId: $postId): $e');
-      _showSnackBar(
-        context,
-        '댓글 저장 중 오류가 발생했습니다.',
-        backgroundColor: Colors.red,
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text('댓글 저장 중 오류가 발생했습니다.'),
+          backgroundColor: Colors.red,
+        ),
       );
       return false;
     }
@@ -495,20 +563,6 @@ class VoiceCommentStateManager {
     return List<double>.generate(
       maxLength,
       (index) => source[(index * step).floor()],
-    );
-  }
-
-  void _showSnackBar(
-    BuildContext context,
-    String message, {
-    Color? backgroundColor,
-  }) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor ?? const Color(0xFF5A5A5A),
-      ),
     );
   }
 }

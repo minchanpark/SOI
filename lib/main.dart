@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soi/api/controller/audio_controller.dart';
 import 'package:soi/api/controller/category_controller.dart' as api_category;
 import 'package:soi/api/controller/comment_controller.dart';
+import 'package:soi/api/controller/comment_audio_controller.dart';
 import 'package:soi/api/controller/contact_controller.dart';
 import 'package:soi/api/controller/friend_controller.dart' as api_friend;
 import 'package:soi/api/controller/media_controller.dart' as api_media;
@@ -205,6 +206,10 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AudioController>(
           create: (_) => AudioController(),
+        ),
+        // FeedAudioManager.stopAllAudio에서 사용 (댓글 오디오 동시 재생/정지 관리)
+        ChangeNotifierProvider<CommentAudioController>(
+          create: (_) => CommentAudioController(),
         ),
       ],
       child: ScreenUtilInit(
