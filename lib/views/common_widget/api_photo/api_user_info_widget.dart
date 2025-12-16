@@ -433,13 +433,18 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
 
         alignment: Alignment.center,
         child: widget.selectedEmoji != null
-            ? Text(
-                widget.selectedEmoji!,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 25.38,
-                  fontFamily: 'Pretendard Variable',
-                  fontWeight: FontWeight.w600,
+            ? Transform.translate(
+                // `Container(width/height: ...)`가 자식에게 tight constraint를 주기 때문에
+                // `Padding(bottom: ...)`은 실제로 "위로 올림"이 아니라 높이만 깎여 체감이 거의 없습니다.
+                // 이모지 위치를 확실히 올리려면 paint 단계에서 offset을 주는 게 안전합니다.
+                offset: const Offset(0, -1),
+                child: Text(
+                  widget.selectedEmoji!,
+                  style: const TextStyle(
+                    fontSize: 25.38,
+                    fontFamily: 'Pretendard Variable',
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               )
             : Image.asset('assets/like_icon.png', width: 25.38, height: 25.38),
