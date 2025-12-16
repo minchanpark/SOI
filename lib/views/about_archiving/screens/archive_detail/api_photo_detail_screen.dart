@@ -150,7 +150,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _pageController.dispose();
     _stopAudio();
     _audioController.dispose();
-    PaintingBinding.instance.imageCache.clear();
+    // (배포버전 프리즈 방지) 전역 imageCache.clear()는 캐시가 큰 실사용 환경에서
+    // dispose 타이밍에 수 초 프리즈를 만들 수 있어 제거합니다.
     super.dispose();
   }
 

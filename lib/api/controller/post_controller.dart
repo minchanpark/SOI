@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/post_service.dart';
@@ -94,9 +94,12 @@ class PostController extends ChangeNotifier {
     _setLoading(true);
     _clearError();
 
-    debugPrint(
-      "[PostController]\nuserId: $userId\nnickName: $nickName\ncontent: $content\npostFileKey: $postFileKey\naudioFileKey: $audioFileKey\ncategoryIds: $categoryIds\nwaveformData: $waveformData\nduration: $duration",
-    );
+    // (배포버전 성능) 요청 payload 전체 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
+    if (kDebugMode) {
+      debugPrint(
+        "[PostController]\nuserId: $userId\nnickName: $nickName\ncontent: $content\npostFileKey: $postFileKey\naudioFileKey: $audioFileKey\ncategoryIds: $categoryIds\nwaveformData: $waveformData\nduration: $duration",
+      );
+    }
 
     try {
       final result = await _postService.createPost(
@@ -109,7 +112,7 @@ class PostController extends ChangeNotifier {
         waveformData: waveformData,
         duration: duration,
       );
-      debugPrint("[PostController] 게시물 생성 결과: $result");
+      if (kDebugMode) debugPrint("[PostController] 게시물 생성 결과: $result");
       _setLoading(false);
       if (result) _notifyPostsChanged();
       return result;

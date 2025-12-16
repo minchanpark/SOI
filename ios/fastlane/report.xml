@@ -5,42 +5,42 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000214">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000242">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001867">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001771">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.638771">
+      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.346162">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: pod --version" time="3.122966">
+      <testcase classname="fastlane.lanes" name="3: pod --version" time="0.67938">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: pod install" time="16.576927">
+      <testcase classname="fastlane.lanes" name="4: pod install" time="16.349629">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="5: flutter pub get" time="1.715395">
+      <testcase classname="fastlane.lanes" name="5: flutter pub get" time="1.710887">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="6: flutter build ipa --release --build-number=86" time="262.353084">
+      <testcase classname="fastlane.lanes" name="6: flutter build ipa --release --build-number=88" time="236.732823">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="7: pilot" time="324.941586">
+      <testcase classname="fastlane.lanes" name="7: pilot" time="300.030159">
         
       </testcase>
     

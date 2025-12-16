@@ -13,6 +13,21 @@ import '../api/services/camera_service.dart';
 class HomePageNavigationBar extends StatefulWidget {
   final int currentPageIndex;
 
+  /// 전역에서 홈 탭(Feed/Camera/Archive)을 바꾸기 위한 키입니다.
+  ///
+  /// (배포버전 프리즈 방지) `pushAndRemoveUntil`로 홈을 "새로" 만드는 대신,
+  /// 기존 홈을 유지한 채 탭만 바꾸도록 유도합니다.
+  static final GlobalKey<_HomePageNavigationBarState> _globalKey =
+      GlobalKey<_HomePageNavigationBarState>();
+
+  /// `MaterialApp.routes` 등에서 주입할 루트 키 (외부에는 `Key`로만 노출).
+  static Key get rootKey => _globalKey;
+
+  /// 현재 살아있는 홈이 있으면 탭만 변경합니다. (없으면 아무 것도 하지 않음)
+  static void requestTab(int index) {
+    _globalKey.currentState?._setCurrentPageIndex(index);
+  }
+
   const HomePageNavigationBar({super.key, required this.currentPageIndex});
 
   @override
@@ -21,6 +36,14 @@ class HomePageNavigationBar extends StatefulWidget {
 
 class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
   late int _currentPageIndex;
+
+  void _setCurrentPageIndex(int index) {
+    if (!mounted) return;
+    if (_currentPageIndex == index) return;
+    setState(() {
+      _currentPageIndex = index;
+    });
+  }
 
   @override
   void initState() {

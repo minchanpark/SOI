@@ -430,6 +430,7 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
           color: Color(0xFF323232),
           shape: BoxShape.circle,
         ),
+
         alignment: Alignment.center,
         child: widget.selectedEmoji != null
             ? Text(

@@ -237,8 +237,10 @@ class MyApp extends StatelessWidget {
           routes: {
             '/launch_video': (context) => const LaunchVideoScreen(),
             '/': (context) => const StartScreen(),
-            '/home_navigation_screen': (context) =>
-                HomePageNavigationBar(currentPageIndex: 1),
+            '/home_navigation_screen': (context) => HomePageNavigationBar(
+              key: HomePageNavigationBar.rootKey,
+              currentPageIndex: 1, // 2: 카테고리(아카이브) 탭으로 진입
+            ),
             '/camera': (context) => const CameraScreen(),
             '/archiving': (context) => const APIArchiveMainScreen(),
             '/start': (context) => const StartScreen(),

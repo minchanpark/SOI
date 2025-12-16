@@ -2,6 +2,7 @@ import 'dart:async';
 //import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -686,9 +687,13 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // home_navigation_screen으로 먼저 이동
       _navigateToHome();
 
-      // 다음 프레임 이후에 업로드 파이프라인 시작(화면 전환 O(1) 체감)
+      // (배포버전 체감 개선) post-frame 콜백을 1번만 걸면 "전환 직후" 같은 프레임 끝에서
+      // 무거운 작업이 바로 시작되어, 새 화면의 첫 페인트가 밀릴 수 있습니다.
+      // 최소 1프레임 더 양보한 뒤 업로드 파이프라인을 시작합니다.
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        unawaited(_runUploadPipelineAfterNavigation(snapshot));
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          unawaited(_runUploadPipelineAfterNavigation(snapshot));
+        });
       });
     } catch (e) {
       debugPrint('업로드 실패: $e');
@@ -923,13 +928,32 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _audioController.stopRealtimeAudio();
     _audioController.clearCurrentRecording();
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => HomePageNavigationBar(currentPageIndex: 2),
-        settings: RouteSettings(name: '/home_navigation_screen'),
-      ),
-      (route) => false,
-    );
+    // (배포버전 프리즈 방지) 홈을 새로 push해서 기존 라우트들을 전부 dispose시키면
+    // dispose 내부의 무거운 정리 작업(특히 imageCache.clear)이 한 번에 실행되며 프리즈가 생길 수 있습니다.
+    // 따라서: "기존 홈으로 popUntil 복귀 + 탭만 변경"으로 전환 비용을 최소화합니다.
+    HomePageNavigationBar.requestTab(2);
+
+    final navigator = Navigator.of(context);
+    var foundHome = false;
+    navigator.popUntil((route) {
+      final isHome = route.settings.name == '/home_navigation_screen';
+      foundHome = foundHome || isHome;
+      return isHome || route.isFirst;
+    });
+
+    // 홈 라우트가 스택에 없으면(예: 딥링크 진입) 기존 방식으로만 fallback
+    if (!foundHome && mounted) {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => HomePageNavigationBar(
+            key: HomePageNavigationBar.rootKey,
+            currentPageIndex: 2,
+          ),
+          settings: const RouteSettings(name: '/home_navigation_screen'),
+        ),
+        (route) => false,
+      );
+    }
 
     if (_draggableScrollController.isAttached) {
       _draggableScrollController.jumpTo(0.0);
@@ -945,9 +969,12 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     // 파형 데이터를 JSON 문자열로 인코딩
     final waveformJson = _encodeWaveformData(payload.waveformData);
 
-    debugPrint(
-      "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: $categoryIds\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
-    );
+    // (배포버전 성능) 대용량 문자열 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
+    if (kDebugMode) {
+      debugPrint(
+        "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: $categoryIds\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
+      );
+    }
 
     // 게시물 생성 API 호출
     final success = await _postController.createPost(
@@ -961,7 +988,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       duration: payload.audioDurationSeconds,
     );
 
-    debugPrint('[PhotoEditor] 게시물 생성 결과: $success');
+    // (배포버전 성능) 대용량 문자열 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
+    if (kDebugMode) debugPrint('[PhotoEditor] 게시물 생성 결과: $success');
 
     return success;
   }
