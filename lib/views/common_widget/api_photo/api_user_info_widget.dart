@@ -54,12 +54,20 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
 
   final LayerLink _likeButtonLink = LayerLink(); // 이모지 버튼과 이모지 패널을 연결하기 위한 링크
   OverlayEntry? _likePanelEntry;
-  late final AnimationController _likePanelController;
 
-  static const Duration _likePanelOpenDuration = Duration(milliseconds: 300);
-  static const Duration _likePanelCloseDuration = Duration(milliseconds: 300);
-  static const double _likeButtonSize = 33;
-  static const double _likePanelHeight = 33;
+  late final AnimationController
+  _likePanelController; // 이모지 패널 애니메이션을 제어하는 컨트롤러
+
+  static const Duration _likePanelOpenDuration = Duration(
+    milliseconds: 300,
+  ); // 이모지 패널 열기 애니메이션 지속 시간
+
+  static const Duration _likePanelCloseDuration = Duration(
+    milliseconds: 300,
+  ); // 이모지 패널 닫기 애니메이션 지속 시간
+
+  static const double _likeButtonSize = 33; // 이모지 버튼 크기
+  static const double _likePanelHeight = 33; // 이모지 패널 높이
 
   // 좋아요 패널 토글 메서드
   // 좋아요 패널의 열림/닫힘 상태를 반전시킵니다.
@@ -106,7 +114,7 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
             type: MaterialType.transparency,
             child: CompositedTransformFollower(
               link: _likeButtonLink, // 좋아요 버튼과 연결
-              showWhenUnlinked: false,
+              showWhenUnlinked: false, // 버튼이 사라지면 패널도 사라짐
               targetAnchor: Alignment.centerRight,
               followerAnchor: Alignment.centerRight,
 
@@ -121,13 +129,15 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
                   // 0.0일 때 완전히 닫힌 상태, 1.0일 때 완전히 열린 상태
                   final value = _likePanelController.value;
 
-                  // 접히듯(widthFactor) 없이, 슬라이드 + 페이드만 적용합니다.
-                  // 이 값(슬라이드 거리)을 조절하면 닫힐 때 우측 끝점 위치도 함께 바뀝니다.
-                  final slideDistance = 7.0;
+                  // 슬라이드 거리
+                  // 패널이 열리고 닫힐 때 슬라이드되는 거리입니다.
+                  // 값을 키우면, 패널이 닫히는 끝점이 오른쪽으로 더 이동합니다.
+                  final slideDistance = 5.0;
 
                   // 슬라이드/페이드는 유지하면서, 패널의 우측 끝점을 버튼 쪽에서 살짝 왼쪽으로 당깁니다.
                   // 값을 키우면(+) 우측 끝점이 더 왼쪽으로 들어가서 버튼과 더 많이 겹칩니다.
                   final rightEdgePull = 6.0;
+
                   return SizedBox(
                     height: _likePanelHeight,
                     child: Stack(
@@ -266,11 +276,13 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     // 이전 이모지 댓글 삭제 여부 플래그
     var deletedOldEmoji = false;
 
-    // 기존에 선택된 이모지가 있으면(내가 남긴 emoji 댓글), 먼저 삭제하고 댓글을 새로고침합니다.
     if (currentUserNickname != null) {
+      // 기존 댓글 목록 조회
       final existingComments = await commentController.getComments(
         postId: widget.post.id,
       );
+
+      // 내가 남긴 가장 최신의 이모지 댓글 찾기
       final existingEmojiComment = _findMyLatestEmojiComment(
         comments: existingComments,
         currentUserNickname: currentUserNickname,
@@ -283,6 +295,7 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
       }
 
       if (existingEmojiComment?.id != null) {
+        // 기존 이모지 댓글이 있으면 삭제
         final deleted = await commentController.deleteComment(
           existingEmojiComment!.id!,
         );
@@ -328,10 +341,13 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     return Listener(
       behavior: HitTestBehavior.translucent, // 투명 영역도 이벤트 수신
       // 포인터 다운 이벤트 처리
+      // 포링터 다운 이벤트란, 사용자가 화면을 터치하거나 클릭했을 때 발생하는 이벤트입니다.
       onPointerDown: (event) {
         _pointerDownPosition = event.position; // 드래그 시작 위치 저장
       },
       // 포인터 이동 이벤트 처리
+      // 포인터 이동 이벤트란, 사용자가 화면을 터치한 상태에서
+      //  손가락을 움직이거나 마우스를 이동시킬 때 발생하는 이벤트입니다.
       onPointerMove: (event) {
         if (!_isLikePanelOpen) return; // 패널이 열려있을 때만 처리
         final start = _pointerDownPosition; // 드래그 시작 위치

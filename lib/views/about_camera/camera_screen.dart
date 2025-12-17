@@ -621,14 +621,11 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// 카메라 전환 버튼 눌렀을 때 처리
   Future<void> _onSwitchCameraPressed() async {
-    if (_cameraSwitchInFlight) {
-      return;
-    }
-
-    if (_isVideoRecording && !_supportsLiveSwitch) {
-      return;
-    }
+    // `!_cameraSwitchInFlight` 토글 방식은 상태가 꼬여 true로 고정될 수 있어
+    // 이후 버튼이 비활성화(전환 불가)되는 원인이 됩니다.
+    if (_cameraSwitchInFlight) return;
 
     setState(() {
       _cameraSwitchInFlight = true;
