@@ -32,11 +32,10 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _feedDataManager = FeedDataManager();
+    // 수정: FeedDataManager는 전역 Provider에서 가져와 캐시를 유지합니다.
     _voiceCommentStateManager = VoiceCommentStateManager();
     _feedAudioManager = FeedAudioManager();
 
-    _feedDataManager?.setOnStateChanged(() => mounted ? setState(() {}) : null);
     _voiceCommentStateManager?.setOnStateChanged(
       () => mounted ? setState(() {}) : null,
     );
@@ -51,6 +50,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _feedDataManager = Provider.of<FeedDataManager>(context, listen: false);
       _userController = Provider.of<UserController>(context, listen: false);
       _lastProfileImageKey = _userController?.currentUser?.profileImageUrlKey;
       _userControllerListener ??= _handleUserProfileChanged;
@@ -69,6 +69,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   Future<void> _loadInitialData() async {
     if (_userController == null) return;
+    // 수정: 피드 진입마다 매번 강제 리로드하지 않고, 캐시가 있으면 재사용합니다.
     await _feedDataManager?.loadUserCategoriesAndPhotos(context);
   }
 
@@ -130,11 +131,13 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   // 페이지 변경 처리 (무한 스크롤)
   void _handlePageChanged(int index) {
-    final totalPosts = _feedDataManager?.allPosts.length ?? 0;
+    final totalPosts = _feedDataManager?.visiblePosts.length ?? 0;
     if (totalPosts == 0) {
       return;
     }
-    if (index >= totalPosts - 5 &&
+    // 수정: 현재 5개를 보여줄 때 4번째(인덱스 3)에서 다음 5개를 미리 로드합니다.
+    // (일반화: 끝에서 2번째에 도달하면 다음 청크를 요청)
+    if (index >= totalPosts - 2 &&
         (_feedDataManager?.hasMoreData ?? false) &&
         !(_feedDataManager?.isLoadingMore ?? false)) {
       unawaited(_feedDataManager?.loadMorePhotos(context));
@@ -249,13 +252,17 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   }
 
   Widget _buildBody() {
-    if (_feedDataManager?.isLoading ?? true) {
+    // 추가: Provider 구독(변경 시 자동 rebuild) - 캐시를 유지하면서도 UI는 최신 상태로 갱신됩니다.
+    final feedDataManager = Provider.of<FeedDataManager>(context);
+    _feedDataManager ??= feedDataManager;
+
+    if (feedDataManager.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.white),
       );
     }
 
-    if (_feedDataManager?.allPosts.isEmpty ?? true) {
+    if (feedDataManager.allPosts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -286,13 +293,17 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => _feedDataManager!.loadUserCategoriesAndPhotos(context),
+      // 수정: 당겨서 새로고침은 서버에서 다시 가져오도록 강제 리프레시합니다.
+      onRefresh: () => feedDataManager.loadUserCategoriesAndPhotos(
+        context,
+        forceRefresh: true,
+      ),
       color: Colors.white,
       backgroundColor: Colors.black,
       child: FeedPageBuilder(
-        posts: _feedDataManager!.allPosts,
-        hasMoreData: _feedDataManager!.hasMoreData,
-        isLoadingMore: _feedDataManager!.isLoadingMore,
+        posts: feedDataManager.visiblePosts,
+        hasMoreData: feedDataManager.hasMoreData,
+        isLoadingMore: feedDataManager.isLoadingMore,
         postComments: _voiceCommentStateManager!.postComments,
         selectedEmojisByPostId:
             _voiceCommentStateManager!.selectedEmojisByPostId,
@@ -312,7 +323,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
             _voiceCommentStateManager!.saveVoiceComment(postId, context),
         onSaveCompleted: _onSaveCompleted,
         onDeletePost: _deletePost,
-        onPageChanged: _handlePageChanged,
+        onPageChanged: (index) => _handlePageChanged(index),
         onStopAllAudio: _stopAllAudio,
         currentUserNickname: _userController?.currentUser?.userId,
         onReloadComments: (postId) =>

@@ -38,6 +38,7 @@ import 'views/about_archiving/screens/archive_detail/shared_archives_screen.dart
 import 'views/about_archiving/screens/api_archive_main_screen.dart';
 import 'views/about_camera/camera_screen.dart';
 import 'views/about_feed/feed_home.dart';
+import 'views/about_feed/manager/feed_data_manager.dart';
 import 'views/about_friends/friend_list_add_screen.dart';
 import 'views/about_friends/friend_list_screen.dart';
 import 'views/about_login/login_screen.dart';
@@ -189,6 +190,10 @@ class MyApp extends StatelessWidget {
           create: (_) => api_category_search.CategorySearchController(),
         ),
         ChangeNotifierProvider<PostController>(create: (_) => PostController()),
+        // 추가: 피드 캐시를 유지하기 위해 FeedDataManager를 전역 Provider로 유지합니다.
+        ChangeNotifierProvider<FeedDataManager>(
+          create: (_) => FeedDataManager(),
+        ),
         ChangeNotifierProvider<api_friend.FriendController>(
           create: (_) => api_friend.FriendController(),
         ),

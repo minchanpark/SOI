@@ -53,7 +53,10 @@ class FeedDataManager {
   }
 
   /// PostController의 게시물 변경을 구독
-  void listenToPostController(PostController postController, BuildContext context) {
+  void listenToPostController(
+    PostController postController,
+    BuildContext context,
+  ) {
     _postController = postController;
     _context = context;
 
@@ -113,6 +116,34 @@ class FeedDataManager {
         throw Exception('로그인이 필요합니다.');
       }
 
+      // 추가: 같은 유저 + forceRefresh=false면 기존 캐시를 재사용합니다.
+      if (!forceRefresh &&
+          _cachedUserId == currentUser.id &&
+          _allPosts.isNotEmpty) {
+        _isLoading = false;
+        // 앱 시작 시 "처음 5개만" 보여주기
+        _visibleCount = (_visibleCount == 0)
+            ? _pageChunkSize.clamp(0, _allPosts.length)
+            : _visibleCount.clamp(0, _allPosts.length);
+        _hasMoreData =
+            _visibleCount < _allPosts.length ||
+            _categoryHasMore.values.any((v) => v);
+        _notifyStateChanged();
+        _onPostsLoaded?.call(visiblePosts);
+        return;
+      }
+
+      // forceRefresh면 캐시 초기화
+      if (forceRefresh || _cachedUserId != currentUser.id) {
+        _cachedUserId = currentUser.id;
+        _allPosts = [];
+        _visibleCount = 0;
+        _seenPostIds.clear();
+        _categoryNextPage.clear();
+        _categoryHasMore.clear();
+      }
+
+      // 사용자 카테고리 로드
       final categories = await categoryController.loadCategories(
         currentUser.id,
         filter: api_model.CategoryFilter.all,
@@ -129,6 +160,8 @@ class FeedDataManager {
       final List<FeedPostItem> combined = [];
       for (final category in categories) {
         try {
+          // 카테고리별 게시물 로드
+          final page = _categoryNextPage[category.id] ?? 0;
           final posts = await postController.getPostsByCategory(
             categoryId: category.id,
             userId: currentUser.id,
