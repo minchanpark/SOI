@@ -150,6 +150,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     _scheduleProfileLoad(widget.post.userProfileImageKey); // 프로필 이미지 로드 예약
 
     if (widget.post.postFileKey?.isNotEmpty ?? false) {
+      // 추가: presigned URL은 매번 달라질 수 있어서(=캐시 미스),
+      // 이미 발급/캐싱된 URL이 있으면 첫 프레임부터 바로 보여주도록 합니다.
+      postImageUrl = _mediaController.peekPresignedUrl(widget.post.postFileKey!);
+
       _loadPostImage(widget.post.postFileKey!); // 게시물 이미지 로드
     } else {
       postImageUrl = null; // 게시물 이미지 키가 없으면 null로 설정
@@ -201,6 +205,15 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
 
     // 게시물 이미지 키가 변경되었는지 확인
     if (oldWidget.post.postFileKey != widget.post.postFileKey) {
+      // 추가: 새 key의 presigned URL이 캐시에 있으면 즉시 UI에 반영(쉬머 최소화)
+      _safeSetState(() {
+        final newKey = widget.post.postFileKey;
+        postImageUrl =
+            (newKey != null && newKey.isNotEmpty)
+                ? _mediaController.peekPresignedUrl(newKey)
+                : null;
+      });
+
       // 게시물 이미지가 변경되었으므로 새로 로드
       _loadPostImage(widget.post.postFileKey!);
 
@@ -229,6 +242,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     }
 
     try {
+      // 추가: 네트워크 요청 전에, 캐시된 presigned URL이 있으면 먼저 보여줍니다.
+      final cached = _mediaController.peekPresignedUrl(key);
+      if (cached != null && cached != postImageUrl) {
+        _safeSetState(() {
+          postImageUrl = cached;
+        });
+      }
+
       // 미디어 컨트롤러를 사용하여 presignedURL 가져오기
       final url = await _mediaController.getPresignedUrl(key);
       if (!mounted) return;
@@ -488,14 +509,36 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     }
 
     if (widget.post.hasImage) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
+      final url = postImageUrl;
+
+      // 추가: URL이 아직 없으면(=presigned URL 발급 전) CachedNetworkImage에 빈 URL을 넣지 않고
+      // 우리가 원하는 쉬머 UI만 보여줍니다. (불필요한 실패/깜빡임 방지)
+      if (url == null || url.isEmpty) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[800]!,
+          highlightColor: Colors.grey[600]!,
+          child: Container(
+            width: _imageWidth.w,
+            height: _imageHeight.h,
+            color: Colors.grey[800],
+          ),
+        );
+      }
+
       return CachedNetworkImage(
-        imageUrl: postImageUrl ?? '',
+        imageUrl: url,
+        // 추가: presigned URL이 바뀌어도(쿼리스트링 변경 등) 같은 파일 key면 같은 캐시를 쓰게 함
+        cacheKey: widget.post.postFileKey,
+        useOldImageOnUrlChange: true, // URL 변경 시에도 이전 이미지 유지(체감 깜빡임 감소)
+        fadeInDuration: Duration.zero, // 로드 후 페이드 제거(체감 쉬머 감소)
+        fadeOutDuration: Duration.zero,
         width: _imageWidth.w,
         height: _imageHeight.h,
         fit: BoxFit.cover,
-        memCacheWidth: (354 * 2).round(),
-        maxWidthDiskCache: (354 * 2).round(),
-        placeholder: (context, url) => Shimmer.fromColors(
+        memCacheWidth: ((354.w * dpr).round()),
+        maxWidthDiskCache: (354.w * dpr).round(),
+        placeholder: (context, _) => Shimmer.fromColors(
           baseColor: Colors.grey[800]!,
           highlightColor: Colors.grey[600]!,
           child: Container(
@@ -504,7 +547,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             color: Colors.grey[800],
           ),
         ),
-        errorWidget: (context, url, error) => Container(
+        errorWidget: (context, _, __) => Container(
           width: _imageWidth.w,
           height: _imageHeight.h,
           color: Colors.grey[800],
@@ -599,6 +642,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   }
 
   /// 업로드 중인 음성 댓글 마커 빌드
+  /// 대기 중인 음성 댓글이 있으면 해당 위치에 마커를 표시합니다.
+  /// 업로드 되기 전에, 댓글이 UI에 미리 보이도록 합니다.
   Widget? _buildPendingMarker() {
     final pending = widget.pendingVoiceComments[widget.post.id];
     if (pending == null) {
@@ -626,13 +671,24 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  /// 원형 아바타 위젯 빌드
+  /// 프로필 이미지 URL을 사용하여 원형 아바타를 생성합니다.
+  ///
+  /// Parameters:
+  ///   - [imageUrl]: 아바타 이미지 URL
+  ///   - [size]: 아바타 크기
+  ///   - [progress]: 진행률 (0.0 ~ 1.0)
+  ///   - [opacity]: 아바타 투명도 (기본값: 1.0)
   Widget _buildPendingProgressAvatar({
-    required String? imageUrl,
-    required double size,
-    required double? progress,
-    double opacity = 1.0,
+    required String? imageUrl, // 프로필 이미지 URL
+    required double size, // 프로필 이미지 크기
+    required double? progress, // 업로드 진행률 (0.0 ~ 1.0)
+    double opacity = 1.0, // 프로필 이미지 투명도 (기본값 1.0)
   }) {
-    final ringSize = size + 6.0;
+    // 프로그레스 링 크기
+    final ringSize = size + 3.0;
+
+    // 원형 프로그레스 링과 아바타를 겹쳐서 표시
     return SizedBox(
       width: ringSize,
       height: ringSize,
@@ -643,8 +699,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             width: ringSize,
             height: ringSize,
             child: CircularProgressIndicator(
-              value: progress?.clamp(0.0, 1.0),
-              strokeWidth: 2.2,
+              value: progress?.clamp(0.0, 2.0),
+              strokeWidth: 2.0,
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
               backgroundColor: Colors.transparent,
             ),
@@ -718,6 +774,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  /// 프로필 + 캡션을 띄우는 오버레이를 빌드하는 위젯 메서드 입니다.
+  ///
+  /// Parameters:
+  ///   - [isCaption]: 캡션 모드 여부
+  ///
+  /// Returns:
+  ///   - [Widget]: 프로필 + 캡션 오버레이 위젯
   Widget _buildCaptionOverlay(bool isCaption) {
     final captionStyle = TextStyle(
       color: Colors.white,
@@ -726,38 +789,39 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       fontWeight: FontWeight.w400,
     );
 
+    final avatarSize = 27.0; // 프로필 이미지 크기 설정
+
     return GestureDetector(
       onTap: () {
         setState(() => _isCaptionExpanded = !_isCaptionExpanded);
       },
+      // 프로필 + 캡션을 띄우틑 컨테이너 위젯
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 1000),
         curve: Curves.easeInOut,
         clipBehavior: Clip.hardEdge,
-        width: 278.w,
-        constraints: BoxConstraints(
-          minHeight: 48.h,
-          maxHeight: _isCaptionExpanded ? 260.h : 48.h,
-        ),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(15),
+          color: Colors.black.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(13.6),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
         child: Row(
           crossAxisAlignment: _isCaptionExpanded
               ? CrossAxisAlignment.start
               : CrossAxisAlignment.center,
           children: [
+            // 프로필 아바타
             Container(
-              width: 32.w,
-              height: 32.w,
+              width: avatarSize,
+              height: avatarSize,
               decoration: const BoxDecoration(shape: BoxShape.circle),
               child: _isProfileLoading
                   ? Shimmer.fromColors(
                       baseColor: Colors.grey[800]!,
                       highlightColor: Colors.grey[600]!,
                       child: Container(
+                        width: avatarSize,
+                        height: avatarSize,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: Color(0xFF2A2A2A),
@@ -766,11 +830,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                     )
                   : _buildCircleAvatar(
                       imageUrl: _uploaderProfileImageUrl,
-                      size: 32,
+                      size: avatarSize,
                       isCaption: isCaption,
                     ),
             ),
             SizedBox(width: 12.w),
+
+            // 캡션 텍스트
             Expanded(
               child: _isCaptionExpanded
                   ? ShaderMask(
@@ -800,6 +866,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                       ),
                     )
                   : FirstLineEllipsisText(
+                      // 첫 줄만 표시하는 커스텀 텍스트 위젯
                       text: widget.post.content!,
                       style: captionStyle,
                     ),
@@ -810,9 +877,20 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  /// 원형 아바타 위젯 빌드
+  /// 프로필 이미지 URL을 사용하여 원형 아바타를 생성합니다.
+  ///
+  /// Parameters:
+  ///   - [imageUrl]: 아바타 이미지 URL
+  ///   - [size]: 아바타 크기 (기본값: 27.0)
+  ///   - [showBorder]: 테두리 표시 여부 (기본값: false)
+  ///   - [borderColor]: 테두리 색상 (기본값: null)
+  ///   - [borderWidth]: 테두리 두께 (기본값: 1.5)
+  ///   - [opacity]: 아바타 투명도 (기본값: 1.0)
+  ///   - [isCaption]: 캡션 모드 여부 (기본값: null)
   Widget _buildCircleAvatar({
     required String? imageUrl,
-    double size = 27.0,
+    double size = 32.0,
     bool showBorder = false,
     Color? borderColor,
     double borderWidth = 1.5,
@@ -822,38 +900,37 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     Widget avatarContent;
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      avatarContent = SizedBox(
-        width: size,
-        height: size,
-        child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: imageUrl,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            memCacheWidth: (size * 4).round(),
-            maxWidthDiskCache: (size * 4).round(),
-            placeholder: (context, url) => Shimmer.fromColors(
-              baseColor: const Color(0xFF2A2A2A),
-              highlightColor: const Color(0xFF3A3A3A),
-              child: Container(
-                width: size,
-                height: size,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF2A2A2A),
-                ),
-              ),
-            ),
-            errorWidget: (context, url, error) => Container(
+      final dpr = MediaQuery.of(context).devicePixelRatio;
+      avatarContent = ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          // 아바타는 실제 표시 크기만큼만 디코딩하면 충분합니다.
+          memCacheWidth: (size * dpr).round(),
+          memCacheHeight: (size * dpr).round(),
+          maxWidthDiskCache: (size * 4).round(),
+          placeholder: (context, url) => Shimmer.fromColors(
+            baseColor: const Color(0xFF2A2A2A),
+            highlightColor: const Color(0xFF3A3A3A),
+            child: Container(
               width: size,
               height: size,
               decoration: const BoxDecoration(
-                color: Color(0xffd9d9d9),
                 shape: BoxShape.circle,
+                color: Color(0xFF2A2A2A),
               ),
-              child: const Icon(Icons.person, color: Colors.white),
             ),
+          ),
+          errorWidget: (context, url, error) => Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(
+              color: Color(0xffd9d9d9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person, color: Colors.white),
           ),
         ),
       );
@@ -890,19 +967,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-
         boxShadow: [
-          /* BoxShadow(
-            //color: Colors.black.withValues(alpha: 1.0),
-            //offset: const Offset(0, 10),
-            blurRadius: 18,
-            spreadRadius: -8,
-          ),*/
           if (isCaption != true)
             BoxShadow(
               color: Colors.white.withValues(alpha: 1.0),
-              //offset: const Offset(0, -2),
-              blurRadius: 6,
+              blurRadius: 2,
               spreadRadius: -2,
             ),
         ],
@@ -928,6 +997,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         : avatar3d;
   }
 
+  /// 기본 영역 탭 처리
   void _handleBaseTap() {
     if (_showActionOverlay) {
       _dismissOverlay();
@@ -940,15 +1010,21 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     }
   }
 
+  /// 액션 오버레이 닫기
+  /// 액션 오버레이란, 댓글 삭제 팝업 등을 의미합니다.
   void _dismissOverlay() {
     setState(() {
-      _showActionOverlay = false;
-      _selectedCommentKey = null;
-      _selectedCommentId = null;
-      _selectedCommentPosition = null;
+      _showActionOverlay = false; // 액션 오버레이 숨기기
+      _selectedCommentKey = null; // 선택된 댓글 키 초기화
+      _selectedCommentId = null; // 선택된 댓글 ID 초기화
+      _selectedCommentPosition = null; // 선택된 댓글 위치 초기화
     });
   }
 
+  /// 댓글 시트 열기
+  ///
+  /// Parameters:
+  ///  - [selectedKey]: 선택된 댓글의 고유 키
   void _openCommentSheet(String selectedKey) {
     final comments = _postComments;
     showModalBottomSheet<void>(
@@ -1056,6 +1132,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  /// 스낵바 표시
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

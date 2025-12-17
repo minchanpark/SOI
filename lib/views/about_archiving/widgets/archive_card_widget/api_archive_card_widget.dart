@@ -102,7 +102,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
             ),
             SizedBox(height: (16.87).h),
             Padding(
-              padding: EdgeInsets.only(left: 14),
+              padding: EdgeInsets.only(left: 12),
               child: Selector<CategoryController, CategoryProfileRowData>(
                 selector: (_, controller) {
                   final latest = controller.getCategoryById(category.id);

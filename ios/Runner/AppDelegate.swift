@@ -158,7 +158,6 @@ extension AppDelegate {
     if let registrar = self.registrar(forPlugin: "SwiftAudioConverter") {
       SwiftAudioConverter.register(with: registrar)
     }
-    
     if let registrar = self.registrar(forPlugin: "com.soi.instagram_share") {
       InstagramSharePlugin.register(with: registrar)
     }

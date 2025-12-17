@@ -45,6 +45,9 @@ class _CameraScreenState extends State<CameraScreen>
   String currentZoom = '1x';
   double currentZoomValue = 1.0;
 
+  // 주석 처리: Flutter(UI) 세로 드래그로 줌 조절 기능은 일단 비활성화합니다.
+  // (현재는 iOS 네이티브 핀치 줌만 사용)
+
   // 동적 줌 레벨 (디바이스별로 결정됨)
   List<Map<String, dynamic>> zoomLevels = [
     {'label': '1x', 'value': 1.0}, // 기본값
@@ -202,7 +205,11 @@ class _CameraScreenState extends State<CameraScreen>
   Future<void> _refreshZoomLevels() async {
     try {
       final availableLevels = await _cameraService.getAvailableZoomLevels();
+
+      // 가져온 줌 레벨을 UI에 적용
       _applyZoomLevels(availableLevels);
+
+      // 주석 처리: 드래그 줌 비활성화로 인해 min/max 줌 범위 갱신은 사용하지 않습니다.
     } catch (_) {
       // 줌 레벨 로드 실패 시 기본값 유지
     } finally {
@@ -231,6 +238,8 @@ class _CameraScreenState extends State<CameraScreen>
       }).toList();
     });
   }
+
+  // 주석 처리: Flutter(UI) 드래그 줌 관련 로직은 일단 비활성화합니다.
 
   // 비디오 녹화 이벤트 리스너 설정
   void _setupVideoListeners() {
@@ -691,6 +700,7 @@ class _CameraScreenState extends State<CameraScreen>
               isVideoRecording: _isVideoRecording,
               isFlashOn: isFlashOn,
               onToggleFlash: _toggleFlash,
+              // 주석 처리: Flutter(UI) 드래그로 줌 조절 기능 비활성화 (두 손가락 핀치 줌만 사용)
             ),
             SizedBox(height: 20.h),
             // 수정: 하단 버튼 레이아웃 변경 - 반응형
@@ -706,7 +716,8 @@ class _CameraScreenState extends State<CameraScreen>
                         try {
                           final XFile? pickedMedia = await _cameraService
                               .pickMediaFromGallery();
-                          if (pickedMedia == null || !mounted) {
+                          // 수정: async gap 이후 context 사용(Navigator.push) 안전장치
+                          if (pickedMedia == null || !context.mounted) {
                             return;
                           }
 

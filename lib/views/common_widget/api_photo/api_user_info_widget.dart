@@ -147,6 +147,8 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
                         Opacity(
                           opacity: value,
                           child: Transform.translate(
+                            // 패널이 열리고 닫힐 때 위치 조절
+                            // 이 값으로 패널이 슬라이드되는 효과를 줍니다.
                             offset: Offset(
                               (1 - value) * slideDistance - rightEdgePull,
                               0,
@@ -450,16 +452,28 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
         alignment: Alignment.center,
         child: widget.selectedEmoji != null
             ? Transform.translate(
-                // `Container(width/height: ...)`가 자식에게 tight constraint를 주기 때문에
-                // `Padding(bottom: ...)`은 실제로 "위로 올림"이 아니라 높이만 깎여 체감이 거의 없습니다.
-                // 이모지 위치를 확실히 올리려면 paint 단계에서 offset을 주는 게 안전합니다.
+                // 수정: 이모지는 기기/OS에 따라 폰트 폴백 메트릭이 달라 "Text로 center" 시 위치가 흔들릴 수 있습니다.
+                // WidgetSpan으로 "고정된 박스" 안에 넣으면 레이아웃 기준이 박스가 되어 위치가 더 안정적입니다.
                 offset: const Offset(0, -1),
-                child: Text(
-                  widget.selectedEmoji!,
-                  style: const TextStyle(
-                    fontSize: 25.38,
-                    fontFamily: 'Pretendard Variable',
-                    fontWeight: FontWeight.w600,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: Text(
+                            widget.selectedEmoji!,
+                            textScaler: TextScaler.noScaling,
+                            style: const TextStyle(
+                              fontSize: 25.38,
+                              fontFamily: 'Pretendard Variable',
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               )

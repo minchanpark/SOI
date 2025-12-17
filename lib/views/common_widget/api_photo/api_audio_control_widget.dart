@@ -248,96 +248,64 @@ class _AudioControlSurface extends StatelessWidget {
     final borderRadius = BorderRadius.circular(13.6);
     return GestureDetector(
       onTap: disableTap ? null : onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.55),
-              offset: const Offset(0, 10),
-              blurRadius: 18,
-              spreadRadius: -8,
-            ),
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.06),
-              offset: const Offset(0, -2),
-              blurRadius: 6,
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  width: 1,
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.10),
-                    Colors.black.withValues(alpha: 0.25),
-                  ],
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildProfileImage(),
-                  SizedBox(width: (13.79).w),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            color: Colors.black.withValues(alpha: 0.4),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildProfileImage(),
+              SizedBox(width: (13.79).w),
 
-                  // 파형 및 진행률
-                  Expanded(
-                    child: SizedBox(
-                      height: 30.h,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (waveformData != null)
-                            CustomWaveformWidget(
-                              waveformData: waveformData!,
-                              progress: progress,
-                              activeColor: Colors.white,
-                              color: Colors.grey[600]!,
-                            )
-                          else
-                            LinearProgressIndicator(
-                              value: progress,
-                              backgroundColor: Colors.grey[600],
-                              valueColor: const AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          if (isAudioLoading)
-                            const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                        ],
-                      ),
-                    ),
+              // 파형 및 진행률
+              Expanded(
+                child: SizedBox(
+                  height: 30.h,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (waveformData != null)
+                        CustomWaveformWidget(
+                          waveformData: waveformData!,
+                          progress: progress,
+                          activeColor: Colors.white,
+                          color: Colors.grey[600]!,
+                        )
+                      else
+                        LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.grey[600],
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      if (isAudioLoading)
+                        const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
                   ),
-                  SizedBox(width: (15.33).w),
-                  Text(
-                    _format(duration),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.sp,
-                      fontFamily: 'Pretendard',
-                    ),
-                  ),
-                  SizedBox(width: (15).w),
-                ],
+                ),
               ),
-            ),
+              SizedBox(width: (15.33).w),
+              Text(
+                _format(duration),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: (11.86).sp,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Pretendard Variable',
+                ),
+              ),
+              SizedBox(width: (15).w),
+            ],
           ),
         ),
       ),
@@ -371,8 +339,8 @@ class _AudioControlSurface extends StatelessWidget {
     return ClipOval(
       child: CachedNetworkImage(
         imageUrl: profileImageUrl!,
-        width: 27.sp,
-        height: 27.sp,
+        width: 27,
+        height: 27,
         fit: BoxFit.cover,
       ),
     );

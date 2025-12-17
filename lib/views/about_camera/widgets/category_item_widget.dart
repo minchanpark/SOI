@@ -59,15 +59,14 @@ class _CategoryItemWidgetState extends State<CategoryItemWidget>
     return GestureDetector(
       onTap: widget.onTap,
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 200), // ✅ 선택 시 부드러운 애니메이션
+        duration: Duration(milliseconds: 200), // 선택 시 부드러운 애니메이션
         width: dimensions.itemWidth,
-        // margin 제거 - GridView의 spacing이 이미 간격을 관리하고 있음
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildCircularContainer(dimensions, isSelected),
+            _buildCircularContainer(dimensions, isSelected), //
             SizedBox(height: 12.h),
-            _buildCategoryLabel(dimensions),
+            _buildCategoryLabel(dimensions), // 카테고리 라벨
           ],
         ),
       ),
@@ -171,7 +170,7 @@ class _CategoryItemWidgetState extends State<CategoryItemWidget>
     );
   }
 
-  /// 선택된 상태의 오버레이 빌드 (화살표 디자인)
+  /// 카테고리가 선택된 상태의 오버레이 위젯
   Widget _buildSelectionOverlay(_CategoryDimensions dimensions) {
     return Container(
       width: dimensions.containerSize,

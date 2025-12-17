@@ -26,6 +26,31 @@ import 'widgets/caption_input_widget.dart';
 import 'widgets/category_list_widget.dart';
 import 'widgets/photo_display_widget.dart';
 
+/// 업로드 성능 추적 클래스
+class _UploadPerfTrace {
+  final String label;
+  final Stopwatch _stopwatch = Stopwatch()..start();
+
+  _UploadPerfTrace(this.label);
+
+  void mark(String step) {
+    if (!kDebugMode) return;
+    debugPrint('[Perf][$label] +${_stopwatch.elapsedMilliseconds}ms $step');
+  }
+}
+
+// Isolate friendly: must be top-level for `compute`.
+String _encodeWaveformDataWorker(List<double> waveformData) {
+  if (waveformData.isEmpty) return '';
+
+  final buffer = StringBuffer();
+  for (var i = 0; i < waveformData.length; i++) {
+    if (i > 0) buffer.write(', ');
+    buffer.write(double.parse(waveformData[i].toStringAsFixed(6)).toString());
+  }
+  return buffer.toString();
+}
+
 class PhotoEditorScreen extends StatefulWidget {
   final String? downloadUrl;
   final String? filePath;
@@ -648,9 +673,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<void> _uploadThenNavigate(List<int> categoryIds) async {
     if (_uploadStarted) return;
 
-    _uploadStarted = true;
+    _uploadStarted = true; // 중복 업로드 방지 플래그 설정
 
     try {
+      // 현재 사용자 정보 확인
       final currentUser = _userController.currentUser;
       if (currentUser == null) {
         _showErrorSnackBar('로그인 후 다시 시도해주세요.');
@@ -658,6 +684,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         return;
       }
 
+      // 업로드할 파일 경로 확인
       final filePath = widget.filePath;
       if (filePath == null || filePath.isEmpty) {
         _safeSetState(() {
@@ -667,6 +694,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         return;
       }
 
+      // 업로드에 필요한 모든 데이터를 스냅샷으로 미리 캡처
       final snapshot = _UploadSnapshot(
         userId: currentUser.id,
         nickName: currentUser.userId,
@@ -687,9 +715,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // home_navigation_screen으로 먼저 이동
       _navigateToHome();
 
-      // (배포버전 체감 개선) post-frame 콜백을 1번만 걸면 "전환 직후" 같은 프레임 끝에서
-      // 무거운 작업이 바로 시작되어, 새 화면의 첫 페인트가 밀릴 수 있습니다.
-      // 최소 1프레임 더 양보한 뒤 업로드 파이프라인을 시작합니다.
+      // 화면 전환이 완료된 후에 업로드 파이프라인 실행
+      // 두 번의 프레임을 늦춘 다음, 업로드를 시작합니다
+      // (이중 지연을 통해 화면 전환이 완전히 끝난 후에 업로드가 시작되도록 보장)
       SchedulerBinding.instance.addPostFrameCallback((_) {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           unawaited(_runUploadPipelineAfterNavigation(snapshot));
@@ -709,25 +737,33 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<void> _runUploadPipelineAfterNavigation(
     _UploadSnapshot snapshot,
   ) async {
+    final perf = _UploadPerfTrace('PhotoEditor.upload');
     try {
       // UI 전환 이후에 무거운 작업들을 시작 (dispose와 무관하게 동작하도록 스냅샷 사용)
       unawaited(_audioController.stopRealtimeAudio());
+
+      // 녹음된 오디오 초기화
       _audioController.clearCurrentRecording();
 
-      // 캐시는 전체 clear 대신 현재 사용한 이미지 정도만 evict
+      // 캐시는 전체 clear 대신 현재 사용한 이미지 정도만 정리하여서 메모리 사용량을 줄임
       _evictCurrentImageFromCache(filePath: snapshot.filePath);
 
       // 성능 최적화: 업로드 전에 미리 압축된 파일이 있는지 확인
+      // 미리 압축된 파일이 있다면 --> 그 파일을 사용
+      // 미리 압축된 파일이 없다면 --> 새로 압축 수행
       final payload = await _prepareUploadPayloadFromSnapshot(snapshot);
+      perf.mark('payload prepared');
       if (payload == null) {
         _uploadStarted = false;
         return;
       }
 
+      // 백그라운드에서 업로드 실행
       await _uploadPostInBackground(
         categoryIds: snapshot.categoryIds,
         payload: payload,
       );
+      perf.mark('pipeline finished');
     } catch (e) {
       debugPrint('[PhotoEditor] 업로드 파이프라인 실패: $e');
     } finally {
@@ -744,8 +780,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     required List<int> categoryIds,
     required _UploadPayload payload,
   }) async {
+    final perf = _UploadPerfTrace('PhotoEditor.upload.bg');
     try {
       final mediaResult = await _uploadMediaForPost(payload: payload);
+      perf.mark('media uploaded');
       if (mediaResult == null) {
         throw Exception('미디어 업로드에 실패했습니다.');
       }
@@ -756,6 +794,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         payload: payload,
         mediaResult: mediaResult,
       );
+      perf.mark('post created');
       if (!createSuccess) {
         throw Exception('게시물 생성에 실패했습니다.');
       }
@@ -767,6 +806,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
           payload.userId,
           forceReload: true,
         );
+        perf.mark('categories refreshed');
       } catch (e) {
         debugPrint('[PhotoEditor] 카테고리 강제 갱신 실패(무시): $e');
       }
@@ -780,8 +820,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<_UploadPayload?> _prepareUploadPayloadFromSnapshot(
     _UploadSnapshot snapshot,
   ) async {
+    // 미디어 파일 경로 확인
     final filePath = snapshot.filePath;
 
+    // 미디어 파일 존재 여부 확인
     var mediaFile = File(filePath);
     if (!await mediaFile.exists()) {
       debugPrint('[PhotoEditor] 미디어 파일을 찾을 수 없습니다: $filePath');
@@ -792,11 +834,15 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       try {
         if (snapshot.compressedFile != null &&
             snapshot.lastCompressedPath == filePath) {
+          // 미리 압축된 파일이 있으면 그것을 사용
           mediaFile = snapshot.compressedFile!;
         } else if (snapshot.compressionTask != null &&
             snapshot.lastCompressedPath == filePath) {
+          // 백그라운드에서 압축이 완료된 파일이 있으면 그것을 사용
           mediaFile = await snapshot.compressionTask!;
         } else {
+          // 미리 압축된 파일이 없고 백그라운드에서 압축도 안 된 경우
+          // 새로 이미지 압축 수행
           mediaFile = await _compressImageIfNeeded(mediaFile);
         }
       } catch (e) {
@@ -808,10 +854,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     String? audioPath;
     final candidatePath = snapshot.recordedAudioPath;
     if (candidatePath != null && candidatePath.isNotEmpty) {
+      // 녹음된 오디오 파일 존재 여부 확인
       final file = File(candidatePath);
       if (await file.exists()) {
-        audioFile = file;
-        audioPath = candidatePath;
+        audioFile = file; // 오디오 파일 설정
+        audioPath = candidatePath; // 오디오 파일 경로 설정
       }
     }
 
@@ -823,10 +870,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         !hasCaption &&
         audioFile != null &&
         snapshot.recordedWaveformData != null;
-    final waveform = shouldIncludeAudio && snapshot.recordedWaveformData != null
-        ? List<double>.from(snapshot.recordedWaveformData!)
-        : null;
 
+    // 파형 데이터는 오디오가 첨부되는 경우에만 포함
+    final waveform = shouldIncludeAudio ? snapshot.recordedWaveformData : null;
+
+    // 업로드 페이로드 생성
     return _UploadPayload(
       userId: snapshot.userId,
       nickName: snapshot.nickName,
@@ -850,6 +898,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Future<_MediaUploadResult?> _uploadMediaForPost({
     required _UploadPayload payload,
   }) async {
+    final perf = _UploadPerfTrace('PhotoEditor.upload.media');
     final files = <http.MultipartFile>[];
     final types = <MediaType>[];
     final usageTypes = <MediaUsageType>[];
@@ -858,6 +907,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     final mediaMultipart = await _mediaController.fileToMultipart(
       payload.mediaFile,
     );
+    perf.mark('multipart(media) ready');
 
     // 미디어 파일 추가
     files.add(mediaMultipart);
@@ -872,6 +922,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       final audioMultipart = await _mediaController.fileToMultipart(
         payload.audioFile!,
       );
+      perf.mark('multipart(audio) ready');
 
       // 음성 파일 추가
       files.add(audioMultipart);
@@ -883,6 +934,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       usageTypes.add(MediaUsageType.post);
     }
 
+    perf.mark('multipart all ready (upload start)');
     // 미디어 업로드 호출
     final keys = await _mediaController.uploadMedia(
       files: files,
@@ -892,6 +944,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       refId: payload.userId,
       usageCount: payload.usageCount,
     );
+    perf.mark('uploadMedia done');
 
     if (keys.isEmpty) {
       return null;
@@ -911,6 +964,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         audioKeys.add(keys[index++]);
       }
     }
+    perf.mark('keys split');
 
     if (mediaKeys.length < perTypeCount ||
         (payload.audioFile != null && audioKeys.length < perTypeCount)) {
@@ -967,7 +1021,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     required _MediaUploadResult mediaResult,
   }) async {
     // 파형 데이터를 JSON 문자열로 인코딩
-    final waveformJson = _encodeWaveformData(payload.waveformData);
+    final waveformJson = await _encodeWaveformDataAsync(payload.waveformData);
 
     // (배포버전 성능) 대용량 문자열 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
     if (kDebugMode) {
@@ -999,11 +1053,29 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     if (waveformData == null || waveformData.isEmpty) {
       return null;
     }
-    final normalized = waveformData
-        .map((value) => double.parse(value.toStringAsFixed(6)))
-        .map((value) => value.toString())
-        .toList();
-    return normalized.join(', ');
+    final encoded = _encodeWaveformDataWorker(waveformData);
+    return encoded.isEmpty ? null : encoded;
+  }
+
+  Future<String?> _encodeWaveformDataAsync(List<double>? waveformData) async {
+    if (waveformData == null || waveformData.isEmpty) {
+      return null;
+    }
+
+    // 작은 데이터는 Isolate 오버헤드가 더 클 수 있어 동기 처리.
+    if (kIsWeb || waveformData.length < 800) {
+      return _encodeWaveformData(waveformData);
+    }
+
+    try {
+      // 큰 데이터는 Isolate에서 처리하여 메인 스레드 부하 감소
+      // Isolate란, Dart에서 별도의 스레드처럼 동작하는 독립적인 실행 컨텍스트입니다.
+      final encoded = await compute(_encodeWaveformDataWorker, waveformData);
+      return encoded.isEmpty ? null : encoded;
+    } catch (e) {
+      debugPrint('[PhotoEditor] waveform encode isolate failed: $e');
+      return _encodeWaveformData(waveformData);
+    }
   }
 
   // ========== 성능 최적화: 사전 압축 ==========
@@ -1376,6 +1448,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }
 
   // ========== 리소스 정리 메서드 ==========
+
+  /// 이미지 캐시를 정리하는 메서드
   void _clearImageCache() {
     _evictCurrentImageFromCache(
       filePath: widget.filePath,
@@ -1383,11 +1457,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     );
   }
 
+  /// 현재 사용된 이미지들을 캐시에서 제거
   void _evictCurrentImageFromCache({String? filePath, String? downloadUrl}) {
     if (filePath != null && filePath.isNotEmpty) {
+      // 로컬 파일 이미지 캐시만 제거
       PaintingBinding.instance.imageCache.evict(FileImage(File(filePath)));
     }
     if (downloadUrl != null && downloadUrl.isNotEmpty) {
+      // 네트워크 이미지 캐시만 제거
       PaintingBinding.instance.imageCache.evict(NetworkImage(downloadUrl));
     }
   }

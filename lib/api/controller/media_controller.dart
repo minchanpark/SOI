@@ -32,6 +32,12 @@ class MediaController extends ChangeNotifier {
   String? _errorMessage;
   double? _uploadProgress;
 
+  // 추가: presigned URL은 1시간 유효하지만, 매번 새로 발급받으면 URL이 바뀌어
+  // 이미지 캐시(CachedNetworkImage)가 새 이미지로 인식 → placeholder(쉬머)가 다시 보일 수 있습니다.
+  // 그래서 key -> presignedUrl을 메모리에 캐시해서, 이미 본 이미지는 즉시 렌더링되도록 합니다.
+  final Map<String, _PresignedUrlCacheEntry> _presignedUrlCache = {};
+  final Map<String, Future<String?>> _inFlightPresignRequests = {};
+
   /// 생성자
   ///
   /// [mediaService]를 주입받아 사용합니다. 테스트 시 MockMediaService를 주입할 수 있습니다.
@@ -58,6 +64,18 @@ class MediaController extends ChangeNotifier {
     try {
       final urls = await _mediaService.getPresignedUrls(keys);
       _setLoading(false);
+
+      // 추가: 응답이 요청 key 순서와 동일하다는 전제 하에 캐시 채우기(길이 일치할 때만)
+      if (urls.length == keys.length) {
+        final now = DateTime.now();
+        for (var i = 0; i < keys.length; i++) {
+          _presignedUrlCache[keys[i]] = _PresignedUrlCacheEntry(
+            url: urls[i],
+            expiresAt: now.add(const Duration(minutes: 55)),
+          );
+        }
+      }
+
       return urls;
     } catch (e) {
       _setError('URL 발급 실패: $e');
@@ -66,18 +84,50 @@ class MediaController extends ChangeNotifier {
     }
   }
 
+  // 추가: 캐시에 있는 presigned URL을 즉시 반환 (없거나 만료면 null)
+  String? peekPresignedUrl(String key) {
+    final entry = _presignedUrlCache[key];
+    if (entry == null) return null;
+    if (entry.isExpired) {
+      _presignedUrlCache.remove(key);
+      return null;
+    }
+    return entry.url;
+  }
+
   Future<String?> getPresignedUrl(String key) async {
+    // 추가: 캐시 hit면 네트워크 없이 즉시 반환
+    final cached = peekPresignedUrl(key);
+    if (cached != null) return cached;
+
+    // 추가: 같은 key에 대한 동시 요청은 1번만 보내고 공유합니다.
+    final inflight = _inFlightPresignRequests[key];
+    if (inflight != null) return inflight;
+
     _setLoading(true);
     _clearError();
 
     try {
-      final url = await _mediaService.getPresignedUrl(key);
+      final future = _mediaService.getPresignedUrl(key);
+      _inFlightPresignRequests[key] = future;
+      final url = await future;
+
+      if (url != null) {
+        // 추가: MediaService 주석 기준 1시간 유효 → 55분만 캐싱(여유)
+        _presignedUrlCache[key] = _PresignedUrlCacheEntry(
+          url: url,
+          expiresAt: DateTime.now().add(const Duration(minutes: 55)),
+        );
+      }
+
       _setLoading(false);
       return url;
     } catch (e) {
       _setError('URL 발급 실패: $e');
       _setLoading(false);
       return null;
+    } finally {
+      _inFlightPresignRequests.remove(key);
     }
   }
 
@@ -277,4 +327,13 @@ class MediaController extends ChangeNotifier {
       });
     }
   }
+}
+
+class _PresignedUrlCacheEntry {
+  final String url;
+  final DateTime expiresAt;
+
+  const _PresignedUrlCacheEntry({required this.url, required this.expiresAt});
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

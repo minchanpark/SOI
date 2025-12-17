@@ -6,7 +6,7 @@ import 'camera_recording_indicator.dart';
 import 'camera_shimmer_box.dart';
 
 /// 카메라 프리뷰를 감싸는 컨테이너 위젯
-/// 카메라 화면을 띄우는 위젯입니다.s
+/// 카메라 화면을 띄우는 위젯입니다.
 class CameraPreviewContainer extends StatelessWidget {
   const CameraPreviewContainer({
     required this.initialization,
@@ -17,6 +17,11 @@ class CameraPreviewContainer extends StatelessWidget {
     required this.isVideoRecording,
     required this.isFlashOn,
     required this.onToggleFlash,
+
+    // 추가: Flutter(UI)에서 드래그로 줌을 조절할 수 있도록 콜백을 받습니다.
+    this.onZoomDragStart, // 줌 드래그를 시작할 때 호출
+    this.onZoomDragUpdate, // 줌 드래그 중에 호출
+    this.onZoomDragEnd, // 줌 드래그가 끝났을 때 호출
     this.width,
     this.height,
     this.recordingIndicator = const CameraRecordingIndicator(),
@@ -31,6 +36,11 @@ class CameraPreviewContainer extends StatelessWidget {
   final bool isVideoRecording;
   final bool isFlashOn;
   final VoidCallback onToggleFlash;
+
+  // 추가: 프리뷰 위에 GestureDetector 오버레이를 올려 세로 드래그로 줌을 제어합니다.
+  final GestureDragStartCallback? onZoomDragStart;
+  final GestureDragUpdateCallback? onZoomDragUpdate;
+  final GestureDragEndCallback? onZoomDragEnd;
   final double? width;
   final double? height;
   final Widget recordingIndicator;
@@ -74,12 +84,28 @@ class CameraPreviewContainer extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.bottomCenter,
                     children: [
+                      // 카메라 프리뷰를 상위 위젯에서 전달받아 표시합니다.
                       cameraView,
-                      if (showZoomControls)
+
+                      // 추가: 플랫폼뷰(카메라 프리뷰) 위에 투명 레이어를 올려 Flutter가 드래그를 받을 수 있게 합니다.
+                      if (onZoomDragStart != null ||
+                          onZoomDragUpdate != null ||
+                          onZoomDragEnd != null)
+                        Positioned.fill(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onVerticalDragStart: onZoomDragStart,
+                            onVerticalDragUpdate: onZoomDragUpdate,
+                            onVerticalDragEnd: onZoomDragEnd,
+                          ),
+                        ),
+                      /* if (showZoomControls)
                         Padding(
                           padding: EdgeInsets.only(bottom: 26.h),
                           child: zoomControls,
-                        ),
+                        ),*/
+
+                      // 로딩 중일 때 카메라 프리뷰 위에 Shimmer 효과 오버레이를 준다.
                       if (isLoading)
                         Positioned.fill(
                           child: CameraShimmerBox(
@@ -92,8 +118,8 @@ class CameraPreviewContainer extends StatelessWidget {
                   ),
                 ),
               ),
-              if (!isLoading && isVideoRecording)
-                Positioned(top: 12.h, child: recordingIndicator),
+              /*  if (!isLoading && isVideoRecording)
+                Positioned(top: 12.h, child: recordingIndicator),*/
               if (!isLoading && !isVideoRecording)
                 IconButton(
                   onPressed: onToggleFlash,

@@ -36,6 +36,16 @@ class CameraService {
   List<double> _availableZoomLevels = [1.0];
   List<double> get availableZoomLevels => _availableZoomLevels;
 
+  // 추가: 드래그(연속) 줌을 위해 네이티브가 지원하는 min/max 줌 범위를 캐시합니다.
+  // Android에서 미구현이면 availableZoomLevels 기반으로 fallback 합니다.
+  double _minZoomFactor = 1.0;
+  double _maxZoomFactor = 1.0;
+  bool _zoomRangeLoaded = false;
+
+  double get minZoomFactor => _minZoomFactor;
+  double get maxZoomFactor => _maxZoomFactor;
+  bool get hasZoomRange => _zoomRangeLoaded && _maxZoomFactor > _minZoomFactor;
+
   // 갤러리 미리보기 상태 관리
   String? _latestGalleryImagePath;
   bool _isLoadingGalleryImage = false;
@@ -391,7 +401,11 @@ class CameraService {
     try {
       await _cameraChannel.invokeMethod('pauseCamera');
       _isSessionActive = false;
-    } on PlatformException {}
+    } on PlatformException catch (e) {
+      if (debugTimings) {
+        debugPrint('deactivateSession failed: ${e.code}');
+      }
+    }
   }
 
   Future<void> pauseCamera() async {
@@ -402,7 +416,11 @@ class CameraService {
 
     try {
       await _cameraChannel.invokeMethod('pauseCamera');
-    } on PlatformException {}
+    } on PlatformException catch (e) {
+      if (debugTimings) {
+        debugPrint('pauseCamera failed: ${e.code}');
+      }
+    }
   }
 
   Future<void> resumeCamera() async {
@@ -466,6 +484,41 @@ class CameraService {
     }
   }
 
+  // 추가: 디바이스가 지원하는 줌 범위(min/max)를 가져옵니다. (iOS 구현됨)
+  Future<void> refreshZoomRange() async {
+    try {
+      final result = await _cameraChannel.invokeMethod('getZoomRange');
+      if (result is Map) {
+        final minZoom = (result['minZoom'] as num?)?.toDouble();
+        final maxZoom = (result['maxZoom'] as num?)?.toDouble();
+        if (minZoom != null && maxZoom != null && maxZoom >= minZoom) {
+          _minZoomFactor = minZoom;
+          _maxZoomFactor = maxZoom;
+          _zoomRangeLoaded = true;
+          return;
+        }
+      }
+    } on PlatformException catch (e) {
+      // 플랫폼에서 미구현이면 조용히 fallback
+      if (debugTimings) {
+        debugPrint('getZoomRange not available: ${e.code}');
+      }
+    } catch (e) {
+      // 기타 예외도 fallback (앱 크래시 방지)
+      if (debugTimings) {
+        debugPrint('getZoomRange error: $e');
+      }
+    }
+
+    // fallback: availableZoomLevels가 있으면 그 범위로 설정
+    if (_availableZoomLevels.isNotEmpty) {
+      final sorted = [..._availableZoomLevels]..sort();
+      _minZoomFactor = sorted.first;
+      _maxZoomFactor = sorted.last;
+      _zoomRangeLoaded = true;
+    }
+  }
+
   Future<void> setBrightness(double value) async {
     try {
       await _cameraChannel.invokeMethod('setBrightness', {'value': value});
@@ -505,6 +558,8 @@ class CameraService {
       // 카메라 초기화 성공 시 사용 가능한 줌 레벨 가져오기
       if (result) {
         await getAvailableZoomLevels();
+        // 추가: 드래그 줌을 위해 min/max 줌 범위도 함께 준비
+        await refreshZoomRange();
       }
 
       return result;
