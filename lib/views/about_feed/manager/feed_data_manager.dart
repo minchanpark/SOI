@@ -27,9 +27,9 @@ class FeedDataManager extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _hasMoreData = false;
 
-  // 추가: "처음엔 5개만 보여주고, 스크롤 중간쯤에서 더 보여주기"용(네트워크가 아니라 UI 노출만 단계적)
-  static const int _pageSize = 5;
-  int _visibleCount = 0;
+  // "처음엔 5개만 보여주고, 스크롤 중간쯤에서 더 보여주기"용(네트워크가 아니라 UI 노출만 단계적으로)
+  static const int _pageSize = 5; // 한 번에 보여줄 게시물 수 --> 5개
+  int _visibleCount = 0; // 현재 노출된 게시물 수
 
   VoidCallback? _onStateChanged;
   Function(List<FeedPostItem>)? _onPostsLoaded;
@@ -86,16 +86,25 @@ class FeedDataManager extends ChangeNotifier {
     _postController?.addPostsChangedListener(_postsChangedListener!);
   }
 
-  // 추가: forceRefresh=false면 이미 캐싱된 목록을 그대로 재사용(피드 재방문 시 쉬머/로딩 최소화)
+  /// 피드용 사용자 카테고리 및 게시물 로드 메소드
+  /// forceRefresh=false면 이미 캐싱된 목록을 그대로 재사용(피드 재방문 시 쉬머/로딩 최소화)
+  ///
+  /// Parameters:
+  /// - [context]: 빌드 컨텍스트
+  /// - [forceRefresh]: true면 서버에서 강제 새로고침
   Future<void> loadUserCategoriesAndPhotos(
     BuildContext context, {
     bool forceRefresh = false,
   }) async {
     if (!forceRefresh && _allPosts.isNotEmpty) {
       _isLoading = false;
+
+      // 이미 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
       if (_visibleCount == 0) {
-        _visibleCount =
-            _allPosts.length < _pageSize ? _allPosts.length : _pageSize;
+        // 처음 로드 시에는 5개만 보여주기
+        _visibleCount = _allPosts.length < _pageSize
+            ? _allPosts.length
+            : _pageSize;
       }
       _hasMoreData = _visibleCount < _allPosts.length;
       _notifyStateChanged();
@@ -104,19 +113,32 @@ class FeedDataManager extends ChangeNotifier {
     await _loadFeed(context, forceRefresh: forceRefresh);
   }
 
+  /// post를 추가로 로드하는 메소드입니다.
+  /// 현재 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
+  ///
+  /// Parameters:
+  /// - [context]: 빌드 컨텍스트
   Future<void> loadMorePhotos(BuildContext context) async {
     if (_isLoadingMore) return;
     if (!_hasMoreData) return;
     _isLoadingMore = true;
     _notifyStateChanged();
-    // 추가: 이미 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
-    final next = _visibleCount + _pageSize;
-    _visibleCount = next > _allPosts.length ? _allPosts.length : next;
-    _hasMoreData = _visibleCount < _allPosts.length;
-    _isLoadingMore = false;
-    _notifyStateChanged();
+    // 이미 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
+    final next = _visibleCount + _pageSize; // 다음으로 보여줄 게시물 수 --> 기존 포스트 개수 + 5개
+    _visibleCount = next > _allPosts.length
+        ? _allPosts.length
+        : next; // 최대 전체 게시물 수를 넘지 않도록 제한
+    _hasMoreData = _visibleCount < _allPosts.length; // 더 보여줄 게시물이 남았는지 여부 업데이트
+    _isLoadingMore = false; // 로딩 상태 해제
+    _notifyStateChanged(); // 상태 변경 알림
   }
 
+  /// 피드를 로드하는 내부 메소드입니다.
+  /// 사용자 카테고리별로 게시물을 불러와서 결합하고 정렬합니다.
+  ///
+  /// Parameters:
+  /// - [context]: 빌드 컨텍스트
+  /// - [forceRefresh]: true면 서버에서 강제 새로고침
   Future<void> _loadFeed(
     BuildContext context, {
     bool forceRefresh = false,
@@ -150,7 +172,7 @@ class FeedDataManager extends ChangeNotifier {
         throw Exception('로그인이 필요합니다.');
       }
 
-      // NOTE: 피드 캐싱/노출(5개씩)은 `loadUserCategoriesAndPhotos`와 `_visibleCount`에서 담당합니다.
+      // 피드 캐싱/노출(5개씩)은 `loadUserCategoriesAndPhotos`와 `_visibleCount`에서 담당합니다.
 
       // 사용자 카테고리 로드
       final categories = await categoryController.loadCategories(
@@ -174,6 +196,8 @@ class FeedDataManager extends ChangeNotifier {
             categoryId: category.id,
             userId: currentUser.id,
           );
+
+          // 게시물과 카테고리 정보를 결합
           combined.addAll(
             posts.map(
               (post) => FeedPostItem(
@@ -188,6 +212,7 @@ class FeedDataManager extends ChangeNotifier {
         }
       }
 
+      // 게시물 작성일 기준 내림차순 정렬
       combined.sort((a, b) {
         final aTime =
             a.post.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -201,12 +226,16 @@ class FeedDataManager extends ChangeNotifier {
         _isLoading = false;
       }
 
-      // 추가: 처음엔 5개만 보여주기 (데이터는 캐싱해두고 UI 노출만 단계적으로)
-      _visibleCount = _allPosts.length < _pageSize ? _allPosts.length : _pageSize;
+      // 처음엔 5개만 보여주기 (데이터는 캐싱해두고 UI 노출만 단계적으로)
+      _visibleCount = _allPosts.length < _pageSize
+          ? _allPosts.length
+          : _pageSize;
+
+      // 더 보여줄 게시물이 남았는지 여부 업데이트
       _hasMoreData = _visibleCount < _allPosts.length;
 
-      _notifyStateChanged();
-      _onPostsLoaded?.call(combined);
+      _notifyStateChanged(); // 상태 변경 알림
+      _onPostsLoaded?.call(combined); // 로드 완료 콜백 호출
     } catch (e) {
       debugPrint('[FeedDataManager] 피드 로드 실패: $e');
       _allPosts = [];
@@ -219,21 +248,30 @@ class FeedDataManager extends ChangeNotifier {
     }
   }
 
+  /// 특정 인덱스의 피드 게시물을 제거합니다.
+  /// _allPosts에서 해당 인덱스의 게시물 데이터를 삭제하고 상태 변경을 알립니다.
+  ///
+  /// Parameters:
+  /// - [index]: 제거할 게시물의 인덱스
   void removePhoto(int index) {
     if (index >= 0 && index < _allPosts.length) {
-      _allPosts.removeAt(index);
-      _notifyStateChanged();
+      _allPosts.removeAt(index); // 해당 인덱스의 게시물 데이터 제거
+      _notifyStateChanged(); // 상태 변경 알림
     }
   }
 
+  /// 특정 인덱스의 피드 게시물 데이터를 반환합니다.
+  ///
+  /// Parameters:
+  /// - [index]: 조회할 게시물의 인덱스
   FeedPostItem? getPostData(int index) {
     if (index >= 0 && index < _allPosts.length) {
-      return _allPosts[index];
+      return _allPosts[index]; // 해당 인덱스의 게시물 데이터 반환
     }
     return null;
   }
 
-  // 추가: 전역 Provider로 쓰기 때문에, 화면 dispose 시에는 캐시를 지우지 않고 리스너만 해제합니다.
+  // 전역 Provider로 쓰기 때문에, 화면 dispose 시에는 캐시를 지우지 않고 리스너만 해제합니다.
   void detachFromPostController() {
     if (_postsChangedListener == null || _postController == null) return;
     _postController!.removePostsChangedListener(_postsChangedListener!);

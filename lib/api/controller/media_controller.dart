@@ -57,18 +57,28 @@ class MediaController extends ChangeNotifier {
   // Presigned URL
   // ============================================
 
+  /// 여러 개의 presigned URL 발급
+  ///
+  /// Parameters:
+  /// - [keys]: 미디어 키 목록
+  ///
+  /// Returns: presigned URL 목록 (List of String)
+  /// - 발급 실패 시 빈 목록 반환
   Future<List<String>> getPresignedUrls(List<String> keys) async {
     _setLoading(true);
     _clearError();
 
     try {
-      final urls = await _mediaService.getPresignedUrls(keys);
+      final urls = await _mediaService.getPresignedUrls(
+        keys,
+      ); // API 호출하여서 presigned URL 요청
       _setLoading(false);
 
-      // 추가: 응답이 요청 key 순서와 동일하다는 전제 하에 캐시 채우기(길이 일치할 때만)
+      // 응답이 요청 key 순서와 동일하다는 전제 하에 캐시 채우기(길이 일치할 때만)
       if (urls.length == keys.length) {
         final now = DateTime.now();
         for (var i = 0; i < keys.length; i++) {
+          // 캐시 저장 (55분 후 만료)
           _presignedUrlCache[keys[i]] = _PresignedUrlCacheEntry(
             url: urls[i],
             expiresAt: now.add(const Duration(minutes: 55)),
@@ -84,7 +94,14 @@ class MediaController extends ChangeNotifier {
     }
   }
 
-  // 추가: 캐시에 있는 presigned URL을 즉시 반환 (없거나 만료면 null)
+  /// 캐시에 있는 presigned URL을 즉시 반환 (없거나 만료면 null)
+  ///
+  /// Parameters:
+  /// - [key]: 미디어 키
+  ///
+  /// Returns:
+  /// - success: presigned URL (캐시에 있고 만료되지 않은 경우)
+  /// - fail: null (캐시에 없거나 만료된 경우)
   String? peekPresignedUrl(String key) {
     final entry = _presignedUrlCache[key];
     if (entry == null) return null;
@@ -96,24 +113,27 @@ class MediaController extends ChangeNotifier {
   }
 
   Future<String?> getPresignedUrl(String key) async {
-    // 추가: 캐시 hit면 네트워크 없이 즉시 반환
-    final cached = peekPresignedUrl(key);
+    // 캐시 hit면 네트워크 없이 즉시 반환
+    final cached = peekPresignedUrl(key); // 캐시를 확인하여서 바로 반환
     if (cached != null) return cached;
 
-    // 추가: 같은 key에 대한 동시 요청은 1번만 보내고 공유합니다.
+    // 같은 key에 대한 동시 요청은 1번만 보내고 공유합니다.
     final inflight = _inFlightPresignRequests[key];
     if (inflight != null) return inflight;
 
     _setLoading(true);
     _clearError();
 
+    // 네트워크 요청 --> 캐시가 miss된 경우에만 호출됩니다.
     try {
-      final future = _mediaService.getPresignedUrl(key);
-      _inFlightPresignRequests[key] = future;
-      final url = await future;
+      final future = _mediaService.getPresignedUrl(
+        key,
+      ); // API 호출하여서 presigned URL 요청
+      _inFlightPresignRequests[key] = future; // 진행 중인 요청으로 등록
+      final url = await future; // 결과 대기
 
       if (url != null) {
-        // 추가: MediaService 주석 기준 1시간 유효 → 55분만 캐싱(여유)
+        // MediaService 주석 기준 1시간 유효 → 55분만 캐싱(여유)
         _presignedUrlCache[key] = _PresignedUrlCacheEntry(
           url: url,
           expiresAt: DateTime.now().add(const Duration(minutes: 55)),
@@ -135,6 +155,18 @@ class MediaController extends ChangeNotifier {
   // 미디어 업로드
   // ============================================
 
+  /// 미디어 파일 업로드
+  ///
+  /// Parameters:
+  /// - [files]: 업로드할 파일 목록 (MultipartFile 형식)
+  /// - [types]: 각 파일의 미디어 타입 목록 (MediaType 형식)
+  /// - [usageTypes]: 각 파일의 사용 용도 목록 (MediaUsageType 형식)
+  /// - [userId]: 업로드하는 사용자 ID
+  /// - [refId]: 참조 ID (예: 게시물 ID)
+  /// - [usageCount]: 사용 횟수
+  ///
+  /// Returns: 업로드된 미디어의 키 목록 (List of String)
+  /// - 업로드 실패 시 빈 목록 반환
   Future<List<String>> uploadMedia({
     required List<http.MultipartFile> files,
     required List<MediaType> types,
@@ -148,6 +180,7 @@ class MediaController extends ChangeNotifier {
     _clearError();
 
     try {
+      // service 호출
       final keys = await _mediaService.uploadMedia(
         files: files,
         types: types,
@@ -166,57 +199,14 @@ class MediaController extends ChangeNotifier {
     }
   }
 
-  /* Future<String?> uploadPostImage({
-    required http.MultipartFile file,
-    required int userId,
-    required int refId,
-  }) async {
-    _setLoading(true);
-    _setUploadProgress(0.0);
-    _clearError();
-
-    try {
-      final key = await _mediaService.uploadPostImage(
-        file: file,
-        userId: userId,
-        refId: refId,
-        usageCount: 1,
-      );
-      _setUploadProgress(1.0);
-      _setLoading(false);
-      return key;
-    } catch (e) {
-      _setError('이미지 업로드 실패: $e');
-      _setLoading(false);
-      return null;
-    }
-  }*/
-
-  /* Future<String?> uploadPostAudio({
-    required http.MultipartFile file,
-    required int userId,
-    required int refId,
-  }) async {
-    _setLoading(true);
-    _setUploadProgress(0.0);
-    _clearError();
-
-    try {
-      final key = await _mediaService.uploadPostAudio(
-        file: file,
-        userId: userId,
-        refId: refId,
-      );
-      _setUploadProgress(1.0);
-      _setLoading(false);
-      return key;
-    } catch (e) {
-      _setError('오디오 업로드 실패: $e');
-      _setLoading(false);
-      return null;
-    }
-  }*/
-
+  /// 프로필 이미지 업로드
+  ///
+  /// Parameters:
+  /// - [file]: 업로드할 파일 (MultipartFile 형식)
+  /// - [userId]: 업로드하는 사용자 ID
+  ///
+  /// Returns: 업로드된 프로필 이미지의 키 (String)
+  /// - 업로드 실패 시 null 반환
   Future<String?> uploadProfileImage({
     required http.MultipartFile file,
     required int userId,
@@ -226,11 +216,12 @@ class MediaController extends ChangeNotifier {
     _clearError();
 
     try {
+      // service 호출
       final key = await _mediaService.uploadProfileImage(
         file: file,
         userId: userId,
       );
-      _setUploadProgress(1.0);
+      _setUploadProgress(1.0); // 업로드률을 100%로 설정
       _setLoading(false);
       return key;
     } catch (e) {
@@ -240,27 +231,37 @@ class MediaController extends ChangeNotifier {
     }
   }
 
+  /// 댓글 오디오 업로드
+  ///
+  /// Parameters:
+  /// - [file]: 업로드할 오디오 파일 (MultipartFile 형식)
+  /// - [userId]: 업로드하는 사용자 ID
+  /// - [postId]: 댓글이 달릴 게시물 ID
+  ///
+  /// Returns: 업로드된 오디오의 키 (String)
+  /// - 업로드 실패 시 null 반환
   Future<String?> uploadCommentAudio({
     required http.MultipartFile file,
     required int userId,
     required int postId,
   }) async {
-    _setLoading(true);
-    _setUploadProgress(0.0);
+    _setLoading(true); // 로딩 상태 설정
+    _setUploadProgress(0.0); // 업로드 진행률 초기화
     _clearError();
 
     try {
+      // service 호출
       final key = await _mediaService.uploadCommentAudio(
         file: file,
         userId: userId,
         postId: postId,
       );
-      _setUploadProgress(1.0);
-      _setLoading(false);
+      _setUploadProgress(1.0); // 업로드률을 100%로 설정
+      _setLoading(false); // 로딩 상태 해제
       return key;
     } catch (e) {
       _setError('댓글 오디오 업로드 실패: $e');
-      _setLoading(false);
+      _setLoading(false); // 로딩 상태 해제
       return null;
     }
   }
@@ -329,6 +330,12 @@ class MediaController extends ChangeNotifier {
   }
 }
 
+/// Presigned URL 캐시 엔트리
+/// Presigned URL과 만료 시각을 함께 저장합니다.
+///
+/// Parameters:
+/// - [ url ]: presigned URL
+/// - [ expiresAt ]: 만료 시각
 class _PresignedUrlCacheEntry {
   final String url;
   final DateTime expiresAt;
