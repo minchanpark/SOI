@@ -1,0 +1,37 @@
+sequenceDiagram
+  autonumber
+  actor User
+  participant VCW as VoiceCommentWidget
+  participant APDW as ApiPhotoDisplayWidget
+  participant PC as PositionConverter
+  participant State as PendingMarkerState
+  participant CC as CommentController
+  participant CS as CommentService
+  participant API as Backend API
+
+  Note over User,API: Text/Voice tag creation and placement on photo
+
+  User->>VCW: Create text/voice comment (draft)
+  VCW->>State: Store PendingApiCommentDraft
+  User->>VCW: Drag profile avatar
+  VCW->>APDW: Draggable drop on photo
+  APDW->>APDW: Convert globalToLocal
+  APDW->>PC: toRelativePosition(absolute, containerSize)
+  PC-->>APDW: relativePosition (0..1, clamped)
+  APDW->>State: Save PendingApiCommentMarker(relativePosition)
+
+  User->>VCW: Tap Save
+  VCW->>State: Resolve finalPosition (marker or auto)
+  VCW->>CC: createTextComment/createAudioComment
+  CC->>CS: createComment(locationX, locationY)
+  CS->>API: POST /comments (locationX, locationY)
+  API-->>CS: CommentResponse
+  CS-->>CC: CommentCreationResult
+  CC-->>VCW: success
+  VCW->>State: Clear pending marker/draft
+
+  Note over APDW,PC: Render comments from stored relative coords
+  APDW->>PC: toAbsolutePosition(relative, containerSize)
+  PC-->>APDW: absolutePosition
+  APDW->>APDW: clampPosition
+  APDW-->>User: Show avatar tag at position
