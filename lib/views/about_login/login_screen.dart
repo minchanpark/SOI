@@ -275,8 +275,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onChanged: (value) {
-                    // 6자리 이상 입력 시 버튼 활성화
-                    _hasCode.value = value.length >= 5;
+                    // 5자리 입력 시 버튼 활성화
+                    _hasCode.value = value.length == 5;
                   },
                 ),
               ),
@@ -324,22 +324,13 @@ class _LoginScreenState extends State<LoginScreen> {
   // -------------------------
   // 전화번호 정규화
   // -------------------------
-  /// "010-6784-1110" → "1067841110"
-  /// "+82-10-6784-1110" → "1067841110"
+  /// "010-6784-1110" → "01067841110"
+  /// "+82-10-6784-1110" → "01067841110"
   String _normalizePhoneNumber(String phone) {
-    // 숫자만 추출
     String digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-
-    // +82 국가번호로 시작하면 82 제거
     if (digits.startsWith('82')) {
-      digits = digits.substring(2);
+      digits = '0${digits.substring(2)}';
     }
-
-    // 맨 앞의 0 제거 (010 → 10)
-    if (digits.startsWith('0')) {
-      digits = digits.substring(1);
-    }
-
     return digits;
   }
 
@@ -353,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _isSendingCode = true;
     });
 
-    // 전화번호 정규화 후 저장
+    // 숫자만 저장, 앞자리 0 유지, 국가번호 제거
     phoneNumber = _normalizePhoneNumber(_phoneController.text);
 
     try {
@@ -413,6 +404,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final code = _codeController.text;
 
+    if (code.length != 5) {
+      _showErrorSnackBar('인증번호는 5자리여야 합니다.');
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+      }
+      return;
+    }
+
     try {
       // 1. SMS 코드 인증 확인
       final isValid = await _apiUserController!.verifySmsCode(
@@ -429,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 2. 로그인 시도
       debugPrint("로그인 시도: $phoneNumber");
-      final user = await _apiUserController!.login(_phoneController.text);
+      final user = await _apiUserController!.login(phoneNumber);
 
       if (user != null) {
         // 기존 회원 - 홈으로 이동

@@ -429,6 +429,7 @@ class CategoryService {
     required int categoryId,
   }) async {
     try {
+      // API 호출 - 카테고리 나가기
       final response = await _categoryApi.delete(userId, categoryId);
 
       if (response == null) {

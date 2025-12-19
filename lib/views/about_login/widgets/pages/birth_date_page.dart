@@ -85,6 +85,10 @@ class BirthDatePage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (v) {
+                            if (v.length == 2) {
+                              // 자동으로 다음 필드로 포커스 이동
+                              FocusScope.of(context).nextFocus();
+                            }
                             if (v.length <= 2) onChanged();
                           },
                           inputFormatters: [
@@ -124,6 +128,10 @@ class BirthDatePage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (v) {
+                            if (v.length == 2) {
+                              // 자동으로 포커스 이동
+                              FocusScope.of(context).nextFocus();
+                            }
                             if (v.length <= 2) onChanged();
                           },
                           inputFormatters: [

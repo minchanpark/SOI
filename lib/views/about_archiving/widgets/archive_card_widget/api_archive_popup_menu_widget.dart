@@ -314,6 +314,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
         return;
       }
 
+      // API 호출 - 카테고리 나가기
       final success = await categoryController!.leaveCategory(
         userId: userId,
         categoryId: widget.category.id,
@@ -334,10 +335,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 1),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
     );
   }
 }

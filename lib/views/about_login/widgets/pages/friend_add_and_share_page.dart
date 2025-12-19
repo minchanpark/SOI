@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../api/controller/contact_controller.dart';
@@ -93,22 +92,7 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                 icon: Icon(Icons.arrow_back_ios, color: Colors.white),
               ),
             ),
-            Positioned(
-              top: 60.h,
-              right: 20.w,
-              child: TextButton(
-                onPressed: widget.onSkip,
-                child: Text(
-                  '건너뛰기 >',
-                  style: TextStyle(
-                    color: const Color(0xFFCBCBCB),
-                    fontSize: 16,
-                    fontFamily: GoogleFonts.inter().fontFamily,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+
             Align(
               alignment: Alignment.center,
               child: Column(

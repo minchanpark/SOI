@@ -589,6 +589,7 @@ class CategoryController extends ChangeNotifier {
     _setLoading(true);
     _clearError();
     try {
+      // API 호출 - 카테고리 나가기
       final result = await _categoryService.leaveCategory(
         userId: userId,
         categoryId: categoryId,

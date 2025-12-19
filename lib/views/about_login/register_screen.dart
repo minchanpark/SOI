@@ -88,6 +88,8 @@ class _AuthScreenState extends State<AuthScreen> {
     idController = TextEditingController();
     pageReady = List.generate(8, (_) => ValueNotifier<bool>(false));
 
+    pageReady[6].value = true;
+
     // ID 컨트롤러 리스너 추가
     idController.addListener(() {
       if (!_isControllerInitialized) return; // Provider 초기화 전이면 무시
@@ -216,7 +218,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 controller: smsController,
                 onChanged: (value) {
                   // 인증번호 입력 여부에 따라 상태 변경
-                  pageReady[3].value = value.length >= 6;
+                  pageReady[3].value = value.length == 5;
 
                   // 인증 완료 후, 사용자가 인증번호를 변경하면 상태 초기화
                   if (isVerified) {
@@ -415,7 +417,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               smsCode = smsController.text;
 
                               // 버튼 클릭시 인증 확인 수행
-                              if (smsCode.length >= 6) {
+                              if (smsCode.length == 5) {
                                 await _performManualVerification(smsCode);
                               }
                               break;
@@ -465,34 +467,41 @@ class _AuthScreenState extends State<AuthScreen> {
     smsCode = code;
 
     try {
-      await _userController
-          .verifySmsCode(
-            phoneNumber.startsWith('0')
-                ? '+82${phoneNumber.substring(1)}'
-                : (phoneNumber.startsWith('+')
-                      ? phoneNumber
-                      : '+82$phoneNumber'),
-            smsCode,
-          )
-          .then((_) {
-            if (!mounted) return;
-            setState(() {
-              isCheckingUser = false;
-              isVerified = true;
-            });
+      final isSuccess = await _userController.verifySmsCode(
+        phoneNumber.startsWith('0')
+            ? '+82${phoneNumber.substring(1)}'
+            : (phoneNumber.startsWith('+') ? phoneNumber : '+82$phoneNumber'),
+        smsCode,
+      );
+      if (!mounted) return;
+      if (isSuccess) {
+        setState(() {
+          isCheckingUser = false;
+          isVerified = true;
+        });
 
-            Fluttertoast.showToast(
-              msg: '인증이 완료되었습니다.',
-              backgroundColor: Colors.green,
-              textColor: Colors.white,
-            );
+        Fluttertoast.showToast(
+          msg: '인증이 완료되었습니다.',
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+        );
 
-            FocusScope.of(context).unfocus();
-            _pageController.nextPage(
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          });
+        FocusScope.of(context).unfocus();
+        _pageController.nextPage(
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        setState(() {
+          isCheckingUser = false;
+          isVerified = false;
+        });
+        Fluttertoast.showToast(
+          msg: '인증번호가 올바르지 않습니다.',
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -519,9 +528,6 @@ class _AuthScreenState extends State<AuthScreen> {
   void _navigateToAuthFinal() {
     // 회원가입 데이터를 AuthFinalScreen으로 전달
     // 실제 회원가입은 onboarding 완료 후 수행
-    debugPrint(
-      "회원가입 데이터 전달: id=$id, name=$name, phone=$phoneNumber, birthDate=$birthDate, profileImagePath=$profileImagePath, agreeServiceTerms=$agreeServiceTerms, agreePrivacyTerms=$agreePrivacyTerms, agreeMarketingInfo=$agreeMarketingInfo",
-    );
     Navigator.push(
       context,
       MaterialPageRoute(

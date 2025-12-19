@@ -54,7 +54,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       _feedDataManager = Provider.of<FeedDataManager>(context, listen: false);
 
       // _feedDataManager instance를 가지고 온 후에,
-      //  각 게시물에 대한 댓글을 로드하는 콜백 설정
+      // 각 게시물에 대한 댓글을 로드하는 콜백 설정
       _feedDataManager?.setOnPostsLoaded((items) {
         if (!mounted) return;
         for (final item in items) {
@@ -78,6 +78,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         context,
         listen: false,
       );
+
+      // FeedDataManager에 PostController 구독 시작
       _feedDataManager?.listenToPostController(postController, context);
 
       _loadInitialData();

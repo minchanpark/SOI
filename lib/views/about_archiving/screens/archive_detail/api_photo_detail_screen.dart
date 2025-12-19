@@ -432,8 +432,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   }
 
   /// 프로필 이미지 드래그 시 위치 업데이트 처리
+  ///
+  /// Parameters:
+  /// - [postId]: 프로필 이미지가 드래그된 게시물 ID
+  /// - [absolutePosition]: 드래그된 절대 위치
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
-    final imageSize = Size(354.w, 500.h);
+    final imageSize = Size(354.w, 500.h); // 프로필 이미지 크기 (고정값)
     final relativePosition = PositionConverter.toRelativePosition(
       absolutePosition,
       imageSize,

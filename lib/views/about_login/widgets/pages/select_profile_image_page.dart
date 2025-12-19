@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// 프로필 이미지 선택 페이지
@@ -96,22 +95,7 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
-        Positioned(
-          top: 60.h,
-          right: 20.w,
-          child: TextButton(
-            onPressed: widget.onSkip,
-            child: Text(
-              '건너뛰기 >',
-              style: TextStyle(
-                color: const Color(0xFFCBCBCB),
-                fontSize: 16,
-                fontFamily: GoogleFonts.inter().fontFamily,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+
         Align(
           alignment: Alignment.center,
           child: Column(

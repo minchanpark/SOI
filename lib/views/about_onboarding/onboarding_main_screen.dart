@@ -78,10 +78,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
 
     // Provider를 통해 전역 UserController 가져오기
     _apiUserController = Provider.of<UserController>(context, listen: false);
-    _apiMediaController = Provider.of<MediaController>(
-      context,
-      listen: false,
-    );
+    _apiMediaController = Provider.of<MediaController>(context, listen: false);
 
     if (!_hasLoadedArguments) {
       // 1. 먼저 ModalRoute arguments에서 데이터 확인
@@ -259,25 +256,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        actions: [
-          (_currentPage == 4)
-              ? SizedBox()
-              : Padding(
-                  padding: EdgeInsets.only(top: 20.h),
-                  child: TextButton(
-                    onPressed: _completeOnboarding,
-                    child: Text(
-                      '건너뛰기 >',
-                      style: TextStyle(
-                        color: const Color(0xFFCBCBCB),
-                        fontSize: 16.sp,
-                        fontFamily: GoogleFonts.inter().fontFamily,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-        ],
+        actions: [],
       ),
       body: Stack(
         alignment: Alignment.bottomCenter,
@@ -321,39 +300,46 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
               currentIndex: _currentPage,
             ),
           ),
-          (_currentPage == 4)
-              ? Positioned(
-                  bottom: 40.h,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.zero,
+          Positioned(
+            bottom: 40.h,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
 
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26.9),
-                      ),
-                    ),
-                    onPressed: _completeOnboarding,
-                    child: Container(
-                      width: 349.w,
-                      height: 59.h,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(26.9),
-                      ),
-                      child: Text(
-                        "계속하기",
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 20.sp,
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26.9),
+                ),
+              ),
+              onPressed: () {
+                if (_currentPage == _contents.length - 1) {
+                  _completeOnboarding();
+                } else {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                }
+              },
+              child: Container(
+                width: 349.w,
+                height: 59.h,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(26.9),
+                ),
+                child: Text(
+                  "계속하기",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 20.sp,
+                    fontFamily: 'Pretendard',
+                    fontWeight: FontWeight.w600,
                   ),
-                )
-              : SizedBox(),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
