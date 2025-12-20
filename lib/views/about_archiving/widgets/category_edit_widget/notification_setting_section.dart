@@ -11,7 +11,7 @@ class NotificationSettingSection extends StatefulWidget {
 
 class _NotificationSettingSectionState
     extends State<NotificationSettingSection> {
-  bool _isNotificationEnabled = false;
+  bool _isNotificationEnabled = true;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -56,15 +56,15 @@ Widget _notificationSwitch(bool isNotificationEnabled) {
     height: 26.h,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(13.r),
-      color:
-          isNotificationEnabled
-              ? const Color(0xffffffff)
-              : const Color(0xff5a5a5a),
+      color: isNotificationEnabled
+          ? const Color(0xffffffff)
+          : const Color(0xff5a5a5a),
     ),
     child: AnimatedAlign(
       duration: const Duration(milliseconds: 200),
-      alignment:
-          isNotificationEnabled ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isNotificationEnabled
+          ? Alignment.centerRight
+          : Alignment.centerLeft,
       child: Container(
         width: 22.w,
         height: 22.h,

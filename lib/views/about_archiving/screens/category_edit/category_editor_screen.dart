@@ -18,8 +18,8 @@ import '../../widgets/category_edit_widget/add_friend_button.dart';
 import '../../widgets/category_edit_widget/category_cover_section.dart';
 import '../../widgets/category_edit_widget/category_info_section.dart';
 import '../../widgets/category_edit_widget/friends_list_widget.dart';
-import '../../widgets/category_edit_widget/notification_setting_section.dart';
 import 'category_cover_photo_selector_screen.dart';
+//import '../../widgets/category_edit_widget/notification_setting_section.dart';
 
 /// 카테고리 편집 화면
 ///
@@ -252,8 +252,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   SizedBox(height: 12),
 
                   // 알림설정 섹션
-                  NotificationSettingSection(),
-                  SizedBox(height: 24.h),
+                  /*NotificationSettingSection(),
+                  SizedBox(height: 24.h),*/
 
                   // 친구 추가 섹션
                   currentCategory.nickNames.isNotEmpty
