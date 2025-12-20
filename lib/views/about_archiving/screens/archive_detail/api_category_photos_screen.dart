@@ -17,10 +17,11 @@ import '../../../../api/models/post.dart';
 import '../../../../theme/theme.dart';
 import '../../widgets/api_photo_grid_item.dart';
 
-/// REST API 기반 카테고리 사진 목록 화면
+/// 카테고리 내에서 사진(포스트)들을 그리드 형식으로 보여주는 화면
+/// Post를 조회하여서 카테고리 내에 사진이 포함된 포스트들을 필터링 후 표시
 ///
-/// Firebase 버전의 CategoryPhotosScreen과 동일한 UI를 유지하면서
-/// REST API를 사용합니다.
+/// Parameters:
+/// - [category]: 사진을 불러올 카테고리 정보
 class ApiCategoryPhotosScreen extends StatefulWidget {
   final Category category;
 
@@ -32,20 +33,26 @@ class ApiCategoryPhotosScreen extends StatefulWidget {
 }
 
 class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
-  // 로딩 상태
-  bool _isLoading = true;
-  String? _errorMessage;
-  List<Post> _posts = [];
-  Category? _category;
+  static const Duration _cacheTtl = Duration(minutes: 30); // 캐시 만료 시간
+  static final Map<String, _CategoryPostsCacheEntry> _categoryPostsCache =
+      {}; // 카테고리별 포스트 캐시를 관리하는 맵
 
-  List<String> _postImageUrls = [];
+  bool _isLoading = true; // 로딩 상태
+  String? _errorMessage; // 에러 메시지
+  List<Post> _posts = []; // 로드된 포스트 목록
+  Category? _category; // 갱신된 카테고리 정보
 
-  Timer? _autoRefreshTimer;
-  static const Duration _autoRefreshInterval = Duration(minutes: 30);
+  List<String> _postImageUrls = []; // 포스트 이미지 URL 목록
+
+  Timer? _autoRefreshTimer; // 자동 새로고침 타이머
+  static const Duration _autoRefreshInterval = Duration(
+    minutes: 30,
+  ); // 자동 새로고침 간격
 
   PostController? postController;
   UserController? userController;
   MediaController? mediaController;
+  VoidCallback? _postsChangedListener; // 포스트 변경을 감지하는 리스너
 
   Category get _currentCategory => _category ?? widget.category;
 
@@ -69,23 +76,27 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+
+    // 포스트 변경 리스너 제거
+    if (_postsChangedListener != null && postController != null) {
+      // 리스너가 등록된 경우에만 제거
+      postController!.removePostsChangedListener(_postsChangedListener!);
+    }
     super.dispose();
   }
 
   /// 카테고리 내 사진(포스트) 목록 로드
-  Future<void> _loadPosts() async {
+  Future<void> _loadPosts({bool forceRefresh = false}) async {
     if (!mounted) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
 
     try {
       // 컨트롤러 인스턴스 가져오기
       postController = Provider.of<PostController>(context, listen: false);
       userController = Provider.of<UserController>(context, listen: false);
       mediaController = Provider.of<MediaController>(context, listen: false);
+
+      // 포스트 변경 리스너 등록
+      _attachPostChangedListenerIfNeeded();
 
       // 현재 사용자 ID 가져오기
       final currentUser = userController!.currentUser;
@@ -97,15 +108,36 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         return;
       }
 
+      // 캐시 확인
+      final cacheKey = _buildCacheKey(
+        userId: currentUser.id,
+        categoryId: _currentCategory.id,
+      );
+      // 캐시에서 유효한 항목 가져오기
+      final cached = _getValidCache(cacheKey);
+      if (!forceRefresh && cached != null) {
+        if (mounted) {
+          setState(() {
+            _posts = cached.posts; // 캐시된 포스트 사용
+            _postImageUrls = cached.imageUrls; // 캐시된 이미지 URL 사용
+            _isLoading = false; // 로딩 완료
+            _errorMessage = null; // 에러 없음
+          });
+        }
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
       // 카테고리 내 포스트 조회
       final posts = await postController!.getPostsByCategory(
         categoryId: _currentCategory.id,
         userId: currentUser.id,
         notificationId: null,
       );
-      debugPrint("[ApiCategoryPhotosScreen] 현재 사용자 ID: ${currentUser.id}");
-      debugPrint("[ApiCategoryPhotosScreen] 카테고리 ID: ${_currentCategory.id}");
-      debugPrint("[ApiCategoryPhotosScreen] 로드된 포스트: $posts");
 
       // 미디어(사진/비디오)가 포함된 포스트 필터링
       final mediaPosts = posts
@@ -132,6 +164,13 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
           _isLoading = false;
         });
       }
+
+      // 캐시에 저장
+      _categoryPostsCache[cacheKey] = _CategoryPostsCacheEntry(
+        posts: List<Post>.unmodifiable(mediaPosts),
+        imageUrls: List<String>.unmodifiable(alignedUrls),
+        cachedAt: DateTime.now(),
+      );
     } catch (e) {
       debugPrint('[ApiCategoryPhotosScreen] 포스트 로드 실패: $e');
       if (mounted) {
@@ -145,7 +184,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
   /// 새로고침
   Future<void> _onRefresh() async {
-    await _loadPosts();
+    await _loadPosts(forceRefresh: true);
     _startAutoRefreshTimer();
   }
 
@@ -163,10 +202,60 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       }
 
       // 데이터 새로고침
-      await _loadPosts();
+      await _loadPosts(forceRefresh: true);
     });
   }
 
+  /// 포스트 변경 리스너를 등록
+  void _attachPostChangedListenerIfNeeded() {
+    if (postController == null || _postsChangedListener != null) return;
+
+    _postsChangedListener = () {
+      if (!mounted) return;
+      final currentUser = userController?.currentUser;
+      if (currentUser == null) return;
+
+      // 해당 카테고리의 캐시 항목 제거
+      _categoryPostsCache.remove(
+        _buildCacheKey(userId: currentUser.id, categoryId: _currentCategory.id),
+      );
+
+      // 포스트 변경 시 강제 새로고침
+      unawaited(_loadPosts(forceRefresh: true));
+    };
+
+    // 리스너 등록
+    postController!.addPostsChangedListener(_postsChangedListener!);
+  }
+
+  /// 캐시 키 생성
+  ///
+  /// Parameters:
+  /// - [userId]: 사용자 ID
+  /// - [categoryId]: 카테고리 ID
+  ///
+  /// Returns: 캐시 키 문자열
+  String _buildCacheKey({required int userId, required int categoryId}) {
+    return '$userId:$categoryId';
+  }
+
+  /// 유효한 캐시 항목 가져오기
+  ///
+  /// Parameters:
+  /// - [key]: 캐시 키
+  ///
+  /// Returns: 유효한 캐시 항목 또는 null
+  _CategoryPostsCacheEntry? _getValidCache(String key) {
+    final cached = _categoryPostsCache[key];
+    if (cached == null) return null;
+    if (DateTime.now().difference(cached.cachedAt) >= _cacheTtl) {
+      _categoryPostsCache.remove(key);
+      return null;
+    }
+    return cached;
+  }
+
+  /// 친구 추가를 처리하는 메서드
   Future<void> _handleAddFriends() async {
     final category = _currentCategory;
     final previousCount = category.totalUserCount;
@@ -181,11 +270,12 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       ),
     );
 
-    final updatedCategory = await _refreshCategory();
+    final updatedCategory = await _refreshCategory(); // 카테고리 정보 갱신
     if (!mounted) return;
 
     if (updatedCategory != null &&
         updatedCategory.totalUserCount != previousCount) {
+      // 멤버 수가 변경된 경우에만 바텀시트 표시
       showApiCategoryMembersBottomSheet(
         context,
         category: updatedCategory,
@@ -194,18 +284,24 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     }
   }
 
+  /// 카테고리 정보를 갱신하는 메서드
   Future<Category?> _refreshCategory() async {
+    // 카테고리 컨트롤러 가져오기
     final categoryController = Provider.of<CategoryController>(
       context,
       listen: false,
     );
+    // userController 가져와서 현재 사용자 ID 확인
     final userController = Provider.of<UserController>(context, listen: false);
     final userId = userController.currentUser?.id;
     if (userId == null) {
       return _currentCategory;
     }
 
+    // 카테고리 목록을 로드하고 캐시합니다.
     await categoryController.loadCategories(userId, forceReload: true);
+
+    // ID로 캐시된 카테고리 가져오기
     final updated = categoryController.getCategoryById(_currentCategory.id);
     if (mounted && updated != null) {
       setState(() {
@@ -383,4 +479,16 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       ),
     );
   }
+}
+
+class _CategoryPostsCacheEntry {
+  final List<Post> posts;
+  final List<String> imageUrls;
+  final DateTime cachedAt;
+
+  const _CategoryPostsCacheEntry({
+    required this.posts,
+    required this.imageUrls,
+    required this.cachedAt,
+  });
 }
