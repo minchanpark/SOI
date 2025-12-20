@@ -67,7 +67,7 @@ class Post {
       waveformData: dto.waveformData,
       duration: dto.duration,
       isActive: dto.isActive ?? true,
-      createdAt: dto.createdAt,
+      createdAt: _normalizeApiDateTime(dto.createdAt),
     );
   }
 
@@ -83,9 +83,7 @@ class Post {
       waveformData: json['waveformData'] as String?,
       duration: json['duration'] as int?,
       isActive: json['isActive'] as bool? ?? true,
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'] as String)
-          : null,
+      createdAt: _parseApiDateString(json['createdAt'] as String?),
     );
   }
 
@@ -217,5 +215,36 @@ class Post {
     final ext = value.substring(lastDot).toLowerCase();
     if (ext.length > 8) return null;
     return ext;
+  }
+
+  /// API에서 넘어온 시간을 로컬 시간으로 보정
+  ///
+  /// 타임존 정보가 없으면 UTC로 간주하고 로컬로 변환합니다.
+  static DateTime? _normalizeApiDateTime(DateTime? value) {
+    if (value == null) return null;
+    if (value.isUtc) return value.toLocal();
+
+    final utc = DateTime.utc(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+      value.second,
+      value.millisecond,
+      value.microsecond,
+    );
+    return utc.toLocal();
+  }
+
+  /// 문자열 기반 날짜 파싱 (타임존 없는 경우 UTC로 간주)
+  static DateTime? _parseApiDateString(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final normalized = _hasTimeZone(raw) ? raw : '${raw}Z';
+    return DateTime.tryParse(normalized)?.toLocal();
+  }
+
+  static bool _hasTimeZone(String value) {
+    return RegExp(r'(Z|[+-]\d{2}:?\d{2})$').hasMatch(value);
   }
 }
