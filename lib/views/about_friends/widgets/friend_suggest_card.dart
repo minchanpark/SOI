@@ -244,7 +244,17 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
   /// SMS로 앱 설치 안내 전송
   Future<void> _sendAppInviteSms(Contact contact, String phoneNumber) async {
     const appInstallLink = 'https://soi-sns.web.app';
-    final message = '친구들의 사진과 목소리를 지금 바로 확인하세요!\n\n$appInstallLink';
+    final userController = Provider.of<UserController>(context, listen: false);
+    final user = userController.currentUser;
+    final link = user == null
+        ? appInstallLink
+        : Uri.parse(appInstallLink).replace(
+            queryParameters: {
+              'refUserId': user.id.toString(),
+              'refNickname': user.userId,
+            },
+          ).toString();
+    final message = '친구들의 사진과 목소리를 지금 바로 확인하세요!\n\n$link';
 
     // SMS URI 직접 구성 (queryParameters 사용 시 +로 인코딩되는 문제 방지)
     final encodedMessage = Uri.encodeComponent(message);

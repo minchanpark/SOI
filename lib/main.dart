@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:app_links/app_links.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +24,6 @@ import 'package:soi/api/controller/notification_controller.dart'
 import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/views/about_friends/friend_management_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 
 import 'package:soi/api/controller/category_search_controller.dart'
@@ -30,7 +31,6 @@ import 'package:soi/api/controller/category_search_controller.dart'
 
 // New API Services (Backend REST API)
 import 'api/api.dart' as api;
-import 'firebase_options.dart';
 import 'utils/app_route_observer.dart';
 import 'views/about_archiving/screens/archive_detail/all_archives_screen.dart';
 import 'views/about_archiving/screens/archive_detail/my_archives_screen.dart';
@@ -55,9 +55,11 @@ import 'views/about_setting/privacy.dart';
 import 'views/about_setting/terms_of_service.dart';
 import 'views/home_navigator_screen.dart';
 import 'views/launch_video_screen.dart';
+import 'firebase_options.dart';
 
 void main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final hasSeenLaunchVideo = prefs.getBool('hasSeenLaunchVideo') ?? false;
 
@@ -68,17 +70,16 @@ void main() async {
   // .env 파일 로드
   await dotenv.load(fileName: ".env");
 
+  // Firebase 초기화
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // 한국어 로케일 초기화
   await initializeDateFormatting('ko_KR', null);
 
   // 이미지 캐시 설정
   _configureImageCache();
-
-  // Firebase 초기화
-  await _initFirebase();
-
-  // Supabase 초기화
-  await _initSupabase();
 
   // REST API 클라이언트 초기화
   api.SoiApiClient.instance.initialize();
@@ -99,9 +100,20 @@ void main() async {
   }
 
   runApp(
-    MyApp(
-      hasSeenLaunchVideo: hasSeenLaunchVideo,
-      preloadedUserController: userController,
+    EasyLocalization(
+      supportedLocales: const [
+        Locale('en'),
+        Locale('es'),
+        Locale('ja'),
+        Locale('ko'),
+        Locale('zh'),
+      ],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('ko'),
+      child: MyApp(
+        hasSeenLaunchVideo: hasSeenLaunchVideo,
+        preloadedUserController: userController,
+      ),
     ),
   );
 }
@@ -121,33 +133,6 @@ void _configureImageCache() {
   cache.maximumSizeBytes = maxBytes;
 }
 
-Future<void> _initFirebase() async {
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    await FirebaseAuth.instance.setSettings(
-      appVerificationDisabledForTesting: false,
-      forceRecaptchaFlow: false,
-    );
-  } catch (_) {
-    rethrow;
-  }
-}
-
-Future<void> _initSupabase() async {
-  final supabaseUrl = dotenv.env['SUPABASE_URL'];
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-
-  if (supabaseUrl == null || supabaseAnonKey == null) return;
-
-  try {
-    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
-  } catch (e) {
-    debugPrint('[Supabase][Storage] Initialization failed: $e');
-  }
-}
-
 void _configureErrorHandling() {
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
@@ -164,7 +149,7 @@ void _configureErrorHandling() {
   debugPaintSizeEnabled = false;
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final bool hasSeenLaunchVideo;
   final UserController preloadedUserController;
   const MyApp({
@@ -174,6 +159,135 @@ class MyApp extends StatelessWidget {
   });
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
+  Uri? _lastHandledUri;
+  bool _isInviteDialogShowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      _handleIncomingUri,
+      onError: (error) {
+        debugPrint('딥링크 수신 실패: $error');
+      },
+    );
+    _handleInitialLink();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleInitialLink() async {
+    try {
+      final uri = await _appLinks.getInitialLink();
+      if (uri != null) _handleIncomingUri(uri);
+    } catch (e) {
+      debugPrint('초기 딥링크 확인 실패: $e');
+    }
+  }
+
+  void _handleIncomingUri(Uri uri) {
+    debugPrint('URI: $uri');
+    if (_lastHandledUri == uri) return;
+    _lastHandledUri = uri;
+
+    final userId =
+        uri.queryParameters['userId'] ??
+        uri.queryParameters['refUserId'] ??
+        uri.queryParameters['inviterId'] ??
+        '';
+    final nickName =
+        uri.queryParameters['nickName'] ??
+        uri.queryParameters['refNickname'] ??
+        uri.queryParameters['inviter'] ??
+        '';
+
+    if (userId.isEmpty && nickName.isEmpty) return;
+
+    unawaited(_processInviteLink(userId: userId, nickName: nickName));
+  }
+
+  Future<void> _processInviteLink({
+    required String userId,
+    required String nickName,
+  }) async {
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+
+    final userController = Provider.of<UserController>(context, listen: false);
+    final friendController = Provider.of<api_friend.FriendController>(
+      context,
+      listen: false,
+    );
+    final currentUser = userController.currentUser;
+
+    if (currentUser != null) {
+      final receiverPhoneNum = currentUser.phoneNumber;
+      var requesterId = int.tryParse(userId);
+      if (requesterId == null && nickName.isNotEmpty && nickName != '친구') {
+        final inviterUser = await userController.getUserByNickname(nickName);
+        requesterId = inviterUser?.id;
+      }
+
+      if (requesterId != null &&
+          requesterId != currentUser.id &&
+          receiverPhoneNum.isNotEmpty) {
+        await friendController.addFriend(
+          requesterId: requesterId,
+          receiverPhoneNum: receiverPhoneNum,
+        );
+      }
+    }
+
+    if (!mounted) return;
+    await _showInviteDialog(
+      context: context,
+      userId: userId,
+      nickName: nickName,
+    );
+  }
+
+  Future<void> _showInviteDialog({
+    required BuildContext context,
+    required String userId,
+    required String nickName,
+  }) async {
+    if (_isInviteDialogShowing) return;
+    _isInviteDialogShowing = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          final displayUserId = userId.isEmpty ? '-' : userId;
+          final displayNickName = nickName.isEmpty ? '-' : nickName;
+          return AlertDialog(
+            title: const Text('친구 추가 요청이 왔어요!'),
+            content: Text('userId: $displayUserId\nnickName: $displayNickName'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('확인'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _isInviteDialogShowing = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
@@ -181,7 +295,7 @@ class MyApp extends StatelessWidget {
         // New Backend API Services (REST API)
         // ============================================
         ChangeNotifierProvider<UserController>.value(
-          value: preloadedUserController,
+          value: widget.preloadedUserController,
         ),
         ChangeNotifierProvider<api_category.CategoryController>(
           create: (_) => api_category.CategoryController(),
@@ -220,9 +334,13 @@ class MyApp extends StatelessWidget {
       child: ScreenUtilInit(
         designSize: const Size(393, 852),
         child: MaterialApp(
-          initialRoute: hasSeenLaunchVideo ? '/' : '/launch_video',
+          navigatorKey: _navigatorKey,
+          initialRoute: widget.hasSeenLaunchVideo ? '/' : '/launch_video',
           navigatorObservers: [appRouteObserver],
           debugShowCheckedModeBanner: false,
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
 
           builder: (context, child) {
             // 텍스트 크기 조정 제한을 위해서 디바이스의 MediaQuery를 가지고 온다.

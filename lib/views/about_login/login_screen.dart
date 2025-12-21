@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -34,6 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
 
   String phoneNumber = '';
+  String _selectedCountryCode = 'KR';
 
   // 현재 페이지 인덱스
   int currentPage = 0;
@@ -42,9 +45,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isSendingCode = false;
   bool _isVerifying = false;
 
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  String? _firebaseVerificationId;
+  int? _firebaseResendToken;
+  late final bool _useFirebaseAuth;
+
   @override
   void initState() {
     super.initState();
+    _useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
   }
 
   @override
@@ -122,7 +131,51 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 24.h),
+              SizedBox(height: 16.h),
+              Container(
+                width: 239.w,
+                height: 44,
+                padding: EdgeInsets.symmetric(horizontal: 14.w),
+                decoration: BoxDecoration(
+                  color: Color(0xff323232),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.centerLeft,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCountryCode,
+                    dropdownColor: const Color(0xff323232),
+                    iconEnabledColor: const Color(0xFFF8F8F8),
+                    style: TextStyle(
+                      color: const Color(0xFFF8F8F8),
+                      fontSize: 14.sp,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w500,
+                    ),
+                    items: const [
+                      DropdownMenuItem<String>(
+                        value: 'KR',
+                        child: Text('South Korea (+82)'),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: 'US',
+                        child: Text('United States (+1)'),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: 'MX',
+                        child: Text('Mexico (+52)'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _selectedCountryCode = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(height: 16.h),
               Container(
                 width: 239.w,
                 height: 44,
@@ -275,8 +328,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onChanged: (value) {
-                    // 5자리 입력 시 버튼 활성화
-                    _hasCode.value = value.length == 5;
+                    final requiredLength = _useFirebaseAuth ? 6 : 5;
+                    _hasCode.value = value.length == requiredLength;
                   },
                 ),
               ),
@@ -334,6 +387,34 @@ class _LoginScreenState extends State<LoginScreen> {
     return digits;
   }
 
+  String _normalizePhoneNumberForFirebase(String phone) {
+    final trimmed = phone.trim();
+    if (trimmed.startsWith('+')) {
+      final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+      return '+$digits';
+    }
+
+    var digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('0')) {
+      digits = digits.substring(1);
+    }
+
+    final dialCode = _dialCodeForSelectedCountry();
+    return digits.isEmpty ? '' : '$dialCode$digits';
+  }
+
+  String _dialCodeForSelectedCountry() {
+    switch (_selectedCountryCode) {
+      case 'US':
+        return '+1';
+      case 'MX':
+        return '+52';
+      case 'KR':
+      default:
+        return '+82';
+    }
+  }
+
   // -------------------------
   // SMS 인증번호 발송
   // -------------------------
@@ -346,6 +427,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // 숫자만 저장, 앞자리 0 유지, 국가번호 제거
     phoneNumber = _normalizePhoneNumber(_phoneController.text);
+    if (_useFirebaseAuth) {
+      phoneNumber = _normalizePhoneNumberForFirebase(_phoneController.text);
+    }
+
+    if (_useFirebaseAuth) {
+      await _sendFirebaseSmsCode(isResend: false);
+      return;
+    }
 
     try {
       final success = await _apiUserController!.requestSmsVerification(
@@ -374,6 +463,11 @@ class _LoginScreenState extends State<LoginScreen> {
   // SMS 인증번호 재발송
   // -------------------------
   Future<void> _resendSmsCode() async {
+    if (_useFirebaseAuth) {
+      await _sendFirebaseSmsCode(isResend: true);
+      return;
+    }
+
     try {
       final success = await _apiUserController!.requestSmsVerification(
         phoneNumber,
@@ -387,6 +481,75 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       debugPrint('SMS 재발송 오류: $e');
       _showErrorSnackBar('인증번호 재전송 중 오류가 발생했습니다.');
+    }
+  }
+
+  Future<void> _sendFirebaseSmsCode({required bool isResend}) async {
+    final firebasePhoneNumber = _normalizePhoneNumberForFirebase(
+      _phoneController.text,
+    );
+    if (firebasePhoneNumber.isEmpty) {
+      _showErrorSnackBar('전화번호를 확인해주세요.');
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      await _firebaseAuth.verifyPhoneNumber(
+        phoneNumber: firebasePhoneNumber,
+        timeout: const Duration(seconds: 60),
+        forceResendingToken: isResend ? _firebaseResendToken : null,
+        verificationCompleted: (credential) async {
+          try {
+            await _firebaseAuth.signInWithCredential(credential);
+          } catch (e) {
+            debugPrint('Firebase 자동 인증 실패: $e');
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          debugPrint('Firebase 인증 실패: ${e.code}');
+          _showErrorSnackBar('인증번호 발송에 실패했습니다.');
+          if (mounted) {
+            setState(() {
+              _isSendingCode = false;
+            });
+          }
+        },
+        codeSent: (verificationId, resendToken) {
+          _firebaseVerificationId = verificationId;
+          _firebaseResendToken = resendToken;
+          if (!isResend) {
+            _goToNextPage();
+          } else {
+            _showSnackBar('인증번호가 재전송되었습니다.');
+          }
+          if (mounted) {
+            setState(() {
+              _isSendingCode = false;
+            });
+          }
+        },
+        codeAutoRetrievalTimeout: (verificationId) {
+          _firebaseVerificationId = verificationId;
+          if (mounted) {
+            setState(() {
+              _isSendingCode = false;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Firebase SMS 발송 오류: $e');
+      _showErrorSnackBar('인증번호 발송 중 오류가 발생했습니다.');
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
     }
   }
 
@@ -404,8 +567,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final code = _codeController.text;
 
-    if (code.length != 5) {
-      _showErrorSnackBar('인증번호는 5자리여야 합니다.');
+    final requiredLength = _useFirebaseAuth ? 6 : 5;
+    if (code.length != requiredLength) {
+      _showErrorSnackBar('인증번호는 ${requiredLength}자리여야 합니다.');
       if (mounted) {
         setState(() {
           _isVerifying = false;
@@ -415,15 +579,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      // 1. SMS 코드 인증 확인
-      final isValid = await _apiUserController!.verifySmsCode(
-        phoneNumber,
-        code,
-      );
+      if (_useFirebaseAuth) {
+        final verificationId = _firebaseVerificationId;
+        if (verificationId == null || verificationId.isEmpty) {
+          _showErrorSnackBar('인증번호 요청이 필요합니다.');
+          return;
+        }
 
-      if (!isValid) {
-        _showErrorSnackBar('인증번호가 올바르지 않습니다.');
-        return;
+        final credential = PhoneAuthProvider.credential(
+          verificationId: verificationId,
+          smsCode: code,
+        );
+        await _firebaseAuth.signInWithCredential(credential);
+      } else {
+        // 1. SMS 코드 인증 확인
+        final isValid = await _apiUserController!.verifySmsCode(
+          phoneNumber,
+          code,
+        );
+
+        if (!isValid) {
+          _showErrorSnackBar('인증번호가 올바르지 않습니다.');
+          return;
+        }
       }
 
       debugPrint('SMS 인증 성공');

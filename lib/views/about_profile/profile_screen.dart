@@ -481,6 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // ignore: unawaited_futures
       deletion.catchError((e) {
         debugPrint('계정 삭제 백그라운드 오류: $e');
+        return e;
       });
     } catch (e) {
       if (mounted) {

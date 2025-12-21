@@ -11,12 +11,16 @@ class ShimmerOnceThenFallbackIcon extends StatefulWidget {
   final double width;
   final double height;
   final double borderRadius;
+  final int? shimmerCycles; //  Shimmer가 몇번 돌 지
+  final Duration? fallbackDelay;
 
   const ShimmerOnceThenFallbackIcon({
     super.key,
     required this.width,
     required this.height,
     required this.borderRadius,
+    this.shimmerCycles,
+    this.fallbackDelay,
   });
 
   @override
@@ -27,13 +31,19 @@ class ShimmerOnceThenFallbackIcon extends StatefulWidget {
 class _ShimmerOnceThenFallbackIconState
     extends State<ShimmerOnceThenFallbackIcon> {
   static const Duration _fallbackDelay = Duration(milliseconds: 600);
+
+  static const Duration _shimmerPeriod = Duration(milliseconds: 1500);
   Timer? _timer;
   bool _showFallback = false;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer(_fallbackDelay, () {
+    final cycles = widget.shimmerCycles;
+    final delay = (cycles != null && cycles > 0)
+        ? Duration(milliseconds: _shimmerPeriod.inMilliseconds * cycles)
+        : (widget.fallbackDelay ?? _fallbackDelay);
+    _timer = Timer(delay, () {
       if (!mounted) return;
       setState(() => _showFallback = true);
     });
@@ -62,7 +72,7 @@ class _ShimmerOnceThenFallbackIconState
     return Shimmer.fromColors(
       baseColor: Colors.grey.shade800,
       highlightColor: Colors.grey.shade700,
-      period: const Duration(milliseconds: 1500),
+      period: _shimmerPeriod,
       child: Container(
         width: widget.width,
         height: widget.height,

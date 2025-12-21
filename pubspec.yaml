@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # SOI API Client (auto-generated from OpenAPI)
   soi_api_client:
@@ -62,6 +64,7 @@ dependencies:
   sqflite: ^2.4.1
   path: ^1.9.1
   intl: ^0.20.0
+  easy_localization: ^3.0.7
   eva_icons_flutter: ^3.1.0
   path_provider: ^2.1.4
   image: ^4.2.0
@@ -95,6 +98,7 @@ dependencies:
   json_annotation: ^4.9.0
   copy_with_extension: ^10.0.1
   video_thumbnail: ^0.5.6
+  video_compress: ^3.1.2
   visibility_detector: ^0.4.0+2
   webview_flutter: ^4.13.0
   logger: ^2.6.2
@@ -134,6 +138,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/
+    - assets/translations/
     - assets/fonts/PretendardVariable.ttf
     - assets/notification.png
     - assets/app_launch_video/SOI.mp4

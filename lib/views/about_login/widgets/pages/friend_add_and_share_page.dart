@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../api/controller/contact_controller.dart';
+import '../../../../api/controller/user_controller.dart';
 
 class FriendAddAndSharePage extends StatefulWidget {
   final PageController? pageController;
@@ -20,7 +21,17 @@ class FriendAddAndSharePage extends StatefulWidget {
 
 class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
   static const String _inviteLink = 'https://soi-sns.web.app';
-  static const String _inviteMessage = 'SOI 앱에서 친구가 되어주세요!\n\n$_inviteLink';
+
+  String _buildInviteLink(BuildContext context) {
+    final user = Provider.of<UserController>(context, listen: false).currentUser;
+    if (user == null) return _inviteLink;
+    return Uri.parse(_inviteLink).replace(
+      queryParameters: {
+        'refUserId': user.id.toString(),
+        'refNickname': user.userId,
+      },
+    ).toString();
+  }
 
   @override
   void initState() {
@@ -54,10 +65,11 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
       final sharePositionOrigin = box != null
           ? box.localToGlobal(Offset.zero) & box.size
           : null;
+      final link = _buildInviteLink(context);
 
       await SharePlus.instance.share(
         ShareParams(
-          text: _inviteMessage,
+          text: 'SOI 앱에서 친구가 되어주세요!\n\n$link',
           subject: 'SOI 친구 초대',
           sharePositionOrigin: sharePositionOrigin,
         ),

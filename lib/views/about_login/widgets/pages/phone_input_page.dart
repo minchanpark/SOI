@@ -8,12 +8,16 @@ import '../common/custom_text_field.dart';
 class PhoneInputPage extends StatelessWidget {
   final TextEditingController controller;
   final Function(String) onChanged;
+  final String selectedCountryCode;
+  final ValueChanged<String> onCountryChanged;
   final PageController? pageController;
 
   const PhoneInputPage({
     super.key,
     required this.controller,
     required this.onChanged,
+    required this.selectedCountryCode,
+    required this.onCountryChanged,
     required this.pageController,
   });
 
@@ -46,7 +50,12 @@ class PhoneInputPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const PageTitle(title: 'SOI 접속을 위해 전화번호를 입력해주세요.'),
-                SizedBox(height: 24.h),
+                SizedBox(height: 16.h),
+                _CountrySelector(
+                  selectedCountryCode: selectedCountryCode,
+                  onChanged: onCountryChanged,
+                ),
+                SizedBox(height: 16.h),
                 CustomTextField(
                   controller: controller,
                   hintText: '전화번호',
@@ -65,6 +74,71 @@ class PhoneInputPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CountryOption {
+  final String code;
+  final String label;
+  final String dialCode;
+
+  const _CountryOption({
+    required this.code,
+    required this.label,
+    required this.dialCode,
+  });
+}
+
+class _CountrySelector extends StatelessWidget {
+  final String selectedCountryCode;
+  final ValueChanged<String> onChanged;
+
+  const _CountrySelector({
+    required this.selectedCountryCode,
+    required this.onChanged,
+  });
+
+  static const _options = [
+    _CountryOption(code: 'KR', label: 'South Korea', dialCode: '+82'),
+    _CountryOption(code: 'US', label: 'United States', dialCode: '+1'),
+    _CountryOption(code: 'MX', label: 'Mexico', dialCode: '+52'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 239.w,
+      height: 44,
+      padding: EdgeInsets.symmetric(horizontal: 14.w),
+      decoration: BoxDecoration(
+        color: const Color(0xff323232),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.centerLeft,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedCountryCode,
+          dropdownColor: const Color(0xff323232),
+          iconEnabledColor: const Color(0xFFF8F8F8),
+          style: TextStyle(
+            color: const Color(0xFFF8F8F8),
+            fontSize: 14.sp,
+            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w500,
+          ),
+          items:
+              _options.map((option) {
+                return DropdownMenuItem<String>(
+                  value: option.code,
+                  child: Text('${option.label} (${option.dialCode})'),
+                );
+              }).toList(),
+          onChanged: (value) {
+            if (value != null) onChanged(value);
+          },
+        ),
+      ),
     );
   }
 }

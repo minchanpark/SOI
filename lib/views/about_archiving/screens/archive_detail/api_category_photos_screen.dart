@@ -15,6 +15,7 @@ import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../api/models/post.dart';
 import '../../../../theme/theme.dart';
+import '../../widgets/archive_card_widget/archive_card_placeholders.dart';
 import '../../widgets/api_photo_grid_item.dart';
 
 /// 카테고리 내에서 사진(포스트)들을 그리드 형식으로 보여주는 화면
@@ -392,9 +393,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   Widget _buildBody() {
     // 로딩 중
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3.0),
-      );
+      return _buildShimmerGrid();
     }
 
     // 에러 발생
@@ -479,8 +478,41 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       ),
     );
   }
+
+  /// 로딩 중일 때 표시할 Shimmer 그리드
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.only(
+        left: 15.w,
+        right: 15.w,
+        top: 20.h,
+        bottom: 30.h,
+      ),
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12.w,
+        mainAxisSpacing: 15.h,
+        childAspectRatio: 175 / 233,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return ShimmerOnceThenFallbackIcon(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              borderRadius: 8,
+              shimmerCycles: 2, // shimmer기 몇번 돌지를 전달
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
+/// 카테고리별 포스트 캐시 항목 클래스
 class _CategoryPostsCacheEntry {
   final List<Post> posts;
   final List<String> imageUrls;

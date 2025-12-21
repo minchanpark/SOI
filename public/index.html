@@ -103,8 +103,16 @@
     
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const inviterName = urlParams.get('inviter') ? decodeURIComponent(urlParams.get('inviter')) : '친구';
-        const inviterId = urlParams.get('inviterId') ? decodeURIComponent(urlParams.get('inviterId')) : '';
+        const refNickname = urlParams.get('refNickname')
+            ? decodeURIComponent(urlParams.get('refNickname'))
+            : (urlParams.get('inviter')
+                ? decodeURIComponent(urlParams.get('inviter'))
+                : '친구');
+        const refUserId = urlParams.get('refUserId')
+            ? decodeURIComponent(urlParams.get('refUserId'))
+            : (urlParams.get('inviterId')
+                ? decodeURIComponent(urlParams.get('inviterId'))
+                : '');
         
         const isAndroid = /Android/i.test(navigator.userAgent);
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -128,7 +136,7 @@
         }
         
         document.getElementById('downloadBtn').onclick = function() {
-            const deepLinkData = `?inviter=${encodeURIComponent(inviterName)}&inviterId=${encodeURIComponent(inviterId)}`;
+            const deepLinkData = `?refNickname=${encodeURIComponent(refNickname)}&refUserId=${encodeURIComponent(refUserId)}`;
             
             if (isAndroid) {
                 const intentUrl = `intent://invite${deepLinkData}#Intent;scheme=soi;package=com.soi.app;S.browser_fallback_url=https://play.google.com/store/apps/details?id=com.soi.app;end`;

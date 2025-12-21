@@ -141,7 +141,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
         final showLoading = _isFetching && requests.isEmpty;
 
         return SizedBox(
-          width: (354 * widget.scale).w,
+          width: 354.w,
           child: Card(
             clipBehavior: Clip.antiAliasWithSaveLayer,
             color: const Color(0xff1c1c1c),

@@ -12,6 +12,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:video_compress/video_compress.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
 import '../../api/controller/audio_controller.dart';
 import '../../api/controller/category_controller.dart' as api_category;
@@ -39,16 +41,25 @@ class _UploadPerfTrace {
   }
 }
 
-// Isolate friendly: must be top-level for `compute`.
+/// 파형 데이터를 인코딩하는 함수s
+///
+/// Parameters:
+/// - [waveformData]: 파형 데이터 리스트
+///
+/// Returns:
+/// - 인코딩된 파형 데이터 문자열
 String _encodeWaveformDataWorker(List<double> waveformData) {
   if (waveformData.isEmpty) return '';
 
-  final buffer = StringBuffer();
+  final buffer =
+      StringBuffer(); // StringBuffer 사용 --> StringBuffer란, 문자열을 효율적으로 생성하기 위한 클래스
+
+  // 파형 데이터를 쉼표로 구분된 문자열로 변환
   for (var i = 0; i < waveformData.length; i++) {
     if (i > 0) buffer.write(', ');
     buffer.write(double.parse(waveformData[i].toStringAsFixed(6)).toString());
   }
-  return buffer.toString();
+  return buffer.toString(); // 최종 문자열 반환
 }
 
 class PhotoEditorScreen extends StatefulWidget {
@@ -78,6 +89,8 @@ class PhotoEditorScreen extends StatefulWidget {
 ///
 /// 서버에 게시물을 업로드하기 위해 필요한 모든 정보를 하나로 모아둔 클래스입니다.
 /// 사용자 정보, 미디어 파일, 캡션, 음성 데이터 등을 포함합니다.
+///
+/// _UploadSnapshot 클래스와 달리, 이 클래스는 실제 업로드 시점에 사용됩니다.
 class _UploadPayload {
   final int userId; // 사용자 ID
   final String nickName; // 사용자 닉네임
@@ -106,6 +119,11 @@ class _UploadPayload {
   });
 }
 
+/// 업로드에 필요한 모든 데이터를 스냅샷으로 담는 클래스
+/// 이 클래스를 만든 이유는, 업로드가 화면 전환 이후에 비동기적으로 실행되기 때문에,
+/// 업로드에 필요한 모든 데이터를 미리 캡처해서 보존하기 위함입니다.
+///
+/// _UploadPayload 클래스와 달리, 이 클래스는 화면 전환 전에 필요한 모든 정보를 담고 있습니다.
 class _UploadSnapshot {
   final int userId;
   final String nickName;
@@ -177,6 +195,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   static const double _kDimensionScaleFactor = 0.85; // 크기 감소 비율
   static const int _kFallbackCompressionQuality = 35; // 최종 강제 압축 품질
   static const int _kFallbackImageDimension = 1024; // 최종 강제 압축 크기
+  static const int _kMaxVideoSizeBytes =
+      20 * 1024 * 1024; // [VideoCompress] 20MB
 
   // 최소 크기는 처음에는 0에서 시작하여 애니메이션으로 잠금 위치까지 이동
   double _minChildSize = _kInitialSheetExtent;
@@ -788,15 +808,32 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         throw Exception('미디어 업로드에 실패했습니다.');
       }
 
-      // 게시물 생성
-      final createSuccess = await _createPostWithMedia(
+      // [Video] 게시물 생성 + 카테고리 대표 이미지 업데이트를 병렬로 처리
+      final createPostFuture = _createPostWithMedia(
         categoryIds: categoryIds,
         payload: payload,
         mediaResult: mediaResult,
       );
+      Future<bool>? updateCategoryCoverFuture;
+      if (payload.isVideo && categoryIds.isNotEmpty) {
+        updateCategoryCoverFuture = _updateCategoryCoverFromVideo(
+          categoryIds: categoryIds,
+          payload: payload,
+        );
+      }
+
+      final results = await Future.wait([
+        createPostFuture,
+        if (updateCategoryCoverFuture != null) updateCategoryCoverFuture,
+      ]);
+
+      final createSuccess = results.isNotEmpty && results.first == true;
       perf.mark('post created');
       if (!createSuccess) {
         throw Exception('게시물 생성에 실패했습니다.');
+      }
+      if (results.length > 1 && results[1] == false) {
+        debugPrint('[PhotoEditor] 비디오 썸네일로 카테고리 업데이트 실패');
       }
 
       // 카테고리 대표 사진(썸네일) 등 최신 상태가 아카이브 메인에 즉시 반영되도록 강제 갱신
@@ -811,9 +848,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         debugPrint('[PhotoEditor] 카테고리 강제 갱신 실패(무시): $e');
       }
 
+      // 업로드가 끝난 후 임시 파일들을 백그라운드에서 삭제
       unawaited(_deleteTemporaryFilesInBackground(payload));
     } catch (e) {
       debugPrint('[PhotoEditor] 백그라운드 업로드 실패: $e');
+    } finally {
+      // [VideoCompress] 임시 캐시 정리
+      if (!kIsWeb) {
+        // 웹에서는 VideoCompress 패키지를 사용하지 않음
+        unawaited(VideoCompress.deleteAllCache());
+      }
     }
   }
 
@@ -830,7 +874,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return null;
     }
 
-    if (!snapshot.isVideo) {
+    if (snapshot.isVideo) {
+      try {
+        // 비디오 파일인 경우 압축 수행
+        mediaFile = await _compressVideoIfNeeded(mediaFile);
+      } catch (e) {
+        debugPrint('[PhotoEditor] 비디오 압축 실패(원본 사용): $e');
+      }
+    } else {
       try {
         if (snapshot.compressedFile != null &&
             snapshot.lastCompressedPath == filePath) {
@@ -1048,11 +1099,99 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     return success;
   }
 
+  // [Video] 썸네일 추출 -> 업로드 -> 카테고리 대표 이미지 변경
+  Future<bool> _updateCategoryCoverFromVideo({
+    required List<int> categoryIds,
+    required _UploadPayload payload,
+  }) async {
+    if (!payload.isVideo || categoryIds.isEmpty) return true;
+
+    // 추출된 썸네일 파일을 저장할 변수
+    File? thumbnailFile;
+
+    try {
+      // 비디오 썸네일 추출
+      thumbnailFile = await _extractVideoThumbnailFile(payload.mediaPath);
+      if (thumbnailFile == null) {
+        debugPrint('[PhotoEditor] 비디오 썸네일 생성 실패');
+        return false;
+      }
+
+      final multipart = await _mediaController.fileToMultipart(
+        thumbnailFile,
+      ); // Multipart로 File을 변환
+
+      final usageCount = categoryIds.length;
+
+      // 썸네일을 미디어 서버에 업로드드해서 키를 받음
+      final keys = await _mediaController.uploadMedia(
+        files: [multipart],
+        types: [MediaType.image],
+        usageTypes: [MediaUsageType.categoryProfile],
+        userId: payload.userId,
+        refId: categoryIds.first,
+        usageCount: usageCount,
+      );
+
+      if (keys.length < usageCount) {
+        debugPrint('[PhotoEditor] 카테고리 썸네일 키 수가 부족합니다. keys: $keys');
+        return false;
+      }
+
+      // 각 카테고리에 대해 썸네일 키로 대표 이미지 업데이트
+      final results = await Future.wait([
+        // 각 카테고리에 대해 대표 이미지 업데이트
+        for (var i = 0; i < usageCount; i++)
+          _categoryController.updateCustomProfile(
+            categoryId: categoryIds[i],
+            userId: payload.userId,
+            profileImageKey: keys[i],
+          ),
+      ]);
+
+      return results.every((value) => value == true);
+    } catch (e) {
+      debugPrint('[PhotoEditor] 비디오 썸네일 업로드/카테고리 업데이트 실패: $e');
+      return false;
+    } finally {
+      if (thumbnailFile != null) {
+        try {
+          await thumbnailFile.delete(); // 임시 썸네일 파일 삭제
+        } catch (e) {
+          return false;
+        }
+      }
+    }
+  }
+
+  /// 비디오 썸네일 추출 메서드
+  Future<File?> _extractVideoThumbnailFile(String videoPath) async {
+    if (kIsWeb) return null;
+    try {
+      final tempDir = await getTemporaryDirectory(); // 임시 디렉토리 경로 가져오기
+
+      // 비디오 썸네일 생성
+      final thumbnailPath = await VideoThumbnail.thumbnailFile(
+        video: videoPath,
+        thumbnailPath: tempDir.path,
+        imageFormat: ImageFormat.JPEG,
+        maxWidth: 720,
+        quality: 80,
+      );
+      if (thumbnailPath == null || thumbnailPath.isEmpty) return null;
+      return File(thumbnailPath); // 썸네일 파일 반환
+    } catch (e) {
+      debugPrint('[PhotoEditor] 비디오 썸네일 추출 실패: $e');
+      return null;
+    }
+  }
+
   /// 파형 데이터를 JSON 문자열로 인코딩
   String? _encodeWaveformData(List<double>? waveformData) {
     if (waveformData == null || waveformData.isEmpty) {
       return null;
     }
+    // List로 받으 waveformData를 encoding 작업 수행
     final encoded = _encodeWaveformDataWorker(waveformData);
     return encoded.isEmpty ? null : encoded;
   }
@@ -1108,6 +1247,72 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
           _compressedFile = File(filePath);
           return File(filePath);
         });
+  }
+
+  /// 비디오 크기를 줄여 업로드 실패(413)를 방지합니다.
+  /// 비디오 크기가 50MB를 초과하는 경우에만 압축을 시도합니다.
+  ///
+  /// Parameters:
+  ///  - [file]: 압축할 비디오 파일
+  ///
+  /// Returns:
+  ///   - 압축된 비디오 파일 또는 원본 파일
+  Future<File> _compressVideoIfNeeded(File file) async {
+    if (kIsWeb) return file;
+
+    final size = await file.length();
+    if (size <= _kMaxVideoSizeBytes) {
+      return file;
+    }
+
+    if (kDebugMode) {
+      debugPrint('[PhotoEditor] 비디오 압축 시작 (${size} bytes)');
+    }
+
+    var compressed = await _tryCompressVideo(file, VideoQuality.MediumQuality);
+    if (compressed == null) {
+      return file;
+    }
+
+    final compressedSize = await compressed.length();
+    if (compressedSize > _kMaxVideoSizeBytes) {
+      final lower = await _tryCompressVideo(file, VideoQuality.LowQuality);
+      if (lower != null) {
+        compressed = lower;
+      }
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[PhotoEditor] 비디오 압축 완료 (${await compressed.length()} bytes)',
+      );
+    }
+
+    return compressed;
+  }
+
+  /// 비디오를 지정된 품질로 압축 시도
+  /// 실패 시 null 반환
+  ///
+  /// Parameters:
+  ///   - [file]: 압축할 비디오 파일
+  ///   - [quality]: 압축 품질 설정
+  ///
+  /// Returns:
+  ///   - 압축된 비디오 파일 또는 null
+  Future<File?> _tryCompressVideo(File file, VideoQuality quality) async {
+    try {
+      final info = await VideoCompress.compressVideo(
+        file.path,
+        quality: quality,
+        includeAudio: true,
+        deleteOrigin: false,
+      );
+      return info?.file;
+    } catch (e) {
+      debugPrint('[PhotoEditor] 비디오 압축 실패: $e');
+      return null;
+    }
   }
 
   /// 이미지를 압축하여 파일 크기 줄이기
@@ -1477,6 +1682,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _compressionTask = null;
     _compressedFile = null;
     _lastCompressedPath = null;
+    // [VideoCompress] 진행 중인 압축 정리
+    if (!kIsWeb) {
+      VideoCompress.cancelCompression();
+      VideoCompress.dispose();
+    }
 
     _audioController.stopRealtimeAudio();
     SchedulerBinding.instance.addPostFrameCallback((_) {

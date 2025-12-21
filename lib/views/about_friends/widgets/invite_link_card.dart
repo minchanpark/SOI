@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/api/models/user.dart';
 import 'package:soi/utils/instagram_share_channel.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,16 +15,37 @@ class InviteLinkCard extends StatelessWidget {
   const InviteLinkCard({super.key, required this.scale});
 
   static const String _inviteLink = 'https://soi-sns.web.app';
-  static const String _inviteMessage = 'SOI 앱에서 친구가 되어주세요!\n\n$_inviteLink';
+
+  String _buildInviteLinkWithUser(User? user) {
+    if (user == null) return _inviteLink;
+    final uri = Uri.parse(_inviteLink);
+    return uri
+        .replace(
+          queryParameters: {
+            'refUserId': user.id.toString(),
+            'refNickname': user.userId,
+          },
+        )
+        .toString();
+  }
 
   /// 시스템 공유 시트용 파라미터 생성
-  ShareParams _buildShareParams() {
-    return ShareParams(text: _inviteMessage, subject: 'SOI 친구 초대');
+  ShareParams _buildShareParams(String link) {
+    return ShareParams(
+      text: 'SOI 앱에서 친구가 되어주세요!\n\n$link',
+      subject: 'SOI 친구 초대',
+    );
+  }
+
+  String _buildInviteLink(BuildContext context) {
+    final user = Provider.of<UserController>(context, listen: false).currentUser;
+    return _buildInviteLinkWithUser(user);
   }
 
   /// 클립보드에 링크 복사
   void _copyLink(BuildContext context) {
-    Clipboard.setData(const ClipboardData(text: _inviteLink));
+    final link = _buildInviteLink(context);
+    Clipboard.setData(ClipboardData(text: link));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('링크가 복사되었습니다'),
@@ -33,7 +57,8 @@ class InviteLinkCard extends StatelessWidget {
   /// 시스템 공유 시트 열기
   Future<void> _shareLink(BuildContext context) async {
     try {
-      await SharePlus.instance.share(_buildShareParams());
+      final link = _buildInviteLink(context);
+      await SharePlus.instance.share(_buildShareParams(link));
     } catch (e) {
       debugPrint('공유 실패: $e');
     }
@@ -41,8 +66,10 @@ class InviteLinkCard extends StatelessWidget {
 
   /// 인스타그램 DM 공유 화면 열기 (네이티브 플러그인 사용)
   Future<void> _shareToInstagram(BuildContext context) async {
+    final link = _buildInviteLink(context);
+    final message = 'SOI 앱에서 친구가 되어주세요!\n\n$link';
     // 먼저 링크를 클립보드에 복사
-    await Clipboard.setData(const ClipboardData(text: _inviteMessage));
+    await Clipboard.setData(ClipboardData(text: message));
 
     try {
       // 인스타그램 설치 확인
@@ -50,7 +77,7 @@ class InviteLinkCard extends StatelessWidget {
 
       if (isInstalled) {
         // 네이티브 채널로 인스타그램 DM 공유 화면 열기
-        await InstagramShareChannel.shareToInstagramDirect(_inviteMessage);
+        await InstagramShareChannel.shareToInstagramDirect(message);
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +92,7 @@ class InviteLinkCard extends StatelessWidget {
       debugPrint('인스타그램 공유 실패: $e');
       // 실패 시 시스템 공유 시트로 대체
       try {
-        await SharePlus.instance.share(_buildShareParams());
+        await SharePlus.instance.share(_buildShareParams(link));
       } catch (shareError) {
         debugPrint('시스템 공유도 실패: $shareError');
       }
@@ -74,7 +101,13 @@ class InviteLinkCard extends StatelessWidget {
 
   /// SMS 메시지 전송
   Future<void> _sendSms(BuildContext context) async {
-    final encodedMessage = Uri.encodeComponent(_inviteMessage);
+    final user = Provider.of<UserController>(
+      context,
+      listen: false,
+    ).currentUser;
+    final link = _buildInviteLinkWithUser(user);
+    final message = 'SOI 앱에서 친구가 되어주세요!\n\n$link';
+    final encodedMessage = Uri.encodeComponent(message);
     final uri = Uri.parse('sms:?body=$encodedMessage');
 
     try {
@@ -97,6 +130,17 @@ class InviteLinkCard extends StatelessWidget {
 
   /// 카카오톡으로 공유
   Future<void> _shareToKakao(BuildContext context) async {
+    final link = _buildInviteLink(context);
+    final linkUri = Uri.parse(link);
+    final executionParams = <String, String>{};
+    final refUserId = linkUri.queryParameters['refUserId'];
+    final refNickname = linkUri.queryParameters['refNickname'];
+    if (refUserId != null && refUserId.isNotEmpty) {
+      executionParams['refUserId'] = refUserId;
+    }
+    if (refNickname != null && refNickname.isNotEmpty) {
+      executionParams['refNickname'] = refNickname;
+    }
     // FeedTemplate 생성
     final template = FeedTemplate(
       content: Content(
@@ -104,16 +148,25 @@ class InviteLinkCard extends StatelessWidget {
         description: '사진과 음성으로 소통하는 새로운 SNS',
         imageUrl: Uri.parse('https://soi-sns.web.app/assets/SOI_logo.png'),
         link: Link(
-          webUrl: Uri.parse(_inviteLink),
-          mobileWebUrl: Uri.parse(_inviteLink),
+          webUrl: linkUri,
+          mobileWebUrl: linkUri,
+          androidExecutionParams: executionParams.isEmpty
+              ? null
+              : executionParams,
+          iosExecutionParams: executionParams.isEmpty ? null : executionParams,
         ),
       ),
       buttons: [
         Button(
           title: 'SOI 시작하기',
           link: Link(
-            webUrl: Uri.parse(_inviteLink),
-            mobileWebUrl: Uri.parse(_inviteLink),
+            webUrl: linkUri,
+            mobileWebUrl: linkUri,
+            androidExecutionParams: executionParams.isEmpty
+                ? null
+                : executionParams,
+            iosExecutionParams:
+                executionParams.isEmpty ? null : executionParams,
           ),
         ),
       ],
