@@ -130,9 +130,14 @@ class CategoryService {
   Future<List<Category>> getCategories({
     required int userId,
     CategoryFilter filter = CategoryFilter.all,
+    int page = 0,
   }) async {
     try {
-      final response = await _categoryApi.getCategories(filter.value, userId);
+      final response = await _categoryApi.getCategories(
+        filter.value,
+        userId,
+        page: page,
+      );
 
       if (response == null) {
         return [];
@@ -202,6 +207,43 @@ class CategoryService {
     } catch (e) {
       if (e is SoiApiException) rethrow;
       throw SoiApiException(message: '카테고리 고정 변경 실패: $e', originalException: e);
+    }
+  }
+
+  // ============================================
+  // 카테고리 알림 설정
+  // ============================================
+
+  /// 카테고리 알림 설정
+  ///
+  /// [categoryId]에 대한 [userId]의 알림 상태를 설정합니다.
+  ///
+  /// Returns:
+  /// - true: 알림 설정됨
+  /// - false: 알림 해제됨
+  Future<bool> setCategoryAlert({
+    required int categoryId,
+    required int userId,
+  }) async {
+    try {
+      final response = await _categoryApi.categoryAlert(categoryId, userId);
+
+      if (response == null) {
+        throw const DataValidationException(message: '카테고리 알림 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '카테고리 알림 설정 실패');
+      }
+
+      return response.data ?? false;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '카테고리 알림 설정 실패: $e', originalException: e);
     }
   }
 

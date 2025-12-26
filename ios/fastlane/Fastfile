@@ -21,38 +21,13 @@ platform :ios do
     )
   end
 
-  def with_unbundled_env
-    keys = %w[
-      BUNDLE_BIN_PATH
-      BUNDLE_GEMFILE
-      BUNDLER_ORIG_MANPATH
-      BUNDLER_ORIG_PATH
-      BUNDLER_VERSION
-      GEM_HOME
-      GEM_PATH
-      RUBYLIB
-      RUBYOPT
-    ]
-
-    saved = {}
-    keys.each do |key|
-      saved[key] = ENV[key]
-      ENV.delete(key)
-    end
-
-    original_path = ENV['PATH']
-    ENV['PATH'] = [
-      '/opt/homebrew/bin',
-      '/usr/local/bin',
-      original_path
-    ].compact.join(':')
-
-    yield
-  ensure
-    ENV['PATH'] = original_path if defined?(original_path) && original_path
-    keys.each do |key|
-      value = saved[key]
-      value.nil? ? ENV.delete(key) : ENV[key] = value
+  def bundle_exec(command, gemfile: nil)
+    brew_bundle = "/opt/homebrew/opt/ruby/bin/bundle"
+    bundle_bin = File.exist?(brew_bundle) ? brew_bundle : "bundle"
+    if gemfile
+      sh "BUNDLE_GEMFILE=#{gemfile} #{bundle_bin} exec #{command}"
+    else
+      sh "#{bundle_bin} exec #{command}"
     end
   end
 
@@ -72,27 +47,23 @@ platform :ios do
     next_build_number = (latest_build.to_i + 1).to_s
     UI.message("Next build number: #{next_build_number}")
 
-    # Bundler 환경 변수가 CocoaPods 실행을 깨뜨리는 케이스가 있어,
-    # Flutter/CocoaPods 관련 커맨드는 unbundled 환경에서 실행합니다.
-    with_unbundled_env do
-      Dir.chdir(File.join(project_root, "ios")) do
-        sh "pod --version"
-        begin
-          sh "pod install"
-        rescue => e
-          UI.user_error!(
-            "CocoaPods 실행에 실패했습니다. " \
-            "현재 Ruby/Bundler 환경과 CocoaPods 설치 환경이 섞였을 수 있어요. " \
-            "터미널에서 `cd ios && pod --version && pod install`이 단독으로 성공하는지 확인해주세요.\n\n" \
-            "원본 에러: #{e.message}"
-          )
-        end
+    ios_gemfile = File.join(project_root, "ios", "Gemfile")
+    Dir.chdir(File.join(project_root, "ios")) do
+      bundle_exec "pod --version", gemfile: ios_gemfile
+      begin
+        bundle_exec "pod install", gemfile: ios_gemfile
+      rescue => e
+        UI.user_error!(
+          "CocoaPods 실행에 실패했습니다. " \
+          "터미널에서 `cd ios && bundle exec pod --version && bundle exec pod install`이 단독으로 성공하는지 확인해주세요.\n\n" \
+          "원본 에러: #{e.message}"
+        )
       end
+    end
 
-      Dir.chdir(project_root) do
-        sh "flutter pub get"
-        sh "flutter build ipa --release --build-number=#{next_build_number}"
-      end
+    Dir.chdir(project_root) do
+      bundle_exec "flutter pub get", gemfile: ios_gemfile
+      bundle_exec "flutter build ipa --release --build-number=#{next_build_number}", gemfile: ios_gemfile
     end
 
     # 2. IPA 파일 경로 확인 및 설정

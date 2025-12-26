@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **isPinned** | **bool** |  | [optional] 
 **usersProfileKey** | **List<String>** |  | [optional] [default to const []]
 **pinnedAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**lastPhotoUploadedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

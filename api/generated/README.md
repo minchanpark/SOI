@@ -62,6 +62,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *APIApi* | [**getPresignedUrl**](doc//APIApi.md#getpresignedurl) | **GET** /media/get-url | Presigned URL 요청
 *APIApi* | [**uploadMedia**](doc//APIApi.md#uploadmedia) | **POST** /media/upload | 미디어 업로드
+*CategoryAPIApi* | [**categoryAlert**](doc//CategoryAPIApi.md#categoryalert) | **POST** /category/set/alert | 카테고리 알림설정
 *CategoryAPIApi* | [**categoryPinned**](doc//CategoryAPIApi.md#categorypinned) | **POST** /category/set/pinned | 카테고리 고정
 *CategoryAPIApi* | [**create3**](doc//CategoryAPIApi.md#create3) | **POST** /category/create | 카테고리 추가
 *CategoryAPIApi* | [**customName**](doc//CategoryAPIApi.md#customname) | **POST** /category/set/name | 카테고리 이름수정

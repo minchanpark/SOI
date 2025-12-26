@@ -68,6 +68,7 @@ class CategoryController extends ChangeNotifier {
     int userId, {
     model.CategoryFilter filter = model.CategoryFilter.all,
     bool forceReload = false,
+    int page = 0,
   }) async {
     final now = DateTime.now();
     final isCacheValid =
@@ -117,14 +118,17 @@ class CategoryController extends ChangeNotifier {
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.all,
+            page: page,
           ),
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.public_,
+            page: page,
           ),
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.private_,
+            page: page,
           ),
         ]);
 
@@ -142,6 +146,7 @@ class CategoryController extends ChangeNotifier {
         final categories = await _categoryService.getCategories(
           userId: userId,
           filter: filter,
+          page: page,
         );
 
         _categoriesCache[filter] = categories;
@@ -318,6 +323,7 @@ class CategoryController extends ChangeNotifier {
   Future<List<model.Category>> getCategories({
     required int userId,
     model.CategoryFilter filter = model.CategoryFilter.all,
+    int page = 0,
   }) async {
     _setLoading(true);
     _clearError();
@@ -325,6 +331,7 @@ class CategoryController extends ChangeNotifier {
       final categories = await _categoryService.getCategories(
         userId: userId,
         filter: filter,
+        page: page,
       );
       _setLoading(false);
       return categories;
@@ -378,6 +385,34 @@ class CategoryController extends ChangeNotifier {
       return result;
     } catch (e) {
       _setError('카테고리 고정 실패: $e');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  /// 카테고리 알림 설정
+  ///
+  /// Parameters:
+  /// - [categoryId]: 카테고리 ID
+  /// - [userId]: 사용자 ID
+  ///
+  /// Returns:
+  /// - [bool]: 알림 설정 여부
+  Future<bool> setCategoryAlert({
+    required int categoryId,
+    required int userId,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final result = await _categoryService.setCategoryAlert(
+        categoryId: categoryId,
+        userId: userId,
+      );
+      _setLoading(false);
+      return result;
+    } catch (e) {
+      _setError('카테고리 알림 설정 실패: $e');
       _setLoading(false);
       return false;
     }

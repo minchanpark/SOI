@@ -5,42 +5,39 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000282">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000404">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001779">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.002553">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.67648">
+      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.134256">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: pod --version" time="0.596231">
+      <testcase classname="fastlane.lanes" name="3: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod --version" time="0.633754">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: pod install" time="16.160186">
+      <testcase classname="fastlane.lanes" name="4: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod install" time="16.649021">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="5: flutter pub get" time="1.801544">
+      <testcase classname="fastlane.lanes" name="5: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter pub get" time="1.760394">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="6: flutter build ipa --release --build-number=117" time="247.656654">
+      <testcase classname="fastlane.lanes" name="6: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter build ipa --release --build-number=119" time="8.55523">
         
-      </testcase>
-    
-      
-      <testcase classname="fastlane.lanes" name="7: pilot" time="225.921771">
+          <failure message="/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/actions/actions_helper.rb:67:in &apos;Fastlane::Actions.execute_action&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/fast_file.rb:224:in &apos;Fastlane::FastFile.sh&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/fast_file.rb:216:in &apos;Fastlane::FastFile#sh&apos;&#10;Fastfile:28:in &apos;Fastlane::FastFile#bundle_exec&apos;&#10;Fastfile:66:in &apos;block (3 levels) in Fastlane::FastFile#parsing_binding&apos;&#10;Fastfile:64:in &apos;Dir.chdir&apos;&#10;Fastfile:64:in &apos;block (2 levels) in Fastlane::FastFile#parsing_binding&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/lane.rb:41:in &apos;Fastlane::Lane#call&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/runner.rb:49:in &apos;block in Fastlane::Runner#execute&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/runner.rb:45:in &apos;Dir.chdir&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/runner.rb:45:in &apos;Fastlane::Runner#execute&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/lane_manager.rb:46:in &apos;Fastlane::LaneManager.cruise_lane&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/command_line_handler.rb:34:in &apos;Fastlane::CommandLineHandler.handle&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/commands_generator.rb:110:in &apos;block (2 levels) in Fastlane::CommandsGenerator#run&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/commander-4.6.0/lib/commander/command.rb:187:in &apos;Commander::Command#call&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/commander-4.6.0/lib/commander/command.rb:157:in &apos;Commander::Command#run&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/commander-4.6.0/lib/commander/runner.rb:444:in &apos;Commander::Runner#run_active_command&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane_core/lib/fastlane_core/ui/fastlane_runner.rb:124:in &apos;Commander::Runner#run!&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/commander-4.6.0/lib/commander/delegates.rb:18:in &apos;Commander::Delegates#run!&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/commands_generator.rb:363:in &apos;Fastlane::CommandsGenerator#run&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/commands_generator.rb:43:in &apos;Fastlane::CommandsGenerator.start&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/fastlane/lib/fastlane/cli_tools_distributor.rb:123:in &apos;Fastlane::CLIToolsDistributor.take_off&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/fastlane-2.230.0/bin/fastlane:23:in &apos;&lt;top (required)&gt;&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/bin/fastlane:25:in &apos;Kernel#load&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/bin/fastlane:25:in &apos;&lt;top (required)&gt;&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli/exec.rb:59:in &apos;Kernel.load&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli/exec.rb:59:in &apos;Bundler::CLI::Exec#kernel_load&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli/exec.rb:23:in &apos;Bundler::CLI::Exec#run&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli.rb:456:in &apos;Bundler::CLI#exec&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/vendor/thor/lib/thor/command.rb:28:in &apos;Bundler::Thor::Command#run&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/vendor/thor/lib/thor/invocation.rb:127:in &apos;Bundler::Thor::Invocation#invoke_command&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/vendor/thor/lib/thor.rb:538:in &apos;Bundler::Thor.dispatch&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli.rb:35:in &apos;Bundler::CLI.dispatch&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/vendor/thor/lib/thor/base.rb:584:in &apos;Bundler::Thor::Base::ClassMethods#start&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/cli.rb:29:in &apos;Bundler::CLI.start&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/exe/bundle:28:in &apos;block in &lt;top (required)&gt;&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/lib/bundler/friendly_errors.rb:118:in &apos;Bundler.with_friendly_errors&apos;&#10;/opt/homebrew/lib/ruby/gems/3.4.0/gems/bundler-2.7.2/exe/bundle:20:in &apos;&lt;top (required)&gt;&apos;&#10;/opt/homebrew/opt/ruby/bin/bundle:25:in &apos;Kernel#load&apos;&#10;/opt/homebrew/opt/ruby/bin/bundle:25:in &apos;&lt;main&gt;&apos;&#10;&#10;Exit status of command &apos;BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter build ipa --release --build-number=119&apos; was 1 instead of 0.&#10;Archiving com.newdawn.soi-project...&#10;Automatically signing iOS for device deployment using specified development team in Xcode project: ZNNY3727TQ&#10;Warning: CocoaPods is installed but broken. Skipping pod install.&#10;  You appear to have CocoaPods installed but it is not working.&#10;  This can happen if the version of Ruby that CocoaPods was installed with is different from the one being used to invoke it.&#10;  This can usually be fixed by re-installing CocoaPods.&#10;For re-installation instructions, see https://guides.cocoapods.org/using/getting-started.html#installation&#10;&#10;CocoaPods not installed or not in valid state.&#10;" />
         
       </testcase>
     

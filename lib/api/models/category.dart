@@ -30,6 +30,7 @@ class Category {
   final bool isPinned;
   final List<String> usersProfileKey;
   final DateTime? pinnedAt;
+  final DateTime? lastPhotoUploadedAt;
 
   const Category({
     required this.id,
@@ -41,6 +42,7 @@ class Category {
     this.isPinned = false,
     this.usersProfileKey = const [],
     this.pinnedAt,
+    this.lastPhotoUploadedAt,
   });
 
   /// CategoryRespDto에서 Category 모델 생성
@@ -55,6 +57,7 @@ class Category {
       isPinned: dto.isPinned ?? false,
       usersProfileKey: dto.usersProfileKey,
       pinnedAt: dto.pinnedAt,
+      lastPhotoUploadedAt: dto.lastPhotoUploadedAt,
     );
   }
 
@@ -64,21 +67,35 @@ class Category {
       id: json['id'] as int? ?? 0,
       name: json['name'] as String? ?? '',
       nickNames:
+          (json['nicknames'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
           (json['nickNames'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
-      photoUrl: json['categoryPhotoUrl'] as String?,
+      photoUrl:
+          json['categoryPhotoKey'] as String? ??
+          json['categoryPhotoUrl'] as String?,
       isNew: json['isNew'] as bool? ?? false,
-      totalUserCount: json['totalUserNum'] as int? ?? 0,
+      totalUserCount:
+          json['totalUserNum'] as int? ??
+          json['totalUserCount'] as int? ??
+          0,
       isPinned: json['isPinned'] as bool? ?? false,
       usersProfileKey:
           (json['usersProfileKey'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
+          (json['usersProfileKeys'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
           [],
       pinnedAt: json['pinnedAt'] != null
           ? DateTime.tryParse(json['pinnedAt'] as String)
+          : null,
+      lastPhotoUploadedAt: json['lastPhotoUploadedAt'] != null
+          ? DateTime.tryParse(json['lastPhotoUploadedAt'] as String)
           : null,
     );
   }
@@ -88,13 +105,14 @@ class Category {
     return {
       'id': id,
       'name': name,
-      'nickNames': nickNames,
-      'categoryPhotoUrl': photoUrl,
+      'nicknames': nickNames,
+      'categoryPhotoKey': photoUrl,
       'isNew': isNew,
       'totalUserNum': totalUserCount,
       'isPinned': isPinned,
       'usersProfileKey': usersProfileKey,
       'pinnedAt': pinnedAt?.toIso8601String(),
+      'lastPhotoUploadedAt': lastPhotoUploadedAt?.toIso8601String(),
     };
   }
 
@@ -112,6 +130,7 @@ class Category {
     bool? isPinned,
     List<String>? usersProfileKey,
     DateTime? pinnedAt,
+    DateTime? lastPhotoUploadedAt,
   }) {
     return Category(
       id: id ?? this.id,
@@ -123,6 +142,7 @@ class Category {
       isPinned: isPinned ?? this.isPinned,
       usersProfileKey: usersProfileKey ?? this.usersProfileKey,
       pinnedAt: pinnedAt ?? this.pinnedAt,
+      lastPhotoUploadedAt: lastPhotoUploadedAt ?? this.lastPhotoUploadedAt,
     );
   }
 

@@ -212,6 +212,23 @@ class _AuthScreenState extends State<AuthScreen> {
                     pageReady[1].value = isComplete;
                   });
                 },
+                onSkip: () {
+                  FocusScope.of(context).unfocus();
+                  setState(() {
+                    monthController.clear();
+                    dayController.clear();
+                    yearController.clear();
+                    selectedMonth = null;
+                    selectedDay = null;
+                    selectedYear = null;
+                    birthDate = '';
+                    pageReady[1].value = false;
+                  });
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
               ),
 
               // 3. 전화번호 입력 페이지

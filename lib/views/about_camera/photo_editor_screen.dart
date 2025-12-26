@@ -633,11 +633,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
 
       // 카테고리에 초대된 사용자 ID 목록 생성
-      final receiverIds = <int>[user.id];
-      for (final friend in selectedFriends) {
-        final parsedId = int.tryParse(friend.uid);
-        if (parsedId != null && !receiverIds.contains(parsedId)) {
-          receiverIds.add(parsedId);
+      // PUBLIC 카테고리인 경우에만 본인 및 친구 ID 추가
+      final isPublicCategory = selectedFriends.isNotEmpty;
+      final receiverIds = <int>[];
+      if (isPublicCategory) {
+        receiverIds.add(user.id);
+        for (final friend in selectedFriends) {
+          final parsedId = int.tryParse(friend.uid);
+          if (parsedId != null && !receiverIds.contains(parsedId)) {
+            receiverIds.add(parsedId);
+          }
         }
       }
 
@@ -646,7 +651,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         requesterId: user.id,
         name: _categoryNameController.text.trim(),
         receiverIds: receiverIds,
-        isPublic: selectedFriends.isNotEmpty,
+        isPublic: isPublicCategory,
       );
 
       if (categoryId == null) {

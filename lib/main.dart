@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -60,6 +61,7 @@ import 'firebase_options.dart';
 void main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await _lockPortraitOrientation();
   final prefs = await SharedPreferences.getInstance();
   final hasSeenLaunchVideo = prefs.getBool('hasSeenLaunchVideo') ?? false;
 
@@ -149,6 +151,12 @@ void _configureErrorHandling() {
   debugPaintSizeEnabled = false;
 }
 
+Future<void> _lockPortraitOrientation() {
+  return SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+}
+
 class MyApp extends StatefulWidget {
   final bool hasSeenLaunchVideo;
   final UserController preloadedUserController;
@@ -162,7 +170,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
@@ -172,6 +180,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _linkSubscription = _appLinks.uriLinkStream.listen(
       _handleIncomingUri,
       onError: (error) {
@@ -183,8 +192,16 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _lockPortraitOrientation();
+    }
   }
 
   Future<void> _handleInitialLink() async {

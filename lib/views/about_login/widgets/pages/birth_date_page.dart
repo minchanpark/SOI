@@ -10,6 +10,7 @@ class BirthDatePage extends StatelessWidget {
   final TextEditingController yearController;
   final PageController? pageController;
   final VoidCallback onChanged;
+  final VoidCallback onSkip;
 
   const BirthDatePage({
     super.key,
@@ -18,6 +19,7 @@ class BirthDatePage extends StatelessWidget {
     required this.yearController,
     required this.pageController,
     required this.onChanged,
+    required this.onSkip,
   });
 
   @override
@@ -39,6 +41,22 @@ class BirthDatePage extends StatelessWidget {
               );
             },
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+        ),
+        Positioned(
+          top: 60.h,
+          right: 20.w,
+          child: TextButton(
+            onPressed: onSkip,
+            child: Text(
+              '건너뛰기',
+              style: TextStyle(
+                color: const Color(0xFFF8F8F8),
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Pretendard',
+              ),
+            ),
           ),
         ),
         Align(

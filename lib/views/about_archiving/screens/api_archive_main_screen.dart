@@ -1023,11 +1023,12 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       }
 
       final isPublicCategory = selectedFriends.isNotEmpty;
-      final receiverIds = <int>[userId];
+      final receiverIds = <int>[];
 
       // 선택된 친구들의 ID 추가
-      // PUBLIC 카테고리인 경우에만 추가
+      // PUBLIC 카테고리인 경우에만 본인 및 친구 ID 추가
       if (isPublicCategory) {
+        receiverIds.add(userId);
         for (final friend in selectedFriends) {
           final parsedId = int.tryParse(friend.uid);
           if (parsedId != null && !receiverIds.contains(parsedId)) {

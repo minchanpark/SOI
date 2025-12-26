@@ -22,6 +22,7 @@ class CategoryRespDto {
     this.isPinned,
     this.usersProfileKey = const [],
     this.pinnedAt,
+    this.lastPhotoUploadedAt,
   });
 
   ///
@@ -84,6 +85,14 @@ class CategoryRespDto {
   ///
   DateTime? pinnedAt;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  DateTime? lastPhotoUploadedAt;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is CategoryRespDto &&
     other.id == id &&
@@ -94,7 +103,8 @@ class CategoryRespDto {
     other.totalUserNum == totalUserNum &&
     other.isPinned == isPinned &&
     _deepEquality.equals(other.usersProfileKey, usersProfileKey) &&
-    other.pinnedAt == pinnedAt;
+    other.pinnedAt == pinnedAt &&
+    other.lastPhotoUploadedAt == lastPhotoUploadedAt;
 
   @override
   int get hashCode =>
@@ -107,10 +117,11 @@ class CategoryRespDto {
     (totalUserNum == null ? 0 : totalUserNum!.hashCode) +
     (isPinned == null ? 0 : isPinned!.hashCode) +
     (usersProfileKey.hashCode) +
-    (pinnedAt == null ? 0 : pinnedAt!.hashCode);
+    (pinnedAt == null ? 0 : pinnedAt!.hashCode) +
+    (lastPhotoUploadedAt == null ? 0 : lastPhotoUploadedAt!.hashCode);
 
   @override
-  String toString() => 'CategoryRespDto[id=$id, name=$name, nicknames=$nicknames, categoryPhotoKey=$categoryPhotoKey, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfileKey=$usersProfileKey, pinnedAt=$pinnedAt]';
+  String toString() => 'CategoryRespDto[id=$id, name=$name, nicknames=$nicknames, categoryPhotoKey=$categoryPhotoKey, isNew=$isNew, totalUserNum=$totalUserNum, isPinned=$isPinned, usersProfileKey=$usersProfileKey, pinnedAt=$pinnedAt, lastPhotoUploadedAt=$lastPhotoUploadedAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -151,6 +162,11 @@ class CategoryRespDto {
     } else {
       json[r'pinnedAt'] = null;
     }
+    if (this.lastPhotoUploadedAt != null) {
+      json[r'lastPhotoUploadedAt'] = this.lastPhotoUploadedAt!.toUtc().toIso8601String();
+    } else {
+      json[r'lastPhotoUploadedAt'] = null;
+    }
     return json;
   }
 
@@ -186,6 +202,7 @@ class CategoryRespDto {
             ? (json[r'usersProfileKey'] as Iterable).cast<String>().toList(growable: false)
             : const [],
         pinnedAt: mapDateTime(json, r'pinnedAt', r''),
+        lastPhotoUploadedAt: mapDateTime(json, r'lastPhotoUploadedAt', r''),
       );
     }
     return null;

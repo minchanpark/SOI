@@ -16,6 +16,69 @@ class CategoryAPIApi {
 
   final ApiClient apiClient;
 
+  /// 카테고리 알림설정
+  ///
+  /// 유저아이디와 카테고리 아이디로 알림을 설정합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  Future<Response> categoryAlertWithHttpInfo(int categoryId, int userId,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/category/set/alert';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'categoryId', categoryId));
+      queryParams.addAll(_queryParams('', 'userId', userId));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 카테고리 알림설정
+  ///
+  /// 유저아이디와 카테고리 아이디로 알림을 설정합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] categoryId (required):
+  ///
+  /// * [int] userId (required):
+  Future<ApiResponseDtoBoolean?> categoryAlert(int categoryId, int userId,) async {
+    final response = await categoryAlertWithHttpInfo(categoryId, userId,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoBoolean',) as ApiResponseDtoBoolean;
+    
+    }
+    return null;
+  }
+
   /// 카테고리 고정
   ///
   /// 카테고리 아이디, 유저 아이디로 카테고리를 고정 혹은 고정해제 시킵니다.

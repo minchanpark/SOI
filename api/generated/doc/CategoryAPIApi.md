@@ -9,6 +9,7 @@ All URIs are relative to *https://newdawnsoi.site*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**categoryAlert**](CategoryAPIApi.md#categoryalert) | **POST** /category/set/alert | 카테고리 알림설정
 [**categoryPinned**](CategoryAPIApi.md#categorypinned) | **POST** /category/set/pinned | 카테고리 고정
 [**create3**](CategoryAPIApi.md#create3) | **POST** /category/create | 카테고리 추가
 [**customName**](CategoryAPIApi.md#customname) | **POST** /category/set/name | 카테고리 이름수정
@@ -18,6 +19,51 @@ Method | HTTP request | Description
 [**inviteResponse**](CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
 [**inviteUser**](CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가(초대)
 
+
+# **categoryAlert**
+> ApiResponseDtoBoolean categoryAlert(categoryId, userId)
+
+카테고리 알림설정
+
+유저아이디와 카테고리 아이디로 알림을 설정합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = CategoryAPIApi();
+final categoryId = 789; // int | 
+final userId = 789; // int | 
+
+try {
+    final result = api_instance.categoryAlert(categoryId, userId);
+    print(result);
+} catch (e) {
+    print('Exception when calling CategoryAPIApi->categoryAlert: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **categoryId** | **int**|  | 
+ **userId** | **int**|  | 
+
+### Return type
+
+[**ApiResponseDtoBoolean**](ApiResponseDtoBoolean.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **categoryPinned**
 > ApiResponseDtoBoolean categoryPinned(categoryId, userId)
