@@ -1,1 +1,162 @@
-{}
+{
+  "common": {
+    "error_occurred": "Ocurrió un error.",
+    "retry": "Reintentar",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "done": "Listo",
+    "add": "Añadir",
+    "send": "Enviar",
+    "more": "Ver más",
+    "delete": "Eliminar",
+    "block": "Bloquear",
+    "please_wait": "Espera un momento, por favor",
+    "search_empty": "No hay resultados de búsqueda.",
+    "login_required": "Se requiere iniciar sesión.",
+    "login_required_relogin": "Se requiere iniciar sesión. Vuelve a iniciar sesión.",
+    "login_required_retry": "Inicia sesión y vuelve a intentarlo.",
+    "login_info_required": "Se requiere información de inicio de sesión.",
+    "user_info_unavailable": "No se puede verificar la información del usuario.",
+    "unknown": "Desconocido"
+  },
+  "archive": {
+    "tabs": {
+      "all": "Todo",
+      "shared": "Álbum compartido",
+      "mine": "Mi álbum"
+    },
+    "menu": {
+      "edit_name": "Editar nombre",
+      "pin": "Fijar",
+      "unpin": "Desfijar",
+      "leave": "Salir"
+    },
+    "edit_name_required": "Ingresa un nombre.",
+    "category_info_unavailable": "No se pudo encontrar la información de la categoría.",
+    "edit_name_success": "El nombre de mi categoría se actualizó.",
+    "edit_name_error": "Ocurrió un error al editar el nombre.",
+    "create_category_title": "Crear nueva categoría",
+    "create_category_name_hint": "Ingresa el nombre de la categoría.",
+    "create_category_name_counter": "{count}/20",
+    "create_category_name_required": "Ingresa el nombre de la categoría.",
+    "category_info_invalid": "La información de la categoría no es válida.",
+    "create_category_failed": "No se pudo crear la categoría.",
+    "create_category_success": "Se agregó una nueva categoría.",
+    "search_empty": "No hay resultados de búsqueda.",
+    "empty_categories": "No hay categorías registradas.",
+    "empty_shared_categories": "No hay categorías compartidas.",
+    "empty_photos": "No hay fotos.",
+    "photo_load_failed": "No se pudieron cargar las fotos.",
+    "photo_deleted": "La foto se eliminó.",
+    "delete_error": "Ocurrió un error al eliminar.",
+    "delete_error_with_reason": "Ocurrió un error al eliminar: {error}"
+  },
+  "comments": {
+    "delete": "Eliminar comentario",
+    "delete_unavailable": "No se puede eliminar este comentario.",
+    "delete_success": "El comentario se eliminó.",
+    "delete_failed": "No se pudo eliminar el comentario.",
+    "delete_error": "Ocurrió un error al eliminar el comentario.",
+    "save_failed": "No se pudo guardar el comentario.",
+    "save_error": "Ocurrió un error al guardar el comentario."
+  },
+  "audio": {
+    "upload_failed": "No se pudo subir el audio.",
+    "waveform_empty": "Sin forma de onda"
+  },
+  "camera": {
+    "preview_start_failed": "No se puede iniciar la cámara.\nReinicia la aplicación.",
+    "video_saved": "El video se guardó.",
+    "gallery_access_failed": "No se pudo acceder a la galería.",
+    "capture_error_stop_audio": "Ocurrió un error al tomar la foto. Detén la grabación de audio e inténtalo de nuevo.",
+    "video_record_start_failed": "No se puede iniciar la grabación de video.",
+    "switch_not_supported_while_recording": "Este dispositivo no permite cambiar de cámara durante la grabación.",
+    "zoom_set_error": "Ocurrió un error al ajustar el zoom.",
+    "zoom_set_error_with_reason": "Ocurrió un error al ajustar el zoom: {error}",
+    "gallery_pick_failed": "No se pudo seleccionar contenido de la galería.",
+    "recording_short": "REC",
+    "caption_hint": "Agregar publicación....",
+    "photo_load_failed": "No se pudo cargar la imagen.\nInténtalo de nuevo.",
+    "photo_unavailable": "No se pudo cargar la imagen.",
+    "video_unavailable": "No se pudo cargar el video.",
+    "editor": {
+      "image_not_found": "No se pudo encontrar el archivo de imagen.",
+      "image_load_error_with_reason": "Error al cargar la imagen: {error}",
+      "category_load_error_with_reason": "Error al cargar las categorías: {error}",
+      "category_create_failed_retry": "No se pudo crear la categoría. Inténtalo de nuevo.",
+      "category_create_error": "Ocurrió un error al crear la categoría.",
+      "upload_file_not_found": "No se encontró el archivo para subir."
+    }
+  },
+  "category": {
+    "edit_title": "Editar",
+    "name_label": "Nombre de la categoría",
+    "cover": {
+      "edit_button": "Editar foto de portada",
+      "edit_sheet_title": "Editar foto de portada",
+      "change_title": "Cambiar foto de portada",
+      "select_take_photo": "Tomar foto",
+      "select_from_library": "Elegir de la biblioteca",
+      "select_from_category": "Elegir de la categoría",
+      "delete_button": "Eliminar portada",
+      "upload_failed": "No se pudo subir la foto de portada.",
+      "update_failed": "No se pudo cambiar la foto de portada.",
+      "updated": "La foto de portada se actualizó.",
+      "update_error": "Ocurrió un error al cambiar la foto de portada.",
+      "delete_failed": "No se pudo eliminar la foto de portada.",
+      "deleted": "La foto de portada se eliminó.",
+      "delete_error": "Ocurrió un error al eliminar la foto de portada.",
+      "camera_error": "Ocurrió un error al usar la cámara.",
+      "gallery_error": "Ocurrió un error al elegir de la galería.",
+      "no_photos": "Aún no hay fotos"
+    },
+    "members": {
+      "add": "Añadir",
+      "add_friend": "Agregar amigo",
+      "add_friend_action": "Agregar amigo",
+      "more": "+ Ver más",
+      "collapse": "Mostrar menos"
+    },
+    "leave": {
+      "button": "Salir",
+      "title": "Salir de la categoría",
+      "confirm": "¿Seguro que quieres salir de esta categoría?\nSi sales, ya no podrás ver las fotos de esta categoría.",
+      "success": "Saliste de la categoría.",
+      "failed": "No se puede salir de la categoría."
+    }
+  },
+  "friends": {
+    "list_title": "Lista de amigos",
+    "search_hint": "Buscar amigos",
+    "empty": "Aún no tienes amigos",
+    "load_failed": "No se pudo cargar la lista de amigos.",
+    "load_failed_title": "No se pudo cargar la lista de amigos.",
+    "load_failed_detail": "No se pudo cargar la lista de amigos.",
+    "add_friend": "Agregar amigo",
+    "select_to_add": "Selecciona amigos para agregar.",
+    "invite_sent": "Se enviaron invitaciones a {count} amigos.",
+    "invite_error_with_reason": "Ocurrió un error al invitar amigos: {error}",
+    "invite_check_title": "Confirmar amigos",
+    "menu": {
+      "delete": "Eliminar amigo",
+      "block": "Bloquear"
+    },
+    "blocked": {
+      "title": "Amigos bloqueados",
+      "empty": "No hay amigos bloqueados",
+      "unblock": "Desbloquear",
+      "load_error": "No se pudieron cargar los amigos bloqueados."
+    },
+    "delete_confirm_title": "¿Quieres eliminar a {name}?",
+    "delete_confirm_desc": "Al eliminar, podría quitarse de las categorías compartidas.",
+    "block_confirm_title": "¿Quieres bloquear a {name}?",
+    "block_confirm_desc": "Al bloquear, esta persona ya no podrá invitarte a categorías\nni enviarte solicitudes de amistad.",
+    "delete_success": "El amigo fue eliminado.",
+    "delete_failed": "No se pudo eliminar al amigo.",
+    "delete_error": "Ocurrió un error al eliminar al amigo.",
+    "block_success": "El amigo fue bloqueado.",
+    "block_failed": "No se pudo bloquear al amigo.",
+    "block_error": "Ocurrió un error al bloquear al amigo."
+  }
+}

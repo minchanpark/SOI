@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class LoadingPopupWidget extends StatelessWidget {
-  final String message;
+  final String? messageKey;
+  final String? message;
   final double? iconSize;
   final Color? backgroundColor;
   final Color? textColor;
@@ -10,7 +12,8 @@ class LoadingPopupWidget extends StatelessWidget {
 
   const LoadingPopupWidget({
     super.key,
-    this.message = '잠시만 기다려주세요',
+    this.messageKey = 'common.please_wait',
+    this.message,
     this.iconSize,
     this.backgroundColor,
     this.textColor,
@@ -46,7 +49,9 @@ class LoadingPopupWidget extends StatelessWidget {
               SizedBox(height: 60.h),
               // 메시지 텍스트
               Text(
-                message,
+                messageKey != null
+                    ? tr(messageKey!, context: context)
+                    : (message ?? ''),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xffffffff),
@@ -64,7 +69,8 @@ class LoadingPopupWidget extends StatelessWidget {
   /// 팝업을 표시하는 정적 메서드
   static Future<void> show(
     BuildContext context, {
-    String message = '잠시만 기다려주세요',
+    String? messageKey = 'common.please_wait',
+    String? message,
     double? iconSize,
     Color? backgroundColor,
     Color? textColor,
@@ -77,6 +83,7 @@ class LoadingPopupWidget extends StatelessWidget {
       barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (BuildContext context) {
         return LoadingPopupWidget(
+          messageKey: messageKey,
           message: message,
           iconSize: iconSize,
           backgroundColor: backgroundColor,

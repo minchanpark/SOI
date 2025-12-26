@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
+
 class CategoryCoverSection extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback onTap;
@@ -44,14 +46,14 @@ class CategoryCoverSection extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '표지사진 수정',
+                      'category.cover.edit_button',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w400,
                         fontFamily: 'Pretendard Variable',
                       ),
-                    ),
+                    ).tr(),
                     SizedBox(width: 4.w),
                     Image.asset('assets/edit.png', width: 18.w, height: 18.h),
                   ],

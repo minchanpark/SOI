@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../../../../api/controller/category_controller.dart' as api_category;
 import '../../../../api/controller/media_controller.dart';
@@ -97,14 +98,14 @@ class _CategoryCoverPhotoSelectorScreenState
         centerTitle: false,
         titleSpacing: 0,
         title: Text(
-          '표지사진 변경',
+          'category.cover.change_title',
           style: TextStyle(
             color: Colors.white,
             fontSize: (20).sp,
             fontWeight: FontWeight.w600,
             fontFamily: 'Pretendard Variable',
           ),
-        ),
+        ).tr(),
       ),
       body: Stack(
         alignment: Alignment.bottomCenter,
@@ -125,13 +126,13 @@ class _CategoryCoverPhotoSelectorScreenState
                   ),
                   SizedBox(height: 16.h),
                   Text(
-                    '아직 사진이 없습니다',
+                    'category.cover.no_photos',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16.sp,
                       fontFamily: 'Pretendard Variable',
                     ),
-                  ),
+                  ).tr(),
                 ],
               ),
             )
@@ -248,7 +249,7 @@ class _CategoryCoverPhotoSelectorScreenState
                     ),
                   ),
                   child: Text(
-                    '확인',
+                    'common.confirm',
                     style: TextStyle(
                       color: (selectedPhotoKey == null)
                           ? Colors.white
@@ -257,7 +258,7 @@ class _CategoryCoverPhotoSelectorScreenState
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Pretendard Variable',
                     ),
-                  ),
+                  ).tr(),
                 ),
               ),
               SizedBox(height: 30.h),
@@ -289,17 +290,18 @@ class _CategoryCoverPhotoSelectorScreenState
       if (!mounted) return;
       Navigator.pop(context, key);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('표지사진이 변경되었습니다.'),
-          backgroundColor: Color(0xFF5a5a5a),
+        SnackBar(
+          content: Text(tr('category.cover.updated', context: context)),
+          backgroundColor: const Color(0xFF5a5a5a),
         ),
       );
     } else if (mounted) {
+      final message =
+          categoryController.errorMessage ??
+          tr('category.cover.update_failed', context: context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            categoryController.errorMessage ?? '표지사진 변경에 실패했습니다.',
-          ),
+          content: Text(message),
           backgroundColor: const Color(0xFF5a5a5a),
         ),
       );

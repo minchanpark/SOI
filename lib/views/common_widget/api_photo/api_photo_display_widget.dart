@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:video_player/video_player.dart';
@@ -758,14 +759,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 ),
                 SizedBox(width: 12.w),
                 Text(
-                  '댓글 삭제',
+                  'comments.delete',
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFFFF0000),
                     fontFamily: 'Pretendard',
                   ),
-                ),
+                ).tr(),
               ],
             ),
           ),
@@ -1059,7 +1060,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     required Offset position,
   }) {
     if (commentId == null) {
-      _showSnackBar('삭제할 수 없는 댓글입니다.');
+      _showSnackBar(tr('comments.delete_unavailable', context: context));
       return;
     }
     setState(() {
@@ -1091,14 +1092,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       if (success) {
         _removeCommentFromCache(targetId);
         await widget.onCommentsReloadRequested?.call(widget.post.id);
-        _showSnackBar('댓글이 삭제되었습니다.');
+        _showSnackBar(tr('comments.delete_success', context: context));
         _dismissOverlay();
       } else {
-        _showSnackBar('댓글 삭제에 실패했습니다.');
+        _showSnackBar(tr('comments.delete_failed', context: context));
       }
     } catch (e) {
       if (!mounted) return;
-      _showSnackBar('댓글 삭제 중 오류가 발생했습니다.');
+      _showSnackBar(tr('comments.delete_error', context: context));
     }
   }
 

@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -169,7 +170,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     with WidgetsBindingObserver {
   bool _isLoading = true;
   bool _showImmediatePreview = false;
-  String? _errorMessage;
+  String? _errorMessageKey;
+  Map<String, String>? _errorMessageArgs;
   bool _useLocalImage = false;
   ImageProvider? _initialImageProvider;
   bool _showAddCategoryUI = false;
@@ -361,7 +363,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
   // ========== 이미지 및 카테고리 로딩 메서드들 ==========
   Future<void> _loadImage() async {
-    _errorMessage = null;
+    _errorMessageKey = null;
+    _errorMessageArgs = null;
 
     // _primeImmediatePreview에서 이미 처리된 경우
     if (_showImmediatePreview) {
@@ -387,14 +390,16 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         }
 
         setState(() {
-          _errorMessage = '이미지 파일을 찾을 수 없습니다.';
+          _errorMessageKey = 'camera.editor.image_not_found';
+          _errorMessageArgs = null;
           _isLoading = false;
         });
         return;
       } catch (e) {
         if (!mounted) return;
         setState(() {
-          _errorMessage = "이미지 로딩 중 오류 발생: $e";
+          _errorMessageKey = 'camera.editor.image_load_error_with_reason';
+          _errorMessageArgs = {'error': e.toString()};
           _isLoading = false;
         });
         return;
@@ -413,7 +418,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     if (currentUser == null) {
       if (mounted) {
         setState(() {
-          _errorMessage = "로그인이 필요합니다.";
+          _errorMessageKey = 'common.login_required';
+          _errorMessageArgs = null;
           _isLoading = false;
         });
       }
@@ -438,7 +444,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = "카테고리 로드 중 오류 발생: $e";
+          _errorMessageKey = 'camera.editor.category_load_error_with_reason';
+          _errorMessageArgs = {'error': e.toString()};
         });
       }
     }
@@ -609,7 +616,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     List<SelectedFriendModel> selectedFriends,
   ) async {
     if (_categoryNameController.text.trim().isEmpty) {
-      _showErrorSnackBar('카테고리 이름을 입력해주세요');
+      _showErrorSnackBar(
+        tr('archive.create_category_name_required', context: context),
+      );
       return;
     }
 
@@ -617,7 +626,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 현재 사용자 정보 가져오기
       final user = _userController.currentUser;
       if (user == null) {
-        _showErrorSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
+        _showErrorSnackBar(
+          tr('common.login_required_relogin', context: context),
+        );
         return;
       }
 
@@ -639,7 +650,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       );
 
       if (categoryId == null) {
-        _showErrorSnackBar('카테고리 생성에 실패했습니다. 다시 시도해주세요.');
+        _showErrorSnackBar(
+          tr('camera.editor.category_create_failed_retry', context: context),
+        );
         return;
       }
 
@@ -651,7 +664,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         _categoryNameController.clear();
       });
     } catch (e) {
-      _showErrorSnackBar('카테고리 생성 중 오류가 발생했습니다');
+      _showErrorSnackBar(
+        tr('camera.editor.category_create_error', context: context),
+      );
     }
   }
 
@@ -699,7 +714,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 현재 사용자 정보 확인
       final currentUser = _userController.currentUser;
       if (currentUser == null) {
-        _showErrorSnackBar('로그인 후 다시 시도해주세요.');
+        _showErrorSnackBar(
+          tr('common.login_required_retry', context: context),
+        );
         _uploadStarted = false;
         return;
       }
@@ -708,7 +725,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       final filePath = widget.filePath;
       if (filePath == null || filePath.isEmpty) {
         _safeSetState(() {
-          _errorMessage = '업로드할 파일을 찾을 수 없습니다.';
+          _errorMessageKey = 'camera.editor.upload_file_not_found';
+          _errorMessageArgs = null;
         });
         _uploadStarted = false;
         return;
@@ -1440,12 +1458,12 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       ),
       body: _isLoading && !_showImmediatePreview
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
+          : _errorMessageKey != null
           ? Center(
               child: Text(
-                _errorMessage!,
+                _errorMessageKey!,
                 style: const TextStyle(color: Colors.white),
-              ),
+              ).tr(namedArgs: _errorMessageArgs),
             )
           : Stack(
               children: [

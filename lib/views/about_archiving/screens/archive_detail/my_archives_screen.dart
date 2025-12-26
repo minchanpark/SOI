@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
@@ -153,14 +154,14 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '오류가 발생했습니다.',
+                      'common.error_occurred',
                       style: TextStyle(color: Colors.white, fontSize: 16.sp),
                       textAlign: TextAlign.center,
-                    ),
+                    ).tr(),
                     SizedBox(height: 16.h),
                     ElevatedButton(
                       onPressed: _refresh,
-                      child: const Text('다시 시도'),
+                      child: Text('common.retry').tr(),
                     ),
                   ],
                 ),
@@ -175,10 +176,10 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 40.h),
                   child: Text(
-                    '검색 결과가 없습니다.',
+                    'archive.search_empty',
                     style: TextStyle(color: Colors.white, fontSize: 16.sp),
                     textAlign: TextAlign.center,
-                  ),
+                  ).tr(),
                 ),
               );
             }
@@ -187,10 +188,10 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 40.h),
                 child: Text(
-                  '등록된 카테고리가 없습니다.',
+                  'archive.empty_categories',
                   style: TextStyle(color: Colors.white, fontSize: 16.sp),
                   textAlign: TextAlign.center,
-                ),
+                ).tr(),
               ),
             );
           }

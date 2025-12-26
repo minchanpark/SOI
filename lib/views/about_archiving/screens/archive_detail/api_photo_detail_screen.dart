@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../api/models/post.dart';
@@ -653,7 +654,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
         if (audioKey == null) {
           debugPrint('오디오 업로드 실패: audioKey is null');
-          _showSnackBar('음성 업로드에 실패했습니다.', backgroundColor: Colors.red);
+          _showSnackBar(
+            tr('audio.upload_failed', context: context),
+            backgroundColor: Colors.red,
+          );
           return;
         }
 
@@ -690,12 +694,18 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           });
         }
       } else {
-        _showSnackBar('댓글 저장에 실패했습니다.', backgroundColor: Colors.red);
+        _showSnackBar(
+          tr('comments.save_failed', context: context),
+          backgroundColor: Colors.red,
+        );
       }
     } catch (e) {
       debugPrint('댓글 저장 실패: $e');
       if (mounted) {
-        _showSnackBar('댓글 저장 중 오류가 발생했습니다.', backgroundColor: Colors.red);
+        _showSnackBar(
+          tr('comments.save_error', context: context),
+          backgroundColor: Colors.red,
+        );
       }
     }
   }
@@ -817,7 +827,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       if (!mounted) return;
       if (success) {
         _deletedPostIds.add(post.id);
-        _showSnackBar('사진이 삭제되었습니다.');
+        _showSnackBar(tr('archive.photo_deleted', context: context));
 
         // 삭제 후 처리
         _handleSuccessfulDeletion(post);
@@ -832,10 +842,16 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           );
         }
       } else {
-        _showSnackBar('삭제 중 오류가 발생했습니다.');
+        _showSnackBar(tr('archive.delete_error', context: context));
       }
     } catch (e) {
-      _showSnackBar('삭제 중 오류가 발생했습니다: $e');
+      _showSnackBar(
+        tr(
+          'archive.delete_error_with_reason',
+          context: context,
+          namedArgs: {'error': e.toString()},
+        ),
+      );
       debugPrint('사진 삭제 실패: $e');
     }
   }

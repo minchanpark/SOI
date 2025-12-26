@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/category_controller.dart'
     as api_category;
@@ -32,13 +33,13 @@ class ExitButton extends StatelessWidget {
             Image.asset('assets/log_out.png', width: 24.w, height: 24.h),
             SizedBox(width: 12.w),
             Text(
-              '나가기',
+              'category.leave.button',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Pretendard Variable',
               ),
-            ),
+            ).tr(),
           ],
         ),
       ),
@@ -66,24 +67,24 @@ class ExitButton extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '카테고리 나가기',
+                'category.leave.title',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20.sp,
                   fontWeight: FontWeight.w600,
                   fontFamily: 'Pretendard Variable',
                 ),
-              ),
+              ).tr(),
               SizedBox(height: 12.h),
               Text(
-                '정말로 이 카테고리에서 나가시겠습니까?\n나가면 이 카테고리의 사진들을 더 이상 볼 수 없습니다.',
+                'category.leave.confirm',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: const Color(0xFFCCCCCC),
                   fontSize: 14.sp,
                   fontFamily: 'Pretendard Variable',
                 ),
-              ),
+              ).tr(),
               SizedBox(height: 24.h),
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -102,9 +103,14 @@ class ExitButton extends StatelessWidget {
 
                         if (currentUser == null) {
                           scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('사용자 정보를 확인할 수 없습니다.'),
-                              backgroundColor: Color(0xFFcccccc),
+                            SnackBar(
+                              content: Text(
+                                tr(
+                                  'common.user_info_unavailable',
+                                  context: context,
+                                ),
+                              ),
+                              backgroundColor: const Color(0xFFcccccc),
                             ),
                           );
                           return;
@@ -118,12 +124,12 @@ class ExitButton extends StatelessWidget {
                         if (success) {
                           navigator.popUntil((route) => route.isFirst);
                         } else {
+                          final message =
+                              categoryController.errorMessage ??
+                              tr('category.leave.failed', context: context);
                           scaffoldMessenger.showSnackBar(
                             SnackBar(
-                              content: Text(
-                                categoryController.errorMessage ??
-                                    '카테고리에서 나갈 수 없습니다.',
-                              ),
+                              content: Text(message),
                               backgroundColor: const Color(0xFFcccccc),
                             ),
                           );
@@ -139,13 +145,13 @@ class ExitButton extends StatelessWidget {
                         elevation: 0,
                       ),
                       child: Text(
-                        '나가기',
+                        'category.leave.button',
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Pretendard Variable',
                         ),
-                      ),
+                      ).tr(),
                     ),
                   ),
                   SizedBox(height: 12.h),
@@ -164,14 +170,14 @@ class ExitButton extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        '취소',
+                        'common.cancel',
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFFcccccc),
                           fontFamily: 'Pretendard Variable',
                         ),
-                      ),
+                      ).tr(),
                     ),
                   ),
                 ],

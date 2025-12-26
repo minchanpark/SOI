@@ -1,1 +1,162 @@
-{}
+{
+  "common": {
+    "error_occurred": "오류가 발생했습니다.",
+    "retry": "다시 시도",
+    "confirm": "확인",
+    "cancel": "취소",
+    "save": "저장",
+    "done": "완료",
+    "add": "추가하기",
+    "send": "전송",
+    "more": "더보기",
+    "delete": "삭제",
+    "block": "차단",
+    "please_wait": "잠시만 기다려주세요",
+    "search_empty": "검색 결과가 없습니다.",
+    "login_required": "로그인이 필요합니다.",
+    "login_required_relogin": "로그인이 필요합니다. 다시 로그인해주세요.",
+    "login_required_retry": "로그인 후 다시 시도해주세요.",
+    "login_info_required": "로그인 정보가 필요합니다.",
+    "user_info_unavailable": "사용자 정보를 확인할 수 없습니다.",
+    "unknown": "알 수 없음"
+  },
+  "archive": {
+    "tabs": {
+      "all": "전체",
+      "shared": "공유앨범",
+      "mine": "나의 앨범"
+    },
+    "menu": {
+      "edit_name": "이름 수정",
+      "pin": "고정",
+      "unpin": "고정 해제",
+      "leave": "나가기"
+    },
+    "edit_name_required": "이름을 입력해주세요",
+    "category_info_unavailable": "카테고리 정보를 찾을 수 없습니다",
+    "edit_name_success": "내 카테고리 이름이 수정되었습니다",
+    "edit_name_error": "이름 수정 중 오류가 발생했습니다",
+    "create_category_title": "새 카테고리 만들기",
+    "create_category_name_hint": "카테고리의 이름을 입력해 주세요.",
+    "create_category_name_counter": "{count}/20자",
+    "create_category_name_required": "카테고리 이름을 입력해주세요",
+    "category_info_invalid": "카테고리 정보가 올바르지 않습니다.",
+    "create_category_failed": "카테고리 생성에 실패했습니다",
+    "create_category_success": "새 카테고리가 추가 되었습니다.",
+    "search_empty": "검색 결과가 없습니다.",
+    "empty_categories": "등록된 카테고리가 없습니다.",
+    "empty_shared_categories": "공유된 카테고리가 없습니다.",
+    "empty_photos": "사진이 없습니다.",
+    "photo_load_failed": "사진을 불러오는데 실패했습니다.",
+    "photo_deleted": "사진이 삭제되었습니다.",
+    "delete_error": "삭제 중 오류가 발생했습니다.",
+    "delete_error_with_reason": "삭제 중 오류가 발생했습니다: {error}"
+  },
+  "comments": {
+    "delete": "댓글 삭제",
+    "delete_unavailable": "삭제할 수 없는 댓글입니다.",
+    "delete_success": "댓글이 삭제되었습니다.",
+    "delete_failed": "댓글 삭제에 실패했습니다.",
+    "delete_error": "댓글 삭제 중 오류가 발생했습니다.",
+    "save_failed": "댓글 저장에 실패했습니다.",
+    "save_error": "댓글 저장 중 오류가 발생했습니다."
+  },
+  "audio": {
+    "upload_failed": "음성 업로드에 실패했습니다.",
+    "waveform_empty": "파형 없음"
+  },
+  "camera": {
+    "preview_start_failed": "카메라를 시작할 수 없습니다.\n앱을 다시 시작해 주세요.",
+    "video_saved": "동영상이 저장되었습니다.",
+    "gallery_access_failed": "갤러리 접근 실패",
+    "capture_error_stop_audio": "카메라 촬영 중 오류가 발생했습니다. 오디오 녹음을 중지하고 다시 시도해주세요.",
+    "video_record_start_failed": "동영상 녹화를 시작할 수 없습니다.",
+    "switch_not_supported_while_recording": "이 기기에서는 녹화 중 카메라 전환을 지원하지 않습니다.",
+    "zoom_set_error": "줌 설정 중 오류가 발생했습니다.",
+    "zoom_set_error_with_reason": "줌 설정 중 오류가 발생했습니다: {error}",
+    "gallery_pick_failed": "갤러리에서 미디어를 선택할 수 없습니다",
+    "recording_short": "REC",
+    "caption_hint": "게시글 추가하기....",
+    "photo_load_failed": "이미지를 불러오지 못헀습니다.\n다시 시도해주세요.",
+    "photo_unavailable": "이미지를 불러올 수 없습니다.",
+    "video_unavailable": "비디오를 불러올 수 없습니다.",
+    "editor": {
+      "image_not_found": "이미지 파일을 찾을 수 없습니다.",
+      "image_load_error_with_reason": "이미지 로딩 중 오류 발생: {error}",
+      "category_load_error_with_reason": "카테고리 로드 중 오류 발생: {error}",
+      "category_create_failed_retry": "카테고리 생성에 실패했습니다. 다시 시도해주세요.",
+      "category_create_error": "카테고리 생성 중 오류가 발생했습니다",
+      "upload_file_not_found": "업로드할 파일을 찾을 수 없습니다."
+    }
+  },
+  "category": {
+    "edit_title": "수정하기",
+    "name_label": "카테고리 이름",
+    "cover": {
+      "edit_button": "표지사진 수정",
+      "edit_sheet_title": "표지 사진 수정",
+      "change_title": "표지사진 변경",
+      "select_take_photo": "사진찍기",
+      "select_from_library": "라이브러리에서 선택",
+      "select_from_category": "카테고리에서 선택",
+      "delete_button": "표지삭제",
+      "upload_failed": "표지사진 업로드에 실패했습니다.",
+      "update_failed": "표지사진 변경에 실패했습니다.",
+      "updated": "표지사진이 변경되었습니다.",
+      "update_error": "표지사진 변경 중 오류가 발생했습니다.",
+      "delete_failed": "표지사진 삭제에 실패했습니다.",
+      "deleted": "표지사진이 삭제되었습니다.",
+      "delete_error": "표지사진 삭제 중 오류가 발생했습니다.",
+      "camera_error": "카메라 촬영 중 오류가 발생했습니다.",
+      "gallery_error": "갤러리 선택 중 오류가 발생했습니다.",
+      "no_photos": "아직 사진이 없습니다"
+    },
+    "members": {
+      "add": "추가하기",
+      "add_friend": "친구 추가",
+      "add_friend_action": "친구 추가하기",
+      "more": "+ 더보기",
+      "collapse": "접기"
+    },
+    "leave": {
+      "button": "나가기",
+      "title": "카테고리 나가기",
+      "confirm": "정말로 이 카테고리에서 나가시겠습니까?\n나가면 이 카테고리의 사진들을 더 이상 볼 수 없습니다.",
+      "success": "카테고리에서 나갔습니다.",
+      "failed": "카테고리에서 나갈 수 없습니다."
+    }
+  },
+  "friends": {
+    "list_title": "친구 목록",
+    "search_hint": "친구 검색하기",
+    "empty": "아직 친구가 없습니다",
+    "load_failed": "친구 목록을 불러오지 못했습니다.",
+    "load_failed_title": "친구 목록을 불러오지 못했습니다",
+    "load_failed_detail": "친구 목록을 불러오지 못했습니다.",
+    "add_friend": "친구 추가",
+    "select_to_add": "추가할 친구를 선택해 주세요.",
+    "invite_sent": "{count}명의 친구에게 초대장을 보냈습니다.",
+    "invite_error_with_reason": "친구 초대 중 오류가 발생했습니다: {error}",
+    "invite_check_title": "친구 확인",
+    "menu": {
+      "delete": "친구 삭제",
+      "block": "차단"
+    },
+    "blocked": {
+      "title": "차단된 친구",
+      "empty": "차단된 친구가 없습니다",
+      "unblock": "차단 해제",
+      "load_error": "차단된 친구를 불러오지 못했습니다."
+    },
+    "delete_confirm_title": "{name}님을 삭제하시겠습니까?",
+    "delete_confirm_desc": "삭제시, 추가된 카테고리에서 삭제될 수 있습니다.",
+    "block_confirm_title": "{name}님을 차단하시겠습니까?",
+    "block_confirm_desc": "차단시, 이 친구는 더 이상 나를 카테고리에\n초대하거나 친구 요청을 할 수 없습니다.",
+    "delete_success": "친구가 삭제되었습니다.",
+    "delete_failed": "친구 삭제에 실패했습니다.",
+    "delete_error": "친구 삭제 중 오류가 발생했습니다.",
+    "block_success": "친구가 차단되었습니다.",
+    "block_failed": "친구 차단에 실패했습니다.",
+    "block_error": "친구 차단 중 오류가 발생했습니다."
+  }
+}

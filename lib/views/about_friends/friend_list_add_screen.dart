@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/category_controller.dart' as api_category;
 import 'package:soi/api/controller/friend_controller.dart' as api_friend;
@@ -33,7 +34,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
 
   List<User> _friends = [];
   bool _isLoadingFriends = false;
-  String? _friendLoadError;
+  String? _friendLoadErrorKey;
   Set<int> _existingMemberIds = <int>{};
 
   @override
@@ -70,7 +71,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
 
     setState(() {
       _isLoadingFriends = true;
-      _friendLoadError = null;
+      _friendLoadErrorKey = null;
     });
 
     try {
@@ -80,7 +81,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
       if (currentUserId == null) {
         setState(() {
           _friends = [];
-          _friendLoadError = '로그인 정보가 필요합니다.';
+          _friendLoadErrorKey = 'common.login_info_required';
         });
         return;
       }
@@ -98,7 +99,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _friendLoadError = '친구 목록을 불러오지 못했습니다.';
+          _friendLoadErrorKey = 'friends.load_failed';
         });
       }
     } finally {
@@ -137,7 +138,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
     final parsedCategoryId = int.tryParse(widget.categoryId ?? '');
 
     if (parsedCategoryId == null) {
-      _showSnackBar('카테고리 정보가 올바르지 않습니다.');
+      _showSnackBar(tr('archive.category_info_invalid', context: context));
       return;
     }
 
@@ -145,7 +146,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
     final requesterId = userController.currentUser?.id;
 
     if (requesterId == null) {
-      _showSnackBar('로그인이 필요합니다.');
+      _showSnackBar(tr('common.login_required', context: context));
       return;
     }
 
@@ -154,7 +155,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
         .toList();
 
     if (receiverIds.isEmpty) {
-      _showSnackBar('추가할 친구를 선택해 주세요.');
+      _showSnackBar(tr('friends.select_to_add', context: context));
       return;
     }
 
@@ -179,7 +180,13 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${receiverIds.length}명의 친구에게 초대장을 보냈습니다.'),
+          content: Text(
+            tr(
+              'friends.invite_sent',
+              context: context,
+              namedArgs: {'count': receiverIds.length.toString()},
+            ),
+          ),
           backgroundColor: const Color(0xFF5A5A5A),
           duration: const Duration(seconds: 2),
         ),
@@ -192,7 +199,13 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
         }
       });
     } catch (e) {
-      _showSnackBar('친구 초대 중 오류가 발생했습니다: $e');
+      _showSnackBar(
+        tr(
+          'friends.invite_error_with_reason',
+          context: context,
+          namedArgs: {'error': e.toString()},
+        ),
+      );
     }
   }
 
@@ -203,7 +216,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
 
     for (final friendId in _selectedFriendIds) {
       final friend = _findFriendById(friendId);
-      final friendName = friend?.name ?? '알 수 없음';
+      final friendName = friend?.name ?? tr('common.unknown', context: context);
       final profileUrl = friend?.profileImageUrlKey;
 
       selectedFriends.add(
@@ -244,14 +257,14 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Color(0xffd9d9d9)),
         title: Text(
-          '친구 목록',
+          'friends.list_title',
           style: TextStyle(
             color: const Color(0xfff9f9f9),
             fontSize: 20.sp,
             fontWeight: FontWeight.w700,
             fontFamily: 'Pretendard',
           ),
-        ),
+        ).tr(),
         centerTitle: false,
       ),
       body: Column(
@@ -285,7 +298,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
                       ),
                       cursorColor: const Color(0xfff9f9f9),
                       decoration: InputDecoration(
-                        hintText: '친구 검색하기',
+                        hintText: tr('friends.search_hint', context: context),
                         hintStyle: TextStyle(
                           color: const Color(0xffd9d9d9),
                           fontSize: 16.sp,
@@ -306,20 +319,22 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   )
-                : _friendLoadError != null
+                : _friendLoadErrorKey != null
                 ? Center(
                     child: Text(
-                      _friendLoadError!,
+                      _friendLoadErrorKey!,
                       style: TextStyle(
                         color: const Color(0xff666666),
                         fontSize: 14.sp,
                       ),
-                    ),
+                    ).tr(),
                   )
                 : displayFriends.isEmpty
                 ? Center(
                     child: Text(
-                      hasQuery ? '검색 결과가 없습니다' : '친구가 없습니다',
+                      hasQuery
+                          ? tr('common.search_empty', context: context)
+                          : tr('friends.empty', context: context),
                       style: TextStyle(
                         color: const Color(0xff666666),
                         fontSize: 16.sp,
@@ -368,14 +383,14 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
                                       ),
                                       SizedBox(width: 12.w),
                                       Text(
-                                        "친구 추가",
+                                        "friends.add_friend",
                                         style: TextStyle(
                                           color: const Color(0xfff9f9f9),
                                           fontSize: 16.sp,
                                           fontWeight: FontWeight.w900,
                                           fontFamily: 'Pretendard',
                                         ),
-                                      ),
+                                      ).tr(),
                                     ],
                                   ),
                                 ),
@@ -427,7 +442,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
                   elevation: 0,
                 ),
                 child: Text(
-                  '완료',
+                  'common.done',
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
@@ -436,7 +451,7 @@ class _FriendListAddScreenState extends State<FriendListAddScreen> {
                         ? Colors.black
                         : const Color(0xfff8f8f8),
                   ),
-                ),
+                ).tr(),
               ),
             ),
           ),

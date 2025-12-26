@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// 카메라 녹화중일 때, 표시할 위젯입니다.
 class CameraRecordingIndicator extends StatelessWidget {
@@ -26,14 +27,14 @@ class CameraRecordingIndicator extends StatelessWidget {
           ),
           SizedBox(width: 8.w),
           Text(
-            'REC',
+            'camera.recording_short',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 14.sp,
               letterSpacing: 1.2,
             ),
-          ),
+          ).tr(),
         ],
       ),
     );

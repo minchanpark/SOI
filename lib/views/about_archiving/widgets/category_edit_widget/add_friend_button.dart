@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AddFriendButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -32,13 +33,13 @@ class AddFriendButton extends StatelessWidget {
             ),
             SizedBox(width: 12.w),
             Text(
-              '친구 추가하기',
+              'category.members.add_friend_action',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Pretendard Variable',
               ),
-            ),
+            ).tr(),
           ],
         ),
       ),

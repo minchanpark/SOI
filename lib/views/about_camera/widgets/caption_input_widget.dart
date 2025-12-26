@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CaptionInputWidget extends StatelessWidget {
   final TextEditingController controller;
@@ -53,7 +54,7 @@ class CaptionInputWidget extends StatelessWidget {
                     decoration: InputDecoration(
                       isCollapsed: true,
                       border: InputBorder.none,
-                      hintText: '게시글 추가하기....',
+                      hintText: tr('camera.caption_hint', context: context),
                       hintStyle: TextStyle(
                         color: Colors.white,
                         fontSize: 16,

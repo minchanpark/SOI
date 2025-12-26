@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../../../api/models/category.dart';
 
 class CategoryInfoSection extends StatelessWidget {
@@ -22,14 +23,14 @@ class CategoryInfoSection extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '카테고리 이름',
+            'category.name_label',
             style: TextStyle(
               color: const Color(0xFFAAAAAA),
               fontSize: 13.sp,
               fontWeight: FontWeight.w400,
               fontFamily: 'Pretendard Variable',
             ),
-          ),
+          ).tr(),
           Flexible(
             child: Text(
               category.name,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:video_player/video_player.dart';
 
 // 이미지를 표시하는 위젯
@@ -175,14 +176,14 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
                     Icon(Icons.error, color: Color(0xffc1c1c1), size: 50.sp),
                     SizedBox(height: 10.h),
                     Text(
-                      "이미지를 불러오지 못헀습니다.\n다시 시도해주세요.",
+                      'camera.photo_load_failed',
                       style: TextStyle(
                         color: Color(0xffc1c1c1),
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         fontFamily: "Pretendard",
                       ),
-                    ),
+                    ).tr(),
                   ],
                 ),
               );
@@ -194,8 +195,11 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
     }
     // 둘 다 없는 경우 에러 메시지 표시
     else {
-      return const Center(
-        child: Text("이미지를 불러올 수 없습니다.", style: TextStyle(color: Colors.white)),
+      return Center(
+        child: Text(
+          "camera.photo_unavailable",
+          style: TextStyle(color: Colors.white),
+        ).tr(),
       );
     }
   }
@@ -212,8 +216,11 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
   Widget _buildVideoPlayer() {
     // 비디오 컨트롤러가 없으면 에러 표시
     if (_videoController == null || _initializeVideoPlayerFuture == null) {
-      return const Center(
-        child: Text("비디오를 불러올 수 없습니다.", style: TextStyle(color: Colors.white)),
+      return Center(
+        child: Text(
+          "camera.video_unavailable",
+          style: TextStyle(color: Colors.white),
+        ).tr(),
       );
     }
 

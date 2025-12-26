@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../../api/controller/audio_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
@@ -648,13 +649,13 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
             ),
             child: Center(
               child: Text(
-                '파형 없음',
+                'audio.waveform_empty',
                 style: TextStyle(
                   color: Colors.white54,
                   fontSize: 14.sp,
                   fontFamily: "Pretendard",
                 ),
-              ),
+              ).tr(),
             ),
           );
   }

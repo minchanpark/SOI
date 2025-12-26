@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../api/controller/category_controller.dart' as api_category;
@@ -223,14 +224,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
             centerTitle: false,
             titleSpacing: 0,
             title: Text(
-              '수정하기',
+              'category.edit_title',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Pretendard Variable',
               ),
-            ),
+            ).tr(),
           ),
           body: SingleChildScrollView(
             child: Padding(
@@ -323,14 +324,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
               ),
               SizedBox(height: 9.h),
               Text(
-                '표지 사진 수정',
+                'category.cover.edit_sheet_title',
                 style: TextStyle(
                   color: const Color(0xFFF8F8F8),
                   fontSize: 18.sp,
                   fontFamily: 'Pretendard Variable',
                   fontWeight: FontWeight.w700,
                 ),
-              ),
+              ).tr(),
 
               Divider(color: const Color(0xFF5A5A5A)),
 
@@ -346,14 +347,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   height: 24.h,
                 ),
                 title: Text(
-                  '사진찍기',
+                  'category.cover.select_take_photo',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Pretendard Variable',
                   ),
-                ),
+                ).tr(),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromCamera();
@@ -372,14 +373,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   height: 24.h,
                 ),
                 title: Text(
-                  '라이브러리에서 선택',
+                  'category.cover.select_from_library',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Pretendard Variable',
                   ),
-                ),
+                ).tr(),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromGallery();
@@ -398,14 +399,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   height: 24.h,
                 ),
                 title: Text(
-                  '카테고리에서 선택',
+                  'category.cover.select_from_category',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Pretendard Variable',
                   ),
-                ),
+                ).tr(),
                 onTap: () {
                   Navigator.pop(context);
                   _selectFromCategory();
@@ -424,14 +425,14 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   height: 24.h,
                 ),
                 title: Text(
-                  '표지삭제',
+                  'category.cover.delete_button',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Pretendard Variable',
                   ),
-                ),
+                ).tr(),
                 onTap: () {
                   Navigator.pop(context);
                   _deleteCoverPhoto();
@@ -461,9 +462,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('카메라 촬영 중 오류가 발생했습니다.'),
-          backgroundColor: Color(0xFF5a5a5a),
+        SnackBar(
+          content: Text(tr('category.cover.camera_error', context: context)),
+          backgroundColor: const Color(0xFF5a5a5a),
         ),
       );
     }
@@ -484,9 +485,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('갤러리 선택 중 오류가 발생했습니다.'),
-          backgroundColor: Color(0xFF5a5a5a),
+        SnackBar(
+          content: Text(tr('category.cover.gallery_error', context: context)),
+          backgroundColor: const Color(0xFF5a5a5a),
         ),
       );
     }
@@ -514,7 +515,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       final userController = context.read<UserController>();
       final currentUser = userController.currentUser;
       if (currentUser == null) {
-        _showSnackBar('로그인이 필요합니다.');
+        _showSnackBar(tr('common.login_required', context: context));
         return;
       }
 
@@ -530,7 +531,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       );
 
       if (keys.isEmpty) {
-        _showSnackBar('표지사진 업로드에 실패했습니다.');
+        _showSnackBar(tr('category.cover.upload_failed', context: context));
         return;
       }
 
@@ -543,14 +544,17 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       );
 
       if (!success) {
-        _showSnackBar(categoryController.errorMessage ?? '표지사진 변경에 실패했습니다.');
+        final message =
+            categoryController.errorMessage ??
+            tr('category.cover.update_failed', context: context);
+        _showSnackBar(message);
         return;
       }
 
       await _reloadCategoryCache();
-      _showSnackBar('표지사진이 변경되었습니다.');
+      _showSnackBar(tr('category.cover.updated', context: context));
     } catch (_) {
-      _showSnackBar('표지사진 변경 중 오류가 발생했습니다.');
+      _showSnackBar(tr('category.cover.update_error', context: context));
     }
   }
 
@@ -560,7 +564,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       final userController = context.read<UserController>();
       final currentUser = userController.currentUser;
       if (currentUser == null) {
-        _showSnackBar('로그인이 필요합니다.');
+        _showSnackBar(tr('common.login_required', context: context));
         return;
       }
 
@@ -573,14 +577,17 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       );
 
       if (!success) {
-        _showSnackBar(categoryController.errorMessage ?? '표지사진 삭제에 실패했습니다.');
+        final message =
+            categoryController.errorMessage ??
+            tr('category.cover.delete_failed', context: context);
+        _showSnackBar(message);
         return;
       }
 
       await _reloadCategoryCache();
-      _showSnackBar('표지사진이 삭제되었습니다.');
+      _showSnackBar(tr('category.cover.deleted', context: context));
     } catch (_) {
-      _showSnackBar('표지사진 삭제 중 오류가 발생했습니다.');
+      _showSnackBar(tr('category.cover.delete_error', context: context));
     }
   }
 

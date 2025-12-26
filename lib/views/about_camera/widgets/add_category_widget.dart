@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
 import '../../about_archiving/widgets/overlapping_profiles_widget.dart';
 import '../../about_friends/friend_list_add_screen.dart';
@@ -36,7 +37,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '카테고리 이름을 입력해주세요.',
+            tr('archive.create_category_name_required', context: context),
             style: TextStyle(
               color: Colors.white,
               fontSize: 14.sp,
@@ -105,7 +106,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
 
                 // 제목
                 Text(
-                  '새 카테고리 만들기',
+                  'archive.create_category_title',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -113,7 +114,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                     fontFamily: 'Pretendard',
                     letterSpacing: -0.4,
                   ),
-                ),
+                ).tr(),
 
                 // 저장 버튼
                 SizedBox(
@@ -132,7 +133,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                       padding: EdgeInsets.only(top: (2.5).h),
                     ),
                     child: Text(
-                      '저장',
+                      'common.save',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14.sp,
@@ -140,7 +141,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                         fontFamily: 'Pretendard',
                         letterSpacing: -0.4,
                       ),
-                    ),
+                    ).tr(),
                   ),
                 ),
               ],
@@ -180,7 +181,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                '친구 추가하기',
+                                'category.members.add_friend_action',
                                 style: TextStyle(
                                   color: const Color(0xFFE2E2E2),
                                   fontSize: 14.sp,
@@ -188,7 +189,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                                   fontFamily: 'Pretendard',
                                   letterSpacing: -0.4,
                                 ),
-                              ),
+                              ).tr(),
                             ],
                           ),
                         ),
@@ -222,7 +223,10 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                             border: UnderlineInputBorder(
                               borderSide: BorderSide.none,
                             ),
-                            hintText: '카테고리의 이름을 입력해 주세요.',
+                            hintText: tr(
+                              'archive.create_category_name_hint',
+                              context: context,
+                            ),
                             hintStyle: TextStyle(
                               color: const Color(0xFFcccccc),
                               fontSize: 14.sp,
@@ -253,7 +257,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                               valueListenable: widget.textController,
                               builder: (context, value, child) {
                                 return Text(
-                                  '${value.text.length}/20자',
+                                  'archive.create_category_name_counter',
                                   style: TextStyle(
                                     color: const Color(0xFFCBCBCB),
                                     fontSize: 12.sp,
@@ -261,6 +265,10 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                                     fontWeight: FontWeight.w500,
                                     letterSpacing: -0.40,
                                   ),
+                                ).tr(
+                                  namedArgs: {
+                                    'count': value.text.length.toString(),
+                                  },
                                 );
                               },
                             ),

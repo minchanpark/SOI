@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../api/controller/category_controller.dart' as api_category;
@@ -94,7 +95,7 @@ class _CategoryListWidgetState extends State<CategoryListWidget>
                   if (index == 0) {
                     return CategoryItemWidget(
                       image: "assets/plus_icon.png",
-                      label: '추가하기',
+                      label: tr('common.add', context: context),
                       onTap: widget.addCategoryPressed,
                     );
                   }
@@ -146,14 +147,14 @@ class _CategoryListWidgetState extends State<CategoryListWidget>
                         height: 45.h,
                         child: Center(
                           child: Text(
-                            '전송',
+                            'common.send',
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 20.sp,
                               fontFamily: 'Pretendard',
                               fontWeight: FontWeight.w600,
                             ),
-                          ),
+                          ).tr(),
                         ),
                       ),
                     ),

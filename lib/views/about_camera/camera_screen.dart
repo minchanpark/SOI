@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 import '../../api/services/camera_service.dart';
@@ -262,7 +263,7 @@ class _CameraScreenState extends State<CameraScreen>
 
         _openVideoEditor(path);
 
-        _showSnackBar('동영상이 저장되었습니다.');
+        _showSnackBar(tr('camera.video_saved', context: context));
       }
     });
 
@@ -304,7 +305,7 @@ class _CameraScreenState extends State<CameraScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _galleryError = '갤러리 접근 실패';
+          _galleryError = tr('camera.gallery_access_failed', context: context);
           _isLoadingGallery = false;
         });
       }
@@ -429,7 +430,9 @@ class _CameraScreenState extends State<CameraScreen>
     } on PlatformException catch (e) {
       // iOS에서 "Cannot Record" 오류가 발생한 경우 추가 정보 제공
       if (e.message?.contains("Cannot Record") == true) {
-        _showSnackBar('카메라 촬영 중 오류가 발생했습니다. 오디오 녹음을 중지하고 다시 시도해주세요.');
+        _showSnackBar(
+          tr('camera.capture_error_stop_audio', context: context),
+        );
       }
     } catch (e) {
       // 추가 예외 처리
@@ -474,7 +477,7 @@ class _CameraScreenState extends State<CameraScreen>
       });
       _pendingVideoAction = _PendingVideoAction.none;
       _showSnackBar(
-        '동영상 녹화를 시작할 수 없습니다.',
+        tr('camera.video_record_start_failed', context: context),
         backgroundColor: const Color(0xFFD9534F),
       );
     }
@@ -605,7 +608,9 @@ class _CameraScreenState extends State<CameraScreen>
   /// cameraservice에 카메라 전환 요청
   Future<void> _switchCamera() async {
     if (_isVideoRecording && !_supportsLiveSwitch) {
-      _showSnackBar('이 기기에서는 녹화 중 카메라 전환을 지원하지 않습니다.');
+      _showSnackBar(
+        tr('camera.switch_not_supported_while_recording', context: context),
+      );
       return;
     }
 
@@ -665,8 +670,18 @@ class _CameraScreenState extends State<CameraScreen>
         currentZoom = zoomLabel;
       });
     } on PlatformException catch (e) {
-      final message = e.message ?? '줌 설정 중 오류가 발생했습니다.';
-      _showSnackBar('줌 설정 중 오류가 발생했습니다: $message');
+      final message = e.message;
+      if (message == null || message.isEmpty) {
+        _showSnackBar(tr('camera.zoom_set_error', context: context));
+        return;
+      }
+      _showSnackBar(
+        tr(
+          'camera.zoom_set_error_with_reason',
+          context: context,
+          namedArgs: {'error': message},
+        ),
+      );
     }
   }
 
@@ -746,7 +761,9 @@ class _CameraScreenState extends State<CameraScreen>
                             ),
                           );
                         } catch (e) {
-                          _showSnackBar('갤러리에서 미디어를 선택할 수 없습니다');
+                          _showSnackBar(
+                            tr('camera.gallery_pick_failed', context: context),
+                          );
                         }
                       },
                       child: Container(

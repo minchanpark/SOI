@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/category_controller.dart';
@@ -337,7 +338,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('이름을 입력해주세요'),
+            content: Text(tr('archive.edit_name_required', context: context)),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -351,12 +352,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       final userId = _userController?.currentUser?.id;
 
       if (userId == null) {
-        throw Exception('사용자 정보를 찾을 수 없습니다');
+        throw Exception(tr('common.user_info_unavailable', context: context));
       }
 
       final categoryId = int.tryParse(_editingCategoryId ?? '');
       if (categoryId == null) {
-        throw Exception('카테고리 정보를 찾을 수 없습니다');
+        throw Exception(
+          tr('archive.category_info_unavailable', context: context),
+        );
       }
 
       // 커스텀 이름 업데이트
@@ -373,7 +376,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('내 카테고리 이름이 수정되었습니다'),
+            content: Text(tr('archive.edit_name_success', context: context)),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -382,7 +385,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('이름 수정 중 오류가 발생했습니다'),
+            content: Text(tr('archive.edit_name_error', context: context)),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -507,9 +510,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                       // 텍스트 레이블들
                       Row(
                         children: [
-                          Expanded(child: _buildChip('전체', 0)),
-                          Expanded(child: _buildChip('공유앨범', 1)),
-                          Expanded(child: _buildChip('나의 앨범', 2)),
+                          Expanded(child: _buildChip('archive.tabs.all', 0)),
+                          Expanded(child: _buildChip('archive.tabs.shared', 1)),
+                          Expanded(child: _buildChip('archive.tabs.mine', 2)),
                         ],
                       ),
                     ],
@@ -627,14 +630,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                           ),
                         ),
                         child: Text(
-                          '확인',
+                          'common.confirm',
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 20.sp,
                             fontFamily: 'Pretendard',
                             fontWeight: FontWeight.w600,
                           ),
-                        ),
+                        ).tr(),
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -650,14 +653,14 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                           ),
                         ),
                         child: Text(
-                          '취소',
+                          'common.cancel',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20.sp,
                             fontFamily: 'Pretendard',
                             fontWeight: FontWeight.w600,
                           ),
-                        ),
+                        ).tr(),
                       ),
                     ),
                   ],
@@ -670,7 +673,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   }
 
   // 선택 가능한 Chip 위젯 생성
-  Widget _buildChip(String label, int index) {
+  Widget _buildChip(String labelKey, int index) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -689,7 +692,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
         alignment: Alignment.center,
         padding: EdgeInsets.only(top: 2.h),
         child: Text(
-          label,
+          labelKey,
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -698,7 +701,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-        ),
+        ).tr(),
       ),
     );
   }
@@ -754,7 +757,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
                         // 제목
                         Text(
-                          '새 카테고리 만들기',
+                          'archive.create_category_title',
                           style: TextStyle(
                             color: const Color(0xFFFFFFFF),
                             fontSize: 16.sp,
@@ -762,7 +765,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                             fontFamily: 'Pretendard',
                             letterSpacing: -0.5,
                           ),
-                        ),
+                        ).tr(),
 
                         // 저장 버튼
                         Container(
@@ -784,7 +787,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
-                              '저장',
+                              'common.save',
                               style: TextStyle(
                                 color: const Color(0xFFFFFFFF),
                                 fontSize: 14.sp,
@@ -792,7 +795,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                                 fontFamily: 'Pretendard',
                                 letterSpacing: -0.4,
                               ),
-                            ),
+                            ).tr(),
                           ),
                         ),
                       ],
@@ -854,7 +857,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                '친구 추가하기',
+                                'category.members.add_friend_action',
                                 style: TextStyle(
                                   color: const Color(0xFFE2E2E2),
                                   fontSize: 14.sp,
@@ -862,7 +865,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                                   fontFamily: 'Pretendard',
                                   letterSpacing: -0.4,
                                 ),
-                              ),
+                              ).tr(),
                             ],
                           ),
                         ),
@@ -919,7 +922,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                             fontFamily: 'Pretendard',
                           ),
                           decoration: InputDecoration(
-                            hintText: '카테고리의 이름을 입력해 주세요.',
+                            hintText: tr(
+                              'archive.create_category_name_hint',
+                              context: context,
+                            ),
                             hintStyle: TextStyle(
                               color: const Color(0xFFCCCCCC),
                               fontSize: 14.sp,
@@ -942,7 +948,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                               valueListenable: _categoryNameController,
                               builder: (context, value, child) {
                                 return Text(
-                                  '${value.text.length}/20자',
+                                  'archive.create_category_name_counter',
                                   style: TextStyle(
                                     color: const Color(0xFFCCCCCC),
                                     fontSize: 12.sp,
@@ -950,6 +956,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                                     fontFamily: 'Pretendard',
                                     letterSpacing: -0.4,
                                   ),
+                                ).tr(
+                                  namedArgs: {
+                                    'count': value.text.length.toString(),
+                                  },
                                 );
                               },
                             ),
@@ -980,9 +990,11 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   ) async {
     final categoryName = _categoryNameController.text.trim();
     if (categoryName.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(_snackBarComponenet('카테고리 이름을 입력해주세요'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        _snackBarComponenet(
+          tr('archive.create_category_name_required', context: context),
+        ),
+      );
       return;
     }
 
@@ -1006,7 +1018,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       final userId = userController.currentUser?.id;
 
       if (userId == null) {
-        _showSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
+        _showSnackBar(tr('common.login_required_relogin', context: context));
         return;
       }
 
@@ -1041,11 +1053,11 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
         }
       } else {
-        _showSnackBar('카테고리 생성에 실패했습니다');
+        _showSnackBar(tr('archive.create_category_failed', context: context));
       }
     } catch (e) {
       debugPrint('[ArchiveMainScreen] 카테고리 생성 오류: $e');
-      _showSnackBar('카테고리 생성에 실패했습니다');
+      _showSnackBar(tr('archive.create_category_failed', context: context));
     }
   }
 
@@ -1067,7 +1079,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           ),
           SizedBox(width: 15.w),
           Text(
-            '새 카테고리가 추가 되었습니다.',
+            tr('archive.create_category_success', context: context),
             style: TextStyle(
               color: Colors.white,
               fontSize: 16.sp,

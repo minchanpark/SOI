@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CategoryMemberViewModel {
   final int? userId;
@@ -80,13 +81,13 @@ class FriendsListWidget extends StatelessWidget {
                 ),
                 SizedBox(width: 12.w),
                 Text(
-                  "친구 추가",
+                  "category.members.add_friend",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w400,
                   ),
-                ),
+                ).tr(),
               ],
             ),
           ),
@@ -144,14 +145,14 @@ class FriendsListWidget extends StatelessWidget {
                         Padding(
                           padding: EdgeInsets.only(left: 18.w),
                           child: Text(
-                            '+ 더보기',
+                            'category.members.more',
                             style: TextStyle(
                               color: const Color(0xFFCCCCCC),
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w500,
                               fontFamily: 'Pretendard Variable',
                             ),
-                          ),
+                          ).tr(),
                         ),
                       ],
                     ),
@@ -184,14 +185,14 @@ class FriendsListWidget extends StatelessWidget {
                           ),
                           SizedBox(width: 12.w),
                           Text(
-                            '접기',
+                            'category.members.collapse',
                             style: TextStyle(
                               color: const Color(0xFFCCCCCC),
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                               fontFamily: 'Pretendard Variable',
                             ),
-                          ),
+                          ).tr(),
                         ],
                       ),
                     ),

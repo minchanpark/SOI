@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../../api/controller/friend_controller.dart';
 import '../../../api/controller/user_controller.dart';
@@ -111,12 +112,12 @@ class _FriendListCardState extends State<FriendListCard> {
                     height: 132.h,
                     child: Center(
                       child: Text(
-                        '아직 친구가 없습니다',
+                        'friends.empty',
                         style: TextStyle(
                           color: const Color(0xff666666),
                           fontSize: 14.sp,
                         ),
-                      ),
+                      ).tr(),
                     ),
                   )
                 : Column(
@@ -222,12 +223,12 @@ class _FriendListCardState extends State<FriendListCard> {
                                   Icon(Icons.add, size: (18).sp),
                                   SizedBox(width: (8).w),
                                   Text(
-                                    '더보기',
+                                    'common.more',
                                     style: TextStyle(
                                       color: const Color(0xffd9d9d9),
                                       fontSize: (16).sp,
                                     ),
-                                  ),
+                                  ).tr(),
                                 ],
                               ),
                               SizedBox(height: (12).h),

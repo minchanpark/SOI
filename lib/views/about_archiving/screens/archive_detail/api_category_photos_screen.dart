@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/views/about_archiving/screens/category_edit/category_editor_screen.dart';
@@ -39,7 +40,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       {}; // 카테고리별 포스트 캐시를 관리하는 맵
 
   bool _isLoading = true; // 로딩 상태
-  String? _errorMessage; // 에러 메시지
+  String? _errorMessageKey; // 에러 메시지 키
   List<Post> _posts = []; // 로드된 포스트 목록
   Category? _category; // 갱신된 카테고리 정보
 
@@ -103,7 +104,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       final currentUser = userController!.currentUser;
       if (currentUser == null) {
         setState(() {
-          _errorMessage = '로그인이 필요합니다.';
+          _errorMessageKey = 'common.login_required';
           _isLoading = false;
         });
         return;
@@ -122,7 +123,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             _posts = cached.posts; // 캐시된 포스트 사용
             _postImageUrls = cached.imageUrls; // 캐시된 이미지 URL 사용
             _isLoading = false; // 로딩 완료
-            _errorMessage = null; // 에러 없음
+            _errorMessageKey = null; // 에러 없음
           });
         }
         return;
@@ -130,7 +131,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
+        _errorMessageKey = null;
       });
 
       // 카테고리 내 포스트 조회
@@ -176,7 +177,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       debugPrint('[ApiCategoryPhotosScreen] 포스트 로드 실패: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = '사진을 불러오는데 실패했습니다.';
+          _errorMessageKey = 'archive.photo_load_failed';
           _isLoading = false;
         });
       }
@@ -397,7 +398,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     }
 
     // 에러 발생
-    if (_errorMessage != null) {
+    if (_errorMessageKey != null) {
       return Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 40.w),
@@ -405,20 +406,20 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                _errorMessage!,
+                _errorMessageKey!,
                 style: TextStyle(color: Colors.white, fontSize: 16.sp),
                 textAlign: TextAlign.center,
-              ),
+              ).tr(),
               SizedBox(height: 16.h),
               ElevatedButton(
                 onPressed: _loadPosts,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white24,
                 ),
-                child: const Text(
-                  '다시 시도',
+                child: Text(
+                  'common.retry',
                   style: TextStyle(color: Colors.white),
-                ),
+                ).tr(),
               ),
             ],
           ),
@@ -432,10 +433,10 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 40.w),
           child: Text(
-            '사진이 없습니다.',
+            'archive.empty_photos',
             style: TextStyle(color: Colors.white, fontSize: 16.sp),
             textAlign: TextAlign.center,
-          ),
+          ).tr(),
         ),
       );
     }

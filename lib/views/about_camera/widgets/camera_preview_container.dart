@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:eva_icons_flutter/eva_icons_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import 'camera_recording_indicator.dart';
 import 'camera_shimmer_box.dart';
@@ -65,10 +66,10 @@ class CameraPreviewContainer extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  '카메라를 시작할 수 없습니다.\n앱을 다시 시작해 주세요.',
+                  'camera.preview_start_failed',
                   style: TextStyle(color: Colors.white, fontSize: 18.sp),
                   textAlign: TextAlign.center,
-                ),
+                ).tr(),
               ),
             );
           }

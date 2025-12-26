@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/friend_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
@@ -30,7 +31,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
   List<User> _friends = [];
   bool _isLoadingFriends = false;
-  String? _friendLoadError;
+  String? _friendLoadErrorKey;
 
   /// API를 통해 친구 목록 로드
   Future<void> _loadFriends() async {
@@ -38,7 +39,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
     setState(() {
       _isLoadingFriends = true;
-      _friendLoadError = null;
+      _friendLoadErrorKey = null;
     });
 
     try {
@@ -51,7 +52,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
         if (mounted) {
           setState(() {
             _friends = [];
-            _friendLoadError = '로그인 정보가 필요합니다.';
+            _friendLoadErrorKey = 'common.login_info_required';
           });
         }
         return;
@@ -74,7 +75,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
       debugPrint('친구 목록 로드 실패: $e');
       if (mounted) {
         setState(() {
-          _friendLoadError = '친구 목록을 불러오지 못했습니다.';
+          _friendLoadErrorKey = 'friends.load_failed_detail';
         });
       }
     } finally {
@@ -137,14 +138,14 @@ class _FriendListScreenState extends State<FriendListScreen> {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Color(0xffd9d9d9)),
         title: Text(
-          '친구 목록',
+          'friends.list_title',
           style: TextStyle(
             color: const Color(0xFFD9D9D9),
             fontSize: 20,
             fontFamily: GoogleFonts.inter().fontFamily,
             fontWeight: FontWeight.w700,
           ),
-        ),
+        ).tr(),
         centerTitle: false,
       ),
       body: Column(
@@ -169,7 +170,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
                 ),
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
-                  hintText: '친구 검색하기',
+                  hintText: tr('friends.search_hint', context: context),
                   hintStyle: TextStyle(
                     color: const Color(0xFFD9D9D9),
                     fontSize: 18.02,
@@ -194,14 +195,14 @@ class _FriendListScreenState extends State<FriendListScreen> {
               Icon(Icons.people_alt_outlined, size: 21.sp),
               SizedBox(width: 11.w),
               Text(
-                "친구 목록",
+                "friends.list_title",
                 style: TextStyle(
                   color: const Color(0xfff9f9f9),
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
                   fontFamily: 'Pretendard',
                 ),
-              ),
+              ).tr(),
             ],
           ),
           SizedBox(height: 18.h),
@@ -215,31 +216,31 @@ class _FriendListScreenState extends State<FriendListScreen> {
     return Expanded(
       child: _isLoadingFriends
           ? Center(child: CircularProgressIndicator(color: Colors.white))
-          : _friendLoadError != null
+          : _friendLoadErrorKey != null
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '친구 목록을 불러오지 못했습니다',
+                    'friends.load_failed_title',
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: 16.sp,
                     ),
-                  ),
+                  ).tr(),
                   SizedBox(height: 12.h),
                   Text(
-                    _friendLoadError!,
+                    _friendLoadErrorKey!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xff666666),
                       fontSize: 14.sp,
                     ),
-                  ),
+                  ).tr(),
                   SizedBox(height: 16.h),
                   ElevatedButton(
                     onPressed: _loadFriends,
-                    child: const Text('다시 시도'),
+                    child: Text('common.retry').tr(),
                   ),
                 ],
               ),
@@ -247,7 +248,9 @@ class _FriendListScreenState extends State<FriendListScreen> {
           : displayFriends.isEmpty
           ? Center(
               child: Text(
-                hasQuery ? '검색 결과가 없습니다' : '친구가 없습니다',
+                hasQuery
+                    ? tr('common.search_empty', context: context)
+                    : tr('friends.empty', context: context),
                 style: TextStyle(
                   color: const Color(0xff666666),
                   fontSize: 16.sp,
@@ -470,13 +473,13 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      '친구 삭제',
+                      'friends.menu.delete',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15.3517.sp,
                         fontFamily: "Pretendard",
                       ),
-                    ),
+                    ).tr(),
                   ],
                 ),
               ),
@@ -509,13 +512,13 @@ class _FriendListScreenState extends State<FriendListScreen> {
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      '차단',
+                      'friends.menu.block',
                       style: TextStyle(
                         color: Color(0xfff40202),
                         fontSize: 15.3517.sp,
                         fontFamily: "Pretendard",
                       ),
-                    ),
+                    ).tr(),
                   ],
                 ),
               ),
@@ -660,15 +663,15 @@ class _FriendListScreenState extends State<FriendListScreen> {
                         width: 294.w,
                         height: 38.h,
                         alignment: Alignment.center,
-                        child: const Text(
-                          '취소',
+                      child: const Text(
+                          'common.cancel',
                           style: TextStyle(
                             color: Color(0xFFcbcbcb),
                             fontSize: 17.78,
                             fontFamily: 'Pretendard Variable',
                             fontWeight: FontWeight.w600,
                           ),
-                        ),
+                        ).tr(),
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -713,9 +716,13 @@ class _FriendListScreenState extends State<FriendListScreen> {
     _showFriendActionModal(
       profileImageUrl: profileImageUrl,
       friendName: friendName,
-      title: "$friendName님을 삭제하시겠습니까?",
-      description: "삭제시, 추가된 카테고리에서 삭제될 수 있습니다.",
-      actionButtonText: "삭제",
+      title: tr(
+        'friends.delete_confirm_title',
+        context: context,
+        namedArgs: {'name': friendName},
+      ),
+      description: tr('friends.delete_confirm_desc', context: context),
+      actionButtonText: tr('common.delete', context: context),
       onActionPressed: () => _handleDeleteFriend(friendUid),
       actionButtonTextColor: Colors.black,
     );
@@ -730,9 +737,13 @@ class _FriendListScreenState extends State<FriendListScreen> {
     _showFriendActionModal(
       profileImageUrl: profileImageUrl,
       friendName: friendName,
-      title: "$friendName님을 차단하시겠습니까?",
-      description: "차단시, 이 친구는 더 이상 나를 카테고리에\n초대하거나 친구 요청을 할 수 없습니다.",
-      actionButtonText: "차단",
+      title: tr(
+        'friends.block_confirm_title',
+        context: context,
+        namedArgs: {'name': friendName},
+      ),
+      description: tr('friends.block_confirm_desc', context: context),
+      actionButtonText: tr('common.block', context: context),
       onActionPressed: () => _handleBlockFriend(friendUid),
       actionButtonTextColor: Color(0xffff0000),
     );
@@ -746,8 +757,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
     if (currentUserId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('로그인 정보가 필요합니다.'),
+        SnackBar(
+          content: Text(tr('common.login_info_required', context: context)),
           backgroundColor: Colors.red,
         ),
       );
@@ -766,16 +777,19 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('친구가 삭제되었습니다.'),
+          SnackBar(
+            content: Text(tr('friends.delete_success', context: context)),
             backgroundColor: Colors.green,
           ),
         );
         await _loadFriends();
       } else {
+        final message =
+            friendController.errorMessage ??
+            tr('friends.delete_failed', context: context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendController.errorMessage ?? '친구 삭제에 실패했습니다.'),
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
@@ -783,8 +797,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('친구 삭제 중 오류가 발생했습니다.'),
+        SnackBar(
+          content: Text(tr('friends.delete_error', context: context)),
           backgroundColor: Colors.red,
         ),
       );
@@ -799,8 +813,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
     if (currentUserId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('로그인 정보가 필요합니다.'),
+        SnackBar(
+          content: Text(tr('common.login_info_required', context: context)),
           backgroundColor: Colors.red,
         ),
       );
@@ -819,16 +833,19 @@ class _FriendListScreenState extends State<FriendListScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('친구가 차단되었습니다.'),
+          SnackBar(
+            content: Text(tr('friends.block_success', context: context)),
             backgroundColor: Colors.orange,
           ),
         );
         await _loadFriends();
       } else {
+        final message =
+            friendController.errorMessage ??
+            tr('friends.block_failed', context: context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(friendController.errorMessage ?? '친구 차단에 실패했습니다.'),
+            content: Text(message),
             backgroundColor: Colors.red,
           ),
         );
@@ -836,8 +853,8 @@ class _FriendListScreenState extends State<FriendListScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('친구 차단 중 오류가 발생했습니다.'),
+        SnackBar(
+          content: Text(tr('friends.block_error', context: context)),
           backgroundColor: Colors.red,
         ),
       );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/media_controller.dart';
@@ -303,7 +304,7 @@ class _ApiCategoryMembersBottomSheetState
 
           // 텍스트
           Text(
-            '추가하기',
+            'category.members.add',
             style: TextStyle(
               color: Colors.white,
               fontSize: 12.sp,
@@ -311,7 +312,7 @@ class _ApiCategoryMembersBottomSheetState
               fontFamily: 'Pretendard',
             ),
             textAlign: TextAlign.center,
-          ),
+          ).tr(),
         ],
       ),
     );

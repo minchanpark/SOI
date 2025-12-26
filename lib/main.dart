@@ -349,12 +349,29 @@ class _MyAppState extends State<MyApp> {
             final clampedScale = mediaQuery.textScaler
                 .scale(1.0)
                 .clamp(1.0, 1.1);
-
-            return MediaQuery(
+            final scaledChild = MediaQuery(
               data: mediaQuery.copyWith(
                 textScaler: TextScaler.linear(clampedScale),
               ),
               child: child!,
+            );
+
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 600) {
+                  return scaledChild;
+                }
+
+                return ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: scaledChild,
+                    ),
+                  ),
+                );
+              },
             );
           },
           routes: {

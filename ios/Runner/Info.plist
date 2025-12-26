@@ -2,12 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.newdawn.soiapp.refresh</string>
-		<string>com.newdawn.soiapp.processing</string>
-	</array>
-
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 
@@ -70,17 +64,6 @@
 	<key>CFBundleVersion</key>
 	<string>36</string>
 
-	<key>branch_key</key>
-	<dict>
-		<key>live</key>
-		<string>key_live_YOUR_LIVE_KEY_HERE</string>
-		<key>test</key>
-		<string>key_test_YOUR_TEST_KEY_HERE</string>
-	</dict>
-
-	<key>branch_use_test_instance</key>
-	<true/>
-
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>FirebaseAuthCAPTCHAFallbackEnabled</key>
@@ -91,36 +74,6 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>googleapis.com</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.0</string>
-			</dict>
-			<key>www.google.com</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.0</string>
-			</dict>
-			<key>www.gstatic.com</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSExceptionMinimumTLSVersion</key>
-				<string>TLSv1.0</string>
-			</dict>
-		</dict>
-	</dict>
-
 	<key>NSCameraUsageDescription</key>
 	<string>SOI는 친구들과 순간을 공유하기 위해 카메라 접근 권한이 필요합니다...</string>
 
@@ -129,9 +82,6 @@
 
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SOI는 동영상 촬영 시 오디오를 녹음하고...</string>
-
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SOI는 사진에 촬영 위치 정보를...</string>
 
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>SOI에서 촬영하거나 편집한 사진과 동영상을...</string>
@@ -148,9 +98,10 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
-		<string>fetch</string>
-		<string>processing</string>
 	</array>
+
+	<key>UIRequiresFullScreen</key>
+	<true/>
 
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -160,15 +111,12 @@
 
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
@@ -178,8 +126,6 @@
 
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>http</string>
-		<string>https</string>
 		<string>kakaokompassauth</string>
 		<string>kakaolink</string>
 		<string>kakaoplus</string>
@@ -195,12 +141,5 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_dartobservatory._tcp</string>
-		<string>_dartVmService._tcp</string>
-	</array>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>디버깅을 위해 이 iPhone과 Flutter 개발 도구가 같은 네트워크에서 통신할 수 있도록 허용합니다.</string>
 </dict>
 </plist>

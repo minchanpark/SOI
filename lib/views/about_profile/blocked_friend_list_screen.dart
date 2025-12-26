@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -24,7 +25,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
   final Map<String, String> _presignedUrlCacheByKey = {};
   int _shimmerPlaceholderCount = 6;
   bool _isLoading = true;
-  String? _error;
+  String? _errorKey;
 
   @override
   void initState() {
@@ -39,7 +40,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
   Future<void> _loadBlockedFriends() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _errorKey = null;
       if (_blockedUsers.isNotEmpty) {
         _shimmerPlaceholderCount = _blockedUsers.length;
       }
@@ -54,7 +55,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
 
       if (currentUserId == null) {
         setState(() {
-          _error = '로그인이 필요합니다.';
+          _errorKey = 'common.login_required';
           _isLoading = false;
         });
         return;
@@ -91,7 +92,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = '차단된 친구를 불러오지 못했습니다.';
+        _errorKey = 'friends.blocked.load_error';
         _isLoading = false;
       });
     }
@@ -183,7 +184,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          '차단된 친구',
+          'friends.blocked.title',
           textAlign: TextAlign.start,
           style: TextStyle(
             color: const Color(0xFFF8F8F8),
@@ -191,7 +192,7 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
             fontFamily: 'Pretendard',
             fontWeight: FontWeight.w700,
           ),
-        ),
+        ).tr(),
       ),
       body: SingleChildScrollView(child: _buildBody()),
     );
@@ -202,34 +203,34 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
       return _buildLoadingShimmer();
     }
 
-    if (_error != null) {
+    if (_errorKey != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '오류가 발생했습니다',
+              'common.error_occurred',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16.sp,
                 fontFamily: 'Pretendard',
                 fontWeight: FontWeight.w600,
               ),
-            ),
+            ).tr(),
             SizedBox(height: 8.h),
             Text(
-              _error!,
+              _errorKey!,
               style: TextStyle(
                 color: const Color(0xFFB0B0B0),
                 fontSize: 14.sp,
                 fontFamily: 'Pretendard',
               ),
               textAlign: TextAlign.center,
-            ),
+            ).tr(),
             SizedBox(height: 16.h),
             ElevatedButton(
               onPressed: _loadBlockedFriends,
-              child: const Text('다시 시도'),
+              child: Text('common.retry').tr(),
             ),
           ],
         ),
@@ -250,14 +251,14 @@ class _BlockedFriendListScreenState extends State<BlockedFriendListScreen> {
               Icon(Icons.block, size: 64.sp, color: const Color(0xFF666666)),
               SizedBox(height: 16.h),
               Text(
-                '차단된 친구가 없습니다',
+                'friends.blocked.empty',
                 style: TextStyle(
                   color: const Color(0xFFB0B0B0),
                   fontSize: 16.sp,
                   fontFamily: 'Pretendard',
                   fontWeight: FontWeight.w500,
                 ),
-              ),
+              ).tr(),
             ],
           ),
         ),
@@ -465,13 +466,13 @@ class _BlockedUserItem extends StatelessWidget {
               padding: EdgeInsets.zero,
             ),
             child: Text(
-              '차단 해제',
+              'friends.blocked.unblock',
               style: TextStyle(
                 fontSize: 13.sp,
                 fontFamily: 'Pretendard',
                 fontWeight: FontWeight.w600,
               ),
-            ),
+            ).tr(),
           ),
         ),
       ],

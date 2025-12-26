@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/user_controller.dart';
@@ -166,7 +167,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
       // 이름 수정 메뉴
       _buildCustomMenuItem(
         icon: 'assets/category_edit.png',
-        text: '이름 수정',
+        text: tr('archive.menu.edit_name', context: context),
         textColor: Colors.white,
         onPressed: () => _handleMenuAction('edit_name'),
       ),
@@ -177,7 +178,9 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
       // 고정/고정 해제 메뉴
       _buildCustomMenuItem(
         icon: 'assets/pin.png',
-        text: isPinnedForCurrentUser ? '고정 해제' : '고정',
+        text: isPinnedForCurrentUser
+            ? tr('archive.menu.unpin', context: context)
+            : tr('archive.menu.pin', context: context),
         textColor: Colors.white,
         onPressed: () =>
             _handleMenuAction(isPinnedForCurrentUser ? 'unpin' : 'pin'),
@@ -189,7 +192,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
       // 나가기 메뉴
       _buildCustomMenuItem(
         icon: 'assets/category_delete.png',
-        text: '나가기',
+        text: tr('archive.menu.leave', context: context),
         textColor: Color(0xFFFF0000),
         onPressed: () => _handleMenuAction('leave'),
       ),
@@ -310,7 +313,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
 
       final userId = userController!.currentUser?.id;
       if (userId == null) {
-        _showSnackBar('로그인이 필요합니다.');
+        _showSnackBar(tr('common.login_required', context: context));
         return;
       }
 
@@ -322,13 +325,13 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
 
       if (success) {
         await categoryController!.loadCategories(userId, forceReload: true);
-        _showSnackBar('카테고리에서 나갔습니다.');
+        _showSnackBar(tr('category.leave.success', context: context));
       } else {
-        _showSnackBar('카테고리 나가기에 실패했습니다.');
+        _showSnackBar(tr('category.leave.failed', context: context));
       }
     } catch (e) {
       debugPrint('[LeaveCategory] 실패: $e');
-      _showSnackBar('카테고리 나가기에 실패했습니다.');
+      _showSnackBar(tr('category.leave.failed', context: context));
     }
   }
 
