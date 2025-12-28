@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 
 /// 생년월일 입력 페이지 위젯
@@ -49,7 +50,7 @@ class BirthDatePage extends StatelessWidget {
           child: TextButton(
             onPressed: onSkip,
             child: Text(
-              '건너뛰기',
+              tr('register.skip', context: context),
               style: TextStyle(
                 color: const Color(0xFFF8F8F8),
                 fontSize: 14.sp,
@@ -66,7 +67,9 @@ class BirthDatePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const PageTitle(title: '생년월일을 입력해주세요.'),
+                PageTitle(
+                  title: tr('register.birth_title', context: context),
+                ),
                 SizedBox(height: 24.h),
                 Container(
                   width: 320.w,

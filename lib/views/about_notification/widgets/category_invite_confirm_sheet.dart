@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import 'category_invitee_preview.dart';
 
@@ -58,7 +59,11 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
                 if (invitees.isNotEmpty) SizedBox(height: 24.h),
                 SizedBox(height: 24.h),
                 Text(
-                  '"$categoryName" 카테고리에 초대되었습니다',
+                  tr(
+                    'notification.invite.title',
+                    context: context,
+                    namedArgs: {'name': categoryName},
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: const Color(0xFFF8F8F8),
@@ -69,7 +74,7 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
                 ),
                 SizedBox(height: 10.h),
                 Text(
-                  '모르는 친구가 추가되어 있는 카테고리입니다.\n수락하시겠습니까?',
+                  tr('notification.invite.message', context: context),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: const Color(0xFFF8F8F8),
@@ -96,7 +101,7 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
                     height: 38,
                     child: Center(
                       child: Text(
-                        '수락',
+                        tr('notification.invite.accept', context: context),
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 17.78,
@@ -124,7 +129,7 @@ class CategoryInviteConfirmSheet extends StatelessWidget {
                     height: 38,
                     child: Center(
                       child: Text(
-                        '취소',
+                        tr('common.cancel', context: context),
                         style: TextStyle(
                           color: const Color(0xFFCBCBCB),
                           fontSize: 17.78,

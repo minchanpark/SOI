@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/controller/notification_controller.dart' as api;
@@ -66,7 +67,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     if (user == null) {
       setState(() {
-        _error = '로그인이 필요합니다';
+        _error = tr('notification.login_required', context: context);
       });
       return;
     }
@@ -91,7 +92,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '알림을 불러올 수 없습니다: $e';
+          _error = tr(
+            'notification.load_failed_with_reason',
+            context: context,
+            namedArgs: {'error': e.toString()},
+          );
           _isLoading = false;
         });
       }
@@ -175,7 +180,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            '알림',
+            tr('notification.title', context: context),
             style: Theme.of(context).textTheme.displayLarge?.copyWith(
               color: const Color(0xFFF8F8F8),
               fontSize: 20.sp,
@@ -208,7 +213,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Padding(
             padding: EdgeInsets.only(left: 19.w),
             child: Text(
-              "최근 7일",
+              tr('notification.recent_7_days', context: context),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18.02.sp,
@@ -237,8 +242,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final requestCount =
         _friendRequestCount ?? _notificationResult?.friendRequestCount ?? 0;
     final subtitle = _isFriendRequestLoading || _isLoading
-        ? '불러오는 중...'
-        : (requestCount > 0 ? '보류 중인 요청 $requestCount명' : '받은 요청이 없습니다');
+        ? tr('notification.loading_short', context: context)
+        : (requestCount > 0
+            ? tr(
+                'notification.pending_requests',
+                context: context,
+                namedArgs: {'count': requestCount.toString()},
+              )
+            : tr('notification.no_requests', context: context));
 
     return GestureDetector(
       onTap: () {
@@ -267,7 +278,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '친구 요청',
+                    tr('notification.friend_requests', context: context),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16.sp,
@@ -327,7 +338,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           const CircularProgressIndicator(color: Color(0xff634D45)),
           SizedBox(height: 16.h),
           Text(
-            '알림을 불러오는 중...',
+            tr('notification.loading', context: context),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: const Color(0xff535252),
               fontSize: 16.sp,
@@ -347,7 +358,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
           SizedBox(height: 16.h),
           Text(
-            '알림을 불러올 수 없습니다',
+            tr('notification.load_failed', context: context),
             style: Theme.of(context).textTheme.displayMedium?.copyWith(
               color: Colors.white,
               fontSize: 20.sp,
@@ -355,7 +366,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           SizedBox(height: 8.h),
           Text(
-            _error ?? '알 수 없는 오류가 발생했습니다',
+            _error ?? tr('notification.unknown_error', context: context),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: const Color(0xff535252),
               fontSize: 16.sp,
@@ -370,7 +381,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
             ),
-            child: const Text('다시 시도'),
+            child: Text(tr('common.retry', context: context)),
           ),
         ],
       ),
@@ -390,7 +401,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           SizedBox(height: 16.h),
           Text(
-            '알림이 없습니다',
+            tr('notification.empty', context: context),
             style: Theme.of(context).textTheme.displayMedium?.copyWith(
               color: const Color(0xff535252),
               fontSize: 20.sp,
@@ -398,7 +409,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
           SizedBox(height: 8.h),
           Text(
-            '새로운 알림이 오면 여기에 표시됩니다',
+            tr('notification.empty_subtitle', context: context),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: const Color(0xff535252).withValues(alpha: 0.7),
               fontSize: 16.sp,
@@ -458,14 +469,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final userController = context.read<UserController>();
     final currentUser = userController.currentUser;
     if (currentUser == null) {
-      _showSnackBar('로그인이 필요합니다.');
+      _showSnackBar(tr('notification.login_required', context: context));
       return;
     }
 
     // 알림 타입을 받아온다.
     final type = notification.type;
     if (type == null) {
-      _showSnackBar('알림 정보를 확인할 수 없습니다.');
+      _showSnackBar(tr('notification.invalid_notification', context: context));
       return;
     }
 
@@ -481,7 +492,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final categoryId =
           notification.relatedId ?? notification.categoryIdForPost;
       if (categoryId == null) {
-        _showSnackBar('카테고리 정보를 찾을 수 없습니다.');
+        _showSnackBar(tr('notification.category_not_found', context: context));
         return;
       }
 
@@ -495,7 +506,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           return CategoryInviteConfirmSheet(
             categoryName:
                 _extractCategoryNameFromNotificationText(notification.text) ??
-                '카테고리',
+                tr('notification.category_default', context: context),
             categoryImageUrl: notification.imageUrl ?? '',
             invitees: const [],
             onAccept: () async {
@@ -508,10 +519,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 );
                 if (ok) {
                   await _onRefresh();
-                  _showSnackBar('카테고리 초대를 수락했습니다.');
+                  _showSnackBar(
+                    tr('notification.invite_accepted', context: context),
+                  );
                 } else {
                   _showSnackBar(
-                    categoryController.errorMessage ?? '초대 수락에 실패했습니다.',
+                    categoryController.errorMessage ??
+                        tr('notification.invite_accept_failed', context: context),
                   );
                 }
               } finally {
@@ -528,10 +542,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 );
                 if (ok) {
                   await _onRefresh();
-                  _showSnackBar('카테고리 초대를 거절했습니다.');
+                  _showSnackBar(
+                    tr('notification.invite_declined', context: context),
+                  );
                 } else {
                   _showSnackBar(
-                    categoryController.errorMessage ?? '초대 거절에 실패했습니다.',
+                    categoryController.errorMessage ??
+                        tr(
+                          'notification.invite_decline_failed',
+                          context: context,
+                        ),
                   );
                 }
               } finally {
@@ -549,7 +569,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final categoryId =
           notification.relatedId ?? notification.categoryIdForPost;
       if (categoryId == null) {
-        _showSnackBar('카테고리 정보를 찾을 수 없습니다.');
+        _showSnackBar(tr('notification.category_not_found', context: context));
         return;
       }
 
@@ -564,7 +584,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final categoryId = notification.categoryIdForPost;
 
       if (postId == null || categoryId == null) {
-        _showSnackBar('게시물 정보를 찾을 수 없습니다.');
+        _showSnackBar(tr('notification.post_not_found', context: context));
         return;
       }
 
@@ -578,7 +598,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
 
     debugPrint('지원하지 않는 알림 타입: ${type.value}');
-    _showSnackBar('지원하지 않는 알림 타입입니다.');
+    _showSnackBar(tr('notification.unsupported', context: context));
   }
 
   void _showSnackBar(String message) {
@@ -629,7 +649,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final category = categoryController.getCategoryById(categoryId);
     if (category == null) {
       Navigator.of(context).pushNamed('/archiving');
-      _showSnackBar('카테고리를 찾을 수 없습니다.');
+      _showSnackBar(tr('notification.category_not_found', context: context));
       return;
     }
 
@@ -668,7 +688,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final category = categoryController.getCategoryById(categoryId);
     if (category == null) {
       Navigator.of(context).pushNamed('/archiving');
-      _showSnackBar('카테고리를 찾을 수 없습니다.');
+      _showSnackBar(tr('notification.category_not_found', context: context));
       return;
     }
 

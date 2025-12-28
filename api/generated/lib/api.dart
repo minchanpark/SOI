@@ -60,6 +60,7 @@ part 'model/category_resp_dto.dart';
 part 'model/comment_req_dto.dart';
 part 'model/comment_resp_dto.dart';
 part 'model/friend_check_resp_dto.dart';
+part 'model/friend_create_by_nick_name_req_dto.dart';
 part 'model/friend_create_req_dto.dart';
 part 'model/friend_req_dto.dart';
 part 'model/friend_resp_dto.dart';

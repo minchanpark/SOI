@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/media_controller.dart';
@@ -36,7 +37,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     final user = userController.currentUser;
     if (user == null || user.id == 0) {
       setState(() {
-        _error = '로그인이 필요합니다.';
+        _error = tr('common.login_required', context: context);
         _isLoading = false;
       });
       return;
@@ -116,7 +117,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '게시물 복구',
+              tr('deleted_posts.title', context: context),
               textAlign: TextAlign.start,
               style: TextStyle(
                 color: const Color(0xFFF8F8F8),
@@ -153,7 +154,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
                   ),
                 ),
                 child: Text(
-                  '게시물에 표시',
+                  tr('deleted_posts.restore_button', context: context),
                   style: TextStyle(
                     color: _selectedPostIds.isNotEmpty
                         ? Colors.black
@@ -184,7 +185,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '오류가 발생했습니다',
+              tr('common.error_occurred', context: context),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16.sp,
@@ -205,7 +206,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
             SizedBox(height: 16.h),
             ElevatedButton(
               onPressed: _loadDeletedPosts,
-              child: const Text('다시 시도'),
+              child: Text(tr('common.retry', context: context)),
             ),
           ],
         ),
@@ -224,7 +225,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
             ),
             SizedBox(height: 16.h),
             Text(
-              '삭제한 게시물이 없습니다',
+              tr('deleted_posts.empty', context: context),
               style: TextStyle(
                 color: const Color(0xFFB0B0B0),
                 fontSize: 16.sp,
@@ -380,11 +381,22 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
     if (mounted) {
       String message;
       if (failCount == 0) {
-        message = '$successCount개의 게시물이 복원되었습니다';
+        message = tr(
+          'deleted_posts.restore_success',
+          context: context,
+          namedArgs: {'count': successCount.toString()},
+        );
       } else if (successCount == 0) {
-        message = '게시물 복원에 실패했습니다';
+        message = tr('deleted_posts.restore_failed', context: context);
       } else {
-        message = '$successCount개 복원 성공, $failCount개 실패';
+        message = tr(
+          'deleted_posts.restore_partial',
+          context: context,
+          namedArgs: {
+            'success': successCount.toString(),
+            'fail': failCount.toString(),
+          },
+        );
       }
 
       Fluttertoast.showToast(

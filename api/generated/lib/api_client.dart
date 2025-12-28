@@ -230,6 +230,8 @@ class ApiClient {
           return CommentRespDto.fromJson(value);
         case 'FriendCheckRespDto':
           return FriendCheckRespDto.fromJson(value);
+        case 'FriendCreateByNickNameReqDto':
+          return FriendCreateByNickNameReqDto.fromJson(value);
         case 'FriendCreateReqDto':
           return FriendCreateReqDto.fromJson(value);
         case 'FriendReqDto':

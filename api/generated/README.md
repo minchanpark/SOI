@@ -76,6 +76,7 @@ Class | Method | HTTP request | Description
 *CommentAPIApi* | [**getComment**](doc//CommentAPIApi.md#getcomment) | **GET** /comment/get | 댓글 조회
 *FriendAPIApi* | [**blockFriend**](doc//FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
 *FriendAPIApi* | [**create1**](doc//FriendAPIApi.md#create1) | **POST** /friend/create | 친구 추가
+*FriendAPIApi* | [**createByNickName**](doc//FriendAPIApi.md#createbynickname) | **POST** /friend/create/by-nickname | nickname으로 친구 추가
 *FriendAPIApi* | [**deleteFriend**](doc//FriendAPIApi.md#deletefriend) | **POST** /friend/delete | 친구 삭제
 *FriendAPIApi* | [**getAllFriend**](doc//FriendAPIApi.md#getallfriend) | **GET** /friend/get-all | 모든 친구 조회
 *FriendAPIApi* | [**getAllFriend1**](doc//FriendAPIApi.md#getallfriend1) | **GET** /friend/check-friend-relation | 연락처에 있는 친구들 관계확인
@@ -129,6 +130,7 @@ Class | Method | HTTP request | Description
  - [CommentReqDto](doc//CommentReqDto.md)
  - [CommentRespDto](doc//CommentRespDto.md)
  - [FriendCheckRespDto](doc//FriendCheckRespDto.md)
+ - [FriendCreateByNickNameReqDto](doc//FriendCreateByNickNameReqDto.md)
  - [FriendCreateReqDto](doc//FriendCreateReqDto.md)
  - [FriendReqDto](doc//FriendReqDto.md)
  - [FriendRespDto](doc//FriendRespDto.md)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class PostManagementScreen extends StatefulWidget {
   const PostManagementScreen({super.key});
@@ -33,7 +34,7 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '게시물 관리',
+              tr('post_management.title', context: context),
               textAlign: TextAlign.start,
               style: TextStyle(
                 color: const Color(0xFFF8F8F8),
@@ -62,7 +63,7 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              '오류가 발생했습니다',
+              tr('common.error_occurred', context: context),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16.sp,
@@ -88,7 +89,7 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
                   _isLoading = false;
                 });
               },
-              child: const Text('다시 시도'),
+              child: Text(tr('common.retry', context: context)),
             ),
           ],
         ),
@@ -169,7 +170,7 @@ class _PostManagementScreenState extends State<PostManagementScreen> {
                   ),
                   SizedBox(width: 28.w),
                   Text(
-                    '삭제한 게시물 복구',
+                    tr('post_management.restore_deleted', context: context),
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
                       fontSize: 17.sp,

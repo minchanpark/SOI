@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/controller/friend_controller.dart';
@@ -199,9 +200,9 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
 
     setState(() => _sending.add(user.id));
     try {
-      final result = await friendController.addFriend(
+      final result = await friendController.addFriendByNickName(
         requesterId: currentUserId,
-        receiverPhoneNum: user.phoneNumber,
+        receiverNickName: user.userId,
       );
 
       if (result != null) {
@@ -211,7 +212,13 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${user.name}님에게 친구 요청을 보냈습니다'),
+              content: Text(
+                tr(
+                  'friends.add_by_id.request_sent',
+                  context: context,
+                  namedArgs: {'name': user.name},
+                ),
+              ),
               backgroundColor: const Color(0xFF5A5A5A),
               duration: const Duration(seconds: 2),
             ),
@@ -222,9 +229,11 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
       debugPrint('친구 요청 실패: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('친구 요청 실패'),
-            backgroundColor: Color(0xFF5A5A5A),
+          SnackBar(
+            content: Text(
+              tr('friends.add_by_id.request_failed', context: context),
+            ),
+            backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
       }
@@ -248,7 +257,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
-              'ID로 추가하기',
+              tr('friends.add_by_id.title', context: context),
               style: TextStyle(
                 color: const Color(0xFFD9D9D9),
                 fontSize: 20,
@@ -292,7 +301,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                 style: TextStyle(color: const Color(0xfff9f9f9), fontSize: 15),
                 cursorColor: const Color(0xfff9f9f9),
                 decoration: InputDecoration(
-                  hintText: '친구 아이디 찾기',
+                  hintText: tr('friends.add_by_id.search_hint', context: context),
                   hintStyle: TextStyle(
                     color: const Color(0xFFD9D9D9),
                     fontSize: 18.02,
@@ -349,7 +358,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     if (_results.isEmpty) {
       return Center(
         child: Text(
-          '없는 아이디 입니다. 다시 입력해주세요',
+          tr('friends.add_by_id.not_found', context: context),
           style: TextStyle(color: const Color(0xff9a9a9a), fontSize: 14.sp),
         ),
       );
@@ -476,19 +485,19 @@ class _UserResultTile extends StatelessWidget {
     bool enabled = false;
     switch (status) {
       case 'accepted':
-        label = '친구';
+        label = tr('friends.add_by_id.status_friend', context: context);
         enabled = false;
         break;
       case 'pending':
-        label = '요청됨';
+        label = tr('friends.add_by_id.status_pending', context: context);
         enabled = false;
         break;
       case 'blocked':
-        label = '차단됨';
+        label = tr('friends.add_by_id.status_blocked', context: context);
         enabled = false;
         break;
       default:
-        label = '친구 추가';
+        label = tr('friends.add_by_id.status_add', context: context);
         enabled = true;
     }
 

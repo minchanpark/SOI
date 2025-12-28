@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// 약관 동의 페이지
@@ -31,7 +32,9 @@ class AgreementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String displayName = name.isNotEmpty ? name : '회원';
+    final String displayName = name.isNotEmpty
+        ? name
+        : tr('register.member_default', context: context);
 
     return Stack(
       children: [
@@ -55,9 +58,19 @@ class AgreementPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(height: (320).h),
+                SizedBox(
+                  height:
+                      context.locale.languageCode == 'es' &&
+                          context.locale.countryCode == 'MX'
+                      ? 280.h
+                      : 320.h,
+                ),
                 Text(
-                  '$displayName님, 환영합니다.',
+                  tr(
+                    'register.agreement_welcome',
+                    context: context,
+                    namedArgs: {'name': displayName},
+                  ),
                   style: TextStyle(
                     color: const Color(0xFFF8F8F8),
                     fontSize: 20,
@@ -67,7 +80,7 @@ class AgreementPage extends StatelessWidget {
                 ),
                 SizedBox(height: 12.h),
                 Text(
-                  '선택하신 정보를 기반으로 개인화된\n서비스를 제공해드릴게요.',
+                  tr('register.agreement_description', context: context),
                   style: TextStyle(
                     color: const Color(0xFFF8F8F8),
                     fontSize: 16,
@@ -80,14 +93,17 @@ class AgreementPage extends StatelessWidget {
                 ),
                 SizedBox(height: (136.1).h),
                 _AgreementOption(
-                  label: '약관 전체 동의',
+                  label: tr('register.agreement_all', context: context),
                   value: agreeAll,
                   onChanged: onToggleAll,
                   onTap: () {},
                 ),
                 SizedBox(height: 24.h),
                 _AgreementOption(
-                  label: '이용약관 동의(필수)',
+                  label: tr(
+                    'register.agreement_service_required',
+                    context: context,
+                  ),
                   value: agreeServiceTerms,
                   onChanged: onToggleServiceTerms,
                   showArrow: true,
@@ -95,7 +111,10 @@ class AgreementPage extends StatelessWidget {
                 ),
                 SizedBox(height: (10.2).h),
                 _AgreementOption(
-                  label: '개인정보 수집 및 이용동의(필수)',
+                  label: tr(
+                    'register.agreement_privacy_required',
+                    context: context,
+                  ),
                   value: agreePrivacyTerms,
                   onChanged: onTogglePrivacyTerms,
                   showArrow: true,
@@ -112,7 +131,10 @@ class AgreementPage extends StatelessWidget {
                 ),
                 SizedBox(height: (10.2).h),
                 _AgreementOption(
-                  label: 'E-mail 및 SMS 광고성 정보 수신동의(선택)',
+                  label: tr(
+                    'register.agreement_marketing_optional',
+                    context: context,
+                  ),
                   value: agreeMarketingInfo,
                   onChanged: onToggleMarketingInfo,
                   onTap: () {},

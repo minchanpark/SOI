@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
 import '../../../api/controller/friend_controller.dart';
@@ -43,7 +44,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
     final userId = userController.currentUserId;
     if (userId == null) {
       setState(() {
-        _errorMessage = '로그인이 필요합니다.';
+        _errorMessage = tr('friends.request.login_required', context: context);
       });
       return;
     }
@@ -67,7 +68,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _errorMessage = '친구 요청을 불러오지 못했습니다.';
+          _errorMessage = tr('friends.request.load_failed', context: context);
         });
       }
     } finally {
@@ -86,7 +87,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
     final userId = context.read<UserController>().currentUserId;
     final friendId = notification.relatedId;
     if (friendId == null) {
-      _showSnackBar('요청 정보를 찾을 수 없습니다.');
+      _showSnackBar(tr('friends.request.not_found', context: context));
       return;
     }
 
@@ -114,10 +115,12 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
         await friendController.refreshFriends(userId: userId);
       }
       _showSnackBar(
-        status == FriendStatus.accepted ? '친구 요청을 수락했습니다' : '친구 요청을 거절했습니다',
+        status == FriendStatus.accepted
+            ? tr('friends.request.accepted', context: context)
+            : tr('friends.request.rejected', context: context),
       );
     } else {
-      _showSnackBar('요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      _showSnackBar(tr('friends.request.failed', context: context));
     }
   }
 
@@ -151,11 +154,15 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
             child: Column(
               children: [
                 if (showLoading)
-                  _buildStatePlaceholder('친구 요청을 불러오는 중...')
+                  _buildStatePlaceholder(
+                    tr('friends.request.loading', context: context),
+                  )
                 else if (_errorMessage != null && requests.isEmpty)
                   _buildStatePlaceholder(_errorMessage!)
                 else if (requests.isEmpty)
-                  _buildStatePlaceholder('받은 친구 요청이 없습니다')
+                  _buildStatePlaceholder(
+                    tr('friends.request.empty', context: context),
+                  )
                 else
                   ...requests.map(_buildFriendRequestItem),
               ],
@@ -196,7 +203,8 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  notification.text ?? '새로운 친구 요청이 도착했어요',
+                  notification.text ??
+                      tr('friends.request.default_text', context: context),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -207,7 +215,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  '친구 요청을 수락하거나 거절할 수 있어요',
+                  tr('friends.request.subtitle', context: context),
                   style: TextStyle(
                     color: const Color(0xff8a8a8a),
                     fontSize: 11.sp,
@@ -231,7 +239,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildActionButton(
-                  label: '거절',
+                  label: tr('friends.request.reject', context: context),
                   backgroundColor: const Color(0xff333333),
                   textColor: const Color(0xff999999),
                   onTap: canRespond
@@ -241,7 +249,7 @@ class _FriendRequestCardState extends State<FriendRequestCard> {
                 ),
                 SizedBox(width: 8.w),
                 _buildActionButton(
-                  label: '수락',
+                  label: tr('friends.request.accept', context: context),
                   backgroundColor: const Color(0xfff9f9f9),
                   textColor: const Color(0xff1c1c1c),
                   onTap: canRespond

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:soi/views/about_onboarding/onboarding_main_screen.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../../theme/theme.dart';
 
 /// 회원가입 완료 화면
@@ -61,7 +62,7 @@ class AuthFinalScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Text(
-                    '회원가입이 완료되었습니다. ',
+                    tr('register.complete_title', context: context),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
@@ -72,7 +73,7 @@ class AuthFinalScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 17.9.h),
                   Text(
-                    '이제부터 SOI의 모든 기능을 자유롭게 \n이용하실 수 있습니다.',
+                    tr('register.complete_description', context: context),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
@@ -127,7 +128,7 @@ class AuthFinalScreen extends StatelessWidget {
                 height: 59.h,
                 alignment: Alignment.center,
                 child: Text(
-                  '계속하기',
+                  tr('common.continue', context: context),
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 20.sp,

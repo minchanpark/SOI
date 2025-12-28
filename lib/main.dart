@@ -109,7 +109,7 @@ void main() async {
         Locale('zh'),
       ],
       path: 'assets/translations',
-      fallbackLocale: const Locale('ko'),
+      fallbackLocale: const Locale('es'),
       child: MyApp(
         hasSeenLaunchVideo: hasSeenLaunchVideo,
         preloadedUserController: userController,

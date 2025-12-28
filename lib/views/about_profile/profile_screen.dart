@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -109,7 +110,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final current = userController.currentUser;
 
       if (current == null) {
-        _showProfileSnackBar('로그인이 필요합니다. 다시 로그인해주세요.');
+        _showProfileSnackBar(
+          tr('profile.snackbar.login_required', context: context),
+        );
         return;
       }
 
@@ -124,7 +127,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final file = File(pickedImage.path);
       if (!await file.exists()) {
-        _showProfileSnackBar('선택한 이미지를 찾을 수 없습니다.');
+        _showProfileSnackBar(
+          tr('profile.snackbar.image_not_found', context: context),
+        );
         return;
       }
 
@@ -144,7 +149,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       if (profileKey == null) {
-        _showProfileSnackBar('프로필 이미지 업로드에 실패했습니다.');
+        _showProfileSnackBar(
+          tr('profile.snackbar.upload_failed', context: context),
+        );
         return;
       }
 
@@ -189,11 +196,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _userInfo = refreshedUser ?? updatedUser ?? _userInfo;
       });
 
-      _showProfileSnackBar('프로필 이미지가 변경되었습니다.');
+      _showProfileSnackBar(
+        tr('profile.snackbar.profile_updated', context: context),
+      );
     } catch (e) {
       debugPrint('프로필 이미지 업데이트 오류: $e');
       if (mounted) {
-        _showProfileSnackBar('프로필 이미지를 변경할 수 없습니다.');
+        _showProfileSnackBar(
+          tr('profile.snackbar.profile_update_failed', context: context),
+        );
       }
     } finally {
       if (mounted) {
@@ -249,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               SizedBox(height: 34.h),
               Text(
-                '로그아웃 하시겠어요?',
+                tr('profile.logout.title', context: context),
                 style: TextStyle(
                   fontFamily: 'Pretendard Variable',
                   fontWeight: FontWeight.w700,
@@ -275,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   child: Text(
-                    '확인',
+                    tr('profile.logout.confirm', context: context),
                     style: TextStyle(
                       fontFamily: 'Pretendard Variable',
                       fontWeight: FontWeight.w600,
@@ -301,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   child: Text(
-                    '취소',
+                    tr('common.cancel', context: context),
                     style: TextStyle(
                       fontFamily: 'Pretendard Variable',
                       fontWeight: FontWeight.w500,
@@ -336,9 +347,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('로그아웃 중 오류가 발생했습니다.'),
-            backgroundColor: Color(0xFF5A5A5A),
+          SnackBar(
+            content: Text(
+              tr('profile.snackbar.logout_failed', context: context),
+            ),
+            backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
       }
@@ -363,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               SizedBox(height: 26.h),
               Text(
-                '탈퇴하기',
+                tr('profile.delete_account.title', context: context),
                 style: TextStyle(
                   fontFamily: 'Pretendard Variable',
                   fontWeight: FontWeight.w700,
@@ -376,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: Text(
-                  '탈퇴 버튼 선택시, 계정은\n삭제되며 복구가 불가능합니다.',
+                  tr('profile.delete_account.description', context: context),
                   style: TextStyle(
                     fontFamily: 'Pretendard Variable',
                     fontWeight: FontWeight.w500,
@@ -404,7 +417,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   child: Text(
-                    '탈퇴',
+                    tr('profile.delete_account.confirm', context: context),
                     style: TextStyle(
                       fontFamily: 'Pretendard Variable',
                       fontWeight: FontWeight.w600,
@@ -430,7 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   child: Text(
-                    '취소',
+                    tr('common.cancel', context: context),
                     style: TextStyle(
                       fontFamily: 'Pretendard Variable',
                       fontWeight: FontWeight.w500,
@@ -491,7 +504,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // 에러 메시지 표시
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('계정 삭제 중 오류가 발생했습니다: $e'),
+            content: Text(
+              tr(
+                'profile.snackbar.delete_account_failed',
+                context: context,
+                namedArgs: {'error': e.toString()},
+              ),
+            ),
             backgroundColor: const Color(0xFF5A5A5A),
             duration: const Duration(seconds: 3),
           ),
@@ -511,7 +530,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
-              '프로필',
+              tr('profile.title', context: context),
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w700,
@@ -696,7 +715,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SizedBox(width: 16.w),
             Text(
-              '계정',
+              tr('profile.section.account', context: context),
               style: TextStyle(
                 fontFamily: 'Pretendard Variable',
                 fontWeight: FontWeight.w700,
@@ -707,14 +726,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         SizedBox(height: 12.h),
-        _buildAccountCard('아이디', _userInfo?.userId ?? ''),
-        SizedBox(height: 7.h),
-        _buildAccountCard('이름', _userInfo?.name ?? ''),
-        SizedBox(height: 7.h),
-        _buildAccountCard('생일', _userInfo?.birthDate ?? ''),
+        _buildAccountCard(
+          tr('profile.account.id_label', context: context),
+          _userInfo?.userId ?? '',
+        ),
         SizedBox(height: 7.h),
         _buildAccountCard(
-          '전화번호',
+          tr('profile.account.name_label', context: context),
+          _userInfo?.name ?? '',
+        ),
+        SizedBox(height: 7.h),
+        _buildAccountCard(
+          tr('profile.account.birth_label', context: context),
+          _userInfo?.birthDate ?? '',
+        ),
+        SizedBox(height: 7.h),
+        _buildAccountCard(
+          tr('profile.account.phone_label', context: context),
           (_userInfo?.phoneNumber ?? '') == '010-000-0000'
               ? ''
               : (_userInfo?.phoneNumber ?? ''),
@@ -774,7 +802,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SizedBox(width: 16.w),
             Text(
-              '앱 설정',
+              tr('profile.section.app_settings', context: context),
               style: TextStyle(
                 fontFamily: 'Pretendard Variable',
                 fontWeight: FontWeight.w700,
@@ -795,11 +823,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               /*  _buildSettingsItem('알림 설정', hasToggle: true),
               Divider(height: 1, color: const Color(0xFF323232)),*/
-              _buildSettingsItem('언어', value: '한국어'),
+              _buildSettingsItem(
+                tr('profile.settings.language', context: context),
+                value: tr('profile.settings.language_ko', context: context),
+              ),
               Divider(height: 1, color: const Color(0xFF323232)),
-              _buildSettingsItem('개인정보 보호', value: ''),
+              _buildSettingsItem(
+                tr('profile.settings.privacy', context: context),
+                value: '',
+                onTap: () {
+                  Navigator.pushNamed(context, '/privacy_protect');
+                },
+              ),
               Divider(height: 1, color: const Color(0xFF323232)),
-              _buildSettingsItem('게시물 관리', value: ''),
+              _buildSettingsItem(
+                tr('profile.settings.post_management', context: context),
+                value: '',
+                onTap: () {
+                  Navigator.pushNamed(context, '/post_management');
+                },
+              ),
             ],
           ),
         ),
@@ -815,7 +858,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SizedBox(width: 16.w),
             Text(
-              '앱 설정',
+              tr('profile.section.usage_guide', context: context),
               style: TextStyle(
                 fontFamily: 'Pretendard Variable',
                 fontWeight: FontWeight.w700,
@@ -834,11 +877,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Column(
             children: [
-              _buildSettingsItem('개인정보 처리방침'),
+              _buildSettingsItem(
+                tr('profile.usage.privacy_policy', context: context),
+                onTap: () {
+                  Navigator.pushNamed(context, '/privacy_policy');
+                },
+              ),
               Divider(height: 1, color: const Color(0xFF323232)),
-              _buildSettingsItem('서비스 이용 약관'),
+              _buildSettingsItem(
+                tr('profile.usage.terms_of_service', context: context),
+                onTap: () {
+                  Navigator.pushNamed(context, '/terms_of_service');
+                },
+              ),
               Divider(height: 1, color: const Color(0xFF323232)),
-              _buildSettingsItem('앱 버전', value: '1.0.0'),
+              _buildSettingsItem(
+                tr('profile.usage.app_version', context: context),
+                value: tr('profile.usage.app_version_value', context: context),
+              ),
             ],
           ),
         ),
@@ -854,7 +910,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SizedBox(width: 16.w),
             Text(
-              '기타',
+              tr('profile.section.other', context: context),
               style: TextStyle(
                 fontFamily: 'Pretendard Variable',
                 fontWeight: FontWeight.w700,
@@ -873,16 +929,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Column(
             children: [
-              _buildSettingsItem('앱 정보 동의 설정'),
+              _buildSettingsItem(
+                tr('profile.other.app_info_consent', context: context),
+              ),
               Divider(height: 1, color: const Color(0xFF323232)),
 
               _buildSettingsItem(
-                '회원 탈퇴',
+                tr('profile.other.delete_account', context: context),
                 isRed: true,
                 onTap: _showDeleteAccountDialog,
               ),
               Divider(height: 1, color: const Color(0xFF323232)),
-              _buildSettingsItem('로그아웃', isRed: true, onTap: _showLogoutDialog),
+              _buildSettingsItem(
+                tr('profile.other.logout', context: context),
+                isRed: true,
+                onTap: _showLogoutDialog,
+              ),
             ],
           ),
         ),
@@ -898,19 +960,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     VoidCallback? onTap,
   }) {
     return GestureDetector(
-      onTap:
-          onTap ??
-          () {
-            if (title == '개인정보 보호') {
-              Navigator.pushNamed(context, '/privacy_protect');
-            } else if (title == '게시물 관리') {
-              Navigator.pushNamed(context, '/post_management');
-            } else if (title == '개인정보 처리방침') {
-              Navigator.pushNamed(context, '/privacy_policy');
-            } else if (title == '서비스 이용 약관') {
-              Navigator.pushNamed(context, '/terms_of_service');
-            }
-          },
+      onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         child: Row(

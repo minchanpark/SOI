@@ -30,6 +30,7 @@ doc/CommentReqDto.md
 doc/CommentRespDto.md
 doc/FriendAPIApi.md
 doc/FriendCheckRespDto.md
+doc/FriendCreateByNickNameReqDto.md
 doc/FriendCreateReqDto.md
 doc/FriendReqDto.md
 doc/FriendRespDto.md
@@ -87,6 +88,7 @@ lib/model/category_resp_dto.dart
 lib/model/comment_req_dto.dart
 lib/model/comment_resp_dto.dart
 lib/model/friend_check_resp_dto.dart
+lib/model/friend_create_by_nick_name_req_dto.dart
 lib/model/friend_create_req_dto.dart
 lib/model/friend_req_dto.dart
 lib/model/friend_resp_dto.dart
@@ -101,3 +103,4 @@ lib/model/user_find_resp_dto.dart
 lib/model/user_resp_dto.dart
 lib/model/user_update_req_dto.dart
 pubspec.yaml
+test/friend_create_by_nick_name_req_dto_test.dart

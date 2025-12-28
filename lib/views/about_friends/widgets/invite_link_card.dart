@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -30,10 +31,14 @@ class InviteLinkCard extends StatelessWidget {
   }
 
   /// 시스템 공유 시트용 파라미터 생성
-  ShareParams _buildShareParams(String link) {
+  ShareParams _buildShareParams(BuildContext context, String link) {
     return ShareParams(
-      text: 'SOI 앱에서 친구가 되어주세요!\n\n$link',
-      subject: 'SOI 친구 초대',
+      text: tr(
+        'friends.invite.share_text',
+        context: context,
+        namedArgs: {'link': link},
+      ),
+      subject: tr('friends.invite.share_subject', context: context),
     );
   }
 
@@ -47,9 +52,9 @@ class InviteLinkCard extends StatelessWidget {
     final link = _buildInviteLink(context);
     Clipboard.setData(ClipboardData(text: link));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('링크가 복사되었습니다'),
-        backgroundColor: Color(0xff404040),
+      SnackBar(
+        content: Text(tr('friends.invite.link_copied', context: context)),
+        backgroundColor: const Color(0xff404040),
       ),
     );
   }
@@ -58,7 +63,7 @@ class InviteLinkCard extends StatelessWidget {
   Future<void> _shareLink(BuildContext context) async {
     try {
       final link = _buildInviteLink(context);
-      await SharePlus.instance.share(_buildShareParams(link));
+      await SharePlus.instance.share(_buildShareParams(context, link));
     } catch (e) {
       debugPrint('공유 실패: $e');
     }
@@ -67,7 +72,11 @@ class InviteLinkCard extends StatelessWidget {
   /// 인스타그램 DM 공유 화면 열기 (네이티브 플러그인 사용)
   Future<void> _shareToInstagram(BuildContext context) async {
     final link = _buildInviteLink(context);
-    final message = 'SOI 앱에서 친구가 되어주세요!\n\n$link';
+    final message = tr(
+      'friends.invite.share_text',
+      context: context,
+      namedArgs: {'link': link},
+    );
     // 먼저 링크를 클립보드에 복사
     await Clipboard.setData(ClipboardData(text: message));
 
@@ -81,9 +90,11 @@ class InviteLinkCard extends StatelessWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('인스타그램이 설치되어 있지 않습니다'),
-              backgroundColor: Color(0xff404040),
+            SnackBar(
+              content: Text(
+                tr('friends.invite.instagram_missing', context: context),
+              ),
+              backgroundColor: const Color(0xff404040),
             ),
           );
         }
@@ -92,7 +103,7 @@ class InviteLinkCard extends StatelessWidget {
       debugPrint('인스타그램 공유 실패: $e');
       // 실패 시 시스템 공유 시트로 대체
       try {
-        await SharePlus.instance.share(_buildShareParams(link));
+        await SharePlus.instance.share(_buildShareParams(context, link));
       } catch (shareError) {
         debugPrint('시스템 공유도 실패: $shareError');
       }
@@ -106,7 +117,11 @@ class InviteLinkCard extends StatelessWidget {
       listen: false,
     ).currentUser;
     final link = _buildInviteLinkWithUser(user);
-    final message = 'SOI 앱에서 친구가 되어주세요!\n\n$link';
+    final message = tr(
+      'friends.invite.share_text',
+      context: context,
+      namedArgs: {'link': link},
+    );
     final encodedMessage = Uri.encodeComponent(message);
     final uri = Uri.parse('sms:?body=$encodedMessage');
 
@@ -116,9 +131,9 @@ class InviteLinkCard extends StatelessWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('메시지 앱을 열 수 없습니다'),
-              backgroundColor: Color(0xff404040),
+            SnackBar(
+              content: Text(tr('friends.invite.sms_unavailable', context: context)),
+              backgroundColor: const Color(0xff404040),
             ),
           );
         }
@@ -144,8 +159,8 @@ class InviteLinkCard extends StatelessWidget {
     // FeedTemplate 생성
     final template = FeedTemplate(
       content: Content(
-        title: 'SOI 앱에서 친구가 되어주세요!',
-        description: '사진과 음성으로 소통하는 새로운 SNS',
+        title: tr('friends.invite.kakao_title', context: context),
+        description: tr('friends.invite.kakao_description', context: context),
         imageUrl: Uri.parse('https://soi-sns.web.app/assets/SOI_logo.png'),
         link: Link(
           webUrl: linkUri,
@@ -158,7 +173,7 @@ class InviteLinkCard extends StatelessWidget {
       ),
       buttons: [
         Button(
-          title: 'SOI 시작하기',
+          title: tr('friends.invite.kakao_button', context: context),
           link: Link(
             webUrl: linkUri,
             mobileWebUrl: linkUri,
@@ -182,9 +197,9 @@ class InviteLinkCard extends StatelessWidget {
         debugPrint('카카오톡 공유 실패: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('카카오톡 공유에 실패했습니다'),
-              backgroundColor: Color(0xff404040),
+            SnackBar(
+              content: Text(tr('friends.invite.kakao_failed', context: context)),
+              backgroundColor: const Color(0xff404040),
             ),
           );
         }
@@ -200,9 +215,9 @@ class InviteLinkCard extends StatelessWidget {
         debugPrint('웹 공유 실패: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('카카오톡이 설치되어 있지 않습니다'),
-              backgroundColor: Color(0xff404040),
+            SnackBar(
+              content: Text(tr('friends.invite.kakao_missing', context: context)),
+              backgroundColor: const Color(0xff404040),
             ),
           );
         }
@@ -228,7 +243,7 @@ class InviteLinkCard extends StatelessWidget {
               _buildLinkCardContent(
                 context,
                 scale,
-                '링크 복사',
+                tr('friends.invite.copy', context: context),
                 'assets/link.png',
                 () => _copyLink(context),
               ),
@@ -236,7 +251,7 @@ class InviteLinkCard extends StatelessWidget {
               _buildLinkCardContent(
                 context,
                 scale,
-                '공유',
+                tr('friends.invite.share', context: context),
                 'assets/share.png',
                 () => _shareLink(context),
               ),
@@ -244,7 +259,7 @@ class InviteLinkCard extends StatelessWidget {
               _buildLinkCardContent(
                 context,
                 scale,
-                '카카오톡',
+                tr('friends.invite.kakao', context: context),
                 'assets/kakao.png',
                 () => _shareToKakao(context),
               ),
@@ -252,7 +267,7 @@ class InviteLinkCard extends StatelessWidget {
               _buildLinkCardContent(
                 context,
                 scale,
-                '인스타그램',
+                tr('friends.invite.instagram', context: context),
                 'assets/insta.png',
                 () => _shareToInstagram(context),
               ),
@@ -260,7 +275,7 @@ class InviteLinkCard extends StatelessWidget {
               _buildLinkCardContent(
                 context,
                 scale,
-                '메세지',
+                tr('friends.invite.message', context: context),
                 'assets/message.png',
                 () => _sendSms(context),
               ),

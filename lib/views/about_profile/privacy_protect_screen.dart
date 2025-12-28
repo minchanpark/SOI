@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import '../../api/controller/user_controller.dart';
-import '../../api/models/user.dart';
+import 'package:easy_localization/easy_localization.dart';
+//import 'package:provider/provider.dart';
+//import '../../api/controller/user_controller.dart';
+//import '../../api/models/user.dart';
 
 class PrivacyProtectScreen extends StatefulWidget {
   const PrivacyProtectScreen({super.key});
@@ -13,7 +14,7 @@ class PrivacyProtectScreen extends StatefulWidget {
 
 class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
   bool _isContactSyncEnabled = false;
-  User? _currentUser;
+  //User? _currentUser;
 
   @override
   void initState() {
@@ -23,13 +24,13 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
 
   Future<void> _loadUserData() async {
     try {
-      final userController = context.read<UserController>();
-      final user = userController.currentUser;
-      if (user != null) {
+      //final userController = context.read<UserController>();
+      //final user = userController.currentUser;
+      /*if (user != null) {
         setState(() {
           _currentUser = user;
         });
-      }
+      }*/
     } catch (e) {
       debugPrint('사용자 데이터 로드 오류: $e');
     }
@@ -46,7 +47,7 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '개인정보 보호',
+              tr('privacy.title', context: context),
               style: TextStyle(
                 color: Color(0xFFF8F8F8),
                 fontSize: 20.sp,
@@ -89,7 +90,7 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
                     ),
                     SizedBox(width: 25.w),
                     Text(
-                      '차단된 사용자',
+                      tr('privacy.blocked_users', context: context),
                       style: TextStyle(
                         color: const Color(0xFFF8F8F8),
                         fontSize: 17.sp,
@@ -128,7 +129,7 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
                     ),
                     SizedBox(width: 25.w),
                     Text(
-                      '연락처 동기화',
+                      tr('privacy.contact_sync', context: context),
                       style: TextStyle(
                         color: const Color(0xFFF8F8F8),
                         fontSize: 17.sp,

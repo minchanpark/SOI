@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 import '../common/custom_text_field.dart';
 
@@ -49,11 +50,13 @@ class SmsCodePage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const PageTitle(title: '인증번호를 입력해주세요.'),
+                PageTitle(
+                  title: tr('register.sms_title', context: context),
+                ),
                 SizedBox(height: 24.h),
                 CustomTextField(
                   controller: controller,
-                  hintText: '인증번호',
+                  hintText: tr('register.sms_hint', context: context),
                   keyboardType: TextInputType.number,
                   borderRadius: 16.5,
                   contentPadding: EdgeInsets.only(bottom: 7.h),
@@ -63,7 +66,7 @@ class SmsCodePage extends StatelessWidget {
                   onPressed: onResendPressed,
                   child: RichText(
                     text: TextSpan(
-                      text: '인증번호 다시 받기',
+                      text: tr('register.sms_resend', context: context),
                       style: TextStyle(
                         color: const Color(0xFFF8F8F8),
                         fontSize: 12,

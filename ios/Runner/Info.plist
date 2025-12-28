@@ -79,19 +79,19 @@
 	</array>
 
 	<key>NSCameraUsageDescription</key>
-	<string>SOI needs access to your camera to let you capture and share moments with friends.</string>
-
-	<key>NSContactsUsageDescription</key>
-	<string>SOI may request access to Contacts to help you find and invite friends. Your full contact list is not uploaded to or stored on our servers.</string>
+	<string>SOI uses the camera to let you take photos or record videos for your posts, and to capture or update your profile photo. For example, you can snap a photo for a new post or take a profile picture directly in the app.</string>
 
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SOI needs access to your microphone to record audio when capturing videos.</string>
+	<string>SOI uses the microphone to record audio you choose to add to your content. For example, you can record a short voice message to capture your current mood and attach it to a photo or post, or leave a voice comment by recording audio and tagging it on an image.</string>
 
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>SOI needs permission to save photos and videos you create or edit to your Photo Library.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>SOI requests access to Contacts only to help you invite friends by sending an invite link via SMS. Your contacts are used on-device for selection and are NEVER uploaded to, stored on, or processed by our servers.</string>
 
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SOI needs access to your Photo Library to let you select and share photos and videos stored on your device.</string>
+	<string>SOI needs access to your Photo Library to show a preview of your gallery and let you select photos or videos to create a post. For example, you can browse your device gallery, pick media, and continue to the post creation screen.</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SOI needs permission to save photos and videos you create or edit in the app to your Photo Library. For example, after editing a photo or creating a video post, you can choose to save it to your device.</string>
 
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>

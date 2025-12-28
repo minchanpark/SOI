@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../api/controller/contact_controller.dart';
@@ -23,14 +24,19 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
   static const String _inviteLink = 'https://soi-sns.web.app';
 
   String _buildInviteLink(BuildContext context) {
-    final user = Provider.of<UserController>(context, listen: false).currentUser;
+    final user = Provider.of<UserController>(
+      context,
+      listen: false,
+    ).currentUser;
     if (user == null) return _inviteLink;
-    return Uri.parse(_inviteLink).replace(
-      queryParameters: {
-        'refUserId': user.id.toString(),
-        'refNickname': user.userId,
-      },
-    ).toString();
+    return Uri.parse(_inviteLink)
+        .replace(
+          queryParameters: {
+            'refUserId': user.id.toString(),
+            'refNickname': user.userId,
+          },
+        )
+        .toString();
   }
 
   @override
@@ -69,16 +75,28 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
 
       await SharePlus.instance.share(
         ShareParams(
-          text: 'SOI 앱에서 친구가 되어주세요!\n\n$link',
-          subject: 'SOI 친구 초대',
+          text: tr(
+            'register.share_text',
+            context: context,
+            namedArgs: {'link': link},
+          ),
+          subject: tr('register.share_subject', context: context),
           sharePositionOrigin: sharePositionOrigin,
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('링크를 공유할 수 없습니다: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              'register.share_failed_with_reason',
+              context: context,
+              namedArgs: {'error': e.toString()},
+            ),
+          ),
+        ),
+      );
       debugPrint("링크 공유 실패: $e");
     }
   }
@@ -109,9 +127,10 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
               alignment: Alignment.center,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '공유 링크를 통해 친구를 추가해 보세요.',
+                    tr('register.friend_share_title', context: context),
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
                       fontSize: 18,
@@ -162,14 +181,19 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                               height: 22.5.h,
                             ),
                           SizedBox(width: 11.5.w),
-                          Text(
-                            '연락처 동기화',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                tr('register.contact_sync', context: context),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16.sp,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -207,14 +231,19 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                               height: 23.h,
                             ),
                             SizedBox(width: 11.5.w),
-                            Text(
-                              '친구 링크 공유',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w600,
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  tr('register.share_link', context: context),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.sp,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
                           ],

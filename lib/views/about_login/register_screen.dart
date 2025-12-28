@@ -1,20 +1,21 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:easy_localization/easy_localization.dart';
+//import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+//import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_final_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'widgets/common/continue_button.dart';
 import 'widgets/pages/friend_add_and_share_page.dart';
 import 'widgets/pages/name_input_page.dart';
 import 'widgets/pages/birth_date_page.dart';
-import 'widgets/pages/phone_input_page.dart';
+//import 'widgets/pages/phone_input_page.dart';
 import 'widgets/pages/select_profile_image_page.dart';
-import 'widgets/pages/sms_code_page.dart';
+//import 'widgets/pages/sms_code_page.dart';
 import 'widgets/pages/id_input_page.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -65,7 +66,8 @@ class _AuthScreenState extends State<AuthScreen> {
   late TextEditingController idController;
 
   // 중복 아이디 체크를 위한 변수
-  String? idErrorMessage;
+  String? _idErrorKey;
+  bool? _isIdAvailable;
   Timer? debounceTimer;
 
   // 약관 동의 상태 변수들
@@ -110,21 +112,25 @@ class _AuthScreenState extends State<AuthScreen> {
             final result = await _userController.checknickNameAvailable(id);
             if (result == true) {
               setState(() {
-                idErrorMessage = '사용 가능한 아이디입니다.';
+                _idErrorKey = 'register.id_available';
+                _isIdAvailable = true;
               });
             } else {
               setState(() {
-                idErrorMessage = '이미 사용 중인 아이디입니다.';
+                _idErrorKey = 'register.id_unavailable';
+                _isIdAvailable = false;
               });
             }
           } catch (e) {
             setState(() {
-              idErrorMessage = '중복 확인 중 오류가 발생했습니다.';
+              _idErrorKey = 'register.id_check_error';
+              _isIdAvailable = false;
             });
           }
         } else {
           setState(() {
-            idErrorMessage = null;
+            _idErrorKey = null;
+            _isIdAvailable = null;
           });
         }
       });
@@ -162,6 +168,10 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     // 화면 크기 정보
     final double screenHeight = MediaQuery.of(context).size.height;
+
+    final String? idErrorMessage = _idErrorKey == null
+        ? null
+        : tr(_idErrorKey!, context: context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -298,6 +308,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 controller: idController,
                 screenHeight: screenHeight,
                 errorMessage: idErrorMessage,
+                isAvailable: _isIdAvailable,
                 onChanged: (value) {
                   pageReady[2].value = value.isNotEmpty;
                 },
@@ -399,7 +410,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ready &&
                     (currentPage != 2 ||
                         idErrorMessage == null ||
-                        idErrorMessage == '사용 가능한 아이디입니다.');
+                        _isIdAvailable == true);
 
                 return ContinueButton(
                   isEnabled: isEnabled,

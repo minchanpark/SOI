@@ -143,6 +143,7 @@ class UserController extends ChangeNotifier {
     }
   }
 
+
   /// 로그아웃
   /// 현재 로그인된 사용자를 로그아웃 처리합니다.
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:soi/api/controller/contact_controller.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -146,7 +147,13 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('초기화 중 오류가 발생했습니다: $e'),
+            content: Text(
+              tr(
+                'friends.manage.init_error',
+                context: context,
+                namedArgs: {'error': e.toString()},
+              ),
+            ),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -235,7 +242,13 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('설정 화면을 열 수 없습니다: $e'),
+            content: Text(
+              tr(
+                'friends.manage.settings_error',
+                context: context,
+                namedArgs: {'error': e.toString()},
+              ),
+            ),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -269,7 +282,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
                   child: Text(
-                    '친구추가',
+                    tr('friends.manage.add_title', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: 18.sp,
@@ -290,7 +303,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
                   child: Text(
-                    '초대링크',
+                    tr('friends.manage.invite_link', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: (18.02).sp,
@@ -307,7 +320,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
                   child: Text(
-                    '친구 요청',
+                    tr('friends.manage.requests', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: (18.02).sp,
@@ -321,7 +334,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
                   child: Text(
-                    '친구 목록',
+                    tr('friends.manage.list', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: (18.02).sp,
@@ -334,7 +347,7 @@ class _FriendManagementScreenState extends State<FriendManagementScreen>
                 Padding(
                   padding: EdgeInsets.only(left: 17.w, bottom: 11.h),
                   child: Text(
-                    '친구 추천',
+                    tr('friends.manage.suggest', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: (18.02).sp,

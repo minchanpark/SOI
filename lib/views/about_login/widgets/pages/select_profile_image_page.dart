@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// 프로필 이미지 선택 페이지
 class SelectProfileImagePage extends StatefulWidget {
@@ -54,9 +55,11 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
     } catch (e) {
       debugPrint('이미지 선택 오류: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr('register.profile_image_error', context: context)),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -102,7 +105,7 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '프로필 사진을 선택해주세요',
+                tr('register.profile_image_title', context: context),
                 style: TextStyle(
                   color: const Color(0xFFF8F8F8),
                   fontSize: 18,

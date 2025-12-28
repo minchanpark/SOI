@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
@@ -49,25 +50,25 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
 
   String? profileImageKey;
 
-  final List<_OnboardingContent> _contents = const [
+  static const List<_OnboardingContent> _contents = [
     _OnboardingContent(
-      message: '카메라로 지금 이 순간을 포착하고,\n감정을 담을 준비를 해요.',
+      messageKey: 'onboarding.message_1',
       image: 'assets/onboarding1.png',
     ),
     _OnboardingContent(
-      message: '찍은 사진 위에 음성을 녹음해 기록하고,\n원하는 카테고리로 바로 보낼 수 있어요.',
+      messageKey: 'onboarding.message_2',
       image: 'assets/onboarding2.png',
     ),
     _OnboardingContent(
-      message: '전체, 공유 기록, 나의 기록을 볼 수 있고,\n카테고리 안에 모아둘 수 있어요.',
+      messageKey: 'onboarding.message_3',
       image: 'assets/onboarding3.png',
     ),
     _OnboardingContent(
-      message: '친구들의 기록을 들어보세요.\n친구들의 사진과 목소리를 하나씩 감상해요.',
+      messageKey: 'onboarding.message_4',
       image: 'assets/onboarding4.png',
     ),
     _OnboardingContent(
-      message: '친구들의 재밌는 음성 댓글을 듣고\n직접 음성 댓글을 남겨보세요!',
+      messageKey: 'onboarding.message_5',
       image: 'assets/onboarding5.png',
     ),
   ];
@@ -134,12 +135,11 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     final String nickName = (registration['nickName'] as String?) ?? '';
     final String name = (registration['name'] as String?) ?? '';
     final String phone = (registration['phone'] as String?) ?? '';
-    final String phoneForServer = phone.isEmpty ? '010-000-0000' : phone;
     final String birthDate = (registration['birthDate'] as String?) ?? '';
     final String? profileImagePath =
         registration['profileImagePath'] as String?;
 
-    // 필수 데이터 확인 (phone은 임시 값으로 대체)
+    // 필수 데이터 확인
     if (nickName.isEmpty || name.isEmpty) {
       debugPrint(
         '[OnboardingMainScreen] 필수 데이터 누락: nickName=$nickName, name=$name, phone=$phone',
@@ -157,7 +157,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     });
 
     debugPrint(
-      '[OnboardingMainScreen] 회원가입 시작: nickName=$nickName, name=$name, phone=$phoneForServer',
+      '[OnboardingMainScreen] 회원가입 시작: nickName=$nickName, name=$name, phone=$phone',
     );
 
     try {
@@ -165,7 +165,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
       final createdUser = await _apiUserController.createUser(
         name: name,
         nickName: nickName,
-        phoneNum: phoneForServer,
+        phoneNum: phone,
         birthDate: birthDate,
       );
 
@@ -219,7 +219,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
       // 4. 로그인 상태 저장
       await _apiUserController.saveLoginState(
         userId: createdUser.id,
-        phoneNumber: phoneForServer,
+        phoneNumber: phone,
       );
 
       debugPrint('[OnboardingMainScreen] 회원가입 완료, 홈 화면으로 이동');
@@ -276,7 +276,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    content.message,
+                    tr(content.messageKey, context: context),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
@@ -330,7 +330,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
                   borderRadius: BorderRadius.circular(26.9),
                 ),
                 child: Text(
-                  "계속하기",
+                  tr('common.continue', context: context),
                   style: TextStyle(
                     color: Colors.black,
                     fontSize: 20.sp,
@@ -348,10 +348,10 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
 }
 
 class _OnboardingContent {
-  final String message;
+  final String messageKey;
   final String image;
 
-  const _OnboardingContent({required this.message, required this.image});
+  const _OnboardingContent({required this.messageKey, required this.image});
 }
 
 class _PageIndicator extends StatelessWidget {

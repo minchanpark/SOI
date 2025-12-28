@@ -23,37 +23,43 @@ class _LoginScreenState extends State<LoginScreen> {
   // REST API 서비스
   api.UserController? _apiUserController;
 
+  // 닉네임 입력 컨트롤러
+  final TextEditingController _nicknameController = TextEditingController();
+
+  // 닉네임 입력 상태
+  final ValueNotifier<bool> _hasNickname = ValueNotifier<bool>(false);
+
   // 전화번호 입력 컨트롤러
-  final TextEditingController _phoneController = TextEditingController();
+  // final TextEditingController _phoneController = TextEditingController();
 
   // 인증번호 입력 컨트롤러
-  final TextEditingController _codeController = TextEditingController();
+  // final TextEditingController _codeController = TextEditingController();
 
   // 전화번호 입력 상태
-  final ValueNotifier<bool> _hasPhone = ValueNotifier<bool>(false);
+  // final ValueNotifier<bool> _hasPhone = ValueNotifier<bool>(false);
 
   // 인증번호 입력 상태
-  final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
+  // final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
 
-  String phoneNumber = '';
-  String _selectedCountryCode = 'KR';
+  // String phoneNumber = '';
+  // String _selectedCountryCode = 'KR';
 
   // 현재 페이지 인덱스
   int currentPage = 0;
 
   // 로딩 상태
   bool _isSendingCode = false;
-  bool _isVerifying = false;
+  //bool _isVerifying = false;
 
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  String? _firebaseVerificationId;
-  int? _firebaseResendToken;
-  late final bool _useFirebaseAuth;
+  //final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  //String? _firebaseVerificationId;
+  //int? _firebaseResendToken;
+  //late final bool _useFirebaseAuth;
 
   @override
   void initState() {
     super.initState();
-    _useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
+    //_useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
   }
 
   @override
@@ -69,10 +75,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _phoneController.dispose();
-    _codeController.dispose();
-    _hasPhone.dispose();
-    _hasCode.dispose();
+    _nicknameController.dispose();
+    _hasNickname.dispose();
+    // _phoneController.dispose();
+    // _codeController.dispose();
+    // _hasPhone.dispose();
+    // _hasCode.dispose();
     super.dispose();
   }
 
@@ -91,11 +99,126 @@ class _LoginScreenState extends State<LoginScreen> {
             currentPage = index;
           });
         },
-        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
+        children: [_buildNicknameLoginPage()],
+        // _buildSmsCodePage()],
       ),
     );
   }
 
+  // -------------------------
+  // 1. 닉네임 입력 페이지
+  // -------------------------
+  Widget _buildNicknameLoginPage() {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return Stack(
+      children: [
+        // 뒤로가기 버튼
+        Positioned(
+          top: 60.h,
+          left: 20.w,
+          child: IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+        ),
+
+        // 입력 필드 (임시 숨김)
+        Positioned(
+          top: 0.35.sh,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              Text(
+                'SOI 접속을 위해 닉네임을 입력해주세요.',
+                style: TextStyle(
+                  color: const Color(0xFFF8F8F8),
+                  fontSize: 18,
+                  fontFamily: GoogleFonts.inter().fontFamily,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16.h),
+              Container(
+                width: 239.w,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Color(0xff323232),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  children: [
+                    SizedBox(width: 17.w),
+                    Icon(
+                      Icons.person_outline,
+                      color: const Color(0xffC0C0C0),
+                      size: 24.sp,
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: TextField(
+                        controller: _nicknameController,
+                        keyboardType: TextInputType.text,
+                        textAlign: TextAlign.start,
+                        cursorHeight: 16.h,
+                        cursorColor: const Color(0xFFF8F8F8),
+                        style: TextStyle(
+                          color: const Color(0xFFF8F8F8),
+                          fontSize: 16,
+                          fontFamily: 'Pretendard',
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.08,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: '닉네임',
+                          hintStyle: TextStyle(
+                            color: const Color(0xFFC0C0C0),
+                            fontSize: 16.sp,
+                            fontFamily: 'Pretendard',
+                            fontWeight: FontWeight.w400,
+                          ),
+                          contentPadding: EdgeInsets.only(
+                            left: 15.w,
+                            bottom: 5.h,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          _hasNickname.value = value.trim().isNotEmpty;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 계속하기 버튼
+        Positioned(
+          bottom: keyboardHeight > 0 ? keyboardHeight + 20.h : 50.h,
+          left: 0,
+          right: 0,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _hasNickname,
+            builder: (context, hasNicknameValue, child) {
+              return ContinueButton(
+                isEnabled: hasNicknameValue && !_isSendingCode,
+                text: _isSendingCode ? '로그인 중...' : '계속하기',
+                onPressed: () => _loginWithNickname(),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /*
   // -------------------------
   // 1. 전화번호 입력 페이지
   // -------------------------
@@ -115,7 +238,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
 
         // 입력 필드 (임시 숨김)
-        /*
         Positioned(
           top: 0.35.sh,
           left: 0,
@@ -233,7 +355,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
-        */
 
         // 계속하기 버튼
         Positioned(
@@ -254,11 +375,12 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
     );
   }
+  */
 
   // -------------------------
   // 2. 인증번호 입력 페이지
   // -------------------------
-  Widget _buildSmsCodePage() {
+  /*Widget _buildSmsCodePage() {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Stack(
@@ -374,8 +496,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ],
     );
-  }
+  }*/
 
+  /*
   // -------------------------
   // 전화번호 정규화
   // -------------------------
@@ -522,7 +645,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         },
         codeSent: (verificationId, resendToken) {
-          _firebaseVerificationId = verificationId;
+          //_firebaseVerificationId = verificationId;
           _firebaseResendToken = resendToken;
           if (!isResend) {
             _goToNextPage();
@@ -536,7 +659,7 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         },
         codeAutoRetrievalTimeout: (verificationId) {
-          _firebaseVerificationId = verificationId;
+          //_firebaseVerificationId = verificationId;
           if (mounted) {
             setState(() {
               _isSendingCode = false;
@@ -554,13 +677,43 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
+  */
+
+  /// 닉네임 로그인
+  Future<void> _loginWithNickname() async {
+    if (_isSendingCode) return;
+
+    setState(() {
+      _isSendingCode = true;
+    });
+
+    final nickname = _nicknameController.text.trim();
+
+    try {
+      final user = await _apiUserController!.login(nickname);
+      if (user != null) {
+        _goHomePage();
+      } else {
+        _showErrorSnackBar('로그인에 실패했습니다.');
+      }
+    } catch (e) {
+      debugPrint('로그인 오류: $e');
+      _showErrorSnackBar('로그인 중 오류가 발생했습니다.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
+    }
+  }
 
   // -------------------------
   // 인증 및 로그인
   // -------------------------
 
   /// 인증번호 확인 및 로그인 처리
-  Future<void> _verifyAndLogin() async {
+  /*Future<void> _verifyAndLogin() async {
     if (_isVerifying) return;
 
     setState(() {
@@ -633,7 +786,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }
+  }*/
 
   // -------------------------
   // 유틸리티 메서드

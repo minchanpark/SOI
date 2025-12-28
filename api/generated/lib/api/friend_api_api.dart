@@ -74,7 +74,7 @@ class FriendAPIApi {
 
   /// 친구 추가
   ///
-  /// 사용자 id를 통해 친구추가를 합니다.
+  /// 사용자 전화번호를 통해 친구추가를 합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -108,13 +108,69 @@ class FriendAPIApi {
 
   /// 친구 추가
   ///
-  /// 사용자 id를 통해 친구추가를 합니다.
+  /// 사용자 전화번호를 통해 친구추가를 합니다.
   ///
   /// Parameters:
   ///
   /// * [FriendCreateReqDto] friendCreateReqDto (required):
   Future<ApiResponseDtoFriendRespDto?> create1(FriendCreateReqDto friendCreateReqDto,) async {
     final response = await create1WithHttpInfo(friendCreateReqDto,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoFriendRespDto',) as ApiResponseDtoFriendRespDto;
+    
+    }
+    return null;
+  }
+
+  /// nickname으로 친구 추가
+  ///
+  /// 사용자 nickName을 통해 친구추가를 합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [FriendCreateByNickNameReqDto] friendCreateByNickNameReqDto (required):
+  Future<Response> createByNickNameWithHttpInfo(FriendCreateByNickNameReqDto friendCreateByNickNameReqDto,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/friend/create/by-nickname';
+
+    // ignore: prefer_final_locals
+    Object? postBody = friendCreateByNickNameReqDto;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// nickname으로 친구 추가
+  ///
+  /// 사용자 nickName을 통해 친구추가를 합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [FriendCreateByNickNameReqDto] friendCreateByNickNameReqDto (required):
+  Future<ApiResponseDtoFriendRespDto?> createByNickName(FriendCreateByNickNameReqDto friendCreateByNickNameReqDto,) async {
+    final response = await createByNickNameWithHttpInfo(friendCreateByNickNameReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

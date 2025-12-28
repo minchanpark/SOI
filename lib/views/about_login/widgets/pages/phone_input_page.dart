@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 import '../common/custom_text_field.dart';
 
@@ -47,11 +48,13 @@ class PhoneInputPage extends StatelessWidget {
         Align(
           alignment: Alignment.center,
           child: Transform.translate(
-            offset: Offset(0, verticalOffset),
+                offset: Offset(0, verticalOffset),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const PageTitle(title: 'SOI 접속을 위해 전화번호를 입력해주세요.'),
+                PageTitle(
+                  title: tr('register.phone_title', context: context),
+                ),
                 SizedBox(height: 16.h),
                 _CountrySelector(
                   selectedCountryCode: selectedCountryCode,
@@ -60,7 +63,7 @@ class PhoneInputPage extends StatelessWidget {
                 SizedBox(height: 16.h),
                 CustomTextField(
                   controller: controller,
-                  hintText: '전화번호',
+                  hintText: tr('register.phone_hint', context: context),
                   keyboardType: TextInputType.phone,
                   textAlign: TextAlign.start,
                   prefixIcon: Icon(
@@ -101,14 +104,26 @@ class _CountrySelector extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _options = [
-    _CountryOption(code: 'KR', label: 'South Korea', dialCode: '+82'),
-    _CountryOption(code: 'US', label: 'United States', dialCode: '+1'),
-    _CountryOption(code: 'MX', label: 'Mexico', dialCode: '+52'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final options = [
+      _CountryOption(
+        code: 'KR',
+        label: tr('register.country_kr', context: context),
+        dialCode: '+82',
+      ),
+      _CountryOption(
+        code: 'US',
+        label: tr('register.country_us', context: context),
+        dialCode: '+1',
+      ),
+      _CountryOption(
+        code: 'MX',
+        label: tr('register.country_mx', context: context),
+        dialCode: '+52',
+      ),
+    ];
+
     return Container(
       width: 239.w,
       height: 44,
@@ -129,12 +144,12 @@ class _CountrySelector extends StatelessWidget {
             fontFamily: 'Pretendard',
             fontWeight: FontWeight.w500,
           ),
-          items: _options.map((option) {
+          items: options.map((option) {
             return DropdownMenuItem<String>(
               value: option.code,
               child: Text('${option.label} (${option.dialCode})'),
             );
-          }).toList(),
+          }).toList(growable: false),
           onChanged: (value) {
             if (value != null) onChanged(value);
           },

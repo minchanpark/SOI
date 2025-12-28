@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 import '../common/custom_text_field.dart';
 import '../common/validation_message.dart';
@@ -10,6 +11,7 @@ class IdInputPage extends StatelessWidget {
   final Function(String) onChanged;
   final Function(String)? onSubmitted;
   final String? errorMessage;
+  final bool? isAvailable;
   final double screenHeight;
   final PageController? pageController;
 
@@ -19,6 +21,7 @@ class IdInputPage extends StatelessWidget {
     required this.onChanged,
     this.onSubmitted,
     this.errorMessage,
+    this.isAvailable,
     required this.screenHeight,
     required this.pageController,
   });
@@ -55,11 +58,13 @@ class IdInputPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const PageTitle(title: '사용하실 아이디를 입력해주세요.'),
+                    PageTitle(
+                      title: tr('register.id_title', context: context),
+                    ),
                     SizedBox(height: 24),
                     CustomTextField(
                       controller: controller,
-                      hintText: '아이디 입력',
+                      hintText: tr('register.id_hint', context: context),
                       keyboardType: TextInputType.text,
                       onChanged: onChanged,
                       onSubmitted: onSubmitted,
@@ -69,7 +74,7 @@ class IdInputPage extends StatelessWidget {
                     (errorMessage != null)
                         ? ValidationMessage(
                             message: errorMessage!,
-                            isSuccess: errorMessage == '사용 가능한 아이디입니다.',
+                            isSuccess: isAvailable == true,
                           )
                         : SizedBox(height: 20),
                     SizedBox(height: 130.h),

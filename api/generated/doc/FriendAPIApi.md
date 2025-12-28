@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**blockFriend**](FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
 [**create1**](FriendAPIApi.md#create1) | **POST** /friend/create | 친구 추가
+[**createByNickName**](FriendAPIApi.md#createbynickname) | **POST** /friend/create/by-nickname | nickname으로 친구 추가
 [**deleteFriend**](FriendAPIApi.md#deletefriend) | **POST** /friend/delete | 친구 삭제
 [**getAllFriend**](FriendAPIApi.md#getallfriend) | **GET** /friend/get-all | 모든 친구 조회
 [**getAllFriend1**](FriendAPIApi.md#getallfriend1) | **GET** /friend/check-friend-relation | 연락처에 있는 친구들 관계확인
@@ -66,7 +67,7 @@ No authorization required
 
 친구 추가
 
-사용자 id를 통해 친구추가를 합니다.
+사용자 전화번호를 통해 친구추가를 합니다.
 
 ### Example
 ```dart
@@ -88,6 +89,49 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **friendCreateReqDto** | [**FriendCreateReqDto**](FriendCreateReqDto.md)|  | 
+
+### Return type
+
+[**ApiResponseDtoFriendRespDto**](ApiResponseDtoFriendRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createByNickName**
+> ApiResponseDtoFriendRespDto createByNickName(friendCreateByNickNameReqDto)
+
+nickname으로 친구 추가
+
+사용자 nickName을 통해 친구추가를 합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = FriendAPIApi();
+final friendCreateByNickNameReqDto = FriendCreateByNickNameReqDto(); // FriendCreateByNickNameReqDto | 
+
+try {
+    final result = api_instance.createByNickName(friendCreateByNickNameReqDto);
+    print(result);
+} catch (e) {
+    print('Exception when calling FriendAPIApi->createByNickName: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **friendCreateByNickNameReqDto** | [**FriendCreateByNickNameReqDto**](FriendCreateByNickNameReqDto.md)|  | 
 
 ### Return type
 

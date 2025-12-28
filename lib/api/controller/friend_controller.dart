@@ -85,6 +85,37 @@ class FriendController extends ChangeNotifier {
     }
   }
 
+  /// 닉네임으로 친구 추가
+  /// 친구 추가 요청을 보내고, 친구 추가 결과를 반환합니다.
+  ///
+  /// Parameters:
+  ///   - [requesterId]: 친구 요청자 ID
+  ///   - [receiverNickName]: 친구 수신자 닉네임
+  ///
+  /// Returns:
+  ///   - [Friend]: 추가된 친구 정보 (실패 시 null)
+  ///   - null: 친구 추가 실패
+  Future<Friend?> addFriendByNickName({
+    required int requesterId,
+    required String receiverNickName,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final friend = await _friendService.addFriendByNickName(
+        requesterId: requesterId,
+        receiverNickName: receiverNickName,
+      );
+      _setLoading(false);
+      return friend;
+    } catch (e) {
+      _setError('친구 추가 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   // ============================================
   // 친구 조회
   // ============================================

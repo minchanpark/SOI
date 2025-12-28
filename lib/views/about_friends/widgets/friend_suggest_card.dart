@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/contact_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -230,7 +231,13 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${contact.displayName}님에게 친구 요청을 보냈습니다.'),
+            content: Text(
+              tr(
+                'friends.suggest.request_sent',
+                context: context,
+                namedArgs: {'name': contact.displayName},
+              ),
+            ),
             backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
@@ -254,7 +261,11 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
               'refNickname': user.userId,
             },
           ).toString();
-    final message = '친구들의 사진과 목소리를 지금 바로 확인하세요!\n\n$link';
+    final message = tr(
+      'friends.suggest.sms_message',
+      context: context,
+      namedArgs: {'link': link},
+    );
 
     // SMS URI 직접 구성 (queryParameters 사용 시 +로 인코딩되는 문제 방지)
     final encodedMessage = Uri.encodeComponent(message);
@@ -266,7 +277,13 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${contact.displayName}님에게 초대 메시지를 보냅니다.'),
+              content: Text(
+                tr(
+                  'friends.suggest.invite_sms_sent',
+                  context: context,
+                  namedArgs: {'name': contact.displayName},
+                ),
+              ),
               backgroundColor: const Color(0xFF5A5A5A),
             ),
           );
@@ -327,7 +344,7 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
         );
       case 'pending':
         return _buildButton(
-          text: '요청됨',
+          text: tr('friends.suggest.pending', context: context),
           isEnabled: false,
           backgroundColor: const Color(0xff666666),
           textColor: const Color(0xffd9d9d9),
@@ -342,7 +359,7 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
       case 'none':
       default:
         return _buildButton(
-          text: '친구 추가',
+          text: tr('friends.suggest.add', context: context),
           isEnabled: true,
           backgroundColor: const Color(0xfff9f9f9),
           textColor: const Color(0xff1c1c1c),
@@ -407,7 +424,7 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
             ),
             SizedBox(height: (16).h),
             Text(
-              '연락처에서 친구를 찾는 중...',
+              tr('friends.suggest.loading', context: context),
               style: TextStyle(color: const Color(0xff666666), fontSize: 14.sp),
             ),
           ],
@@ -431,7 +448,7 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
           padding: EdgeInsets.all(20.sp),
           child: Center(
             child: Text(
-              '추천할 친구가 없습니다',
+              tr('friends.suggest.empty', context: context),
               style: TextStyle(color: const Color(0xff666666), fontSize: 14.sp),
             ),
           ),
@@ -455,7 +472,9 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
               ),
             ),
             title: Text(
-              contact.displayName.isNotEmpty ? contact.displayName : '이름 없음',
+              contact.displayName.isNotEmpty
+                  ? contact.displayName
+                  : tr('friends.suggest.no_name', context: context),
               style: TextStyle(
                 color: const Color(0xFFD9D9D9),
                 fontSize: 16,
@@ -497,8 +516,8 @@ class _FriendSuggestCardState extends State<FriendSuggestCard> {
       child: Center(
         child: Text(
           contactController.contactSyncEnabled
-              ? '연락처에서 친구를 찾을 수 없습니다'
-              : '연락처 동기화를 활성화해주세요',
+              ? tr('friends.suggest.no_contacts', context: context)
+              : tr('friends.suggest.enable_sync', context: context),
           style: TextStyle(color: const Color(0xff666666), fontSize: 14.sp),
         ),
       ),

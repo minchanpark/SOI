@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../api/controller/user_controller.dart';
 import '../../theme/theme.dart';
@@ -135,6 +136,33 @@ class _StartScreenState extends State<StartScreen>
     }
   }
 
+  /// 로그인 버튼 처리
+  Future<void> _handleLoginTap() async {
+    try {
+      final userController = Provider.of<UserController>(
+        context,
+        listen: false,
+      );
+      final canAutoLogin = await userController.tryAutoLogin();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (canAutoLogin) {
+        await _navigateToHome();
+        return;
+      }
+    } catch (e) {
+      debugPrint('[StartScreen] 자동 로그인 확인 실패: $e');
+    }
+
+    if (!mounted) {
+      return;
+    }
+    Navigator.pushNamed(context, '/login');
+  }
+
   Future<void> _navigateToHome() async {
     if (!mounted || _homeNavigationScheduled) {
       return;
@@ -239,7 +267,7 @@ class _StartScreenState extends State<StartScreen>
 
   Widget _buildSubText() {
     return Text(
-      'SOI에 오신걸 환영합니다!',
+      tr('start.welcome', context: context),
       textAlign: TextAlign.center,
       style: TextStyle(
         color: const Color(0xFFF8F8F8),
@@ -269,7 +297,7 @@ class _StartScreenState extends State<StartScreen>
             height: 59.h,
             alignment: Alignment.center,
             child: Text(
-              '회원가입',
+              tr('common.signup', context: context),
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 22.sp,
@@ -281,9 +309,9 @@ class _StartScreenState extends State<StartScreen>
         ),
         SizedBox(height: 19.w),
         ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             // 로그인 기록 체크 후 분기 처리
-            Navigator.pushNamed(context, '/login');
+            await _handleLoginTap();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xff171717),
@@ -297,7 +325,7 @@ class _StartScreenState extends State<StartScreen>
             height: 59.h,
             alignment: Alignment.center,
             child: Text(
-              '로그인',
+              tr('common.login', context: context),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22.sp,

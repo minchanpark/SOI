@@ -89,6 +89,54 @@ class FriendService {
     }
   }
 
+  /// 닉네임으로 친구 추가 요청
+  ///
+  /// [requesterId]가 [receiverNickName]에게 친구 추가 요청을 보냅니다.
+  ///
+  /// Parameters:
+  /// - [requesterId]: 요청자 ID
+  /// - [receiverNickName]: 대상 사용자 닉네임
+  ///
+  /// Returns: 생성된 친구 관계 정보 (Friend)
+  ///
+  /// Throws:
+  /// - [BadRequestException]: 이미 친구이거나 본인에게 요청
+  /// - [NotFoundException]: 대상 사용자를 찾을 수 없음
+  Future<Friend> addFriendByNickName({
+    required int requesterId,
+    required String receiverNickName,
+  }) async {
+    try {
+      final dto = FriendCreateByNickNameReqDto(
+        requesterId: requesterId,
+        receiverNickName: receiverNickName,
+      );
+
+      final response = await _friendApi.createByNickName(dto);
+
+      if (response == null) {
+        throw const DataValidationException(message: '친구 추가 응답이 없습니다.');
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '친구 추가 실패');
+      }
+
+      if (response.data == null) {
+        throw const DataValidationException(message: '친구 관계 정보가 없습니다.');
+      }
+
+      return Friend.fromDto(response.data!);
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '친구 추가 실패: $e', originalException: e);
+    }
+  }
+
   // ============================================
   // 친구 조회
   // ============================================

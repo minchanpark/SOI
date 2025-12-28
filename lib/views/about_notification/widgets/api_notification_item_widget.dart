@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 import '../../../api/models/notification.dart';
 
@@ -38,7 +39,9 @@ class ApiNotificationItemWidget extends StatelessWidget {
             Expanded(child: _buildNotificationText()),
             SizedBox(width: 12.w),
             if (notification.type == AppNotificationType.categoryInvite)
-              _buildConfirmButton()
+              _buildConfirmButton(
+                tr('notification.confirm', context: context),
+              )
             else if (notification.hasImage)
               _buildThumbnail(),
           ],
@@ -150,7 +153,7 @@ class ApiNotificationItemWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildConfirmButton() {
+  Widget _buildConfirmButton(String label) {
     return SizedBox(
       width: 44.w,
       height: 29.h,
@@ -164,7 +167,7 @@ class ApiNotificationItemWidget extends StatelessWidget {
           ),
         ),
         child: Text(
-          '확인',
+          label,
           style: TextStyle(
             color: const Color(0xFF1C1C1C),
             fontSize: 12.sp,
