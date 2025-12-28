@@ -53,7 +53,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // 페이지별 입력 완료 여부
   late List<ValueNotifier<bool>> pageReady;
-  String _selectedCountryCode = 'KR';
+  //String _selectedCountryCode = 'KR';
 
   // 공통 컨트롤러
   late TextEditingController nameController;
@@ -78,15 +78,15 @@ class _AuthScreenState extends State<AuthScreen> {
   late UserController _userController;
   bool _isControllerInitialized = false;
 
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  /* final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   String? _firebaseVerificationId;
   int? _firebaseResendToken;
-  late final bool _useFirebaseAuth;
+  late final bool _useFirebaseAuth;*/
 
   @override
   void initState() {
     super.initState();
-    _useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
+    // _useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
     // 컨트롤러 및 상태 초기화
     nameController = TextEditingController();
     monthController = TextEditingController();
@@ -175,8 +175,9 @@ class _AuthScreenState extends State<AuthScreen> {
             onPageChanged: (index) {
               setState(() {
                 currentPage = index;
-                if (index == 7) {
-                  pageReady[7].value = true;
+                if (index == 4 || index == 5) {
+                  pageReady[4].value = true;
+                  pageReady[5].value = true;
                 }
               });
             },
@@ -232,7 +233,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
 
               // 3. 전화번호 입력 페이지
-              PhoneInputPage(
+              /*PhoneInputPage(
                 controller: phoneController,
                 onChanged: (value) {
                   pageReady[2].value = value.isNotEmpty;
@@ -244,9 +245,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   });
                 },
                 pageController: _pageController,
-              ),
+              ),*/
               // 인증번호 입력 페이지
-              SmsCodePage(
+              /*SmsCodePage(
                 controller: smsController,
                 onChanged: (value) {
                   // 인증번호 입력 여부에 따라 상태 변경
@@ -291,14 +292,14 @@ class _AuthScreenState extends State<AuthScreen> {
                   }
                 },
                 pageController: _pageController,
-              ),
-              // 4. 아이디 입력 페이지
+              ),*/
+              // 3. 아이디 입력 페이지
               IdInputPage(
                 controller: idController,
                 screenHeight: screenHeight,
                 errorMessage: idErrorMessage,
                 onChanged: (value) {
-                  pageReady[4].value = value.isNotEmpty;
+                  pageReady[2].value = value.isNotEmpty;
                 },
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -318,7 +319,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 },
                 pageController: _pageController,
               ),
-              // 5. 약관동의 페이지
+              // 4. 약관동의 페이지
               AgreementPage(
                 name: name,
                 agreeAll: agreeAll,
@@ -335,7 +336,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     agreeMarketingInfo = value;
 
                     // 약관 페이지 준비 상태 업데이트 (필수 약관이 모두 체크되었는지 확인)
-                    pageReady[5].value = agreeServiceTerms && agreePrivacyTerms;
+                    pageReady[3].value = agreeServiceTerms && agreePrivacyTerms;
                   });
                 },
                 onToggleServiceTerms: (bool value) {
@@ -343,7 +344,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     agreeServiceTerms = value;
                     // 개별 항목 변경 시 전체 동의 상태 업데이트
                     _updateAgreeAllStatus();
-                    pageReady[5].value = agreeServiceTerms && agreePrivacyTerms;
+                    pageReady[3].value = agreeServiceTerms && agreePrivacyTerms;
                   });
                 },
                 onTogglePrivacyTerms: (bool value) {
@@ -351,7 +352,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     agreePrivacyTerms = value;
                     // 개별 항목 변경 시 전체 동의 상태 업데이트
                     _updateAgreeAllStatus();
-                    pageReady[5].value = agreeServiceTerms && agreePrivacyTerms;
+                    pageReady[3].value = agreeServiceTerms && agreePrivacyTerms;
                   });
                 },
                 onToggleMarketingInfo: (bool value) {
@@ -363,20 +364,20 @@ class _AuthScreenState extends State<AuthScreen> {
                 },
                 pageController: _pageController,
               ),
-              // 6. 프로필 이미지 선택 페이지
+              // 5. 프로필 이미지 선택 페이지
               SelectProfileImagePage(
                 onImageSelected: (String? imagePath) {
                   setState(() {
                     profileImagePath = imagePath;
 
                     // 이미지 선택은 선택사항이므로 항상 true
-                    pageReady[6].value = true;
+                    pageReady[4].value = true;
                   });
                 },
                 pageController: _pageController,
                 onSkip: _navigateToAuthFinal,
               ),
-              // 7. 친구 추가 및 공유 페이지
+              // 6. 친구 추가 및 공유 페이지
               FriendAddAndSharePage(
                 pageController: _pageController,
                 onSkip: _navigateToAuthFinal,
@@ -396,7 +397,7 @@ class _AuthScreenState extends State<AuthScreen> {
               builder: (context, ready, child) {
                 final bool isEnabled =
                     ready &&
-                    (currentPage != 4 ||
+                    (currentPage != 2 ||
                         idErrorMessage == null ||
                         idErrorMessage == '사용 가능한 아이디입니다.');
 
@@ -419,7 +420,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 curve: Curves.easeInOut,
                               );
                               break;
-                            case 2: // 전화번호
+                            /* case 2: // 전화번호
                               if (_useFirebaseAuth) {
                                 phoneNumber = _normalizePhoneNumberForFirebase(
                                   phoneController.text,
@@ -467,8 +468,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 );
                                 debugPrint('SMS 발송 예외: $e');
                               }
-                              break;
-                            case 3: // 인증코드
+                              break;*/
+                            /* case 3: // 인증코드
                               smsCode = smsController.text;
 
                               // 버튼 클릭시 인증 확인 수행
@@ -476,8 +477,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               if (smsCode.length == requiredLength) {
                                 await _performManualVerification(smsCode);
                               }
-                              break;
-                            case 4: // 아이디
+                              break;*/
+                            case 2: // 아이디
                               id = idController.text;
                               // ID 저장 후 다음 페이지로 이동
                               _pageController.nextPage(
@@ -485,20 +486,20 @@ class _AuthScreenState extends State<AuthScreen> {
                                 curve: Curves.easeInOut,
                               );
                               break;
-                            case 5: // 약관동의
+                            case 3: // 약관동의
                               _pageController.nextPage(
                                 duration: Duration(milliseconds: 300),
                                 curve: Curves.easeInOut,
                               );
                               break;
-                            // 여기서 프로필 설정 페이지로 넘어가야함
-                            case 6:
+
+                            case 4:
                               _pageController.nextPage(
                                 duration: Duration(milliseconds: 300),
                                 curve: Curves.easeInOut,
                               );
                               break;
-                            case 7:
+                            case 5:
                               _navigateToAuthFinal();
                               break;
                           }
@@ -514,7 +515,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   /// 전화번호를 Firebase 인증에 맞게 정규화하는 함수
-  String _normalizePhoneNumberForFirebase(String phone) {
+  /* String _normalizePhoneNumberForFirebase(String phone) {
     final trimmed = phone.trim();
     if (trimmed.startsWith('+')) {
       final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
@@ -540,10 +541,10 @@ class _AuthScreenState extends State<AuthScreen> {
       default:
         return '+82';
     }
-  }
+  }*/
 
   /// Firebase를 통한 SMS 인증 코드 요청 함수
-  Future<bool> _requestFirebaseSmsCode({required bool isResend}) async {
+  /*Future<bool> _requestFirebaseSmsCode({required bool isResend}) async {
     final firebasePhoneNumber = _normalizePhoneNumberForFirebase(
       phoneController.text,
     );
@@ -597,10 +598,10 @@ class _AuthScreenState extends State<AuthScreen> {
       const Duration(seconds: 65),
       onTimeout: () => false,
     );
-  }
+  }*/
 
   /// 수동 인증 코드 확인 함수
-  Future<void> _performManualVerification(String code) async {
+  /*Future<void> _performManualVerification(String code) async {
     if (isCheckingUser) return;
 
     setState(() {
@@ -686,7 +687,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
       debugPrint('인증 확인 중 예외: $e');
     }
-  }
+  }*/
 
   // 전체 동의 상태 업데이트 함수
   void _updateAgreeAllStatus() {

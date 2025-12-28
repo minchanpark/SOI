@@ -79,19 +79,19 @@
 	</array>
 
 	<key>NSCameraUsageDescription</key>
-	<string>SOI는 친구들과 순간을 공유하기 위해 카메라 접근 권한이 필요합니다...</string>
+	<string>SOI needs access to your camera to let you capture and share moments with friends.</string>
 
 	<key>NSContactsUsageDescription</key>
-	<string>SOI는 연락처에 저장된 친구들을 쉽게 찾고 초대하기 위해 연락처 접근 권한이 필요합니다...</string>
+	<string>SOI may request access to Contacts to help you find and invite friends. Your full contact list is not uploaded to or stored on our servers.</string>
 
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SOI는 동영상 촬영 시 오디오를 녹음하고...</string>
+	<string>SOI needs access to your microphone to record audio when capturing videos.</string>
 
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>SOI에서 촬영하거나 편집한 사진과 동영상을...</string>
+	<string>SOI needs permission to save photos and videos you create or edit to your Photo Library.</string>
 
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SOI는 기기에 저장된 사진과 동영상을...</string>
+	<string>SOI needs access to your Photo Library to let you select and share photos and videos stored on your device.</string>
 
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>

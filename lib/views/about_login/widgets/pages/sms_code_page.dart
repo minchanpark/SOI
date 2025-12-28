@@ -39,6 +39,8 @@ class SmsCodePage extends StatelessWidget {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
+
+        // 인증번호 입력 UI 임시 숨김
         Align(
           alignment: Alignment.center,
           child: Transform.translate(

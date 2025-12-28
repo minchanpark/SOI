@@ -73,9 +73,7 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   // Firebase 초기화
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 한국어 로케일 초기화
   await initializeDateFormatting('ko_KR', null);
@@ -152,9 +150,7 @@ void _configureErrorHandling() {
 }
 
 Future<void> _lockPortraitOrientation() {
-  return SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  return SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 }
 
 class MyApp extends StatefulWidget {

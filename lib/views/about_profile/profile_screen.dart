@@ -713,7 +713,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         SizedBox(height: 7.h),
         _buildAccountCard('생일', _userInfo?.birthDate ?? ''),
         SizedBox(height: 7.h),
-        _buildAccountCard('전화번호', _userInfo?.phoneNumber ?? ''),
+        _buildAccountCard(
+          '전화번호',
+          (_userInfo?.phoneNumber ?? '') == '010-000-0000'
+              ? ''
+              : (_userInfo?.phoneNumber ?? ''),
+        ),
       ],
     );
   }

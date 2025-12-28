@@ -42,6 +42,8 @@ class PhoneInputPage extends StatelessWidget {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
+
+        // 전화번호 입력 UI 임시 숨김
         Align(
           alignment: Alignment.center,
           child: Transform.translate(
@@ -127,13 +129,12 @@ class _CountrySelector extends StatelessWidget {
             fontFamily: 'Pretendard',
             fontWeight: FontWeight.w500,
           ),
-          items:
-              _options.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option.code,
-                  child: Text('${option.label} (${option.dialCode})'),
-                );
-              }).toList(),
+          items: _options.map((option) {
+            return DropdownMenuItem<String>(
+              value: option.code,
+              child: Text('${option.label} (${option.dialCode})'),
+            );
+          }).toList(),
           onChanged: (value) {
             if (value != null) onChanged(value);
           },

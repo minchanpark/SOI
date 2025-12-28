@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/user_controller.dart';
@@ -10,14 +11,14 @@ import '../../../../api/controller/user_controller.dart';
 ///
 /// 카테고리에 대한 알림 on/off를 토글합니다.
 /// API: POST /category/set/alert
+///
+/// 알림 상태는 로컬(SharedPreferences)에 저장되어 앱 재시작 후에도 유지됩니다.
 class NotificationSettingSection extends StatefulWidget {
   final int categoryId;
-  final bool initialValue;
 
   const NotificationSettingSection({
     super.key,
     required this.categoryId,
-    this.initialValue = true,
   });
 
   @override
@@ -27,21 +28,45 @@ class NotificationSettingSection extends StatefulWidget {
 
 class _NotificationSettingSectionState
     extends State<NotificationSettingSection> {
-  late bool _isNotificationEnabled;
+  bool _isNotificationEnabled = true; // 기본값: 알림 활성화
   bool _isLoading = false;
+  bool _isInitialized = false;
+
+  /// SharedPreferences 키 생성
+  String get _prefKey => 'category_alert_${widget.categoryId}';
 
   @override
   void initState() {
     super.initState();
-    _isNotificationEnabled = widget.initialValue;
+    _loadSavedState();
   }
 
   @override
   void didUpdateWidget(NotificationSettingSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialValue != widget.initialValue) {
-      _isNotificationEnabled = widget.initialValue;
+    if (oldWidget.categoryId != widget.categoryId) {
+      _loadSavedState();
     }
+  }
+
+  /// SharedPreferences에서 저장된 알림 상태 로드
+  Future<void> _loadSavedState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedValue = prefs.getBool(_prefKey);
+
+    if (mounted) {
+      setState(() {
+        // 저장된 값이 있으면 사용, 없으면 기본값 true (알림 활성화)
+        _isNotificationEnabled = savedValue ?? true;
+        _isInitialized = true;
+      });
+    }
+  }
+
+  /// SharedPreferences에 알림 상태 저장
+  Future<void> _saveState(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, value);
   }
 
   Future<void> _toggleNotification() async {
@@ -56,13 +81,20 @@ class _NotificationSettingSectionState
       return;
     }
 
+    // 클라이언트에서 먼저 상태 반전 (서버도 토글 방식이므로 동기화됨)
+    final newState = !_isNotificationEnabled;
+
     setState(() => _isLoading = true);
 
     try {
-      final newState = await categoryController.setCategoryAlert(
+      // API 호출 (서버에서 토글됨)
+      await categoryController.setCategoryAlert(
         categoryId: widget.categoryId,
         userId: currentUser.id,
       );
+
+      // 새 상태를 로컬에 저장
+      await _saveState(newState);
 
       if (mounted) {
         setState(() {
@@ -118,8 +150,8 @@ class _NotificationSettingSectionState
             ).tr(),
           ),
           GestureDetector(
-            onTap: _isLoading ? null : _toggleNotification,
-            child: _isLoading
+            onTap: (_isLoading || !_isInitialized) ? null : _toggleNotification,
+            child: (_isLoading || !_isInitialized)
                 ? SizedBox(
                     width: 50.w,
                     height: 26.h,

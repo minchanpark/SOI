@@ -134,12 +134,13 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     final String nickName = (registration['nickName'] as String?) ?? '';
     final String name = (registration['name'] as String?) ?? '';
     final String phone = (registration['phone'] as String?) ?? '';
+    final String phoneForServer = phone.isEmpty ? '010-000-0000' : phone;
     final String birthDate = (registration['birthDate'] as String?) ?? '';
     final String? profileImagePath =
         registration['profileImagePath'] as String?;
 
-    // 필수 데이터 확인
-    if (nickName.isEmpty || name.isEmpty || phone.isEmpty) {
+    // 필수 데이터 확인 (phone은 임시 값으로 대체)
+    if (nickName.isEmpty || name.isEmpty) {
       debugPrint(
         '[OnboardingMainScreen] 필수 데이터 누락: nickName=$nickName, name=$name, phone=$phone',
       );
@@ -156,7 +157,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
     });
 
     debugPrint(
-      '[OnboardingMainScreen] 회원가입 시작: nickName=$nickName, name=$name, phone=$phone',
+      '[OnboardingMainScreen] 회원가입 시작: nickName=$nickName, name=$name, phone=$phoneForServer',
     );
 
     try {
@@ -164,7 +165,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
       final createdUser = await _apiUserController.createUser(
         name: name,
         nickName: nickName,
-        phoneNum: phone,
+        phoneNum: phoneForServer,
         birthDate: birthDate,
       );
 
@@ -218,7 +219,7 @@ class _OnboardingMainScreenState extends State<OnboardingMainScreen> {
       // 4. 로그인 상태 저장
       await _apiUserController.saveLoginState(
         userId: createdUser.id,
-        phoneNumber: phone,
+        phoneNumber: phoneForServer,
       );
 
       debugPrint('[OnboardingMainScreen] 회원가입 완료, 홈 화면으로 이동');

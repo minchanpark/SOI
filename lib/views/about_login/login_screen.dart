@@ -114,7 +114,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
 
-        // 입력 필드
+        // 입력 필드 (임시 숨김)
+        /*
         Positioned(
           top: 0.35.sh,
           left: 0,
@@ -232,6 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
+        */
 
         // 계속하기 버튼
         Positioned(
@@ -276,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
 
-        // 입력 필드
+        // 입력 필드 (임시 숨김)
         Positioned(
           top: 0.35.sh,
           left: 0,
