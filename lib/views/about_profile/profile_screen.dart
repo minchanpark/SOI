@@ -740,6 +740,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           tr('profile.account.birth_label', context: context),
           _userInfo?.birthDate ?? '',
         ),
+        // 전화번호는 현재 표시하지 않음.
+        /*
         SizedBox(height: 7.h),
         _buildAccountCard(
           tr('profile.account.phone_label', context: context),
@@ -747,6 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? ''
               : (_userInfo?.phoneNumber ?? ''),
         ),
+        */
       ],
     );
   }

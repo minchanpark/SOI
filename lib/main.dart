@@ -101,15 +101,14 @@ void main() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: const [
-        Locale('en'),
-        Locale('es'),
-        Locale('ja'),
-        Locale('ko'),
-        Locale('zh'),
-      ],
+      supportedLocales: const [Locale('ko'), Locale('es')],
       path: 'assets/translations',
-      fallbackLocale: const Locale('es'),
+      fallbackLocale: const Locale('ko'),
+      startLocale:
+          PlatformDispatcher.instance.locale.languageCode == 'es'
+              ? const Locale('es')
+              : const Locale('ko'),
+
       child: MyApp(
         hasSeenLaunchVideo: hasSeenLaunchVideo,
         preloadedUserController: userController,

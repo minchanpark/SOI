@@ -14,6 +14,7 @@ import '../../../../api/models/user.dart' as api_user;
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
 import '../../../../api/controller/category_controller.dart' as api_category;
+import '../../../../api/controller/friend_controller.dart';
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/media_controller.dart';
 import '../../../../api/controller/audio_controller.dart';
@@ -21,6 +22,7 @@ import '../../../../utils/position_converter.dart';
 import '../../../about_share/share_screen.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
 import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
+import '../../../../api/models/friend.dart';
 
 /// API 기반 사진 상세 화면
 ///
@@ -61,6 +63,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   // 컨트롤러
   UserController? _userController;
+  FriendController? _friendController;
+  VoidCallback? _friendListener;
 
   // 상태 맵 (Firebase 버전과 동일한 구조)
   final Map<int, List<Comment>> _postComments = {};
@@ -137,6 +141,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _pageController = PageController(initialPage: _currentIndex);
     _audioController = AudioController();
     _userController = Provider.of<UserController>(context, listen: false);
+    _friendController = Provider.of<FriendController>(context, listen: false);
+    _friendListener = () {
+      if (!mounted) return;
+      unawaited(_refreshPostsForBlockStatus());
+    };
+    _friendController?.addListener(_friendListener!);
     _loadUserProfileImage();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -151,9 +161,70 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _pageController.dispose();
     _stopAudio();
     _audioController.dispose();
+    if (_friendListener != null) {
+      _friendController?.removeListener(_friendListener!);
+      _friendListener = null;
+    }
     // (배포버전 프리즈 방지) 전역 imageCache.clear()는 캐시가 큰 실사용 환경에서
     // dispose 타이밍에 수 초 프리즈를 만들 수 있어 제거합니다.
     super.dispose();
+  }
+
+  Future<void> _refreshPostsForBlockStatus() async {
+    if (!mounted) return;
+    final userController = _userController ?? context.read<UserController>();
+    final currentUser = userController.currentUser;
+    if (currentUser == null) return;
+
+    final postController = context.read<PostController>();
+    final friendController =
+        _friendController ?? context.read<FriendController>();
+
+    final posts = await postController.getPostsByCategory(
+      categoryId: widget.categoryId,
+      userId: currentUser.id,
+      notificationId: null,
+    );
+
+    final blockedUsers = await friendController.getAllFriends(
+      userId: currentUser.id,
+      status: FriendStatus.blocked,
+    );
+    final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+    final filteredPosts = posts
+        .where((post) => !blockedIds.contains(post.nickName))
+        .toList(growable: false);
+
+    if (!mounted) return;
+    if (filteredPosts.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final currentPostId =
+        _posts.isNotEmpty ? _posts[_currentIndex].id : null;
+    var nextIndex = 0;
+    if (currentPostId != null) {
+      final foundIndex =
+          filteredPosts.indexWhere((post) => post.id == currentPostId);
+      nextIndex = foundIndex >= 0 ? foundIndex : 0;
+    }
+
+    setState(() {
+      _posts = filteredPosts;
+      _currentIndex = nextIndex;
+    });
+
+    if (_pageController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!_pageController.hasClients) return;
+        _pageController.jumpToPage(_currentIndex);
+      });
+    }
+
+    _loadUserProfileImage();
+    _loadCommentsForPost(_posts[_currentIndex].id);
   }
 
   // ================= UI =================

@@ -2,9 +2,15 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
+import '../../../api/controller/friend_controller.dart';
+import '../../../api/controller/post_controller.dart';
+import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/audio_controller.dart';
+import '../../../views/about_feed/manager/feed_data_manager.dart';
+import '../report/report_bottom_sheet.dart';
 
 /// API 기반 음성 댓글 리스트 Bottom Sheet
 ///
@@ -170,6 +176,190 @@ class _ApiCommentRow extends StatelessWidget {
 
   const _ApiCommentRow({required this.comment, this.isHighlighted = false});
 
+  bool _canShowActions(String? currentUserId) {
+    if (currentUserId == null || currentUserId.isEmpty) return false;
+    if (comment.nickname == null || comment.nickname!.isEmpty) return false;
+    return comment.nickname != currentUserId;
+  }
+
+  Future<void> _reportUser(BuildContext context) async {
+    await ReportBottomSheet.show(context);
+  }
+
+  Future<void> _blockUser(BuildContext context) async {
+    final userController = context.read<UserController>();
+    final currentUser = userController.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('common.login_required', context: context)),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
+      return;
+    }
+
+    final shouldBlock = await _showBlockConfirmation(context);
+    if (shouldBlock != true) return;
+
+    final nickname = comment.nickname ?? '';
+    if (nickname.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('common.user_info_unavailable', context: context)),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
+      return;
+    }
+
+    final targetUser = await userController.getUserByNickname(nickname);
+    if (targetUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('common.user_info_unavailable', context: context)),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
+      return;
+    }
+
+    final friendController = context.read<FriendController>();
+    final ok = await friendController.blockFriend(
+      requesterId: currentUser.id,
+      receiverId: targetUser.id,
+    );
+    if (!context.mounted) return;
+
+    if (ok) {
+      context.read<FeedDataManager>().removePostsByNickname(nickname);
+      context.read<PostController>().notifyPostsChanged();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('common.block_success', context: context)),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('common.block_failed', context: context)),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showBlockConfirmation(BuildContext context) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xff323232),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: 17.h),
+              Text(
+                '차단 하시겠습니까?',
+                style: TextStyle(
+                  color: const Color(0xFFF8F8F8),
+                  fontSize: 19.78.sp,
+                  fontFamily: 'Pretendard Variable',
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12.h),
+              SizedBox(
+                height: 38.h,
+                width: 344.w,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xfff5f5f5),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.2.r),
+                    ),
+                  ),
+                  child: Text(
+                    '예',
+                    style: TextStyle(
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 17.8.sp,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 13.h),
+              SizedBox(
+                height: 38.h,
+                width: 344.w,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF323232),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.2.r),
+                    ),
+                  ),
+                  child: Text(
+                    '아니오',
+                    style: TextStyle(
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w500,
+                      fontSize: 17.8.sp,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 30.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionMenu(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: Colors.white, size: 20.sp),
+      color: const Color(0xFF323232),
+      onSelected: (value) {
+        if (value == 'report') {
+          _reportUser(context);
+        } else if (value == 'block') {
+          _blockUser(context);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'report',
+          child: Text(
+            tr('common.report', context: context),
+            style: TextStyle(color: Colors.white, fontSize: 14.sp),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'block',
+          child: Text(
+            tr('common.block', context: context),
+            style: TextStyle(color: Colors.white, fontSize: 14.sp),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     switch (comment.type) {
@@ -203,6 +393,8 @@ class _ApiCommentRow extends StatelessWidget {
     final profileUrl = comment.userProfile ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
     final emoji = _emojiFromId(comment.emojiId);
+    final currentUserId = context.read<UserController>().currentUser?.userId;
+    final showActions = _canShowActions(currentUserId);
 
     final content = Column(
       children: [
@@ -229,6 +421,7 @@ class _ApiCommentRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (showActions) _buildActionMenu(context),
             SizedBox(width: 10.w),
           ],
         ),
@@ -271,6 +464,8 @@ class _ApiCommentRow extends StatelessWidget {
     // userProfile은 프로필 이미지 URL
     final profileUrl = comment.userProfile ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
+    final currentUserId = context.read<UserController>().currentUser?.userId;
+    final showActions = _canShowActions(currentUserId);
 
     final content = Column(
       children: [
@@ -308,6 +503,7 @@ class _ApiCommentRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (showActions) _buildActionMenu(context),
             SizedBox(width: 10.w),
           ],
         ),
@@ -349,6 +545,8 @@ class _ApiCommentRow extends StatelessWidget {
   Widget _buildAudioRow(BuildContext context) {
     final profileUrl = comment.userProfile ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
+    final currentUserId = context.read<UserController>().currentUser?.userId;
+    final showActions = _canShowActions(currentUserId);
 
     // waveformData 파싱 (String -> List<double>)
     final waveformData = _parseWaveformData(comment.waveformData);
@@ -405,6 +603,7 @@ class _ApiCommentRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (showActions) _buildActionMenu(context),
                 SizedBox(width: 10.w),
               ],
             ),

@@ -64,7 +64,7 @@ dependencies:
   sqflite: ^2.4.1
   path: ^1.9.1
   intl: ^0.20.0
-  easy_localization: ^3.0.7
+  easy_localization: ^3.0.8
   eva_icons_flutter: ^3.1.0
   path_provider: ^2.1.4
   image: ^4.2.0
@@ -143,6 +143,8 @@ flutter:
     - assets/notification.png
     - assets/app_launch_video/SOI.mp4
     - assets/icon/icon.png
+    - assets/translations/ko.json
+    - assets/translations/es.json
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

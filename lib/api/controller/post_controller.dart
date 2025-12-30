@@ -49,6 +49,11 @@ class PostController extends ChangeNotifier {
     }
   }
 
+  /// 외부에서 게시물 변경 알림 트리거
+  void notifyPostsChanged() {
+    _notifyPostsChanged();
+  }
+
   /// 생성자
   ///
   /// [postService]를 주입받아 사용합니다. 테스트 시 MockPostService를 주입할 수 있습니다.

@@ -11,6 +11,7 @@
     "more": "더보기",
     "delete": "삭제",
     "block": "차단",
+    "report": "신고",
     "continue": "계속하기",
     "please_wait": "잠시만 기다려주세요",
     "search_empty": "검색 결과가 없습니다.",
@@ -21,7 +22,10 @@
     "user_info_unavailable": "사용자 정보를 확인할 수 없습니다.",
     "login": "로그인",
     "signup": "회원가입",
-    "unknown": "알 수 없음"
+    "unknown": "알 수 없음",
+    "report_received": "접수됨",
+    "block_success": "차단되었습니다.",
+    "block_failed": "차단에 실패했습니다."
   },
   "archive": {
     "tabs": {
@@ -166,7 +170,172 @@
     "delete_error": "친구 삭제 중 오류가 발생했습니다.",
     "block_success": "친구가 차단되었습니다.",
     "block_failed": "친구 차단에 실패했습니다.",
-    "block_error": "친구 차단 중 오류가 발생했습니다."
+    "block_error": "친구 차단 중 오류가 발생했습니다.",
+    "manage": {
+      "add_title": "친구추가",
+      "invite_link": "초대링크",
+      "requests": "친구 요청",
+      "list": "친구 목록",
+      "suggest": "친구 추천",
+      "init_error": "초기화 중 오류가 발생했습니다: {error}",
+      "settings_error": "설정 화면을 열 수 없습니다: {error}"
+    },
+    "options": {
+      "contact_sync": "연락처 동기화",
+      "id_label": "ID",
+      "add_by_id": "ID로 추가 하기"
+    },
+    "request": {
+      "login_required": "로그인이 필요합니다.",
+      "load_failed": "친구 요청을 불러오지 못했습니다.",
+      "not_found": "요청 정보를 찾을 수 없습니다.",
+      "accepted": "친구 요청을 수락했습니다",
+      "rejected": "친구 요청을 거절했습니다",
+      "failed": "요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      "loading": "친구 요청을 불러오는 중...",
+      "empty": "받은 친구 요청이 없습니다",
+      "default_text": "새로운 친구 요청이 도착했어요",
+      "subtitle": "친구 요청을 수락하거나 거절할 수 있어요",
+      "accept": "수락",
+      "reject": "거절"
+    },
+    "invite": {
+      "share_text": "SOI 앱에서 친구가 되어주세요!\n\n{link}",
+      "share_subject": "SOI 친구 초대",
+      "link_copied": "링크가 복사되었습니다",
+      "instagram_missing": "인스타그램이 설치되어 있지 않습니다",
+      "sms_unavailable": "메시지 앱을 열 수 없습니다",
+      "kakao_title": "SOI 앱에서 친구가 되어주세요!",
+      "kakao_description": "사진과 음성으로 소통하는 새로운 SNS",
+      "kakao_button": "SOI 시작하기",
+      "kakao_failed": "카카오톡 공유에 실패했습니다",
+      "kakao_missing": "카카오톡이 설치되어 있지 않습니다",
+      "copy": "링크 복사",
+      "share": "공유",
+      "kakao": "카카오톡",
+      "instagram": "인스타그램",
+      "message": "메세지"
+    },
+    "suggest": {
+      "request_sent": "{name}님에게 친구 요청을 보냈습니다.",
+      "sms_message": "친구들의 사진과 목소리를 지금 바로 확인하세요!\n\n{link}",
+      "invite_sms_sent": "{name}님에게 초대 메시지를 보냅니다.",
+      "pending": "요청됨",
+      "add": "친구 추가",
+      "loading": "연락처에서 친구를 찾는 중...",
+      "empty": "추천할 친구가 없습니다",
+      "no_name": "이름 없음",
+      "no_contacts": "연락처에서 친구를 찾을 수 없습니다",
+      "enable_sync": "연락처 동기화를 활성화해주세요"
+    },
+    "add_by_id": {
+      "title": "ID로 추가하기",
+      "search_hint": "친구 아이디 찾기",
+      "not_found": "없는 아이디 입니다. 다시 입력해주세요",
+      "request_sent": "{name}님에게 친구 요청을 보냈습니다",
+      "request_failed": "친구 요청 실패",
+      "status_friend": "친구",
+      "status_pending": "요청됨",
+      "status_blocked": "차단됨",
+      "status_add": "친구 추가"
+    }
+  },
+  "profile": {
+    "title": "프로필",
+    "section": {
+      "account": "계정",
+      "app_settings": "앱 설정",
+      "usage_guide": "앱 설정",
+      "other": "기타"
+    },
+    "account": {
+      "id_label": "아이디",
+      "name_label": "이름",
+      "birth_label": "생일",
+      "phone_label": "전화번호"
+    },
+    "settings": {
+      "language": "언어",
+      "language_ko": "한국어",
+      "privacy": "개인정보 보호",
+      "post_management": "게시물 관리"
+    },
+    "usage": {
+      "privacy_policy": "개인정보 처리방침",
+      "terms_of_service": "서비스 이용 약관",
+      "app_version": "앱 버전",
+      "app_version_value": "1.0.0"
+    },
+    "other": {
+      "app_info_consent": "앱 정보 동의 설정",
+      "delete_account": "회원 탈퇴",
+      "logout": "로그아웃"
+    },
+    "logout": {
+      "title": "로그아웃 하시겠어요?",
+      "confirm": "확인"
+    },
+    "delete_account": {
+      "title": "탈퇴하기",
+      "description": "탈퇴 버튼 선택시, 계정은\n삭제되며 복구가 불가능합니다.",
+      "confirm": "탈퇴"
+    },
+    "snackbar": {
+      "login_required": "로그인이 필요합니다. 다시 로그인해주세요.",
+      "image_not_found": "선택한 이미지를 찾을 수 없습니다.",
+      "upload_failed": "프로필 이미지 업로드에 실패했습니다.",
+      "profile_updated": "프로필 이미지가 변경되었습니다.",
+      "profile_update_failed": "프로필 이미지를 변경할 수 없습니다.",
+      "logout_failed": "로그아웃 중 오류가 발생했습니다.",
+      "delete_account_failed": "계정 삭제 중 오류가 발생했습니다: {error}"
+    }
+  },
+  "privacy": {
+    "title": "개인정보 보호",
+    "blocked_users": "차단된 사용자",
+    "contact_sync": "연락처 동기화"
+  },
+  "deleted_posts": {
+    "title": "게시물 복구",
+    "restore_button": "게시물에 표시",
+    "empty": "삭제한 게시물이 없습니다",
+    "restore_success": "{count}개의 게시물이 복원되었습니다",
+    "restore_failed": "게시물 복원에 실패했습니다",
+    "restore_partial": "{success}개 복원 성공, {fail}개 실패"
+  },
+  "post_management": {
+    "title": "게시물 관리",
+    "restore_deleted": "삭제한 게시물 복구"
+  },
+  "notification": {
+    "title": "알림",
+    "recent_7_days": "최근 7일",
+    "loading_short": "불러오는 중...",
+    "pending_requests": "보류 중인 요청 {count}명",
+    "no_requests": "받은 요청이 없습니다",
+    "friend_requests": "친구 요청",
+    "loading": "알림을 불러오는 중...",
+    "load_failed": "알림을 불러올 수 없습니다",
+    "load_failed_with_reason": "알림을 불러올 수 없습니다: {error}",
+    "unknown_error": "알 수 없는 오류가 발생했습니다",
+    "empty": "알림이 없습니다",
+    "empty_subtitle": "새로운 알림이 오면 여기에 표시됩니다",
+    "login_required": "로그인이 필요합니다.",
+    "invalid_notification": "알림 정보를 확인할 수 없습니다.",
+    "category_not_found": "카테고리 정보를 찾을 수 없습니다.",
+    "category_default": "카테고리",
+    "invite_accepted": "카테고리 초대를 수락했습니다.",
+    "invite_accept_failed": "초대 수락에 실패했습니다.",
+    "invite_declined": "카테고리 초대를 거절했습니다.",
+    "invite_decline_failed": "초대 거절에 실패했습니다.",
+    "post_not_found": "게시물 정보를 찾을 수 없습니다.",
+    "unsupported": "지원하지 않는 알림 타입입니다.",
+    "confirm": "확인",
+    "invite": {
+      "title": "\"{name}\" 카테고리에 초대되었습니다",
+      "message": "모르는 친구가 추가되어 있는 카테고리입니다.\n수락하시겠습니까?",
+      "accept": "수락"
+    }
   },
   "register": {
     "name_title": "당신의 이름을 알려주세요.",

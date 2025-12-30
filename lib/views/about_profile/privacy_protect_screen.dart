@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
-//import 'package:provider/provider.dart';
-//import '../../api/controller/user_controller.dart';
-//import '../../api/models/user.dart';
+import 'package:provider/provider.dart';
+import '../../api/controller/contact_controller.dart';
 
 class PrivacyProtectScreen extends StatefulWidget {
   const PrivacyProtectScreen({super.key});
@@ -13,26 +12,26 @@ class PrivacyProtectScreen extends StatefulWidget {
 }
 
 class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
-  bool _isContactSyncEnabled = false;
-  //User? _currentUser;
-
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<ContactController>().initialize();
+    });
   }
 
-  Future<void> _loadUserData() async {
-    try {
-      //final userController = context.read<UserController>();
-      //final user = userController.currentUser;
-      /*if (user != null) {
-        setState(() {
-          _currentUser = user;
-        });
-      }*/
-    } catch (e) {
-      debugPrint('사용자 데이터 로드 오류: $e');
+  Future<void> _handleContactToggle(ContactController controller) async {
+    if (controller.isLoading) return;
+    final result = await controller.handleToggleChange();
+    if (!mounted) return;
+    if (result.message.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFF5A5A5A),
+        ),
+      );
     }
   }
 
@@ -58,94 +57,94 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
           ],
         ),
       ),
-      body: Center(
-        child: Column(
-          children: [
-            SizedBox(height: 29.h),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/blocked_friends');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF1C1C1E),
-                overlayColor: Color(0xffffffff).withValues(alpha: 0.1),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: SizedBox(
-                width: 358.w,
-                height: 62,
-                child: Row(
-                  children: [
-                    SizedBox(width: 16.w),
-                    SizedBox(
-                      width: 32,
-                      child: Icon(
-                        Icons.block_flipped,
-                        size: 32,
-                        color: Colors.white,
-                      ),
+      body: Consumer<ContactController>(
+        builder: (context, contactController, _) {
+          return Center(
+            child: Column(
+              children: [
+                SizedBox(height: 29.h),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/blocked_friends');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF1C1C1E),
+                    overlayColor: Color(0xffffffff).withValues(alpha: 0.1),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    SizedBox(width: 25.w),
-                    Text(
-                      tr('privacy.blocked_users', context: context),
-                      style: TextStyle(
-                        color: const Color(0xFFF8F8F8),
-                        fontSize: 17.sp,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w500,
-                      ),
+                  ),
+                  child: SizedBox(
+                    width: 358.w,
+                    height: 62,
+                    child: Row(
+                      children: [
+                        SizedBox(width: 16.w),
+                        SizedBox(
+                          width: 32,
+                          child: Icon(
+                            Icons.block_flipped,
+                            size: 32,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 25.w),
+                        Text(
+                          tr('privacy.blocked_users', context: context),
+                          style: TextStyle(
+                            color: const Color(0xFFF8F8F8),
+                            fontSize: 17.sp,
+                            fontFamily: 'Pretendard',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                SizedBox(height: 13.h),
+                GestureDetector(
+                  onTap: () => _handleContactToggle(contactController),
+                  child: Container(
+                    width: 358.w,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1C1C1E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(width: 16.w),
+                        SizedBox(
+                          width: 32,
+                          child: Image.asset(
+                            "assets/contact.png",
+                            width: 27.w,
+                            height: 27.h,
+                          ),
+                        ),
+                        SizedBox(width: 25.w),
+                        Text(
+                          tr('privacy.contact_sync', context: context),
+                          style: TextStyle(
+                            color: const Color(0xFFF8F8F8),
+                            fontSize: 17.sp,
+                            fontFamily: 'Pretendard',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Spacer(),
+                        _profileSwitch(contactController.contactSyncEnabled),
+                        SizedBox(width: 16.w),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 13.h),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isContactSyncEnabled = !_isContactSyncEnabled;
-                });
-              },
-              child: Container(
-                width: 358.w,
-                height: 62,
-                decoration: BoxDecoration(
-                  color: Color(0xFF1C1C1E),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(width: 16.w),
-                    SizedBox(
-                      width: 32,
-                      child: Image.asset(
-                        "assets/contact.png",
-                        width: 27.w,
-                        height: 27.h,
-                      ),
-                    ),
-                    SizedBox(width: 25.w),
-                    Text(
-                      tr('privacy.contact_sync', context: context),
-                      style: TextStyle(
-                        color: const Color(0xFFF8F8F8),
-                        fontSize: 17.sp,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Spacer(),
-                    _profileSwitch(_isContactSyncEnabled),
-                    SizedBox(width: 16.w),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

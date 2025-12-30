@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../api/controller/category_controller.dart' as api_category;
+import '../../../api/controller/friend_controller.dart';
 import '../../../api/controller/post_controller.dart';
 import '../../../api/controller/user_controller.dart';
 import '../../../api/models/category.dart' as api_model;
+import '../../../api/models/friend.dart';
 import '../../../api/models/post.dart';
 
 class FeedPostItem {
@@ -190,6 +192,10 @@ class FeedDataManager extends ChangeNotifier {
         context,
         listen: false,
       );
+      final friendController = Provider.of<FriendController>(
+        context,
+        listen: false,
+      );
       final postController = Provider.of<PostController>(
         context,
         listen: false,
@@ -248,6 +254,19 @@ class FeedDataManager extends ChangeNotifier {
       final List<FeedPostItem> combined = [
         for (final items in combinedLists) ...items,
       ];
+
+      // 차단 사용자 게시물 필터링
+      final blockedUsers = await friendController.getAllFriends(
+        userId: currentUser.id,
+        status: FriendStatus.blocked,
+      );
+      if (blockedUsers.isNotEmpty) {
+        final blockedIds =
+            blockedUsers.map((user) => user.userId).toSet();
+        combined.removeWhere(
+          (item) => blockedIds.contains(item.post.nickName),
+        );
+      }
 
       // 게시물 작성일 기준 내림차순 정렬
       combined.sort((a, b) {
@@ -342,6 +361,22 @@ class FeedDataManager extends ChangeNotifier {
       _allPosts.removeAt(index); // 해당 인덱스의 게시물 데이터 제거
       _notifyStateChanged(); // 상태 변경 알림
     }
+  }
+
+  /// 닉네임 기준으로 피드에서 게시물 제거
+  void removePostsByNickname(String nickName) {
+    if (_allPosts.isEmpty) return;
+    final filtered = _allPosts
+        .where((item) => item.post.nickName != nickName)
+        .toList(growable: false);
+    if (filtered.length == _allPosts.length) return;
+
+    _allPosts = filtered;
+    if (_visibleCount > _allPosts.length) {
+      _visibleCount = _allPosts.length;
+    }
+    _hasMoreData = _visibleCount < _allPosts.length;
+    _notifyStateChanged();
   }
 
   @override

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// 약관 동의 페이지
 class AgreementPage extends StatelessWidget {
@@ -107,7 +106,9 @@ class AgreementPage extends StatelessWidget {
                   value: agreeServiceTerms,
                   onChanged: onToggleServiceTerms,
                   showArrow: true,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushNamed(context, '/terms_of_service');
+                  },
                 ),
                 SizedBox(height: (10.2).h),
                 _AgreementOption(
@@ -118,15 +119,8 @@ class AgreementPage extends StatelessWidget {
                   value: agreePrivacyTerms,
                   onChanged: onTogglePrivacyTerms,
                   showArrow: true,
-                  onTap: () async {
-                    final url = Uri.parse(
-                      "https://firebasestorage.googleapis.com/v0/b/soi-privacy.firebasestorage.app/o/index.html?alt=media&token=a34771bf-ec02-4fe0-9d48-0f272068908e",
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    } else {
-                      debugPrint('Could not launch $url');
-                    }
+                  onTap: () {
+                    Navigator.pushNamed(context, '/privacy_policy');
                   },
                 ),
                 SizedBox(height: (10.2).h),

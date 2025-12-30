@@ -11,6 +11,7 @@
     "more": "Más",
     "delete": "Eliminar",
     "block": "Bloquear",
+    "report": "Reportar",
     "continue": "Seguir",
     "please_wait": "Espera",
     "search_empty": "Sin resultados",
@@ -21,7 +22,10 @@
     "user_info_unavailable": "Sin datos de usuario",
     "login": "Entrar",
     "signup": "Registro",
-    "unknown": "N/D"
+    "unknown": "N/D",
+    "report_received": "Recibido",
+    "block_success": "Bloqueado",
+    "block_failed": "No se pudo"
   },
   "archive": {
     "tabs": {

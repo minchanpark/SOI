@@ -11,9 +11,11 @@ import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sh
 import 'package:soi/views/about_friends/friend_list_add_screen.dart';
 
 import '../../../../api/controller/category_controller.dart';
+import '../../../../api/controller/friend_controller.dart';
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
+import '../../../../api/models/friend.dart';
 import '../../../../api/models/post.dart';
 import '../../../../theme/theme.dart';
 import '../../widgets/archive_card_widget/archive_card_placeholders.dart';
@@ -54,6 +56,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   PostController? postController;
   UserController? userController;
   MediaController? mediaController;
+  FriendController? friendController;
   VoidCallback? _postsChangedListener; // 포스트 변경을 감지하는 리스너
 
   Category get _currentCategory => _category ?? widget.category;
@@ -96,6 +99,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       postController = Provider.of<PostController>(context, listen: false);
       userController = Provider.of<UserController>(context, listen: false);
       mediaController = Provider.of<MediaController>(context, listen: false);
+      friendController = Provider.of<FriendController>(context, listen: false);
 
       // 포스트 변경 리스너 등록
       _attachPostChangedListenerIfNeeded();
@@ -141,9 +145,19 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         notificationId: null,
       );
 
+      final blockedUsers = await friendController!.getAllFriends(
+        userId: currentUser.id,
+        status: FriendStatus.blocked,
+      );
+      final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+
       // 미디어(사진/비디오)가 포함된 포스트 필터링
       final mediaPosts = posts
-          .where((post) => post.hasMedia)
+          .where((post) {
+            if (!post.hasMedia) return false;
+            if (blockedIds.isEmpty) return true;
+            return !blockedIds.contains(post.nickName);
+          })
           .toList(growable: false);
 
       // 파일 키 목록 생성

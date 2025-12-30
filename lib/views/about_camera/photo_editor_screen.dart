@@ -204,7 +204,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   double _minChildSize = _kInitialSheetExtent;
 
   // 초기값은 0에서 시작
-  double _initialChildSize = _kInitialSheetExtent;
+  //double _initialChildSize = _kInitialSheetExtent;
+  double _initialChildSize = 0.19;
 
   // 잠금 상태 플래그
   // 이 플래그로 바텀시트가 잠금 상태인지 여부를 추적
@@ -719,9 +720,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 현재 사용자 정보 확인
       final currentUser = _userController.currentUser;
       if (currentUser == null) {
-        _showErrorSnackBar(
-          tr('common.login_required_retry', context: context),
-        );
+        _showErrorSnackBar(tr('common.login_required_retry', context: context));
         _uploadStarted = false;
         return;
       }
