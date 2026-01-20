@@ -183,7 +183,17 @@ class _ApiCommentRow extends StatelessWidget {
   }
 
   Future<void> _reportUser(BuildContext context) async {
-    await ReportBottomSheet.show(context);
+    final result = await ReportBottomSheet.show(context);
+    if (result == null) return;
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
+        ),
+        backgroundColor: Color(0xFF5A5A5A),
+      ),
+    );
   }
 
   Future<void> _blockUser(BuildContext context) async {

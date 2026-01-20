@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 //import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/user_controller.dart';
+import 'package:soi/utils/username_validator.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
 //import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_final_screen.dart';
@@ -107,6 +108,13 @@ class _AuthScreenState extends State<AuthScreen> {
       if (debounceTimer?.isActive ?? false) debounceTimer!.cancel();
       debounceTimer = Timer(const Duration(milliseconds: 300), () async {
         final id = idController.text.trim();
+        if (isForbiddenUsername(id)) {
+          setState(() {
+            _idErrorKey = 'register.id_not_allowed';
+            _isIdAvailable = false;
+          });
+          return;
+        }
         if (id.isNotEmpty) {
           try {
             final result = await _userController.checknickNameAvailable(id);
@@ -314,6 +322,13 @@ class _AuthScreenState extends State<AuthScreen> {
                 },
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
+                    if (isForbiddenUsername(value)) {
+                      setState(() {
+                        _idErrorKey = 'register.id_not_allowed';
+                        _isIdAvailable = false;
+                      });
+                      return;
+                    }
                     id = value;
                     Navigator.push(
                       context,

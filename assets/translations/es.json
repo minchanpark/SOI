@@ -248,6 +248,7 @@
     "id_available": "ID libre",
     "id_unavailable": "ID en uso",
     "id_check_error": "Error al verificar",
+    "id_not_allowed": "Este nombre de usuario no está permitido. Por favor, elige otro.",
     "phone_title": "Tu teléfono",
     "phone_hint": "Teléfono",
     "sms_title": "Código",

@@ -32,6 +32,7 @@ class ApiUserInfoWidget extends StatefulWidget {
   final ValueChanged<String?>? onEmojiSelected; // 부모 상태(postId별 선택값) 즉시 반영용
   final bool isLiked;
   final String? selectedEmoji;
+  final Future<void> Function(ReportResult result)? onReportSubmitted;
 
   const ApiUserInfoWidget({
     super.key,
@@ -44,6 +45,7 @@ class ApiUserInfoWidget extends StatefulWidget {
     this.onEmojiSelected,
     this.isLiked = false,
     this.selectedEmoji,
+    this.onReportSubmitted,
   });
 
   @override
@@ -67,7 +69,21 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
 
   Future<void> _reportUser() async {
     if (!mounted) return;
-    await ReportBottomSheet.show(context);
+    final result = await ReportBottomSheet.show(context);
+    if (result == null) return;
+    if (widget.onReportSubmitted != null) {
+      await widget.onReportSubmitted!(result);
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
+        ),
+        backgroundColor: Color(0xFF5A5A5A),
+      ),
+    );
   }
 
   Future<void> _blockUser() async {

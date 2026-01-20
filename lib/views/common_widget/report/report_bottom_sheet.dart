@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+class ReportResult {
+  final String reason;
+  final String? detail;
+
+  const ReportResult({required this.reason, this.detail});
+}
+
 class ReportBottomSheet {
-  static Future<void> show(BuildContext context) async {
+  static Future<ReportResult?> show(BuildContext context) async {
     final reasons = <String>[
       '스팸',
       '괴롭힘/혐오',
@@ -12,7 +19,7 @@ class ReportBottomSheet {
     String? selectedReason;
     final detailController = TextEditingController();
 
-    await showModalBottomSheet<void>(
+    return showModalBottomSheet<ReportResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -128,11 +135,11 @@ class ReportBottomSheet {
                       child: ElevatedButton(
                         onPressed: canSubmit
                             ? () {
-                                Navigator.of(sheetContext).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('신고가 정상적으로 접수되었습니다.'),
-                                    backgroundColor: Color(0xFF5A5A5A),
+                                final detail = detailController.text.trim();
+                                Navigator.of(sheetContext).pop(
+                                  ReportResult(
+                                    reason: selectedReason!,
+                                    detail: detail.isEmpty ? null : detail,
                                   ),
                                 );
                               }

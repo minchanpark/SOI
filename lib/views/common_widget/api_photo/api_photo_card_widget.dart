@@ -9,6 +9,7 @@ import 'api_user_info_widget.dart';
 import 'api_voice_recording_widget.dart';
 import 'api_voice_comment_list_sheet.dart';
 import 'pending_api_voice_comment.dart';
+import '../report/report_bottom_sheet.dart';
 
 /// API 기반 사진 카드 위젯
 ///
@@ -26,6 +27,8 @@ class ApiPhotoCardWidget extends StatefulWidget {
   // postId별 선택된 이모지 (부모가 관리)
   final String? selectedEmoji;
   final ValueChanged<String?>? onEmojiSelected; // 부모 캐시 갱신 콜백
+  final Future<void> Function(Post post, ReportResult result)?
+  onReportSubmitted;
 
   // 상태 관리 관련
   final Map<int, List<Comment>> postComments;
@@ -57,6 +60,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
     this.isCategory = false,
     this.selectedEmoji,
     this.onEmojiSelected,
+    this.onReportSubmitted,
     required this.postComments,
     required this.voiceCommentActiveStates,
     required this.voiceCommentSavedStates,
@@ -127,6 +131,11 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
                 onCommentsReloadRequested: widget.onCommentsReloadRequested,
+                onReportSubmitted:
+                    widget.onReportSubmitted == null
+                        ? null
+                        : (result) =>
+                            widget.onReportSubmitted!(widget.post, result),
 
                 // 부모 상태 반영
                 selectedEmoji: widget.selectedEmoji,

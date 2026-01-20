@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soi/api/models/user.dart';
 import 'package:soi/api/services/user_service.dart';
+import 'package:soi/utils/username_validator.dart';
 
 /// 사용자 및 인증 컨트롤러
 ///
@@ -373,6 +374,11 @@ class UserController extends ChangeNotifier {
     _clearError();
 
     try {
+      if (nickName != null && isForbiddenUsername(nickName)) {
+        _setError('This username is not allowed. Please choose another.');
+        _setLoading(false);
+        return null;
+      }
       final user = await _userService.updateUser(
         id: id,
         name: name,
