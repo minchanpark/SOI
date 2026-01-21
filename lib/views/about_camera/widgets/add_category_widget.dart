@@ -75,10 +75,6 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
       setState(() {
         _selectedFriends = result;
       });
-
-      for (final friend in _selectedFriends) {
-        debugPrint('- ${friend.name} (${friend.uid})');
-      }
     }
   }
 
@@ -105,7 +101,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                   onPressed: widget.onBackPressed,
                 ),
 
-                // 제목
+                // "새 카테고리 만들기" 텍스트
                 Text(
                   'archive.create_category_title',
                   style: TextStyle(
@@ -130,7 +126,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                         borderRadius: BorderRadius.circular(16.5),
                       ),
                       elevation: 0,
-                      // 저장 텍스트의 위치를 조정할 때는 여기서 <--
+                      // 저장 텍스트의 위치를 조정할 때는 여기서
                       padding: EdgeInsets.only(top: (2.5).h),
                     ),
                     child: Text(

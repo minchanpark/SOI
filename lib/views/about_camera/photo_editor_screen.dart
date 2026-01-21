@@ -285,16 +285,33 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
   // ========== 초기화 메서드들 ==========
 
+  // AddCategoryWidget 컨텐츠에 필요한 바텀시트 extent를 동적으로 계산
+  double _calculateAddCategorySheetExtent({bool withKeyboard = false}) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    // AddCategoryWidget 컨텐츠 높이 (헤더 48 + 구분선 1 + 패딩 20 + 친구버튼 35 + 텍스트필드 48 + 카운터 18 + 여유 30)
+    const contentHeight = 200.0;
+
+    // 키보드가 올라올 때는 키보드 높이도 고려
+    final keyboardHeight = withKeyboard ? (this.keyboardHeight + 200) : 0.0;
+
+    // 필요한 총 높이
+    final totalNeeded = contentHeight + keyboardHeight;
+
+    // 화면 비율로 변환 (최소 0.25, 최대 0.65)
+    final extent = (totalNeeded / screenHeight).clamp(0.25, 0.65);
+    return extent;
+  }
+
   // 카테고리 이름 입력 포커스 변경 리스너
   void _onCategoryFocusChange() {
     if (!mounted || _isDisposing) return;
 
     if (_categoryFocusNode.hasFocus && _showAddCategoryUI) {
-      // 키보드가 올라올 때 바텀시트 확장 --> 0.45로 키보드 높이에 맞춤
-      _animateSheetTo(0.45);
+      // 키보드가 올라올 때 바텀시트 확장 (동적 계산)
+      _animateSheetTo(_calculateAddCategorySheetExtent(withKeyboard: true));
     } else if (!_categoryFocusNode.hasFocus && _showAddCategoryUI) {
-      // 키보드가 내려갈 때 바텀시트 축소 --> 0.25로 축소
-      _animateSheetTo(0.25);
+      // 키보드가 내려갈 때 바텀시트 축소 (동적 계산)
+      _animateSheetTo(_calculateAddCategorySheetExtent(withKeyboard: false));
     }
   }
 
@@ -1687,8 +1704,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                                               () => _showAddCategoryUI = true,
                                             );
                                             _animateSheetTo(
-                                              0.25,
-                                            ); // 카테고리를 추가할 때는 시트를 0.25로 변경
+                                              (0.3).sp,
+                                            ); // 카테고리를 추가할 때는 시트를 0.3로 변경
                                           },
                                         ),
                                 ),
