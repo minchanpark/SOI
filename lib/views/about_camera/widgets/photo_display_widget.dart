@@ -49,6 +49,9 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
   bool _isInitialized = false;
   bool _isMuted = false; // 음소거 상태 추가
 
+  // 갤러리 이미지 표시 모드 (true: 원본 비율, false: 채우기)
+  bool _showOriginalAspectRatio = true;
+
   @override
   void initState() {
     super.initState();
@@ -122,6 +125,10 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(20.0),
+        border: Border.all(
+          color: Color(0xff2b2b2b), // 테두리 색상
+          width: 2.0, // 테두리 두께
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20.0),
@@ -136,6 +143,17 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
 
   /// 이미지 위젯을 결정하는 메소드
   Widget _buildImageWidget(BuildContext context) {
+    // 카메라에서 촬영한 이미지인 경우 (기존 방식 유지)
+    if (widget.isFromCamera) {
+      return _buildCameraImage();
+    }
+
+    // 갤러리에서 가져온 이미지인 경우 (더블탭으로 비율 전환)
+    return _buildGalleryImage();
+  }
+
+  /// 카메라에서 촬영한 이미지 (항상 BoxFit.cover)
+  Widget _buildCameraImage() {
     if (widget.initialImage != null) {
       return Stack(
         alignment: Alignment.topLeft,
@@ -152,7 +170,6 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
       );
     }
 
-    // 로컬 이미지를 우선적으로 사용
     if (widget.useLocalImage && widget.filePath != null) {
       return Stack(
         alignment: Alignment.topLeft,
@@ -163,45 +180,114 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
             height: widget.height,
             fit: BoxFit.cover,
             gaplessPlayback: true,
-            // 메모리 최적화: 이미지 캐시 크기 제한
             cacheWidth: (widget.width * 2).round(),
-
-            // 사진을 제대로 가지고 오지 못한 경우, 에러 아이콘 표시
-            errorBuilder: (context, error, stackTrace) {
-              return Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error, color: Color(0xffc1c1c1), size: 50.sp),
-                    SizedBox(height: 10.h),
-                    Text(
-                      'camera.photo_load_failed',
-                      style: TextStyle(
-                        color: Color(0xffc1c1c1),
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: "Pretendard",
-                      ),
-                    ).tr(),
-                  ],
-                ),
-              );
-            },
+            errorBuilder: (context, error, stackTrace) => _buildImageError(),
           ),
           _buildCancelButton(),
         ],
       );
     }
-    // 둘 다 없는 경우 에러 메시지 표시
-    else {
-      return Center(
-        child: Text(
-          "camera.photo_unavailable",
-          style: TextStyle(color: Colors.white),
-        ).tr(),
+
+    return _buildImageUnavailable();
+  }
+
+  /// 갤러리에서 가져온 이미지 (더블탭으로 비율 전환)
+  Widget _buildGalleryImage() {
+    // 현재 표시 모드에 따른 BoxFit 결정
+    final boxFit = _showOriginalAspectRatio ? BoxFit.contain : BoxFit.cover;
+
+    if (widget.initialImage != null) {
+      return Stack(
+        alignment: Alignment.topLeft,
+        children: [
+          GestureDetector(
+            onDoubleTap: _toggleAspectRatioMode,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              color: Colors.black,
+              child: Image(
+                image: widget.initialImage!,
+                width: widget.width,
+                height: widget.height,
+                fit: boxFit,
+                gaplessPlayback: true,
+              ),
+            ),
+          ),
+          _buildCancelButton(),
+        ],
       );
     }
+
+    if (widget.useLocalImage && widget.filePath != null) {
+      return Stack(
+        alignment: Alignment.topLeft,
+        children: [
+          GestureDetector(
+            onDoubleTap: _toggleAspectRatioMode,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              color: Colors.black,
+              child: Image.file(
+                File(widget.filePath!),
+                width: widget.width,
+                height: widget.height,
+                fit: boxFit,
+                gaplessPlayback: true,
+                cacheWidth: (widget.width * 2).round(),
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildImageError(),
+              ),
+            ),
+          ),
+          _buildCancelButton(),
+        ],
+      );
+    }
+
+    return _buildImageUnavailable();
+  }
+
+  /// 더블탭 시 비율 모드 전환
+  void _toggleAspectRatioMode() {
+    setState(() {
+      _showOriginalAspectRatio = !_showOriginalAspectRatio;
+    });
+  }
+
+  /// 이미지 로드 에러 위젯
+  Widget _buildImageError() {
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, color: Color(0xffc1c1c1), size: 50.sp),
+          SizedBox(height: 10.h),
+          Text(
+            'camera.photo_load_failed',
+            style: TextStyle(
+              color: Color(0xffc1c1c1),
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              fontFamily: "Pretendard",
+            ),
+          ).tr(),
+        ],
+      ),
+    );
+  }
+
+  /// 이미지 사용 불가 위젯
+  Widget _buildImageUnavailable() {
+    return Center(
+      child: Text(
+        "camera.photo_unavailable",
+        style: TextStyle(color: Colors.white),
+      ).tr(),
+    );
   }
 
   Widget _buildCancelButton() {
@@ -232,25 +318,49 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.done) {
               debugPrint("isFromCamera: ${widget.isFromCamera}");
-              return (widget.isFromCamera)
-                  ? SizedBox(
-                      width: widget.width,
-                      height: widget.height,
-                      child: FittedBox(
-                        fit: BoxFit.fill,
-                        child: SizedBox(
-                          width: _videoController!.value.size.width,
-                          height: _videoController!.value.size.height,
-                          child: VideoPlayer(_videoController!),
+
+              // 카메라에서 촬영한 비디오: 항상 화면에 맞춤
+              if (widget.isFromCamera) {
+                return SizedBox(
+                  width: widget.width,
+                  height: widget.height,
+                  child: FittedBox(
+                    fit: BoxFit.fill,
+                    child: SizedBox(
+                      width: _videoController!.value.size.width,
+                      height: _videoController!.value.size.height,
+                      child: VideoPlayer(_videoController!),
+                    ),
+                  ),
+                );
+              }
+
+              // 갤러리에서 가져온 비디오: 더블탭으로 비율 전환
+              return GestureDetector(
+                onDoubleTap: _toggleAspectRatioMode,
+                child: Container(
+                  width: widget.width,
+                  height: widget.height,
+                  color: Colors.black,
+                  child: _showOriginalAspectRatio
+                      // 원본 비율 유지
+                      ? Center(
+                          child: AspectRatio(
+                            aspectRatio: _videoController!.value.aspectRatio,
+                            child: VideoPlayer(_videoController!),
+                          ),
+                        )
+                      // 화면에 맞춤 (채우기)
+                      : FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: _videoController!.value.size.width,
+                            height: _videoController!.value.size.height,
+                            child: VideoPlayer(_videoController!),
+                          ),
                         ),
-                      ),
-                    )
-                  : Center(
-                      child: AspectRatio(
-                        aspectRatio: _videoController!.value.aspectRatio,
-                        child: VideoPlayer(_videoController!),
-                      ),
-                    );
+                ),
+              );
             } else {
               return const Center(child: CircularProgressIndicator());
             }

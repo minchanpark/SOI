@@ -131,8 +131,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   ///       이 Future를 사용하여 초기화가 완료될 때까지 기다릴 수 있습니다.
   Future<void>? _videoInitialization;
 
-  /// 비디오가 BoxFit.cover 모드인지 여부
-  bool _isVideoCoverMode = true;
+  /// 비디오가 BoxFit.cover 모드인지 여부 (false = 원본 비율, true = 화면 채우기)
+  bool _isVideoCoverMode = false;
+
+  /// 이미지가 BoxFit.cover 모드인지 여부 (false = 원본 비율, true = 화면 채우기)
+  bool _isImageCoverMode = false;
 
   /// 비디오가 화면에 보이는지 여부
   bool _isVideoVisible = true;
@@ -153,7 +156,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     if (widget.post.postFileKey?.isNotEmpty ?? false) {
       // 추가: presigned URL은 매번 달라질 수 있어서(=캐시 미스),
       // 이미 발급/캐싱된 URL이 있으면 첫 프레임부터 바로 보여주도록 합니다.
-      postImageUrl = _mediaController.peekPresignedUrl(widget.post.postFileKey!);
+      postImageUrl = _mediaController.peekPresignedUrl(
+        widget.post.postFileKey!,
+      );
 
       _loadPostImage(widget.post.postFileKey!); // 게시물 이미지 로드
     } else {
@@ -209,10 +214,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       // 추가: 새 key의 presigned URL이 캐시에 있으면 즉시 UI에 반영(쉬머 최소화)
       _safeSetState(() {
         final newKey = widget.post.postFileKey;
-        postImageUrl =
-            (newKey != null && newKey.isNotEmpty)
-                ? _mediaController.peekPresignedUrl(newKey)
-                : null;
+        postImageUrl = (newKey != null && newKey.isNotEmpty)
+            ? _mediaController.peekPresignedUrl(newKey)
+            : null;
       });
 
       // 게시물 이미지가 변경되었으므로 새로 로드
@@ -491,15 +495,28 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                   _isVideoCoverMode = !_isVideoCoverMode;
                 });
               },
-              child: SizedBox(
+              child: Container(
                 width: _imageWidth.w,
                 height: _imageHeight.h,
-                child: FittedBox(
-                  fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
-                  child: SizedBox(
-                    width: controller.value.size.width,
-                    height: controller.value.size.height,
-                    child: VideoPlayer(controller),
+                clipBehavior: Clip.antiAlias, // BoxFit.cover 시 overflow 방지
+                decoration: BoxDecoration(
+                  color: Colors.black, // 원본 비율일 때 여백 색상
+                  border: Border.all(
+                    color: Color(0xff2b2b2b), // 테두리 색상
+                    width: 2.0, // 테두리 두께
+                  ),
+                  borderRadius: BorderRadius.circular(20.0), // 모서리 둥글게
+                ),
+                // border 안쪽을 정확히 클리핑 (borderRadius - borderWidth)
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18.0),
+                  child: FittedBox(
+                    fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
+                    child: SizedBox(
+                      width: controller.value.size.width,
+                      height: controller.value.size.height,
+                      child: VideoPlayer(controller),
+                    ),
                   ),
                 ),
               ),
@@ -527,32 +544,64 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         );
       }
 
-      return CachedNetworkImage(
-        imageUrl: url,
-        // 추가: presigned URL이 바뀌어도(쿼리스트링 변경 등) 같은 파일 key면 같은 캐시를 쓰게 함
-        cacheKey: widget.post.postFileKey,
-        useOldImageOnUrlChange: true, // URL 변경 시에도 이전 이미지 유지(체감 깜빡임 감소)
-        fadeInDuration: Duration.zero, // 로드 후 페이드 제거(체감 쉬머 감소)
-        fadeOutDuration: Duration.zero,
-        width: _imageWidth.w,
-        height: _imageHeight.h,
-        fit: BoxFit.cover,
-        memCacheWidth: ((354.w * dpr).round()),
-        maxWidthDiskCache: (354.w * dpr).round(),
-        placeholder: (context, _) => Shimmer.fromColors(
-          baseColor: Colors.grey[800]!,
-          highlightColor: Colors.grey[600]!,
-          child: Container(
-            width: _imageWidth.w,
-            height: _imageHeight.h,
-            color: Colors.grey[800],
-          ),
-        ),
-        errorWidget: (context, _, __) => Container(
+      // 더블탭으로 비율 전환 (기본: 원본 비율)
+      return GestureDetector(
+        onDoubleTap: () {
+          if (!mounted) return;
+          setState(() {
+            _isImageCoverMode = !_isImageCoverMode;
+          });
+        },
+        child: Container(
           width: _imageWidth.w,
           height: _imageHeight.h,
-          color: Colors.grey[800],
-          child: Icon(Icons.broken_image, color: Colors.grey[600], size: 50.w),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.black, // 원본 비율일 때 여백 색상
+            border: Border.all(
+              color: Color(0xff2b2b2b), // 테두리 색상
+              width: 2.0, // 테두리 두께
+            ),
+            borderRadius: BorderRadius.circular(20.0), // 모서리 둥글게
+          ),
+          // border 안쪽을 정확히 클리핑 (borderRadius - borderWidth)
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18.0),
+            child: CachedNetworkImage(
+              imageUrl: url,
+              // 추가: presigned URL이 바뀌어도(쿼리스트링 변경 등) 같은 파일 key면 같은 캐시를 쓰게 함
+              cacheKey: widget.post.postFileKey,
+              useOldImageOnUrlChange: true, // URL 변경 시에도 이전 이미지 유지(체감 깜빡임 감소)
+              fadeInDuration: Duration.zero, // 로드 후 페이드 제거(체감 쉬머 감소)
+              fadeOutDuration: Duration.zero,
+              width: _imageWidth.w,
+              height: _imageHeight.h,
+              fit: _isImageCoverMode
+                  ? BoxFit.cover
+                  : BoxFit.contain, // 더블탭으로 전환
+              memCacheWidth: ((354.w * dpr).round()),
+              maxWidthDiskCache: (354.w * dpr).round(),
+              placeholder: (context, _) => Shimmer.fromColors(
+                baseColor: Colors.grey[800]!,
+                highlightColor: Colors.grey[600]!,
+                child: Container(
+                  width: _imageWidth.w,
+                  height: _imageHeight.h,
+                  color: Colors.grey[800],
+                ),
+              ),
+              errorWidget: (context, _, __) => Container(
+                width: _imageWidth.w,
+                height: _imageHeight.h,
+                color: Colors.grey[800],
+                child: Icon(
+                  Icons.broken_image,
+                  color: Colors.grey[600],
+                  size: 50.w,
+                ),
+              ),
+            ),
+          ), // ClipRRect 닫기
         ),
       );
     }
