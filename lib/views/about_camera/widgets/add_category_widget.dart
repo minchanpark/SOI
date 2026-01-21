@@ -83,7 +83,6 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
     return Container(
       color: Color(0xFF171717),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // 컨텐츠 크기에 맞게 축소
         children: [
           // 네비게이션 헤더
           Container(
@@ -113,22 +112,18 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                   ),
                 ).tr(),
 
-                // 저장 버튼
-                SizedBox(
-                  width: 51.w,
-                  height: 25.h,
-
-                  child: ElevatedButton(
-                    onPressed: _handleSavePressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF323232),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.5),
-                      ),
-                      elevation: 0,
-                      // 저장 텍스트의 위치를 조정할 때는 여기서
-                      padding: EdgeInsets.only(top: (2.5).h),
+                // 저장 버튼 (터치 영역 확장)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque, // 투명 영역도 터치 감지
+                  onTap: _handleSavePressed,
+                  child: Container(
+                    width: 51.w,
+                    height: 25.h,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF323232),
+                      borderRadius: BorderRadius.circular(16.5),
                     ),
+                    alignment: Alignment.center,
                     child: Text(
                       'common.save',
                       style: TextStyle(
