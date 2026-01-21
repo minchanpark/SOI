@@ -663,7 +663,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
 
       _categoriesLoaded = false;
-      await _categoryController.loadCategories(user.id, forceReload: true);
+
+      // 카테고리를 새로 만들고 나면 카테고리 목록을 새로고침
+      await _categoryController.loadCategories(
+        user.id,
+        forceReload: true,
+        fetchAllPages: true,
+        maxPages: 2,
+      );
 
       _safeSetState(() {
         _showAddCategoryUI = false;

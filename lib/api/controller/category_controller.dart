@@ -67,8 +67,10 @@ class CategoryController extends ChangeNotifier {
   Future<List<model.Category>> loadCategories(
     int userId, {
     model.CategoryFilter filter = model.CategoryFilter.all,
-    bool forceReload = false,
+    bool forceReload = true,
     int page = 0,
+    bool fetchAllPages = true,
+    int maxPages = 50,
   }) async {
     final now = DateTime.now();
     final isCacheValid =
@@ -119,16 +121,22 @@ class CategoryController extends ChangeNotifier {
             userId: userId,
             filter: model.CategoryFilter.all,
             page: page,
+            fetchAllPages: fetchAllPages,
+            maxPages: maxPages,
           ),
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.public_,
             page: page,
+            fetchAllPages: fetchAllPages,
+            maxPages: maxPages,
           ),
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.private_,
             page: page,
+            fetchAllPages: fetchAllPages,
+            maxPages: maxPages,
           ),
         ]);
 
@@ -147,6 +155,8 @@ class CategoryController extends ChangeNotifier {
           userId: userId,
           filter: filter,
           page: page,
+          fetchAllPages: fetchAllPages,
+          maxPages: maxPages,
         );
 
         _categoriesCache[filter] = categories;
@@ -324,6 +334,8 @@ class CategoryController extends ChangeNotifier {
     required int userId,
     model.CategoryFilter filter = model.CategoryFilter.all,
     int page = 0,
+    bool fetchAllPages = false,
+    int maxPages = 50,
   }) async {
     _setLoading(true);
     _clearError();
@@ -332,6 +344,8 @@ class CategoryController extends ChangeNotifier {
         userId: userId,
         filter: filter,
         page: page,
+        fetchAllPages: fetchAllPages,
+        maxPages: maxPages,
       );
       _setLoading(false);
       return categories;
@@ -352,12 +366,10 @@ class CategoryController extends ChangeNotifier {
       getCategories(userId: userId, filter: model.CategoryFilter.all);
 
   // 공개 카테고리 조회
-
   Future<List<model.Category>> getPublicCategories(int userId) =>
       getCategories(userId: userId, filter: model.CategoryFilter.public_);
 
   // 비공개 카테고리 조회
-
   Future<List<model.Category>> getPrivateCategories(int userId) =>
       getCategories(userId: userId, filter: model.CategoryFilter.private_);
 

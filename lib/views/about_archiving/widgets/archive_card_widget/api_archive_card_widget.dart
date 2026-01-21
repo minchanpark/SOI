@@ -114,6 +114,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
                   );
                 },
                 builder: (context, data, _) {
+                  // 프로필 행 위젯 빌드 --> 프로필을 row로 표시
                   return ApiArchiveProfileRowWidget(
                     profileUrlKeys: data.profileUrlKeys,
                     totalUserCount: data.totalUserCount,
@@ -127,6 +128,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
     );
   }
 
+  /// 카테고리 제목 위젯 빌드
   Widget _buildTitleWidget(BuildContext context, {required double fontSize}) {
     if (isEditing && editingController != null) {
       return TextField(
@@ -174,6 +176,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
     );
   }
 
+  /// 팝업 메뉴 위젯 빌드
   Widget _buildPopupMenu() {
     if (isEditMode) {
       return SizedBox(width: 30, height: 30);
@@ -186,6 +189,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
     );
   }
 
+  /// 카테고리 이미지 위젯 빌드
   Widget _buildCategoryImage({
     required double width,
     required double height,
@@ -250,6 +254,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
     );
   }
 
+  /// 고정 배지 위젯 빌드
   Widget _buildPinnedBadge({double? top, double? left, double? right}) {
     return Selector<CategoryController, bool>(
       selector: (_, controller) =>
@@ -277,6 +282,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
     );
   }
 
+  /// 신규 배지 위젯 빌드
   Widget _buildNewBadge({double? top, double? left, double? right}) {
     return Selector<CategoryController, bool>(
       selector: (_, controller) =>

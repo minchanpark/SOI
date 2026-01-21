@@ -62,12 +62,9 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
     );
   }
 
-  /// 데이터 로드
+  /// 카테고리 초기 로드
   Future<void> _loadData() async {
-    final userController = Provider.of<UserController>(
-      context,
-      listen: false,
-    );
+    final userController = Provider.of<UserController>(context, listen: false);
     final categoryController = Provider.of<CategoryController>(
       context,
       listen: false,
@@ -88,6 +85,8 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
       await categoryController.loadCategories(
         currentUser.id,
         filter: CategoryFilter.private_,
+        fetchAllPages: true,
+        maxPages: 2,
       );
       if (mounted) {
         setState(() {
@@ -111,6 +110,8 @@ class _MyArchivesScreenState extends State<MyArchivesScreen>
         _userId!,
         filter: CategoryFilter.private_,
         forceReload: true,
+        fetchAllPages: true,
+        maxPages: 2,
       );
     }
   }

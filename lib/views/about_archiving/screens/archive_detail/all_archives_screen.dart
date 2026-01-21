@@ -102,8 +102,13 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
           _userId = currentUser.id;
         });
       }
-      // 카테고리 로드
-      await _categoryController!.loadCategories(currentUser.id);
+
+      /// 카테고리 초기 로드
+      await _categoryController!.loadCategories(
+        currentUser.id,
+        fetchAllPages: true,
+        maxPages: 2, // 처음 로드 시 최대 2페이지만 로드
+      );
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
@@ -122,7 +127,11 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
   /// 새로고침
   Future<void> _refresh() async {
     if (_userId != null && _categoryController != null) {
-      await _categoryController!.loadCategories(_userId!, forceReload: true);
+      await _categoryController!.loadCategories(
+        _userId!,
+        forceReload: true,
+        fetchAllPages: true,
+      );
     }
   }
 
@@ -249,6 +258,7 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
     );
   }
 
+  /// 그리드 뷰 빌드
   Widget _buildGridView(List<int> categoryIds, String searchQuery) {
     return GridView.builder(
       key: ValueKey('grid_${categoryIds.length}_$searchQuery'),
@@ -267,8 +277,9 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
         final category = categoryController.getCategoryById(categoryId);
         if (category == null) return const SizedBox.shrink();
 
+        // 그리드 모드의 아카이브 카드 위젯
         return ApiArchiveCardWidget(
-          key: ValueKey('archive_card_$categoryId'),
+          key: ValueKey('archive_card_$categoryId'), // 고유 키 지정
           category: category,
           layoutMode: ArchiveLayoutMode.grid,
           isEditMode: widget.isEditMode,

@@ -1048,7 +1048,12 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
       if (categoryId != null) {
         // 최적화: forceReload: true가 캐시를 무시하므로 invalidateCache 중복 제거
-        await categoryController.loadCategories(userId, forceReload: true);
+        await categoryController.loadCategories(
+          userId,
+          forceReload: true,
+          fetchAllPages: true,
+          maxPages: 50,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());

@@ -131,23 +131,73 @@ class CategoryService {
     required int userId,
     CategoryFilter filter = CategoryFilter.all,
     int page = 0,
+    bool fetchAllPages = true,
+    int maxPages = 50,
   }) async {
     try {
-      final response = await _categoryApi.getCategories(
-        filter.value,
-        userId,
-        page: page,
-      );
+      if (!fetchAllPages) {
+        final response = await _categoryApi.getCategories(
+          filter.value,
+          userId,
+          page: page,
+        );
 
-      if (response == null) {
-        return [];
+        if (response == null) {
+          return [];
+        }
+
+        if (response.success != true) {
+          throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
+        }
+
+        return response.data.map((dto) => Category.fromDto(dto)).toList();
       }
 
-      if (response.success != true) {
-        throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
+      final allCategories = <Category>[];
+      final seenIds = <int>{};
+      var currentPage = page;
+      var pagesFetched = 0;
+
+      while (pagesFetched < maxPages) {
+        final response = await _categoryApi.getCategories(
+          filter.value,
+          userId,
+          page: currentPage,
+        );
+
+        if (response == null) {
+          break;
+        }
+
+        if (response.success != true) {
+          throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
+        }
+
+        final pageItems = response.data
+            .map((dto) => Category.fromDto(dto))
+            .toList();
+        if (pageItems.isEmpty) {
+          break;
+        }
+
+        var addedCount = 0;
+        for (final item in pageItems) {
+          if (seenIds.add(item.id)) {
+            allCategories.add(item);
+            addedCount++;
+          }
+        }
+
+        // 서버가 같은 페이지를 반복해서 반환할 경우 무한 루프 방지
+        if (addedCount == 0) {
+          break;
+        }
+
+        currentPage++;
+        pagesFetched++;
       }
 
-      return response.data.map((dto) => Category.fromDto(dto)).toList();
+      return allCategories;
     } on ApiException catch (e) {
       throw _handleApiException(e);
     } on SocketException catch (e) {

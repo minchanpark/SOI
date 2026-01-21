@@ -21,16 +21,16 @@ enum CategoryFilter {
 ///
 /// API의 CategoryRespDto를 앱 내부에서 사용하기 위한 모델입니다.
 class Category {
-  final int id;
+  final int id; // 카테고리 ID
   final String name; // 카테고리 이름
   final List<String> nickNames; // 카테고리 닉네임
-  final String? photoUrl;
-  final bool isNew;
-  final int totalUserCount;
-  final bool isPinned;
-  final List<String> usersProfileKey;
-  final DateTime? pinnedAt;
-  final DateTime? lastPhotoUploadedAt;
+  final String? photoUrl; // 카테고리 사진 URL
+  final bool isNew; // 신규 카테고리 여부
+  final int totalUserCount; // 카테고리 참여자 수
+  final bool isPinned; // 카테고리 고정 여부
+  final List<String> usersProfileKey; // 사용자 프로필 키 목록
+  final DateTime? pinnedAt; // 고정된 날짜
+  final DateTime? lastPhotoUploadedAt; // 마지막 사진 업로드 날짜
 
   const Category({
     required this.id,
@@ -79,9 +79,7 @@ class Category {
           json['categoryPhotoUrl'] as String?,
       isNew: json['isNew'] as bool? ?? false,
       totalUserCount:
-          json['totalUserNum'] as int? ??
-          json['totalUserCount'] as int? ??
-          0,
+          json['totalUserNum'] as int? ?? json['totalUserCount'] as int? ?? 0,
       isPinned: json['isPinned'] as bool? ?? false,
       usersProfileKey:
           (json['usersProfileKey'] as List<dynamic>?)
