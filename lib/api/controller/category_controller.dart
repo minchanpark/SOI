@@ -88,9 +88,7 @@ class CategoryController extends ChangeNotifier {
 
         if (hasAllCaches) {
           _currentCategories = _categoriesCache[filter]!;
-          debugPrint(
-            '[CategoryController] 캐시된 카테고리 반환 (filter: ${filter.value}): ${_currentCategories.length}개',
-          );
+
           notifyListeners();
           return _currentCategories;
         }
@@ -101,22 +99,19 @@ class CategoryController extends ChangeNotifier {
         if (_categoriesCache.containsKey(filter) &&
             _categoriesCache[filter]!.isNotEmpty) {
           _currentCategories = _categoriesCache[filter]!;
-          debugPrint(
-            '[CategoryController] 캐시된 카테고리 반환 (filter: ${filter.value}): ${_currentCategories.length}개',
-          );
           notifyListeners();
           return _currentCategories;
         }
       }
     }
-
     _setLoading(true);
     _clearError();
 
     try {
       if (filter == model.CategoryFilter.all) {
-        // ALL 필터: PUBLIC, PRIVATE, ALL 모두 병렬 로드
+        // ALL 필터: PUBLIC, PRIVATE, ALL 모두 병렬로 로드
         final results = await Future.wait([
+          // 전체 카테고리를 먼저 로드
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.all,
@@ -124,6 +119,7 @@ class CategoryController extends ChangeNotifier {
             fetchAllPages: fetchAllPages,
             maxPages: maxPages,
           ),
+          // PUBLIC 카테고리를 병렬로 로드
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.public_,
@@ -131,6 +127,7 @@ class CategoryController extends ChangeNotifier {
             fetchAllPages: fetchAllPages,
             maxPages: maxPages,
           ),
+          // PRIVATE 카테고리를 병렬로 로드
           _categoryService.getCategories(
             userId: userId,
             filter: model.CategoryFilter.private_,
@@ -141,14 +138,13 @@ class CategoryController extends ChangeNotifier {
         ]);
 
         // 각 filter별 캐시 저장
-        _categoriesCache[model.CategoryFilter.all] = results[0];
-        _categoriesCache[model.CategoryFilter.public_] = results[1];
-        _categoriesCache[model.CategoryFilter.private_] = results[2];
+        _categoriesCache[model.CategoryFilter.all] =
+            results[0]; // 전체 카테고리 목록 캐시를 저장
+        _categoriesCache[model.CategoryFilter.public_] =
+            results[1]; // 공개 카테고리 목록 캐시를 저장
+        _categoriesCache[model.CategoryFilter.private_] =
+            results[2]; // 비공개 카테고리 목록 캐시를 저장
         _currentCategories = results[0]; // ALL을 현재 카테고리로 설정
-
-        debugPrint(
-          '[CategoryController] 전체 카테고리 로드 완료 - ALL: ${results[0].length}개, PUBLIC: ${results[1].length}개, PRIVATE: ${results[2].length}개',
-        );
       } else {
         // PUBLIC 또는 PRIVATE 필터: 해당 필터만 로드
         final categories = await _categoryService.getCategories(
@@ -161,10 +157,6 @@ class CategoryController extends ChangeNotifier {
 
         _categoriesCache[filter] = categories;
         _currentCategories = categories;
-
-        debugPrint(
-          '[CategoryController] 카테고리 로드 완료 (filter: ${filter.value}): ${categories.length}개',
-        );
       }
 
       _lastLoadedUserId = userId;
@@ -186,7 +178,6 @@ class CategoryController extends ChangeNotifier {
     _currentCategories = [];
     _lastLoadedUserId = null;
     _lastLoadTime = null;
-    debugPrint('🗑️ [CategoryController] 캐시 무효화');
     notifyListeners();
   }
 
