@@ -210,6 +210,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   // 잠금 상태 플래그
   // 이 플래그로 바텀시트가 잠금 상태인지 여부를 추적
   bool _hasLockedSheetExtent = false;
+
+  // 애니메이션 진행 중 플래그 (레이스 컨디션 방지용)
+  bool _isAnimatingSheet = false;
+
   List<double>? _recordedWaveformData;
   String? _recordedAudioPath;
   int? _recordedAudioDurationSeconds;
@@ -250,6 +254,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _primeImmediatePreview();
     _initializeScreen();
     _captionController.addListener(_handleCaptionChanged);
+    // 카테고리 이름 입력 포커스 리스너 추가
+    _categoryFocusNode.addListener(_onCategoryFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _captionFocusNode.unfocus();
@@ -278,6 +284,20 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }
 
   // ========== 초기화 메서드들 ==========
+
+  // 카테고리 이름 입력 포커스 변경 리스너
+  void _onCategoryFocusChange() {
+    if (!mounted || _isDisposing) return;
+
+    if (_categoryFocusNode.hasFocus && _showAddCategoryUI) {
+      // 키보드가 올라올 때 바텀시트 확장 --> 0.45로 키보드 높이에 맞춤
+      _animateSheetTo(0.45);
+    } else if (!_categoryFocusNode.hasFocus && _showAddCategoryUI) {
+      // 키보드가 내려갈 때 바텀시트 축소 --> 0.25로 축소
+      _animateSheetTo(0.25);
+    }
+  }
+
   void _initializeScreen() {
     if (!_showImmediatePreview) _loadImage();
   }
@@ -456,13 +476,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
   // 카테고리 선택/해제 핸들러
   void _handleCategorySelection(int categoryId) {
-    final wasEmpty = _selectedCategoryIds.isEmpty;
-
-    // 현재 바텀시트 위치 확인
-    final currentExtent = _draggableScrollController.isAttached
-        ? _draggableScrollController.size
-        : _kLockedSheetExtent;
-
     setState(() {
       if (_selectedCategoryIds.contains(categoryId)) {
         _selectedCategoryIds.remove(categoryId);
@@ -473,15 +486,33 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
     // 카테고리 선택 상태에 따라 바텀시트 높이 조정
     if (_selectedCategoryIds.isEmpty) {
+      // 모든 카테고리가 해제되면 기본 위치로
       _animateSheetTo(_kLockedSheetExtent);
-    } else if (wasEmpty) {
-      // 바텀시트가 이미 확장된 상태(0.19보다 크게 열린 상태)라면 위치 유지
-      if (currentExtent > _kLockedSheetExtent + 0.05) {
-        // 바텀시트를 움직이지 않음 (사용자가 올린 위치 유지)
+    } else {
+      // 카테고리가 선택된 상태 → 바텀시트가 버튼보다 아래에 있으면 올림
+      // 현재 위치 체크는 postFrameCallback 내부에서 수행하여 타이밍 갭 방지
+      _animateSheetToIfNeeded(_kExpandedSheetExtent);
+    }
+  }
+
+  // 바텀시트가 목표 위치보다 아래에 있을 때만 애니메이션 실행
+  void _animateSheetToIfNeeded(double targetSize) {
+    if (!mounted || _isDisposing) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isDisposing) return;
+      if (!_draggableScrollController.isAttached) return;
+
+      // 현재 위치를 postFrameCallback 내부에서 체크 (타이밍 갭 해결)
+      final currentExtent = _draggableScrollController.size;
+
+      // 이미 확장된 상태(목표 위치 근처 또는 그 이상)라면 애니메이션 불필요
+      if (currentExtent >= targetSize - 0.02) {
         return;
       }
-      _animateSheetTo(_kExpandedSheetExtent);
-    }
+
+      _animateSheetTo(targetSize);
+    });
   }
 
   // 바텀시트를 특정 크기로 애니메이션하는 메서드
@@ -495,9 +526,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _isDisposing) return;
 
-      // Controller가 attach될 때까지 재시도 (최대 50번)
+      // Controller가 attach될 때까지 재시도 (최대 50번, 10ms 간격)
       if (!_draggableScrollController.isAttached) {
         if (retryCount < 50) {
+          await Future.delayed(const Duration(milliseconds: 10));
           _animateSheetTo(
             size,
             lockExtent: lockExtent,
@@ -509,20 +541,28 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         return;
       }
 
-      // 애니메이션 실행
-      await _draggableScrollController.animateTo(
-        size,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
+      // 애니메이션 시작 플래그 설정 (레이스 컨디션 방지)
+      _isAnimatingSheet = true;
 
-      // 애니메이션 완료 후 lockExtent 처리
-      if (lockExtent && !_hasLockedSheetExtent && mounted) {
-        setState(() {
-          _minChildSize = size;
-          _initialChildSize = size;
-          _hasLockedSheetExtent = true;
-        });
+      try {
+        // 애니메이션 실행
+        await _draggableScrollController.animateTo(
+          size,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+
+        // 애니메이션 완료 후 lockExtent 처리
+        if (lockExtent && !_hasLockedSheetExtent && mounted) {
+          setState(() {
+            _minChildSize = size;
+            _initialChildSize = size;
+            _hasLockedSheetExtent = true;
+          });
+        }
+      } finally {
+        // 애니메이션 종료 플래그 해제
+        _isAnimatingSheet = false;
       }
     });
   }
@@ -1294,10 +1334,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return file;
     }
 
-    if (kDebugMode) {
-      debugPrint('[PhotoEditor] 비디오 압축 시작 (${size} bytes)');
-    }
-
     var compressed = await _tryCompressVideo(file, VideoQuality.MediumQuality);
     if (compressed == null) {
       return file;
@@ -1309,12 +1345,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       if (lower != null) {
         compressed = lower;
       }
-    }
-
-    if (kDebugMode) {
-      debugPrint(
-        '[PhotoEditor] 비디오 압축 완료 (${await compressed.length()} bytes)',
-      );
     }
 
     return compressed;
@@ -1515,6 +1545,11 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
           ? null
           : NotificationListener<DraggableScrollableNotification>(
               onNotification: (notification) {
+                // 애니메이션 진행 중이면 간섭하지 않음 (레이스 컨디션 방지)
+                if (_isAnimatingSheet) {
+                  return true;
+                }
+
                 // 카테고리가 선택된 상태에서는 바텀시트가 너무 내려가지 않도록 방지
                 if (_selectedCategoryIds.isNotEmpty) {
                   // 바텀시트가 locked 위치 아래로 내려가려고 하면 방지
@@ -1522,6 +1557,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted &&
                           !_isDisposing &&
+                          !_isAnimatingSheet && // 애니메이션 중이 아닐 때만
                           _draggableScrollController.isAttached) {
                         _draggableScrollController.jumpTo(_kLockedSheetExtent);
                       }
@@ -1594,6 +1630,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                                       ? ClipRect(
                                           child: LayoutBuilder(
                                             builder: (context, addConstraints) {
+                                              // 카테고리 추가 UI
                                               return ConstrainedBox(
                                                 constraints: BoxConstraints(
                                                   maxHeight:
@@ -1629,6 +1666,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                                             },
                                           ),
                                         )
+                                      // 카테고리 목록 UI
                                       : CategoryListWidget(
                                           scrollController: scrollController,
                                           selectedCategoryIds:
@@ -1648,7 +1686,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                                             setState(
                                               () => _showAddCategoryUI = true,
                                             );
-                                            _animateSheetTo(0.65);
+                                            _animateSheetTo(
+                                              0.25,
+                                            ); // 카테고리를 추가할 때는 시트를 0.25로 변경
                                           },
                                         ),
                                 ),
@@ -1731,6 +1771,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _captionController.removeListener(_handleCaptionChanged);
     _captionController.dispose();
     _captionFocusNode.dispose();
+    _categoryFocusNode.removeListener(_onCategoryFocusChange);
     _categoryFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (_draggableScrollController.isAttached) {

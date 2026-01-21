@@ -87,6 +87,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
     return Container(
       color: Color(0xFF171717),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // 컨텐츠 크기에 맞게 축소
         children: [
           // 네비게이션 헤더
           Container(
@@ -151,7 +152,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
           // 구분선
           Divider(height: 1, color: Color(0xFF323232)),
 
-          // 메인 컨텐츠 영역
+          // 메인 컨텐츠 영역 (스크롤 가능하도록 Expanded + SingleChildScrollView)
           Expanded(
             child: SingleChildScrollView(
               controller: widget.scrollController,
@@ -159,6 +160,7 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_selectedFriends.isEmpty)
                       // 친구 추가하기 버튼
@@ -205,74 +207,67 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
                     ],
 
                     // 텍스트 입력 영역
-                    Column(
-                      children: [
-                        // 입력 필드
-                        TextField(
-                          controller: widget.textController,
-                          cursorColor: Color(0xFFF3F3F3),
-                          focusNode: widget.focusNode,
-                          style: TextStyle(
-                            color: const Color(0xFFf4f4f4),
-                            fontSize: 15.sp,
-                            fontFamily: 'Pretendard Variable',
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.40,
-                          ),
-                          decoration: InputDecoration(
-                            border: UnderlineInputBorder(
-                              borderSide: BorderSide.none,
-                            ),
-                            hintText: tr(
-                              'archive.create_category_name_hint',
-                              context: context,
-                            ),
-                            hintStyle: TextStyle(
-                              color: const Color(0xFFcccccc),
-                              fontSize: 14.sp,
-                              fontFamily: 'Pretendard Variable',
-                              fontWeight: FontWeight.w400,
-                              letterSpacing: -0.40,
-                            ),
-                          ),
-                          maxLength: 20,
-                          buildCounter:
-                              (
-                                context, {
-                                required currentLength,
-                                required isFocused,
-                                maxLength,
-                              }) {
-                                return null;
-                              },
+                    TextField(
+                      controller: widget.textController,
+                      cursorColor: Color(0xFFF3F3F3),
+                      focusNode: widget.focusNode,
+                      style: TextStyle(
+                        color: const Color(0xFFf4f4f4),
+                        fontSize: 15.sp,
+                        fontFamily: 'Pretendard Variable',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.40,
+                      ),
+                      decoration: InputDecoration(
+                        border: UnderlineInputBorder(
+                          borderSide: BorderSide.none,
                         ),
+                        hintText: tr(
+                          'archive.create_category_name_hint',
+                          context: context,
+                        ),
+                        hintStyle: TextStyle(
+                          color: const Color(0xFFcccccc),
+                          fontSize: 14.sp,
+                          fontFamily: 'Pretendard Variable',
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: -0.40,
+                        ),
+                      ),
+                      maxLength: 20,
+                      buildCounter:
+                          (
+                            context, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) {
+                            return null;
+                          },
+                    ),
 
-                        SizedBox(height: 8.h),
-
-                        // 글자 수 카운터
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: widget.textController,
-                              builder: (context, value, child) {
-                                return Text(
-                                  'archive.create_category_name_counter',
-                                  style: TextStyle(
-                                    color: const Color(0xFFCBCBCB),
-                                    fontSize: 12.sp,
-                                    fontFamily: 'Pretendard Variable',
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: -0.40,
-                                  ),
-                                ).tr(
-                                  namedArgs: {
-                                    'count': value.text.length.toString(),
-                                  },
-                                );
+                    // 글자 수 카운터
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: widget.textController,
+                          builder: (context, value, child) {
+                            return Text(
+                              'archive.create_category_name_counter',
+                              style: TextStyle(
+                                color: const Color(0xFFCBCBCB),
+                                fontSize: 12.sp,
+                                fontFamily: 'Pretendard Variable',
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -0.40,
+                              ),
+                            ).tr(
+                              namedArgs: {
+                                'count': value.text.length.toString(),
                               },
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ],
                     ),
