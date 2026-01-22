@@ -270,6 +270,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _initializeControllers();
     _loadCategoriesIfNeeded();
     _startPreCompressionIfNeeded(); // 성능 최적화: 미리 압축 시작
+
+    // [디버깅] 기존 비디오 썸네일 캐시 초기화
+    // 테스트를 위해 이전 캐시를 제거하고 새로 시작
+    _mediaController.clearVideoThumbnailCache();
   }
 
   @override
@@ -901,7 +905,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         payload: payload,
         mediaResult: mediaResult,
       );
-      Future<bool>? updateCategoryCoverFuture;
+      Future<List<String>?>? updateCategoryCoverFuture;
       if (payload.isVideo && categoryIds.isNotEmpty) {
         updateCategoryCoverFuture = _updateCategoryCoverFromVideo(
           categoryIds: categoryIds,
@@ -919,8 +923,27 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       if (!createSuccess) {
         throw Exception('게시물 생성에 실패했습니다.');
       }
-      if (results.length > 1 && results[1] == false) {
-        debugPrint('[PhotoEditor] 비디오 썸네일로 카테고리 업데이트 실패');
+
+      // [캐싱] 비디오 S3 키와 썸네일 키를 매핑하여 저장
+      if (payload.isVideo && results.length > 1) {
+        final thumbnailKeys = results[1] as List<String>?;
+        if (thumbnailKeys != null && thumbnailKeys.isNotEmpty) {
+          // mediaKeys[0]는 비디오의 S3 키
+          final videoS3Key = mediaResult.mediaKeys.isNotEmpty
+              ? mediaResult.mediaKeys[0]
+              : null;
+
+          if (videoS3Key != null) {
+            _mediaController.cacheThumbnailForVideo(
+              videoS3Key,
+              thumbnailKeys[0], // 첫 번째 썸네일 키 사용
+            );
+          } else {
+            throw Exception('비디오 S3 키가 없어 캐싱 불가');
+          }
+        } else {
+          throw Exception('카테고리 대표 이미지 업데이트에 실패했습니다.');
+        }
       }
 
       // 카테고리 대표 사진(썸네일) 등 최신 상태가 아카이브 메인에 즉시 반영되도록 강제 갱신
@@ -938,7 +961,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       // 업로드가 끝난 후 임시 파일들을 백그라운드에서 삭제
       unawaited(_deleteTemporaryFilesInBackground(payload));
     } catch (e) {
-      debugPrint('[PhotoEditor] 백그라운드 업로드 실패: $e');
+      throw Exception('[PhotoEditor] 백그라운드 업로드 실패: $e');
     } finally {
       // [VideoCompress] 임시 캐시 정리
       if (!kIsWeb) {
@@ -957,8 +980,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     // 미디어 파일 존재 여부 확인
     var mediaFile = File(filePath);
     if (!await mediaFile.exists()) {
-      debugPrint('[PhotoEditor] 미디어 파일을 찾을 수 없습니다: $filePath');
-      return null;
+      throw Exception('미디어 파일을 찾을 수 없습니다.');
     }
 
     if (snapshot.isVideo) {
@@ -1187,11 +1209,29 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }
 
   // [Video] 썸네일 추출 -> 업로드 -> 카테고리 대표 이미지 변경
-  Future<bool> _updateCategoryCoverFromVideo({
+  // Returns: 업로드된 썸네일 키 리스트 (실패 시 null)
+  Future<List<String>?> _updateCategoryCoverFromVideo({
     required List<int> categoryIds,
     required _UploadPayload payload,
   }) async {
-    if (!payload.isVideo || categoryIds.isEmpty) return true;
+    if (!payload.isVideo || categoryIds.isEmpty) return null;
+
+    // 대표사진이 이미 설정된 카테고리는 제외 (첫 게시물인 경우만 설정)
+    final categoriesToUpdate = <int>[];
+    for (final categoryId in categoryIds) {
+      final category = _categoryController.getCategoryById(categoryId);
+      // 대표사진이 없거나(null) 비어있는 경우에만 업데이트
+      if (category != null &&
+          (category.photoUrl == null || category.photoUrl!.isEmpty)) {
+        categoriesToUpdate.add(categoryId);
+      }
+    }
+
+    // 업데이트할 카테고리가 없으면 종료
+    if (categoriesToUpdate.isEmpty) {
+      debugPrint('[PhotoEditor] 모든 카테고리에 이미 대표사진이 설정되어 있어 스킵');
+      return null;
+    }
 
     // 추출된 썸네일 파일을 저장할 변수
     File? thumbnailFile;
@@ -1201,14 +1241,14 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       thumbnailFile = await _extractVideoThumbnailFile(payload.mediaPath);
       if (thumbnailFile == null) {
         debugPrint('[PhotoEditor] 비디오 썸네일 생성 실패');
-        return false;
+        return null;
       }
 
       final multipart = await _mediaController.fileToMultipart(
         thumbnailFile,
       ); // Multipart로 File을 변환
 
-      final usageCount = categoryIds.length;
+      final usageCount = categoriesToUpdate.length;
 
       // 썸네일을 미디어 서버에 업로드드해서 키를 받음
       final keys = await _mediaController.uploadMedia(
@@ -1216,13 +1256,13 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         types: [MediaType.image],
         usageTypes: [MediaUsageType.categoryProfile],
         userId: payload.userId,
-        refId: categoryIds.first,
+        refId: categoriesToUpdate.first,
         usageCount: usageCount,
       );
 
       if (keys.length < usageCount) {
         debugPrint('[PhotoEditor] 카테고리 썸네일 키 수가 부족합니다. keys: $keys');
-        return false;
+        return null;
       }
 
       // 각 카테고리에 대해 썸네일 키로 대표 이미지 업데이트
@@ -1230,22 +1270,28 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
         // 각 카테고리에 대해 대표 이미지 업데이트
         for (var i = 0; i < usageCount; i++)
           _categoryController.updateCustomProfile(
-            categoryId: categoryIds[i],
+            categoryId: categoriesToUpdate[i],
             userId: payload.userId,
             profileImageKey: keys[i],
           ),
       ]);
 
-      return results.every((value) => value == true);
+      final allSuccess = results.every((value) => value == true);
+      if (!allSuccess) {
+        debugPrint('[PhotoEditor] 일부 카테고리 대표 이미지 업데이트 실패');
+      }
+
+      // 썸네일 키 리스트 반환 (나중에 비디오 S3 키와 매핑하기 위해)
+      return keys;
     } catch (e) {
       debugPrint('[PhotoEditor] 비디오 썸네일 업로드/카테고리 업데이트 실패: $e');
-      return false;
+      return null;
     } finally {
       if (thumbnailFile != null) {
         try {
           await thumbnailFile.delete(); // 임시 썸네일 파일 삭제
         } catch (e) {
-          return false;
+          return null;
         }
       }
     }

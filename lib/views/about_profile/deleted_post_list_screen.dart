@@ -61,18 +61,30 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
       final postIdsForResolvedKeys = <int>[];
 
       _imageUrlByPostId.clear();
+
       for (final post in posts) {
         final keyOrUrl = post.postFileKey;
         if (keyOrUrl == null || keyOrUrl.isEmpty) continue;
 
+        // 이미 URL인 경우
         final uri = Uri.tryParse(keyOrUrl);
         if (uri != null && uri.hasScheme) {
           _imageUrlByPostId[post.id] = keyOrUrl;
           continue;
         }
 
-        imageKeysToResolve.add(keyOrUrl);
-        postIdsForResolvedKeys.add(post.id);
+        // 비디오인 경우: 썸네일 캐시에서 조회
+        if (post.isVideo) {
+          final thumbnailKey = mediaController.getThumbnailForVideo(keyOrUrl);
+          if (thumbnailKey != null) {
+            imageKeysToResolve.add(thumbnailKey);
+            postIdsForResolvedKeys.add(post.id);
+          }
+        } else {
+          // 이미지인 경우: 일반 처리
+          imageKeysToResolve.add(keyOrUrl);
+          postIdsForResolvedKeys.add(post.id);
+        }
       }
 
       if (imageKeysToResolve.isNotEmpty) {
@@ -305,9 +317,7 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
                 ),
               // 선택 오버레이
               if (isPostSelected)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.3),
-                ),
+                Container(color: Colors.black.withValues(alpha: 0.3)),
               // 체크마크
               if (isPostSelected)
                 Positioned(

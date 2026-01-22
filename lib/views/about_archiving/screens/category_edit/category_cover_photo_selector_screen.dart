@@ -58,18 +58,44 @@ class _CategoryCoverPhotoSelectorScreenState
         notificationId: null,
       );
 
-      final imagePosts = posts.where((post) => post.hasImage).toList();
-      final keys = imagePosts
-          .map((post) => post.postFileKey)
-          .whereType<String>()
-          .where((key) => key.isNotEmpty)
+      // 이미지 + 비디오 게시물 모두 포함
+      final mediaPosts = posts
+          .where((post) => post.hasImage || post.isVideo)
           .toList();
 
-      final urls = await mediaController.getPresignedUrls(keys);
       final resolved = <_SelectablePhoto>[];
 
-      for (int i = 0; i < keys.length && i < urls.length; i++) {
-        resolved.add(_SelectablePhoto(key: keys[i], url: urls[i]));
+      for (final post in mediaPosts) {
+        String? key;
+
+        if (post.isVideo) {
+          // 비디오인 경우: 캐시에서 썸네일 키 조회
+          final videoKey = post.postFileKey;
+
+          if (videoKey != null && videoKey.isNotEmpty) {
+            key = mediaController.getThumbnailForVideo(videoKey);
+            if (key == null) {
+              // 캐시에 없으면 비디오는 스킵 (썸네일이 없으면 표시 불가)
+
+              continue;
+            }
+          }
+        } else {
+          // 이미지인 경우: 기존대로 postFileKey 사용
+          key = post.postFileKey;
+        }
+
+        if (key != null && key.isNotEmpty) {
+          try {
+            final urls = await mediaController.getPresignedUrls([key]);
+            if (urls.isNotEmpty) {
+              resolved.add(_SelectablePhoto(key: key, url: urls[0]));
+            }
+          } catch (e) {
+            // URL 발급 실패 시 해당 항목은 스킵
+            continue;
+          }
+        }
       }
 
       if (!mounted) return;

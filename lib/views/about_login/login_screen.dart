@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -23,43 +21,31 @@ class _LoginScreenState extends State<LoginScreen> {
   // REST API 서비스
   api.UserController? _apiUserController;
 
-  // 닉네임 입력 컨트롤러
-  final TextEditingController _nicknameController = TextEditingController();
-
-  // 닉네임 입력 상태
-  final ValueNotifier<bool> _hasNickname = ValueNotifier<bool>(false);
-
   // 전화번호 입력 컨트롤러
-  // final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
 
   // 인증번호 입력 컨트롤러
-  // final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _codeController = TextEditingController();
 
   // 전화번호 입력 상태
-  // final ValueNotifier<bool> _hasPhone = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _hasPhone = ValueNotifier<bool>(false);
 
   // 인증번호 입력 상태
-  // final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _hasCode = ValueNotifier<bool>(false);
 
-  // String phoneNumber = '';
-  // String _selectedCountryCode = 'KR';
+  String phoneNumber = '';
+  String _selectedCountryCode = 'KR';
 
   // 현재 페이지 인덱스
   int currentPage = 0;
 
   // 로딩 상태
   bool _isSendingCode = false;
-  //bool _isVerifying = false;
-
-  //final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  //String? _firebaseVerificationId;
-  //int? _firebaseResendToken;
-  //late final bool _useFirebaseAuth;
+  bool _isVerifying = false;
 
   @override
   void initState() {
     super.initState();
-    //_useFirebaseAuth = dotenv.env['USE_FIREBASE_AUTH'] == 'true';
   }
 
   @override
@@ -75,12 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _nicknameController.dispose();
-    _hasNickname.dispose();
-    // _phoneController.dispose();
-    // _codeController.dispose();
-    // _hasPhone.dispose();
-    // _hasCode.dispose();
+    _phoneController.dispose();
+    _codeController.dispose();
+    _hasPhone.dispose();
+    _hasCode.dispose();
     super.dispose();
   }
 
@@ -99,126 +83,11 @@ class _LoginScreenState extends State<LoginScreen> {
             currentPage = index;
           });
         },
-        children: [_buildNicknameLoginPage()],
-        // _buildSmsCodePage()],
+        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
       ),
     );
   }
 
-  // -------------------------
-  // 1. 닉네임 입력 페이지
-  // -------------------------
-  Widget _buildNicknameLoginPage() {
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
-    return Stack(
-      children: [
-        // 뒤로가기 버튼
-        Positioned(
-          top: 60.h,
-          left: 20.w,
-          child: IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-        ),
-
-        // 입력 필드 (임시 숨김)
-        Positioned(
-          top: 0.35.sh,
-          left: 0,
-          right: 0,
-          child: Column(
-            children: [
-              Text(
-                'SOI 접속을 위해 닉네임을 입력해주세요.',
-                style: TextStyle(
-                  color: const Color(0xFFF8F8F8),
-                  fontSize: 18,
-                  fontFamily: GoogleFonts.inter().fontFamily,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16.h),
-              Container(
-                width: 239.w,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Color(0xff323232),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  children: [
-                    SizedBox(width: 17.w),
-                    Icon(
-                      Icons.person_outline,
-                      color: const Color(0xffC0C0C0),
-                      size: 24.sp,
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: TextField(
-                        controller: _nicknameController,
-                        keyboardType: TextInputType.text,
-                        textAlign: TextAlign.start,
-                        cursorHeight: 16.h,
-                        cursorColor: const Color(0xFFF8F8F8),
-                        style: TextStyle(
-                          color: const Color(0xFFF8F8F8),
-                          fontSize: 16,
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.08,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: '닉네임',
-                          hintStyle: TextStyle(
-                            color: const Color(0xFFC0C0C0),
-                            fontSize: 16.sp,
-                            fontFamily: 'Pretendard',
-                            fontWeight: FontWeight.w400,
-                          ),
-                          contentPadding: EdgeInsets.only(
-                            left: 15.w,
-                            bottom: 5.h,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          _hasNickname.value = value.trim().isNotEmpty;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 계속하기 버튼
-        Positioned(
-          bottom: keyboardHeight > 0 ? keyboardHeight + 20.h : 50.h,
-          left: 0,
-          right: 0,
-          child: ValueListenableBuilder<bool>(
-            valueListenable: _hasNickname,
-            builder: (context, hasNicknameValue, child) {
-              return ContinueButton(
-                isEnabled: hasNicknameValue && !_isSendingCode,
-                text: _isSendingCode ? '로그인 중...' : '계속하기',
-                onPressed: () => _loginWithNickname(),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /*
   // -------------------------
   // 1. 전화번호 입력 페이지
   // -------------------------
@@ -232,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
           top: 60.h,
           left: 20.w,
           child: IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
+            onPressed: () => Navigator.of(context).pop(),
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
@@ -375,12 +244,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
     );
   }
-  */
 
   // -------------------------
   // 2. 인증번호 입력 페이지
   // -------------------------
-  /*Widget _buildSmsCodePage() {
+  Widget _buildSmsCodePage() {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Stack(
@@ -452,8 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   onChanged: (value) {
-                    final requiredLength = _useFirebaseAuth ? 6 : 5;
-                    _hasCode.value = value.length == requiredLength;
+                    _hasCode.value = value.length == 5;
                   },
                 ),
               ),
@@ -496,48 +363,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ],
     );
-  }*/
-
-  /*
-  // -------------------------
-  // 전화번호 정규화
-  // -------------------------
-  /// "010-6784-1110" → "01067841110"
-  /// "+82-10-6784-1110" → "01067841110"
-  String _normalizePhoneNumber(String phone) {
-    String digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.startsWith('82')) {
-      digits = '0${digits.substring(2)}';
-    }
-    return digits;
-  }
-
-  String _normalizePhoneNumberForFirebase(String phone) {
-    final trimmed = phone.trim();
-    if (trimmed.startsWith('+')) {
-      final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
-      return '+$digits';
-    }
-
-    var digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.startsWith('0')) {
-      digits = digits.substring(1);
-    }
-
-    final dialCode = _dialCodeForSelectedCountry();
-    return digits.isEmpty ? '' : '$dialCode$digits';
-  }
-
-  String _dialCodeForSelectedCountry() {
-    switch (_selectedCountryCode) {
-      case 'US':
-        return '+1';
-      case 'MX':
-        return '+52';
-      case 'KR':
-      default:
-        return '+82';
-    }
   }
 
   // -------------------------
@@ -550,20 +375,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _isSendingCode = true;
     });
 
-    // 숫자만 저장, 앞자리 0 유지, 국가번호 제거
-    phoneNumber = _normalizePhoneNumber(_phoneController.text);
-    if (_useFirebaseAuth) {
-      phoneNumber = _normalizePhoneNumberForFirebase(_phoneController.text);
-    }
-
-    if (_useFirebaseAuth) {
-      await _sendFirebaseSmsCode(isResend: false);
-      return;
+    // 전화번호 형식을 국제 형식으로 변환 (+82)
+    phoneNumber = _phoneController.text;
+    String formattedPhone = phoneNumber;
+    if (phoneNumber.startsWith('0')) {
+      formattedPhone = '+82${phoneNumber.substring(1)}';
+    } else if (!phoneNumber.startsWith('+')) {
+      formattedPhone = '+82$phoneNumber';
     }
 
     try {
       final success = await _apiUserController!.requestSmsVerification(
-        phoneNumber,
+        formattedPhone,
       );
 
       if (success) {
@@ -588,14 +411,17 @@ class _LoginScreenState extends State<LoginScreen> {
   // SMS 인증번호 재발송
   // -------------------------
   Future<void> _resendSmsCode() async {
-    if (_useFirebaseAuth) {
-      await _sendFirebaseSmsCode(isResend: true);
-      return;
+    // 전화번호 형식을 국제 형식으로 변환 (+82)
+    String formattedPhone = phoneNumber;
+    if (phoneNumber.startsWith('0')) {
+      formattedPhone = '+82${phoneNumber.substring(1)}';
+    } else if (!phoneNumber.startsWith('+')) {
+      formattedPhone = '+82$phoneNumber';
     }
 
     try {
       final success = await _apiUserController!.requestSmsVerification(
-        phoneNumber,
+        formattedPhone,
       );
 
       if (success) {
@@ -609,111 +435,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _sendFirebaseSmsCode({required bool isResend}) async {
-    final firebasePhoneNumber = _normalizePhoneNumberForFirebase(
-      _phoneController.text,
-    );
-    if (firebasePhoneNumber.isEmpty) {
-      _showErrorSnackBar('전화번호를 확인해주세요.');
-      if (mounted) {
-        setState(() {
-          _isSendingCode = false;
-        });
-      }
-      return;
-    }
-
-    try {
-      await _firebaseAuth.verifyPhoneNumber(
-        phoneNumber: firebasePhoneNumber,
-        timeout: const Duration(seconds: 60),
-        forceResendingToken: isResend ? _firebaseResendToken : null,
-        verificationCompleted: (credential) async {
-          try {
-            await _firebaseAuth.signInWithCredential(credential);
-          } catch (e) {
-            debugPrint('Firebase 자동 인증 실패: $e');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          debugPrint('Firebase 인증 실패: ${e.code}');
-          _showErrorSnackBar('인증번호 발송에 실패했습니다.');
-          if (mounted) {
-            setState(() {
-              _isSendingCode = false;
-            });
-          }
-        },
-        codeSent: (verificationId, resendToken) {
-          //_firebaseVerificationId = verificationId;
-          _firebaseResendToken = resendToken;
-          if (!isResend) {
-            _goToNextPage();
-          } else {
-            _showSnackBar('인증번호가 재전송되었습니다.');
-          }
-          if (mounted) {
-            setState(() {
-              _isSendingCode = false;
-            });
-          }
-        },
-        codeAutoRetrievalTimeout: (verificationId) {
-          //_firebaseVerificationId = verificationId;
-          if (mounted) {
-            setState(() {
-              _isSendingCode = false;
-            });
-          }
-        },
-      );
-    } catch (e) {
-      debugPrint('Firebase SMS 발송 오류: $e');
-      _showErrorSnackBar('인증번호 발송 중 오류가 발생했습니다.');
-      if (mounted) {
-        setState(() {
-          _isSendingCode = false;
-        });
-      }
-    }
-  }
-  */
-
-  /// 닉네임 로그인
-  Future<void> _loginWithNickname() async {
-    if (_isSendingCode) return;
-
-    setState(() {
-      _isSendingCode = true;
-    });
-
-    final nickname = _nicknameController.text.trim();
-
-    try {
-      final user = await _apiUserController!.login(nickname);
-      if (user != null) {
-        _goHomePage();
-      } else {
-        _showErrorSnackBar('로그인에 실패했습니다.');
-      }
-    } catch (e) {
-      debugPrint('로그인 오류: $e');
-      _showErrorSnackBar('로그인 중 오류가 발생했습니다.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSendingCode = false;
-        });
-      }
-    }
-  }
-
   // -------------------------
   // 인증 및 로그인
   // -------------------------
 
   /// 인증번호 확인 및 로그인 처리
-  /*Future<void> _verifyAndLogin() async {
+  Future<void> _verifyAndLogin() async {
     if (_isVerifying) return;
 
     setState(() {
@@ -722,9 +449,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final code = _codeController.text;
 
-    final requiredLength = _useFirebaseAuth ? 6 : 5;
-    if (code.length != requiredLength) {
-      _showErrorSnackBar('인증번호는 ${requiredLength}자리여야 합니다.');
+    if (code.length != 5) {
+      _showErrorSnackBar('인증번호는 5자리여야 합니다.');
       if (mounted) {
         setState(() {
           _isVerifying = false;
@@ -734,40 +460,39 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      if (_useFirebaseAuth) {
-        final verificationId = _firebaseVerificationId;
-        if (verificationId == null || verificationId.isEmpty) {
-          _showErrorSnackBar('인증번호 요청이 필요합니다.');
-          return;
-        }
+      // 전화번호 형식을 국제 형식으로 변환 (+82)
+      String formattedPhone = phoneNumber;
+      if (phoneNumber.startsWith('0')) {
+        formattedPhone = '+82${phoneNumber.substring(1)}';
+      } else if (!phoneNumber.startsWith('+')) {
+        formattedPhone = '+82$phoneNumber';
+      }
 
-        final credential = PhoneAuthProvider.credential(
-          verificationId: verificationId,
-          smsCode: code,
-        );
-        await _firebaseAuth.signInWithCredential(credential);
-      } else {
-        // 1. SMS 코드 인증 확인
-        final isValid = await _apiUserController!.verifySmsCode(
-          phoneNumber,
-          code,
-        );
+      // 1. SMS 코드 인증 확인
+      final isValid = await _apiUserController!.verifySmsCode(
+        formattedPhone,
+        code,
+      );
 
-        if (!isValid) {
-          _showErrorSnackBar('인증번호가 올바르지 않습니다.');
-          return;
+      if (!isValid) {
+        _showErrorSnackBar('인증번호가 올바르지 않습니다.');
+        if (mounted) {
+          setState(() {
+            _isVerifying = false;
+          });
         }
+        return;
       }
 
       debugPrint('SMS 인증 성공');
 
       // 2. 로그인 시도
-      debugPrint("로그인 시도: $phoneNumber");
-      final user = await _apiUserController!.login(phoneNumber);
+      debugPrint("로그인 시도: $formattedPhone");
+      final user = await _apiUserController!.login(formattedPhone);
 
       if (user != null) {
         // 기존 회원 - 홈으로 이동
-        debugPrint('로그인 성공: \${user.userId}');
+        debugPrint('로그인 성공: ${user.userId}');
         _goHomePage();
       } else {
         // 신규 회원 - 회원가입 페이지로 이동
@@ -786,7 +511,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }*/
+  }
 
   // -------------------------
   // 유틸리티 메서드

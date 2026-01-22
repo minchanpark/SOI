@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -32,11 +33,18 @@ class MediaController extends ChangeNotifier {
   String? _errorMessage;
   double? _uploadProgress;
 
-  // 추가: presigned URL은 1시간 유효하지만, 매번 새로 발급받으면 URL이 바뀌어
+  // presigned URL은 1시간 유효하지만, 매번 새로 발급받으면 URL이 바뀌어
   // 이미지 캐시(CachedNetworkImage)가 새 이미지로 인식 → placeholder(쉬머)가 다시 보일 수 있습니다.
   // 그래서 key -> presignedUrl을 메모리에 캐시해서, 이미 본 이미지는 즉시 렌더링되도록 합니다.
   final Map<String, _PresignedUrlCacheEntry> _presignedUrlCache = {};
   final Map<String, Future<String?>> _inFlightPresignRequests = {};
+
+  // 비디오 파일 키 -> 썸네일 키 매핑 캐시
+  // photo_editor에서 비디오 업로드 시 생성한 썸네일 키를 저장하여,
+  // category_cover_photo_selector 등에서 재사용할 수 있습니다.
+  // LRU 캐시로 구현: 최대 100개까지만 유지하여 메모리 과부하 방지
+  final LinkedHashMap<String, String> _videoThumbnailCache = LinkedHashMap();
+  static const int _maxThumbnailCacheSize = 100;
 
   /// 생성자
   ///
@@ -52,6 +60,57 @@ class MediaController extends ChangeNotifier {
 
   /// 업로드 진행률 (0.0 ~ 1.0)
   double? get uploadProgress => _uploadProgress;
+
+  // ============================================
+  // 비디오 썸네일 캐싱
+  // ============================================
+
+  /// 비디오 파일 키에 대한 썸네일 키를 캐시에 저장
+  ///
+  /// photo_editor에서 비디오 업로드 시 생성한 썸네일 키를 저장합니다.
+  /// LRU 방식으로 최대 100개까지만 유지하며, 초과 시 가장 오래된 항목을 제거합니다.
+  /// [videoKey] 비디오 파일의 S3 키
+  /// [thumbnailKey] 비디오 썸네일 이미지의 S3 키
+  void cacheThumbnailForVideo(String videoKey, String thumbnailKey) {
+    if (videoKey.isEmpty || thumbnailKey.isEmpty) {
+      // 유효하지 않은 키는 무시
+      return;
+    }
+
+    // 이미 존재하는 키면 제거 후 다시 추가 (LRU 순서 갱신)
+    if (_videoThumbnailCache.containsKey(videoKey)) {
+      _videoThumbnailCache.remove(videoKey);
+    }
+
+    _videoThumbnailCache[videoKey] = thumbnailKey;
+
+    // 캐시 크기가 최대값을 초과하면 가장 오래된 항목(첫 번째 항목) 제거
+    if (_videoThumbnailCache.length > _maxThumbnailCacheSize) {
+      final oldestKey = _videoThumbnailCache.keys.first;
+      _videoThumbnailCache.remove(oldestKey);
+    }
+  }
+
+  /// 비디오 파일 키에 대한 썸네일 키를 조회
+  ///
+  /// 캐시에 저장된 썸네일 키를 반환하며, 없으면 null을 반환합니다.
+  /// 조회 시 해당 항목을 LRU 순서상 최신으로 갱신합니다.
+  /// [videoKey] 비디오 파일의 S3 키
+  /// Returns: 썸네일 키 또는 null
+  String? getThumbnailForVideo(String videoKey) {
+    final thumbnailKey = _videoThumbnailCache[videoKey];
+    if (thumbnailKey != null) {
+      // LRU 순서 갱신: 제거 후 다시 추가하여 맨 뒤로 이동
+      _videoThumbnailCache.remove(videoKey);
+      _videoThumbnailCache[videoKey] = thumbnailKey;
+    }
+    return thumbnailKey;
+  }
+
+  /// 비디오 썸네일 캐시 초기화
+  void clearVideoThumbnailCache() {
+    _videoThumbnailCache.clear();
+  }
 
   // ============================================
   // Presigned URL
