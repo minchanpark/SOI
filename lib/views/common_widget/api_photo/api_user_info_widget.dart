@@ -78,9 +78,7 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
-        ),
+        content: Text('신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.'),
         backgroundColor: Color(0xFF5A5A5A),
       ),
     );
@@ -123,9 +121,9 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
     if (!mounted) return;
 
     if (ok) {
-      context
-          .read<FeedDataManager>()
-          .removePostsByNickname(widget.post.nickName);
+      context.read<FeedDataManager>().removePostsByNickname(
+        widget.post.nickName,
+      );
       context.read<PostController>().notifyPostsChanged();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -644,36 +642,28 @@ class _ApiUserInfoWidgetState extends State<ApiUserInfoWidget>
           color: Color(0xFF323232),
           shape: BoxShape.circle,
         ),
-
-        alignment: Alignment.center,
-        child: widget.selectedEmoji != null
-            ? Transform.translate(
-                // 수정: 이모지는 기기/OS에 따라 폰트 폴백 메트릭이 달라 "Text로 center" 시 위치가 흔들릴 수 있습니다.
-                // WidgetSpan으로 "고정된 박스" 안에 넣으면 레이아웃 기준이 박스가 되어 위치가 더 안정적입니다.
-                offset: const Offset(0, -1),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          child: Text(
-                            widget.selectedEmoji!,
-                            textScaler: TextScaler.noScaling,
-                            style: const TextStyle(
-                              fontSize: 25.38,
-                              fontFamily: 'Pretendard Variable',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+        // 이모지와 아이콘 모두 정확히 중앙 정렬
+        child: Center(
+          child: widget.selectedEmoji != null
+              ? FittedBox(
+                  fit: BoxFit.contain,
+                  child: Text(
+                    widget.selectedEmoji!,
+                    textScaler: TextScaler.noScaling,
+                    // 이모지와 아이콘 모두 정확히 중앙 정렬
+                    style: TextStyle(
+                      fontSize: 25.38,
+                      fontFamily: 'Pretendard Variable',
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
+                )
+              : Image.asset(
+                  'assets/like_icon.png',
+                  width: 25.38,
+                  height: 25.38,
                 ),
-              )
-            : Image.asset('assets/like_icon.png', width: 25.38, height: 25.38),
+        ),
       ),
     );
   }

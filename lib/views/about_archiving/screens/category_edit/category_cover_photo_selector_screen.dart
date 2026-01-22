@@ -286,7 +286,10 @@ class _CategoryCoverPhotoSelectorScreenState
     );
 
     if (success && mounted) {
-      await categoryController.loadCategories(currentUser.id, forceReload: true);
+      await categoryController.loadCategories(
+        currentUser.id,
+        forceReload: true,
+      );
       if (!mounted) return;
       Navigator.pop(context, key);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -313,8 +316,5 @@ class _SelectablePhoto {
   final String key;
   final String url;
 
-  const _SelectablePhoto({
-    required this.key,
-    required this.url,
-  });
+  const _SelectablePhoto({required this.key, required this.url});
 }

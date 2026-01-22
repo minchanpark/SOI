@@ -65,15 +65,26 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   void initState() {
     super.initState();
     _category = widget.category;
-    // 빌드 완료 후 데이터 로드 (notifyListeners 충돌 방지)
+    // 화면이 렌더링된 후 초기 데이터 로드
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final categoryController = Provider.of<CategoryController>(
         context,
         listen: false,
       );
-      categoryController.markCategoryAsViewed(_currentCategory.id);
-      await _loadPosts();
-      _startAutoRefreshTimer();
+      categoryController.markCategoryAsViewed(
+        _currentCategory.id,
+      ); // 카테고리를 본 것으로 표시
+
+      // 리스너 등록을 데이터 로딩 전에 수행하여 타이밍 이슈 방지
+      // 게시물 추가 알림을 놓치지 않도록 즉시 등록
+      postController = Provider.of<PostController>(context, listen: false);
+      userController = Provider.of<UserController>(context, listen: false);
+      mediaController = Provider.of<MediaController>(context, listen: false);
+      friendController = Provider.of<FriendController>(context, listen: false);
+      _attachPostChangedListenerIfNeeded();
+
+      await _loadPosts(); // 초기 데이터 로드
+      _startAutoRefreshTimer(); // 자동 새로고침 타이머 시작
     });
   }
 
@@ -95,14 +106,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     if (!mounted) return;
 
     try {
-      // 컨트롤러 인스턴스 가져오기
-      postController = Provider.of<PostController>(context, listen: false);
-      userController = Provider.of<UserController>(context, listen: false);
-      mediaController = Provider.of<MediaController>(context, listen: false);
-      friendController = Provider.of<FriendController>(context, listen: false);
-
-      // 포스트 변경 리스너 등록
-      _attachPostChangedListenerIfNeeded();
+      // [FIX] 컨트롤러와 리스너는 initState에서 이미 초기화/등록됨
+      // (타이밍 이슈 방지: 게시물 추가 알림을 놓치지 않도록)
 
       // 현재 사용자 ID 가져오기
       final currentUser = userController!.currentUser;
@@ -338,18 +343,19 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // 카테고리 이름
-            Text(
-              _currentCategory.name,
-              style: TextStyle(
-                color: const Color(0xFFD9D9D9),
-                fontSize: 20,
-                fontFamily: GoogleFonts.inter().fontFamily,
-                fontWeight: FontWeight.w700,
+            Expanded(
+              child: Text(
+                _currentCategory.name,
+                style: TextStyle(
+                  color: const Color(0xFFD9D9D9),
+                  fontSize: 20,
+                  fontFamily: GoogleFonts.inter().fontFamily,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-            const Spacer(),
             // 멤버 수 표시
             InkWell(
               onTap: () {

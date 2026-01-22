@@ -104,10 +104,9 @@ void main() async {
       supportedLocales: const [Locale('ko'), Locale('es')],
       path: 'assets/translations',
       fallbackLocale: const Locale('ko'),
-      startLocale:
-          PlatformDispatcher.instance.locale.languageCode == 'es'
-              ? const Locale('es')
-              : const Locale('ko'),
+      startLocale: PlatformDispatcher.instance.locale.languageCode == 'es'
+          ? const Locale('es')
+          : const Locale('ko'),
 
       child: MyApp(
         hasSeenLaunchVideo: hasSeenLaunchVideo,
@@ -170,7 +169,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   Uri? _lastHandledUri;
-  bool _isInviteDialogShowing = false;
+  DateTime? _lastHandledTime;
+  //bool _isInviteDialogShowing = false;
 
   @override
   void initState() {
@@ -210,8 +210,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   void _handleIncomingUri(Uri uri) {
     debugPrint('URI: $uri');
-    if (_lastHandledUri == uri) return;
+
+    // URI + 시간 기반 중복 방지: 같은 URI를 3초 이내에 다시 처리하지 않음
+    final now = DateTime.now();
+    final isSameUri = _lastHandledUri == uri;
+    final timeDiff = _lastHandledTime != null
+        ? now.difference(_lastHandledTime!).inSeconds
+        : 999; // 초기값은 충분히 큰 값
+
+    if (isSameUri && timeDiff < 3) {
+      debugPrint('중복 URI 무시: 마지막 처리 후 $timeDiff초 경과');
+      return;
+    }
+
     _lastHandledUri = uri;
+    _lastHandledTime = now;
 
     final userId =
         uri.queryParameters['userId'] ??
@@ -261,15 +274,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     }
 
-    if (!mounted) return;
+    /* if (!mounted) return;
     await _showInviteDialog(
       context: context,
       userId: userId,
       nickName: nickName,
-    );
+    );*/
   }
 
-  Future<void> _showInviteDialog({
+  /* ㅇ Future<void> _showInviteDialog({
     required BuildContext context,
     required String userId,
     required String nickName,
@@ -297,7 +310,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     } finally {
       _isInviteDialogShowing = false;
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
