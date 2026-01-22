@@ -75,12 +75,15 @@ class ApiArchiveCardWidget extends StatelessWidget {
             Stack(
               alignment: Alignment.topLeft,
               children: [
+                // 카테고리 이미지 위젯 빌드
                 _buildCategoryImage(
                   width: 146.7,
                   height: 146.8,
                   borderRadius: 6.61,
                 ),
+                // 고정 배지 위젯 빌드
                 _buildPinnedBadge(top: 5, left: 5),
+                // 신규 배지 위젯 빌드
                 _buildNewBadge(top: 6.43, left: 127),
               ],
             ),
@@ -213,8 +216,15 @@ class ApiArchiveCardWidget extends StatelessWidget {
               useOldImageOnUrlChange: true,
               width: width,
               height: height,
-              memCacheWidth: (width * 2).round(),
-              maxWidthDiskCache: (width * 2).round(),
+
+              // 메모리 캐시, 디스크 캐시 해상도 조정
+              // MediaQuery.of(context).devicePixelRatio: 디바이스 픽셀 비율 고려
+              memCacheWidth:
+                  (width * MediaQuery.of(context).devicePixelRatio * 1.5)
+                      .round(),
+              maxWidthDiskCache:
+                  (width * MediaQuery.of(context).devicePixelRatio * 1.5)
+                      .round(),
               fit: BoxFit.cover,
               // shimmer placeholder 및 에러 위젯 처리
               // shimmer는 한번만 보여주고, 이후에는 기본 아이콘을 보여줍니다.

@@ -511,7 +511,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18.0),
                   child: FittedBox(
-                    fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
+                    fit: _isVideoCoverMode ? BoxFit.fill : BoxFit.contain,
                     child: SizedBox(
                       width: controller.value.size.width,
                       height: controller.value.size.height,
@@ -569,16 +569,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             borderRadius: BorderRadius.circular(18.0),
             child: CachedNetworkImage(
               imageUrl: url,
-              // 추가: presigned URL이 바뀌어도(쿼리스트링 변경 등) 같은 파일 key면 같은 캐시를 쓰게 함
+              // presigned URL이 바뀌어도(쿼리스트링 변경 등) 같은 파일 key면 같은 캐시를 쓰게 함
               cacheKey: widget.post.postFileKey,
               useOldImageOnUrlChange: true, // URL 변경 시에도 이전 이미지 유지(체감 깜빡임 감소)
               fadeInDuration: Duration.zero, // 로드 후 페이드 제거(체감 쉬머 감소)
               fadeOutDuration: Duration.zero,
               width: _imageWidth.w,
               height: _imageHeight.h,
-              fit: _isImageCoverMode
-                  ? BoxFit.cover
-                  : BoxFit.contain, // 더블탭으로 전환
+              fit: _isImageCoverMode ? BoxFit.fill : BoxFit.contain, // 더블탭으로 전환
               memCacheWidth: ((354.w * dpr).round()),
               maxWidthDiskCache: (354.w * dpr).round(),
               placeholder: (context, _) => Shimmer.fromColors(

@@ -197,8 +197,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   static const double _kDimensionScaleFactor = 0.85; // 크기 감소 비율
   static const int _kFallbackCompressionQuality = 35; // 최종 강제 압축 품질
   static const int _kFallbackImageDimension = 1024; // 최종 강제 압축 크기
-  static const int _kMaxVideoSizeBytes =
-      20 * 1024 * 1024; // [VideoCompress] 20MB
+
+  /// 20MB로 설정 (비디오 업로드 제한)
+  static const int _kMaxVideoSizeBytes = 50 * 1024 * 1024;
 
   // 최소 크기는 처음에는 0에서 시작하여 애니메이션으로 잠금 위치까지 이동
   double _minChildSize = _kInitialSheetExtent;
@@ -1351,20 +1352,53 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return file;
     }
 
-    var compressed = await _tryCompressVideo(file, VideoQuality.MediumQuality);
-    if (compressed == null) {
-      return file;
-    }
-
-    final compressedSize = await compressed.length();
-    if (compressedSize > _kMaxVideoSizeBytes) {
-      final lower = await _tryCompressVideo(file, VideoQuality.LowQuality);
-      if (lower != null) {
-        compressed = lower;
+    // 1단계: 원본 해상도 유지, 비트레이트 1.5Mbps, 30fps
+    var compressed = await _tryCompressVideoWithBitrate(
+      file,
+      bitrate: 1500000, // 1.5Mbps
+      frameRate: 30,
+    );
+    if (compressed != null) {
+      final compressedSize = await compressed.length();
+      if (compressedSize <= _kMaxVideoSizeBytes) {
+        debugPrint('[PhotoEditor] 1단계 압축 성공: ${compressedSize ~/ 1024}KB');
+        return compressed;
       }
     }
 
-    return compressed;
+    // 2단계: 원본 해상도 유지, 비트레이트 1Mbps
+    compressed = await _tryCompressVideoWithBitrate(
+      file,
+      bitrate: 1000000, // 1Mbps
+      frameRate: 30,
+    );
+    if (compressed != null) {
+      final compressedSize = await compressed.length();
+      if (compressedSize <= _kMaxVideoSizeBytes) {
+        debugPrint('[PhotoEditor] 2단계 압축 성공: ${compressedSize ~/ 1024}KB');
+        return compressed;
+      }
+    }
+
+    // 3단계: 원본 해상도 유지, 비트레이트 800Kbps
+    compressed = await _tryCompressVideoWithBitrate(
+      file,
+      bitrate: 800000, // 800Kbps
+      frameRate: 30,
+    );
+    if (compressed != null) {
+      final compressedSize = await compressed.length();
+      if (compressedSize <= _kMaxVideoSizeBytes) {
+        debugPrint('[PhotoEditor] 3단계 압축 성공: ${compressedSize ~/ 1024}KB');
+        return compressed;
+      }
+    }
+
+    // 4단계: 최후의 수단 - MediumQuality (해상도 약간 감소)
+    debugPrint('[PhotoEditor] 비트레이트 압축 실패, MediumQuality 시도');
+    compressed = await _tryCompressVideo(file, VideoQuality.MediumQuality);
+
+    return compressed ?? file;
   }
 
   /// 비디오를 지정된 품질로 압축 시도
@@ -1387,6 +1421,36 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return info?.file;
     } catch (e) {
       debugPrint('[PhotoEditor] 비디오 압축 실패: $e');
+      return null;
+    }
+  }
+
+  /// 비디오를 커스텀 비트레이트로 압축 시도 (해상도 유지)
+  /// 실패 시 null 반환
+  ///
+  /// Parameters:
+  ///   - [file]: 압축할 비디오 파일
+  ///   - [bitrate]: 비디오 비트레이트 (bps)
+  ///   - [frameRate]: 프레임레이트 (기본 30fps)
+  ///
+  /// Returns:
+  ///   - 압축된 비디오 파일 또는 null
+  Future<File?> _tryCompressVideoWithBitrate(
+    File file, {
+    required int bitrate,
+    int frameRate = 30,
+  }) async {
+    try {
+      final info = await VideoCompress.compressVideo(
+        file.path,
+        quality: VideoQuality.DefaultQuality, // 원본 해상도 유지
+        frameRate: frameRate, // 프레임레이트 지정
+        includeAudio: true,
+        deleteOrigin: false,
+      );
+      return info?.file;
+    } catch (e) {
+      debugPrint('[PhotoEditor] 비디오 비트레이트 압축 실패: $e');
       return null;
     }
   }
