@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
+import '../../../../utils/snackbar_utils.dart';
 import '../archive_category_dialogs.dart';
 import 'animated_menu_overlay.dart';
 
@@ -337,8 +338,10 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+    SnackBarUtils.showSnackBar(
+      context,
+      message,
+      duration: const Duration(seconds: 1),
     );
   }
 }

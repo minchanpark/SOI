@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../../../../utils/snackbar_utils.dart';
 
 /// 프로필 이미지 선택 페이지
 class SelectProfileImagePage extends StatefulWidget {
@@ -55,10 +56,9 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
     } catch (e) {
       debugPrint('이미지 선택 오류: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('register.profile_image_error', context: context)),
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr('register.profile_image_error', context: context),
         );
       }
     } finally {

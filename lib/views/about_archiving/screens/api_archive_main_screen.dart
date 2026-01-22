@@ -15,6 +15,7 @@ import 'package:soi/api/models/category.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../theme/theme.dart';
+import '../../../utils/snackbar_utils.dart';
 import '../../about_friends/friend_list_add_screen.dart';
 import '../widgets/overlapping_profiles_widget.dart';
 import 'archive_detail/all_archives_screen.dart';
@@ -336,11 +337,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     // 빈 텍스트 입력 시에만 에러 메시지 표시
     if (trimmedText.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('archive.edit_name_required', context: context)),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr('archive.edit_name_required', context: context),
         );
       }
       return;
@@ -374,20 +373,16 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       cancelEditMode();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('archive.edit_name_success', context: context)),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr('archive.edit_name_success', context: context),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('archive.edit_name_error', context: context)),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr('archive.edit_name_error', context: context),
         );
       }
     }
@@ -990,10 +985,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   ) async {
     final categoryName = _categoryNameController.text.trim();
     if (categoryName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        _snackBarComponenet(
-          tr('archive.create_category_name_required', context: context),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr('archive.create_category_name_required', context: context),
       );
       return;
     }
@@ -1056,7 +1050,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(_showSuccessSnackBar());
+          SnackBarUtils.showSnackBar(
+            context,
+            tr('archive.create_category_success', context: context),
+          );
         }
       } else {
         _showSnackBar(tr('archive.create_category_failed', context: context));
@@ -1069,44 +1066,8 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
   void _showSnackBar(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(_snackBarComponenet(message));
+      SnackBarUtils.showSnackBar(context, message);
     }
-  }
-
-  SnackBar _showSuccessSnackBar() {
-    return SnackBar(
-      content: Row(
-        children: [
-          SvgPicture.asset(
-            'assets/archive_icon.svg',
-            width: 19.sp,
-            height: 17.sp,
-            colorFilter: ColorFilter.mode(Color(0xffc2c0c0), BlendMode.srcIn),
-          ),
-          SizedBox(width: 15.w),
-          Text(
-            tr('archive.create_category_success', context: context),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontFamily: 'Pretendard',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-      backgroundColor: Color(0xFF323232),
-      duration: Duration(seconds: 2),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.5)),
-    );
-  }
-
-  SnackBar _snackBarComponenet(String content) {
-    return SnackBar(
-      content: Text(content, style: TextStyle(color: Colors.white)),
-      backgroundColor: const Color(0xFF5A5A5A),
-    );
   }
 
   @override

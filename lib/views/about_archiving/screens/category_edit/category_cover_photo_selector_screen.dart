@@ -9,6 +9,7 @@ import '../../../../api/controller/media_controller.dart';
 import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
+import '../../../../utils/snackbar_utils.dart';
 
 /// 카테고리 표지사진 선택 화면
 class CategoryCoverPhotoSelectorScreen extends StatefulWidget {
@@ -318,22 +319,15 @@ class _CategoryCoverPhotoSelectorScreenState
       );
       if (!mounted) return;
       Navigator.pop(context, key);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr('category.cover.updated', context: context)),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr('category.cover.updated', context: context),
       );
     } else if (mounted) {
       final message =
           categoryController.errorMessage ??
           tr('category.cover.update_failed', context: context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
-      );
+      SnackBarUtils.showSnackBar(context, message);
     }
   }
 }

@@ -9,6 +9,7 @@ import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/notification.dart';
 import '../../api/models/post.dart';
+import '../../utils/snackbar_utils.dart';
 import '../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
 import '../about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
 import 'widgets/api_notification_item_widget.dart';
@@ -244,12 +245,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final subtitle = _isFriendRequestLoading || _isLoading
         ? tr('notification.loading_short', context: context)
         : (requestCount > 0
-            ? tr(
-                'notification.pending_requests',
-                context: context,
-                namedArgs: {'count': requestCount.toString()},
-              )
-            : tr('notification.no_requests', context: context));
+              ? tr(
+                  'notification.pending_requests',
+                  context: context,
+                  namedArgs: {'count': requestCount.toString()},
+                )
+              : tr('notification.no_requests', context: context));
 
     return GestureDetector(
       onTap: () {
@@ -525,7 +526,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 } else {
                   _showSnackBar(
                     categoryController.errorMessage ??
-                        tr('notification.invite_accept_failed', context: context),
+                        tr(
+                          'notification.invite_accept_failed',
+                          context: context,
+                        ),
                   );
                 }
               } finally {
@@ -603,12 +607,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xff1c1c1c),
-      ),
-    );
+    SnackBarUtils.showSnackBar(context, message);
   }
 
   void _showBlockingLoading() {

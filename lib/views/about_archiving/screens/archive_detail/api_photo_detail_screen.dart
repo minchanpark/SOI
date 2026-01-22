@@ -20,6 +20,7 @@ import '../../../../api/controller/post_controller.dart';
 import '../../../../api/controller/media_controller.dart';
 import '../../../../api/controller/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
+import '../../../../utils/snackbar_utils.dart';
 import '../../../about_share/share_screen.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
 import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
@@ -203,12 +204,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       return;
     }
 
-    final currentPostId =
-        _posts.isNotEmpty ? _posts[_currentIndex].id : null;
+    final currentPostId = _posts.isNotEmpty ? _posts[_currentIndex].id : null;
     var nextIndex = 0;
     if (currentPostId != null) {
-      final foundIndex =
-          filteredPosts.indexWhere((post) => post.id == currentPostId);
+      final foundIndex = filteredPosts.indexWhere(
+        (post) => post.id == currentPostId,
+      );
       nextIndex = foundIndex >= 0 ? foundIndex : 0;
     }
 
@@ -419,22 +420,13 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     try {
       await FirebaseFirestore.instance.collection('post_reports').add(data);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
-          ),
-          backgroundColor: Color(0xFF5A5A5A),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('신고 접수에 실패했습니다.'),
-          backgroundColor: Color(0xFF5A5A5A),
-        ),
-      );
+      SnackBarUtils.showSnackBar(context, '신고 접수에 실패했습니다.');
     }
   }
 
@@ -1033,20 +1025,6 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   void _showSnackBar(String message, {Color? backgroundColor}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Container(
-          height: 30.h,
-          alignment: Alignment.center,
-          child: Text(
-            message,
-            style: TextStyle(fontFamily: 'Pretendard', fontSize: 14.sp),
-          ),
-        ),
-        backgroundColor: backgroundColor ?? const Color(0xFF5A5A5A),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-      ),
-    );
+    SnackBarUtils.showSnackBar(context, message);
   }
 }

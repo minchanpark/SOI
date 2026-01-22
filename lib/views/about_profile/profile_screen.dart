@@ -12,6 +12,7 @@ import '../../api/controller/category_controller.dart';
 import '../../api/controller/media_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/user.dart';
+import '../../utils/snackbar_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -346,13 +347,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              tr('profile.snackbar.logout_failed', context: context),
-            ),
-            backgroundColor: const Color(0xFF5A5A5A),
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr('profile.snackbar.logout_failed', context: context),
         );
       }
     }
@@ -502,18 +499,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Navigator.of(context).pop();
 
         // 에러 메시지 표시
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              tr(
-                'profile.snackbar.delete_account_failed',
-                context: context,
-                namedArgs: {'error': e.toString()},
-              ),
-            ),
-            backgroundColor: const Color(0xFF5A5A5A),
-            duration: const Duration(seconds: 3),
+        SnackBarUtils.showSnackBar(
+          context,
+          tr(
+            'profile.snackbar.delete_account_failed',
+            context: context,
+            namedArgs: {'error': e.toString()},
           ),
+          duration: const Duration(seconds: 3),
         );
       }
     }
@@ -1045,11 +1038,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showProfileSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF5A5A5A),
-      ),
-    );
+    SnackBarUtils.showSnackBar(context, message);
   }
 }

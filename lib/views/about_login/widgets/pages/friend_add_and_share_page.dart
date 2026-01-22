@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../api/controller/contact_controller.dart';
 import '../../../../api/controller/user_controller.dart';
+import '../../../../utils/snackbar_utils.dart';
 
 class FriendAddAndSharePage extends StatefulWidget {
   final PageController? pageController;
@@ -86,15 +87,12 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              'register.share_failed_with_reason',
-              context: context,
-              namedArgs: {'error': e.toString()},
-            ),
-          ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr(
+          'register.share_failed_with_reason',
+          context: context,
+          namedArgs: {'error': e.toString()},
         ),
       );
       debugPrint("링크 공유 실패: $e");

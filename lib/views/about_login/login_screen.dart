@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:soi/api/controller/user_controller.dart' as api;
 import 'package:solar_icons/solar_icons.dart';
 import '../../theme/theme.dart';
+import '../../utils/snackbar_utils.dart';
 import 'widgets/common/continue_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -541,9 +542,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showErrorSnackBar(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
+      SnackBarUtils.showSnackBar(context, message);
     }
   }
 }

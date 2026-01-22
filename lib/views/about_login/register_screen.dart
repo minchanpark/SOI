@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/utils/username_validator.dart';
+import 'package:soi/utils/snackbar_utils.dart';
 import 'package:soi/views/about_login/widgets/pages/agreement_page.dart';
 import 'package:soi/views/about_login/widgets/pages/phone_input_page.dart';
 import 'package:soi/views/about_login/widgets/pages/sms_code_page.dart';
@@ -285,8 +286,9 @@ class _AuthScreenState extends State<AuthScreen> {
                           throw Exception('SMS 재전송 실패: $error');
                         });
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('인증번호 재전송 중 오류가 발생했습니다.')),
+                    SnackBarUtils.showSnackBar(
+                      context,
+                      '인증번호 재전송 중 오류가 발생했습니다.',
                     );
                     debugPrint('재전송 예외: $e');
                   }
@@ -450,23 +452,17 @@ class _AuthScreenState extends State<AuthScreen> {
                                   );
                                 } else {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'SMS 발송에 실패했습니다. 다시 시도해주세요.',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                      ),
+                                    SnackBarUtils.showSnackBar(
+                                      context,
+                                      'SMS 발송에 실패했습니다. 다시 시도해주세요.',
                                     );
                                   }
                                 }
                               } catch (e) {
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('SMS 발송 중 오류가 발생했습니다.'),
-                                      backgroundColor: Colors.red,
-                                    ),
+                                  SnackBarUtils.showSnackBar(
+                                    context,
+                                    'SMS 발송 중 오류가 발생했습니다.',
                                   );
                                 }
                                 debugPrint('SMS 발송 예외: $e');
@@ -539,12 +535,7 @@ class _AuthScreenState extends State<AuthScreen> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('인증이 완료되었습니다.'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          SnackBarUtils.showSnackBar(context, '인증이 완료되었습니다.');
         }
 
         FocusScope.of(context).unfocus();
@@ -558,12 +549,7 @@ class _AuthScreenState extends State<AuthScreen> {
           isVerified = false;
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('인증번호가 올바르지 않습니다.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBarUtils.showSnackBar(context, '인증번호가 올바르지 않습니다.');
         }
       }
     } catch (e) {
@@ -575,13 +561,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
       final errorMessage = e.toString().replaceFirst('Exception: ', '').trim();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              errorMessage.isNotEmpty ? errorMessage : '인증 확인 중 오류가 발생했습니다.',
-            ),
-            backgroundColor: Colors.red,
-          ),
+        SnackBarUtils.showSnackBar(
+          context,
+          errorMessage.isNotEmpty ? errorMessage : '인증 확인 중 오류가 발생했습니다.',
         );
       }
 

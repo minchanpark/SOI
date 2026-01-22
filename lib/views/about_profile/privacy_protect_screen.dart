@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import '../../api/controller/contact_controller.dart';
+import '../../utils/snackbar_utils.dart';
 
 class PrivacyProtectScreen extends StatefulWidget {
   const PrivacyProtectScreen({super.key});
@@ -26,12 +27,7 @@ class _PrivacyProtectScreenState extends State<PrivacyProtectScreen> {
     final result = await controller.handleToggleChange();
     if (!mounted) return;
     if (result.message.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: const Color(0xFF5A5A5A),
-        ),
-      );
+      SnackBarUtils.showSnackBar(context, result.message);
     }
   }
 

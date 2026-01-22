@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:soi/utils/snackbar_utils.dart';
 
 /// 음성 댓글 전용 오디오 컨트롤러
 ///
@@ -80,8 +81,6 @@ class CommentAudioController extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      debugPrint('🎵 CommentAudio - 재생 시작: $commentId');
-
       // 다른 댓글이 재생 중이면 중지
       if (_currentPlayingCommentId != null &&
           _currentPlayingCommentId != commentId) {
@@ -98,10 +97,8 @@ class CommentAudioController extends ChangeNotifier {
       _isPlayingStates[commentId] = true;
       _currentPlayingCommentId = commentId;
       _commentAudioUrls[commentId] = audioUrl;
-
-      debugPrint('✅ CommentAudio - 재생 시작 완료: $commentId');
     } catch (e) {
-      debugPrint('❌ CommentAudio - 재생 오류: $e');
+      debugPrint('CommentAudio - 재생 오류: $e');
       _setError('음성 댓글을 재생할 수 없습니다: $e');
     } finally {
       _setLoading(false);
@@ -117,11 +114,10 @@ class CommentAudioController extends ChangeNotifier {
         await player.pause();
         _isPlayingStates[commentId] = false;
 
-        debugPrint('⏸️ CommentAudio - 일시정지: $commentId');
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('❌ CommentAudio - 일시정지 오류: $e');
+      debugPrint('CommentAudio - 일시정지 오류: $e');
     }
   }
 
@@ -138,11 +134,10 @@ class CommentAudioController extends ChangeNotifier {
           _currentPlayingCommentId = null;
         }
 
-        debugPrint('⏹️ CommentAudio - 중지: $commentId');
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('❌ CommentAudio - 중지 오류: $e');
+      debugPrint('CommentAudio - 중지 오류: $e');
     }
   }
 
@@ -207,8 +202,6 @@ class CommentAudioController extends ChangeNotifier {
         if (_currentPlayingCommentId == commentId) {
           _currentPlayingCommentId = null;
         }
-
-        debugPrint('🏁 CommentAudio - 재생 완료: $commentId');
       }
 
       // 상태 변화가 있을 때만 알림
@@ -250,13 +243,10 @@ class CommentAudioController extends ChangeNotifier {
         await player.seek(position);
         _currentPositions[commentId] = position;
 
-        debugPrint(
-          '⏩ CommentAudio - 위치 이동: $commentId, ${position.inSeconds}초',
-        );
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('❌ CommentAudio - 위치 이동 오류: $e');
+      debugPrint("CommentAudio - 위치 이동 오류: $e");
     }
   }
 
@@ -269,11 +259,10 @@ class CommentAudioController extends ChangeNotifier {
         _isPlayingStates[commentId] = true;
         _currentPlayingCommentId = commentId;
 
-        debugPrint('▶️ CommentAudio - 재생 재개: $commentId');
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('❌ CommentAudio - 재생 재개 오류: $e');
+      debugPrint('CommentAudio - 재생 재개 오류: $e');
     }
   }
 
@@ -315,19 +304,17 @@ class CommentAudioController extends ChangeNotifier {
         _currentPlayingCommentId = null;
       }
 
-      debugPrint('🗑️ CommentAudio - 플레이어 해제: $commentId');
+      debugPrint('CommentAudio - 플레이어 해제: $commentId');
     }
   }
 
   /// 에러 상태를 사용자에게 보여주고 자동으로 클리어
   void showErrorToUser(BuildContext context) {
     if (_error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_error!),
-          backgroundColor: const Color(0xFF5A5A5A),
-          duration: const Duration(seconds: 3),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        _error!,
+        duration: const Duration(seconds: 3),
       );
       _clearError();
     }

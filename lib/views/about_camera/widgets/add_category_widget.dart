@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
+import '../../../utils/snackbar_utils.dart';
 import '../../about_archiving/widgets/overlapping_profiles_widget.dart';
 import '../../about_friends/friend_list_add_screen.dart';
 
@@ -34,21 +35,9 @@ class _AddCategoryWidgetState extends State<AddCategoryWidget> {
   void _handleSavePressed() async {
     // 카테고리 이름이 입력되었는지 확인
     if (widget.textController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr('archive.create_category_name_required', context: context),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
-              fontFamily: 'Pretendard',
-            ),
-          ),
-          backgroundColor: Color(0xFF323232),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr('archive.create_category_name_required', context: context),
       );
       return;
     }

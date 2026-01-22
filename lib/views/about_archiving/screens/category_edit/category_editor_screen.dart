@@ -13,6 +13,7 @@ import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../api/models/user.dart';
 import '../../../../api/services/media_service.dart';
+import '../../../../utils/snackbar_utils.dart';
 import '../../../about_friends/friend_list_add_screen.dart';
 import '../../widgets/exit_button.dart';
 import '../../widgets/category_edit_widget/add_friend_button.dart';
@@ -253,9 +254,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   SizedBox(height: 12),
 
                   // 알림설정 섹션
-                  NotificationSettingSection(
-                    categoryId: currentCategory.id,
-                  ),
+                  NotificationSettingSection(categoryId: currentCategory.id),
                   SizedBox(height: 24.h),
 
                   // 친구 추가 섹션
@@ -463,11 +462,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         await _updateCoverPhoto(imageFile);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr('category.cover.camera_error', context: context)),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr('category.cover.camera_error', context: context),
       );
     }
   }
@@ -486,11 +483,9 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         await _updateCoverPhoto(imageFile);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr('category.cover.gallery_error', context: context)),
-          backgroundColor: const Color(0xFF5a5a5a),
-        ),
+      SnackBarUtils.showSnackBar(
+        context,
+        tr('category.cover.gallery_error', context: context),
       );
     }
   }
@@ -630,11 +625,6 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF5a5a5a),
-      ),
-    );
+    SnackBarUtils.showSnackBar(context, message);
   }
 }

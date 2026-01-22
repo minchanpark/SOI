@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/user_controller.dart';
+import '../../../../utils/snackbar_utils.dart';
 
 /// 카테고리 알림 설정 섹션
 ///
@@ -16,10 +17,7 @@ import '../../../../api/controller/user_controller.dart';
 class NotificationSettingSection extends StatefulWidget {
   final int categoryId;
 
-  const NotificationSettingSection({
-    super.key,
-    required this.categoryId,
-  });
+  const NotificationSettingSection({super.key, required this.categoryId});
 
   @override
   State<NotificationSettingSection> createState() =>
@@ -117,12 +115,10 @@ class _NotificationSettingSectionState
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF5a5a5a),
-        duration: const Duration(seconds: 2),
-      ),
+    SnackBarUtils.showSnackBar(
+      context,
+      message,
+      duration: const Duration(seconds: 2),
     );
   }
 
