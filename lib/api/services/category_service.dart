@@ -89,7 +89,7 @@ class CategoryService {
         isPublic: isPublic,
       );
 
-      final response = await _categoryApi.create3(dto);
+      final response = await _categoryApi.create4(dto);
 
       if (response == null) {
         throw const DataValidationException(message: '카테고리 생성 응답이 없습니다.');

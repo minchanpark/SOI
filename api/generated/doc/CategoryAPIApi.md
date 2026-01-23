@@ -11,7 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**categoryAlert**](CategoryAPIApi.md#categoryalert) | **POST** /category/set/alert | 카테고리 알림설정
 [**categoryPinned**](CategoryAPIApi.md#categorypinned) | **POST** /category/set/pinned | 카테고리 고정
-[**create3**](CategoryAPIApi.md#create3) | **POST** /category/create | 카테고리 추가
+[**create4**](CategoryAPIApi.md#create4) | **POST** /category/create | 카테고리 추가
 [**customName**](CategoryAPIApi.md#customname) | **POST** /category/set/name | 카테고리 이름수정
 [**customProfile**](CategoryAPIApi.md#customprofile) | **POST** /category/set/profile | 카테고리 프로필 수정
 [**delete**](CategoryAPIApi.md#delete) | **POST** /category/delete | 카테고리 나가기 (삭제)
@@ -110,8 +110,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **create3**
-> ApiResponseDtoLong create3(categoryCreateReqDto)
+# **create4**
+> ApiResponseDtoLong create4(categoryCreateReqDto)
 
 카테고리 추가
 
@@ -125,10 +125,10 @@ final api_instance = CategoryAPIApi();
 final categoryCreateReqDto = CategoryCreateReqDto(); // CategoryCreateReqDto | 
 
 try {
-    final result = api_instance.create3(categoryCreateReqDto);
+    final result = api_instance.create4(categoryCreateReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling CategoryAPIApi->create3: $e\n');
+    print('Exception when calling CategoryAPIApi->create4: $e\n');
 }
 ```
 

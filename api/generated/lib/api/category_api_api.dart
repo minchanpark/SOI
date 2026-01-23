@@ -151,7 +151,7 @@ class CategoryAPIApi {
   /// Parameters:
   ///
   /// * [CategoryCreateReqDto] categoryCreateReqDto (required):
-  Future<Response> create3WithHttpInfo(CategoryCreateReqDto categoryCreateReqDto,) async {
+  Future<Response> create4WithHttpInfo(CategoryCreateReqDto categoryCreateReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/category/create';
 
@@ -183,8 +183,8 @@ class CategoryAPIApi {
   /// Parameters:
   ///
   /// * [CategoryCreateReqDto] categoryCreateReqDto (required):
-  Future<ApiResponseDtoLong?> create3(CategoryCreateReqDto categoryCreateReqDto,) async {
-    final response = await create3WithHttpInfo(categoryCreateReqDto,);
+  Future<ApiResponseDtoLong?> create4(CategoryCreateReqDto categoryCreateReqDto,) async {
+    final response = await create4WithHttpInfo(categoryCreateReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

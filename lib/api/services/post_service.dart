@@ -84,7 +84,7 @@ class PostService {
         duration: duration,
       );
 
-      final response = await _postApi.create(dto);
+      final response = await _postApi.create1(dto);
 
       if (response == null) {
         throw const DataValidationException(message: '게시물 생성 응답이 없습니다.');
@@ -130,7 +130,7 @@ class PostService {
         duration: duration,
       );
 
-      final response = await _postApi.createWithHttpInfo(dto);
+      final response = await _postApi.create1WithHttpInfo(dto);
       if (response.statusCode >= HttpStatus.badRequest) {
         throw ApiException(response.statusCode, response.body);
       }
@@ -339,7 +339,7 @@ class PostService {
         duration: duration,
       );
 
-      final response = await _postApi.update2(dto);
+      final response = await _postApi.update3(dto);
 
       if (response == null) {
         throw const DataValidationException(message: '게시물 수정 응답이 없습니다.');
@@ -416,7 +416,7 @@ class PostService {
   /// - [ForbiddenException]: 삭제 권한 없음
   Future<bool> deletePost(int postId) async {
     try {
-      final response = await _postApi.delete1(postId);
+      final response = await _postApi.delete2(postId);
 
       if (response == null) {
         throw const DataValidationException(message: '게시물 삭제 응답이 없습니다.');

@@ -474,10 +474,68 @@ class UserAPIApi {
   ///
   /// Parameters:
   ///
-  /// * [String] phoneNum (required):
-  Future<Response> loginWithHttpInfo(String phoneNum,) async {
+  /// * [String] nickName (required):
+  Future<Response> loginByNicknameWithHttpInfo(String nickName,) async {
     // ignore: prefer_const_declarations
-    final path = r'/user/login';
+    final path = r'/user/login/by-nickname';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'nickName', nickName));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 사용자 로그인(전화번호로)
+  ///
+  /// 인증이 완료된 전화번호로 로그인을 합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] nickName (required):
+  Future<ApiResponseDtoUserRespDto?> loginByNickname(String nickName,) async {
+    final response = await loginByNicknameWithHttpInfo(nickName,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoUserRespDto',) as ApiResponseDtoUserRespDto;
+    
+    }
+    return null;
+  }
+
+  /// 사용자 로그인(전화번호로)
+  ///
+  /// 인증이 완료된 전화번호로 로그인을 합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] phoneNum (required):
+  Future<Response> loginByPhoneWithHttpInfo(String phoneNum,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/user/login/by-phone';
 
     // ignore: prefer_final_locals
     Object? postBody;
@@ -509,8 +567,8 @@ class UserAPIApi {
   /// Parameters:
   ///
   /// * [String] phoneNum (required):
-  Future<ApiResponseDtoUserRespDto?> login(String phoneNum,) async {
-    final response = await loginWithHttpInfo(phoneNum,);
+  Future<ApiResponseDtoUserRespDto?> loginByPhone(String phoneNum,) async {
+    final response = await loginByPhoneWithHttpInfo(phoneNum,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

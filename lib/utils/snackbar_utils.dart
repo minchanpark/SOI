@@ -13,7 +13,7 @@ class SnackBarUtils {
   static void showSnackBar(
     BuildContext context,
     String message, {
-    Duration duration = const Duration(seconds: 2),
+    Duration duration = const Duration(seconds: 1),
   }) {
     // 기존 스낵바가 있으면 제거
     ScaffoldMessenger.of(context).clearSnackBars();

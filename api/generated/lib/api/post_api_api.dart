@@ -25,7 +25,7 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [PostCreateReqDto] postCreateReqDto (required):
-  Future<Response> createWithHttpInfo(PostCreateReqDto postCreateReqDto,) async {
+  Future<Response> create1WithHttpInfo(PostCreateReqDto postCreateReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/post/create';
 
@@ -57,8 +57,8 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [PostCreateReqDto] postCreateReqDto (required):
-  Future<ApiResponseDtoBoolean?> create(PostCreateReqDto postCreateReqDto,) async {
-    final response = await createWithHttpInfo(postCreateReqDto,);
+  Future<ApiResponseDtoBoolean?> create1(PostCreateReqDto postCreateReqDto,) async {
+    final response = await create1WithHttpInfo(postCreateReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -81,7 +81,7 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [int] postId (required):
-  Future<Response> delete1WithHttpInfo(int postId,) async {
+  Future<Response> delete2WithHttpInfo(int postId,) async {
     // ignore: prefer_const_declarations
     final path = r'/post/delete';
 
@@ -115,8 +115,8 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [int] postId (required):
-  Future<ApiResponseDtoObject?> delete1(int postId,) async {
-    final response = await delete1WithHttpInfo(postId,);
+  Future<ApiResponseDtoObject?> delete2(int postId,) async {
+    final response = await delete2WithHttpInfo(postId,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -407,7 +407,7 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [PostUpdateReqDto] postUpdateReqDto (required):
-  Future<Response> update2WithHttpInfo(PostUpdateReqDto postUpdateReqDto,) async {
+  Future<Response> update3WithHttpInfo(PostUpdateReqDto postUpdateReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/post/update';
 
@@ -439,8 +439,8 @@ class PostAPIApi {
   /// Parameters:
   ///
   /// * [PostUpdateReqDto] postUpdateReqDto (required):
-  Future<ApiResponseDtoObject?> update2(PostUpdateReqDto postUpdateReqDto,) async {
-    final response = await update2WithHttpInfo(postUpdateReqDto,);
+  Future<ApiResponseDtoObject?> update3(PostUpdateReqDto postUpdateReqDto,) async {
+    final response = await update3WithHttpInfo(postUpdateReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

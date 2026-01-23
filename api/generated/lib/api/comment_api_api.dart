@@ -25,7 +25,7 @@ class CommentAPIApi {
   /// Parameters:
   ///
   /// * [CommentReqDto] commentReqDto (required):
-  Future<Response> create2WithHttpInfo(CommentReqDto commentReqDto,) async {
+  Future<Response> create3WithHttpInfo(CommentReqDto commentReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/comment/create';
 
@@ -57,8 +57,8 @@ class CommentAPIApi {
   /// Parameters:
   ///
   /// * [CommentReqDto] commentReqDto (required):
-  Future<ApiResponseDtoObject?> create2(CommentReqDto commentReqDto,) async {
-    final response = await create2WithHttpInfo(commentReqDto,);
+  Future<ApiResponseDtoObject?> create3(CommentReqDto commentReqDto,) async {
+    final response = await create3WithHttpInfo(commentReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

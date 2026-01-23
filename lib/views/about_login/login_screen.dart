@@ -487,9 +487,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       debugPrint('SMS 인증 성공');
 
-      // 2. 로그인 시도
-      debugPrint("로그인 시도: $formattedPhone");
-      final user = await _apiUserController!.login(formattedPhone);
+      // 2. 로그인 시도 (국가번호 없이 원본 전화번호 사용)
+      debugPrint("로그인 시도: $phoneNumber");
+      final user = await _apiUserController!.login(phoneNumber);
 
       if (user != null) {
         // 기존 회원 - 홈으로 이동

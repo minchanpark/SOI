@@ -9,13 +9,13 @@ All URIs are relative to *https://newdawnsoi.site*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**create2**](CommentAPIApi.md#create2) | **POST** /comment/create | 댓글 추가
+[**create3**](CommentAPIApi.md#create3) | **POST** /comment/create | 댓글 추가
 [**deleteComment**](CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
 [**getComment**](CommentAPIApi.md#getcomment) | **GET** /comment/get | 댓글 조회
 
 
-# **create2**
-> ApiResponseDtoObject create2(commentReqDto)
+# **create3**
+> ApiResponseDtoObject create3(commentReqDto)
 
 댓글 추가
 
@@ -29,10 +29,10 @@ final api_instance = CommentAPIApi();
 final commentReqDto = CommentReqDto(); // CommentReqDto | 
 
 try {
-    final result = api_instance.create2(commentReqDto);
+    final result = api_instance.create3(commentReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling CommentAPIApi->create2: $e\n');
+    print('Exception when calling CommentAPIApi->create3: $e\n');
 }
 ```
 

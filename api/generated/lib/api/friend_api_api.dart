@@ -81,7 +81,7 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [FriendCreateReqDto] friendCreateReqDto (required):
-  Future<Response> create1WithHttpInfo(FriendCreateReqDto friendCreateReqDto,) async {
+  Future<Response> create2WithHttpInfo(FriendCreateReqDto friendCreateReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/friend/create';
 
@@ -113,8 +113,8 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [FriendCreateReqDto] friendCreateReqDto (required):
-  Future<ApiResponseDtoFriendRespDto?> create1(FriendCreateReqDto friendCreateReqDto,) async {
-    final response = await create1WithHttpInfo(friendCreateReqDto,);
+  Future<ApiResponseDtoFriendRespDto?> create2(FriendCreateReqDto friendCreateReqDto,) async {
+    final response = await create2WithHttpInfo(friendCreateReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

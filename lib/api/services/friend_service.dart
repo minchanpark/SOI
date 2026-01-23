@@ -64,7 +64,7 @@ class FriendService {
         receiverPhoneNum: receiverPhoneNum,
       );
 
-      final response = await _friendApi.create1(dto);
+      final response = await _friendApi.create2(dto);
 
       if (response == null) {
         throw const DataValidationException(message: '친구 추가 응답이 없습니다.');

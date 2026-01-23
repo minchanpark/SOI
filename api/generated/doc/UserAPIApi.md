@@ -17,7 +17,8 @@ Method | HTTP request | Description
 [**getAllUsers**](UserAPIApi.md#getallusers) | **GET** /user/get-all | 모든유저 조회
 [**getUser**](UserAPIApi.md#getuser) | **GET** /user/get | 특정유저 조회
 [**idCheck**](UserAPIApi.md#idcheck) | **GET** /user/id-check | 사용자 id 중복 체크
-[**login**](UserAPIApi.md#login) | **POST** /user/login | 사용자 로그인(전화번호로)
+[**loginByNickname**](UserAPIApi.md#loginbynickname) | **POST** /user/login/by-nickname | 사용자 로그인(전화번호로)
+[**loginByPhone**](UserAPIApi.md#loginbyphone) | **POST** /user/login/by-phone | 사용자 로그인(전화번호로)
 [**update1**](UserAPIApi.md#update1) | **PATCH** /user/update | 유저정보 업데이트
 [**updateProfile**](UserAPIApi.md#updateprofile) | **PATCH** /user/update-profile | 유저 프로필 업데이트
 
@@ -362,8 +363,51 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **login**
-> ApiResponseDtoUserRespDto login(phoneNum)
+# **loginByNickname**
+> ApiResponseDtoUserRespDto loginByNickname(nickName)
+
+사용자 로그인(전화번호로)
+
+인증이 완료된 전화번호로 로그인을 합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = UserAPIApi();
+final nickName = nickName_example; // String | 
+
+try {
+    final result = api_instance.loginByNickname(nickName);
+    print(result);
+} catch (e) {
+    print('Exception when calling UserAPIApi->loginByNickname: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **nickName** | **String**|  | 
+
+### Return type
+
+[**ApiResponseDtoUserRespDto**](ApiResponseDtoUserRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **loginByPhone**
+> ApiResponseDtoUserRespDto loginByPhone(phoneNum)
 
 사용자 로그인(전화번호로)
 
@@ -377,10 +421,10 @@ final api_instance = UserAPIApi();
 final phoneNum = phoneNum_example; // String | 
 
 try {
-    final result = api_instance.login(phoneNum);
+    final result = api_instance.loginByPhone(phoneNum);
     print(result);
 } catch (e) {
-    print('Exception when calling UserAPIApi->login: $e\n');
+    print('Exception when calling UserAPIApi->loginByPhone: $e\n');
 }
 ```
 

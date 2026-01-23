@@ -113,7 +113,7 @@ class UserService {
   /// - [SoiApiException]: 기타 API 에러
   Future<User?> loginWithPhone(String phoneNum) async {
     try {
-      final response = await _userApi.login(phoneNum);
+      final response = await _userApi.loginByPhone(phoneNum);
 
       if (response == null) {
         return null;

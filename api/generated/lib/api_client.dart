@@ -198,6 +198,8 @@ class ApiClient {
           return ApiResponseDtoListObject.fromJson(value);
         case 'ApiResponseDtoListPostRespDto':
           return ApiResponseDtoListPostRespDto.fromJson(value);
+        case 'ApiResponseDtoListReportResponseDto':
+          return ApiResponseDtoListReportResponseDto.fromJson(value);
         case 'ApiResponseDtoListString':
           return ApiResponseDtoListString.fromJson(value);
         case 'ApiResponseDtoListUserFindRespDto':
@@ -212,6 +214,8 @@ class ApiClient {
           return ApiResponseDtoObject.fromJson(value);
         case 'ApiResponseDtoPostRespDto':
           return ApiResponseDtoPostRespDto.fromJson(value);
+        case 'ApiResponseDtoReportResponseDto':
+          return ApiResponseDtoReportResponseDto.fromJson(value);
         case 'ApiResponseDtoUserRespDto':
           return ApiResponseDtoUserRespDto.fromJson(value);
         case 'AuthCheckReqDto':
@@ -250,6 +254,16 @@ class ApiClient {
           return PostRespDto.fromJson(value);
         case 'PostUpdateReqDto':
           return PostUpdateReqDto.fromJson(value);
+        case 'ReportCreateRequestDto':
+          return ReportCreateRequestDto.fromJson(value);
+        case 'ReportResponseDto':
+          return ReportResponseDto.fromJson(value);
+        case 'ReportSearchRequestDto':
+          return ReportSearchRequestDto.fromJson(value);
+        case 'ReportUpdateReqDto':
+          return ReportUpdateReqDto.fromJson(value);
+        case 'SortOptionDto':
+          return SortOptionDto.fromJson(value);
         case 'UserCreateReqDto':
           return UserCreateReqDto.fromJson(value);
         case 'UserFindRespDto':

@@ -9,17 +9,17 @@ All URIs are relative to *https://newdawnsoi.site*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**create**](PostAPIApi.md#create) | **POST** /post/create | 게시물 추가
-[**delete1**](PostAPIApi.md#delete1) | **DELETE** /post/delete | 게시물 삭제
+[**create1**](PostAPIApi.md#create1) | **POST** /post/create | 게시물 추가
+[**delete2**](PostAPIApi.md#delete2) | **DELETE** /post/delete | 게시물 삭제
 [**findAllByUserId**](PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
 [**findByCategoryId**](PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
 [**setPost**](PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
 [**showDetail**](PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
-[**update2**](PostAPIApi.md#update2) | **PATCH** /post/update | 게시물 수정
+[**update3**](PostAPIApi.md#update3) | **PATCH** /post/update | 게시물 수정
 
 
-# **create**
-> ApiResponseDtoBoolean create(postCreateReqDto)
+# **create1**
+> ApiResponseDtoBoolean create1(postCreateReqDto)
 
 게시물 추가
 
@@ -33,10 +33,10 @@ final api_instance = PostAPIApi();
 final postCreateReqDto = PostCreateReqDto(); // PostCreateReqDto | 
 
 try {
-    final result = api_instance.create(postCreateReqDto);
+    final result = api_instance.create1(postCreateReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling PostAPIApi->create: $e\n');
+    print('Exception when calling PostAPIApi->create1: $e\n');
 }
 ```
 
@@ -61,8 +61,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **delete1**
-> ApiResponseDtoObject delete1(postId)
+# **delete2**
+> ApiResponseDtoObject delete2(postId)
 
 게시물 삭제
 
@@ -76,10 +76,10 @@ final api_instance = PostAPIApi();
 final postId = 789; // int | 
 
 try {
-    final result = api_instance.delete1(postId);
+    final result = api_instance.delete2(postId);
     print(result);
 } catch (e) {
-    print('Exception when calling PostAPIApi->delete1: $e\n');
+    print('Exception when calling PostAPIApi->delete2: $e\n');
 }
 ```
 
@@ -288,8 +288,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **update2**
-> ApiResponseDtoObject update2(postUpdateReqDto)
+# **update3**
+> ApiResponseDtoObject update3(postUpdateReqDto)
 
 게시물 수정
 
@@ -303,10 +303,10 @@ final api_instance = PostAPIApi();
 final postUpdateReqDto = PostUpdateReqDto(); // PostUpdateReqDto | 
 
 try {
-    final result = api_instance.update2(postUpdateReqDto);
+    final result = api_instance.update3(postUpdateReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling PostAPIApi->update2: $e\n');
+    print('Exception when calling PostAPIApi->update3: $e\n');
 }
 ```
 

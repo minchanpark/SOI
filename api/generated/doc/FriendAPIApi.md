@@ -10,7 +10,7 @@ All URIs are relative to *https://newdawnsoi.site*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**blockFriend**](FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
-[**create1**](FriendAPIApi.md#create1) | **POST** /friend/create | 친구 추가
+[**create2**](FriendAPIApi.md#create2) | **POST** /friend/create | 친구 추가
 [**createByNickName**](FriendAPIApi.md#createbynickname) | **POST** /friend/create/by-nickname | nickname으로 친구 추가
 [**deleteFriend**](FriendAPIApi.md#deletefriend) | **POST** /friend/delete | 친구 삭제
 [**getAllFriend**](FriendAPIApi.md#getallfriend) | **GET** /friend/get-all | 모든 친구 조회
@@ -62,8 +62,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **create1**
-> ApiResponseDtoFriendRespDto create1(friendCreateReqDto)
+# **create2**
+> ApiResponseDtoFriendRespDto create2(friendCreateReqDto)
 
 친구 추가
 
@@ -77,10 +77,10 @@ final api_instance = FriendAPIApi();
 final friendCreateReqDto = FriendCreateReqDto(); // FriendCreateReqDto | 
 
 try {
-    final result = api_instance.create1(friendCreateReqDto);
+    final result = api_instance.create2(friendCreateReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling FriendAPIApi->create1: $e\n');
+    print('Exception when calling FriendAPIApi->create2: $e\n');
 }
 ```
 
