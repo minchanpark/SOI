@@ -106,7 +106,6 @@ class CommentService {
 
       // 자동 생성된 API 클라이언트 사용
       final response = await _commentApi.create3(dto);
-      debugPrint("댓글 생성 응답: $response");
 
       if (response == null) {
         throw const DataValidationException(message: '댓글 생성 응답이 없습니다.');
