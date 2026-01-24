@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -127,9 +126,6 @@ class CameraService {
         break;
     }
   }
-
-  // 이미지 선택기 인스턴스
-  final ImagePicker _imagePicker = ImagePicker();
 
   // ==================== 갤러리 및 파일 관리 ====================
 
@@ -274,16 +270,6 @@ class CameraService {
     try {
       final File? file = await asset.file;
       return file;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // 갤러리에서 미디어(이미지/비디오)를 선택하는 함수
-  Future<XFile?> pickMediaFromGallery() async {
-    try {
-      final XFile? mediaFile = await _imagePicker.pickMedia();
-      return mediaFile;
     } catch (e) {
       return null;
     }

@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
@@ -21,7 +25,6 @@ import '../../../../api/controller/media_controller.dart';
 import '../../../../api/controller/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../../utils/snackbar_utils.dart';
-import '../../../about_share/share_screen.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
 import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
 import '../../../common_widget/report/report_bottom_sheet.dart';
@@ -258,64 +261,19 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               ),
             ),
             actions: [
-              Padding(
-                padding: EdgeInsets.only(right: 23.w),
-                child: IconButton(
-                  onPressed: () async {
-                    // 현재 게시물 정보 가져오기
-                    final currentPost = _posts[_currentIndex];
-
-                    // 오디오 재생 시간 계산
-                    Duration audioDuration = Duration(
-                      seconds: currentPost.durationInSeconds,
-                    );
-
-                    // 현재 게시물이 오디오를 포함하는 경우 재생 시간 업데이트
-                    if (currentPost.hasAudio) {
-                      final resolvedUrl =
-                          _resolvedAudioUrls[currentPost.id] ??
-                          currentPost.audioUrl;
-                      if (resolvedUrl != null &&
-                          _audioController.currentAudioUrl == resolvedUrl) {
-                        audioDuration = _audioController.totalDuration;
-                      }
-                    }
-
-                    // waveformData 파싱
-                    List<double>? waveformData;
-                    if (currentPost.waveformData != null &&
-                        currentPost.waveformData!.isNotEmpty) {
-                      try {
-                        final decoded = jsonDecode(currentPost.waveformData!);
-                        if (decoded is List) {
-                          waveformData = decoded
-                              .map((e) => (e as num).toDouble())
-                              .toList();
-                        }
-                      } catch (_) {}
-                    }
-
-                    if (!mounted) return;
-                    // 공유 화면으로 이동
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ShareScreen(
-                          imageUrl: currentPost.userProfileImageKey ?? '',
-                          waveformData: waveformData,
-                          audioDuration: audioDuration,
-                          categoryName: widget.categoryName,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: Image.asset(
-                    'assets/share_icon.png',
-                    width: 20.w,
-                    height: 20.h,
+              // 다운로드 버튼 (모든 게시물에서 표시)
+              if (_posts.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(right: 23.w),
+                  child: IconButton(
+                    onPressed: _downloadPhoto,
+                    icon: Icon(
+                      Icons.download_rounded,
+                      color: Colors.white,
+                      size: 24.w,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           body: PageView.builder(
@@ -1002,6 +960,81 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   Future<void> _stopAudio() async {
     await _audioController.stopRealtimeAudio();
+  }
+
+  /// 미디어(사진/비디오) 다운로드 처리
+  Future<void> _downloadPhoto() async {
+    try {
+      final currentPost = _posts[_currentIndex];
+      final mediaKey = currentPost.postFileKey;
+
+      if (mediaKey == null || mediaKey.isEmpty) {
+        _showSnackBar('다운로드할 미디어가 없습니다.');
+        return;
+      }
+
+      final isVideo = currentPost.isVideo;
+
+      // MediaController로 presigned URL 획득
+      final mediaController = context.read<MediaController>();
+      String? mediaUrl = mediaKey;
+
+      // URL이 아닌 키인 경우 presigned URL 획득
+      final uri = Uri.tryParse(mediaKey);
+      if (uri == null || !uri.hasScheme) {
+        mediaUrl = await mediaController.getPresignedUrl(mediaKey);
+      }
+
+      if (mediaUrl == null || mediaUrl.isEmpty) {
+        _showSnackBar('미디어 URL을 가져올 수 없습니다.');
+        return;
+      }
+
+      // 미디어 다운로드
+      final response = await http.get(Uri.parse(mediaUrl));
+
+      if (response.statusCode != 200) {
+        _showSnackBar('다운로드에 실패했습니다.');
+        return;
+      }
+
+      final Uint8List bytes = response.bodyBytes;
+      dynamic result;
+
+      if (isVideo) {
+        // 비디오의 경우: 임시 파일로 저장 후 갤러리에 저장
+        final tempDir = await getTemporaryDirectory();
+        final fileName = "SOI_${DateTime.now().millisecondsSinceEpoch}.mp4";
+        final tempFile = File('${tempDir.path}/$fileName');
+        await tempFile.writeAsBytes(bytes);
+
+        result = await ImageGallerySaver.saveFile(
+          tempFile.path,
+          name: fileName,
+        );
+
+        // 임시 파일 삭제
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+      } else {
+        // 이미지의 경우: 바로 저장
+        result = await ImageGallerySaver.saveImage(
+          bytes,
+          quality: 100,
+          name: "SOI_${DateTime.now().millisecondsSinceEpoch}",
+        );
+      }
+
+      if (result['isSuccess'] == true || result != null) {
+        _showSnackBar('갤러리에 저장되었습니다.');
+      } else {
+        _showSnackBar('저장에 실패했습니다.');
+      }
+    } catch (e) {
+      debugPrint('다운로드 실패: $e');
+      _showSnackBar('다운로드 중 오류가 발생했습니다.');
+    }
   }
 
   // 스낵바 틀 함수

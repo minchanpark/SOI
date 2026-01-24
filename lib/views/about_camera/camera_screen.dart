@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import '../../api/services/camera_service.dart';
 import 'widgets/camera_app_bar.dart';
 import 'widgets/camera_capture_button.dart';
@@ -27,14 +27,6 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
-  static const List<String> _videoFileExtensions = [
-    '.mp4',
-    '.mov',
-    '.avi',
-    '.mkv',
-    '.m4v',
-  ];
-
   // Swift와 통신할 플랫폼 채널
   final CameraService _cameraService = CameraService.instance;
 
@@ -430,9 +422,7 @@ class _CameraScreenState extends State<CameraScreen>
     } on PlatformException catch (e) {
       // iOS에서 "Cannot Record" 오류가 발생한 경우 추가 정보 제공
       if (e.message?.contains("Cannot Record") == true) {
-        _showSnackBar(
-          tr('camera.capture_error_stop_audio', context: context),
-        );
+        _showSnackBar(tr('camera.capture_error_stop_audio', context: context));
       }
     } catch (e) {
       // 추가 예외 처리
@@ -729,32 +719,39 @@ class _CameraScreenState extends State<CameraScreen>
                     child: InkWell(
                       onTap: () async {
                         try {
-                          final XFile? pickedMedia = await _cameraService
-                              .pickMediaFromGallery();
+                          final stopwatch = Stopwatch()..start();
+                          debugPrint('[GalleryPick] tap');
+                          final List<AssetEntity>? pickedAssets =
+                              await AssetPicker.pickAssets(
+                            context,
+                            pickerConfig: const AssetPickerConfig(
+                              maxAssets: 1,
+                              requestType: RequestType.common,
+                            ),
+                          );
+                          debugPrint(
+                            '[GalleryPick] picker done: ${stopwatch.elapsedMilliseconds}ms',
+                          );
                           // 수정: async gap 이후 context 사용(Navigator.push) 안전장치
-                          if (pickedMedia == null || !context.mounted) {
+                          if (pickedAssets == null ||
+                              pickedAssets.isEmpty ||
+                              !context.mounted) {
+                            debugPrint('[GalleryPick] cancelled or unmounted');
                             return;
                           }
 
-                          final String? mimeType = pickedMedia.mimeType;
-                          final String normalizedPath = pickedMedia.path
-                              .toLowerCase();
-                          final String normalizedName = pickedMedia.name
-                              .toLowerCase();
-
+                          final AssetEntity pickedAsset = pickedAssets.first;
                           final bool isVideo =
-                              (mimeType?.startsWith('video/') ?? false) ||
-                              _videoFileExtensions.any(
-                                (ext) =>
-                                    normalizedPath.endsWith(ext) ||
-                                    normalizedName.endsWith(ext),
-                              );
+                              pickedAsset.type == AssetType.video;
 
+                          debugPrint(
+                            '[GalleryPick] push editor (isVideo=$isVideo) at ${stopwatch.elapsedMilliseconds}ms',
+                          );
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => PhotoEditorScreen(
-                                filePath: pickedMedia.path,
+                                asset: pickedAsset,
                                 isVideo: isVideo,
                                 isFromCamera: false,
                               ),

@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:video_compress/video_compress.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
@@ -66,6 +67,7 @@ String _encodeWaveformDataWorker(List<double> waveformData) {
 class PhotoEditorScreen extends StatefulWidget {
   final String? downloadUrl;
   final String? filePath;
+  final AssetEntity? asset;
 
   // 미디어가 비디오인지 여부를 체크하는 플래그
   final bool? isVideo;
@@ -78,6 +80,7 @@ class PhotoEditorScreen extends StatefulWidget {
     super.key,
     this.downloadUrl,
     this.filePath,
+    this.asset,
     this.isVideo,
     this.initialImage,
     this.isFromCamera = true, // 기본값은 촬영된 것으로 설정
@@ -180,6 +183,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   bool _shouldAutoOpenCategorySheet = true;
   bool _isDisposing = false;
   bool _uploadStarted = false;
+  String? _resolvedFilePath;
+  bool _isResolvingAsset = false;
 
   // ========== 바텀시트 크기 상수 ==========
   static const double _kInitialSheetExtent = 0.0;
@@ -321,7 +326,42 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }
 
   void _initializeScreen() {
+    if (widget.asset != null) {
+      unawaited(_resolveAssetFileIfNeeded());
+      return;
+    }
     if (!_showImmediatePreview) _loadImage();
+  }
+
+  Future<void> _resolveAssetFileIfNeeded() async {
+    if (widget.asset == null) return;
+    if (_isResolvingAsset || _resolvedFilePath != null) return;
+
+    _isResolvingAsset = true;
+    try {
+      final file = await widget.asset!.file;
+      if (!mounted) return;
+
+      if (file != null) {
+        _resolvedFilePath = file.path;
+      } else {
+        _errorMessageKey = 'camera.editor.image_not_found';
+        _errorMessageArgs = null;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _errorMessageKey = 'camera.editor.image_load_error_with_reason';
+      _errorMessageArgs = {'error': e.toString()};
+    } finally {
+      _isResolvingAsset = false;
+    }
+
+    if (!mounted) return;
+    if (!_showImmediatePreview) {
+      await _loadImage();
+    } else {
+      setState(() {});
+    }
   }
 
   void _primeImmediatePreview() {
@@ -333,7 +373,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return;
     }
 
-    final localPath = widget.filePath;
+    final localPath = _currentFilePath;
     if (localPath == null || localPath.isEmpty) return;
 
     final file = File(localPath);
@@ -383,13 +423,19 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   void _handleWidgetUpdate(PhotoEditorScreen oldWidget) {
     if (oldWidget.filePath != widget.filePath ||
         oldWidget.downloadUrl != widget.downloadUrl ||
-        oldWidget.initialImage != widget.initialImage) {
+        oldWidget.initialImage != widget.initialImage ||
+        oldWidget.asset?.id != widget.asset?.id) {
       _categoriesLoaded = false;
+      _resolvedFilePath = null;
+      _isResolvingAsset = false;
       if (widget.initialImage != null) {
         _initialImageProvider = widget.initialImage;
         _showImmediatePreview = true;
         _useLocalImage = true;
         _isLoading = false;
+      }
+      if (widget.asset != null) {
+        unawaited(_resolveAssetFileIfNeeded());
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadUserCategories(forceReload: true);
@@ -416,7 +462,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       return;
     }
 
-    final localPath = widget.filePath;
+    final localPath = _currentFilePath;
     if (localPath != null && localPath.isNotEmpty) {
       final file = File(localPath);
       try {
@@ -771,6 +817,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }
 
   // 비디오 출처 확인 헬퍼 메서드
+  String? get _currentFilePath => _resolvedFilePath ?? widget.filePath;
   bool get isVideoFromCamera => widget.isVideo == true && widget.isFromCamera;
   bool get isVideoFromGallery => widget.isVideo == true && !widget.isFromCamera;
 
@@ -795,7 +842,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
 
       // 업로드할 파일 경로 확인
-      final filePath = widget.filePath;
+      final filePath = _currentFilePath;
       if (filePath == null || filePath.isEmpty) {
         _safeSetState(() {
           _errorMessageKey = 'camera.editor.upload_file_not_found';
@@ -1361,7 +1408,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     if (widget.isVideo == true) return;
 
     // 파일 경로가 없으면 압축할 수 없음
-    final filePath = widget.filePath;
+    final filePath = _currentFilePath;
     if (filePath == null || filePath.isEmpty) return;
 
     // 이미 같은 파일을 압축 중이면 중복 실행하지 않음
@@ -1642,7 +1689,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         PhotoDisplayWidget(
-                          filePath: widget.filePath,
+                          filePath: _currentFilePath,
                           useLocalImage: _useLocalImage,
                           width: 354.w,
                           height: 500.h,
@@ -1853,7 +1900,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   /// 이미지 캐시를 정리하는 메서드
   void _clearImageCache() {
     _evictCurrentImageFromCache(
-      filePath: widget.filePath,
+      filePath: _currentFilePath,
       downloadUrl: widget.downloadUrl,
     );
   }

@@ -66,6 +66,8 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
 
     // 비디오인 경우에만 VideoPlayerController 초기화
     if (widget.isVideo && widget.filePath != null) {
+      final stopwatch = Stopwatch()..start();
+      debugPrint('[VideoInit] start: ${widget.filePath}');
       _isInitialized = true;
       _videoController = VideoPlayerController.file(File(widget.filePath!));
       _initializeVideoPlayerFuture = _videoController!
@@ -74,9 +76,15 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
             // 초기화 완료 후 자동 재생 및 루프 설정
             _videoController!.setLooping(true);
             _videoController!.play();
+            debugPrint(
+              '[VideoInit] done: ${stopwatch.elapsedMilliseconds}ms',
+            );
             if (mounted) setState(() {});
           })
           .catchError((error) {
+            debugPrint(
+              '[VideoInit] error after ${stopwatch.elapsedMilliseconds}ms: $error',
+            );
             debugPrint("비디오 초기화 에러: $error");
           });
     }
@@ -300,14 +308,9 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
   }
 
   Widget _buildVideoPlayer() {
-    // 비디오 컨트롤러가 없으면 에러 표시
+    // 비디오 컨트롤러가 없으면 로딩 표시
     if (_videoController == null || _initializeVideoPlayerFuture == null) {
-      return Center(
-        child: Text(
-          "camera.video_unavailable",
-          style: TextStyle(color: Colors.white),
-        ).tr(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return Stack(
