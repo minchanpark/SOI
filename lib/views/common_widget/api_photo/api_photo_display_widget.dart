@@ -599,7 +599,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 ),
               ),
             ),
-          ), // ClipRRect 닫기
+          ),
         ),
       );
     }
@@ -853,6 +853,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
           borderRadius: BorderRadius.circular(13.6),
         ),
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+
         child: Row(
           crossAxisAlignment: _isCaptionExpanded
               ? CrossAxisAlignment.start

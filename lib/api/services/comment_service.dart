@@ -70,13 +70,27 @@ class CommentService {
     try {
       final commentTypeEnum = _toCommentTypeEnum(type);
 
+      // waveformData 변환: "[0.0275,...]" → "0.0275,..."
+      String? processedWaveformData = waveformData;
+      if (waveformData != null && waveformData.isNotEmpty) {
+        try {
+          // JSON 배열 문자열을 파싱하여 콤마로 구분된 문자열로 변환
+          final parsed = jsonDecode(waveformData) as List;
+          processedWaveformData = parsed.join(',');
+          debugPrint('waveformData 변환: $waveformData → $processedWaveformData');
+        } catch (e) {
+          debugPrint('waveformData 변환 실패, 원본 사용: $e');
+          // 변환 실패 시 원본 그대로 사용
+        }
+      }
+
       final dto = CommentReqDto(
         postId: postId,
         userId: userId,
         emojiId: emojiId,
         text: text,
         audioKey: audioFileKey,
-        waveformData: waveformData,
+        waveformData: processedWaveformData,
         duration: duration,
         locationX: locationX,
         locationY: locationY,
@@ -88,36 +102,10 @@ class CommentService {
       debugPrint('commentType: ${commentTypeEnum.value}');
       debugPrint('audioFileKey: $audioFileKey');
       debugPrint('text: $text');
-      debugPrint('waveformData type: ${waveformData?.runtimeType}');
-      debugPrint('waveformData value: $waveformData');
-      if (waveformData != null && waveformData.isNotEmpty) {
-        final end = waveformData.length > 50 ? 50 : waveformData.length;
-        debugPrint(
-          'waveformData first 50 chars: ${waveformData.substring(0, end)}',
-        );
-      }
+      debugPrint('waveformData: $processedWaveformData');
 
-      final jsonMap = dto.toJson();
-      final waveformValue = jsonMap['waveformData'];
-      // 백엔드가 `waveFormData`(F 대문자)로 필드를 받을 수 있어 호환을 위해 함께 전송합니다.
-      if (waveformValue is String) {
-        jsonMap['waveFormData'] = waveformValue;
-      }
-      debugPrint('DTO JSON map: $jsonMap');
-      debugPrint(
-        'waveformData in JSON type: ${jsonMap['waveformData'].runtimeType}',
-      );
-      try {
-        final encoded = jsonEncode(jsonMap);
-        final preview = encoded.length > 300
-            ? encoded.substring(0, 300)
-            : encoded;
-        debugPrint('DTO JSON encoded (preview): $preview');
-      } catch (_) {
-        // ignore: empty_catches
-      }
-
-      final response = await _createComment(jsonMap);
+      // 자동 생성된 API 클라이언트 사용
+      final response = await _commentApi.create3(dto);
       debugPrint("댓글 생성 응답: $response");
 
       if (response == null) {
@@ -378,33 +366,5 @@ class CommentService {
           originalException: e,
         );
     }
-  }
-
-  Future<ApiResponseDtoObject?> _createComment(
-    Map<String, dynamic> body,
-  ) async {
-    final apiClient = SoiApiClient.instance.apiClient;
-    final response = await apiClient.invokeAPI(
-      '/comment/create',
-      'POST',
-      const <QueryParam>[],
-      body,
-      <String, String>{},
-      <String, String>{},
-      'application/json',
-    );
-
-    if (response.statusCode >= HttpStatus.badRequest) {
-      throw ApiException(response.statusCode, utf8.decode(response.bodyBytes));
-    }
-
-    if (response.bodyBytes.isEmpty ||
-        response.statusCode == HttpStatus.noContent) {
-      return null;
-    }
-
-    final decodedBody = utf8.decode(response.bodyBytes);
-    return await apiClient.deserializeAsync(decodedBody, 'ApiResponseDtoObject')
-        as ApiResponseDtoObject?;
   }
 }
