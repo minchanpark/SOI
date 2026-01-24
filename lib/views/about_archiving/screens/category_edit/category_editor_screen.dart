@@ -19,6 +19,7 @@ import '../../widgets/exit_button.dart';
 import '../../widgets/category_edit_widget/add_friend_button.dart';
 import '../../widgets/category_edit_widget/category_cover_section.dart';
 import '../../widgets/category_edit_widget/category_info_section.dart';
+import '../../widgets/category_edit_widget/edit_name_bottom_sheet.dart';
 import '../../widgets/category_edit_widget/friends_list_widget.dart';
 import 'category_cover_photo_selector_screen.dart';
 import '../../widgets/category_edit_widget/notification_setting_section.dart';
@@ -249,7 +250,11 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   SizedBox(height: 24.h),
 
                   // 카테고리 이름 섹션
-                  CategoryInfoSection(category: currentCategory),
+                  CategoryInfoSection(
+                    category: currentCategory,
+                    onTap: () =>
+                        _showEditNameBottomSheet(context, currentCategory),
+                  ),
 
                   SizedBox(height: 12),
 
@@ -586,6 +591,24 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
     } catch (_) {
       _showSnackBar(tr('category.cover.delete_error', context: context));
     }
+  }
+
+  /// 카테고리 이름 수정 바텀시트
+  /// 카테고리 이름 수정 바텀시트
+  void _showEditNameBottomSheet(BuildContext context, Category category) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext bottomSheetContext) {
+        return EditNameBottomSheet(
+          category: category,
+          onSuccess: (String message) {
+            if (mounted) _showSnackBar(message);
+          },
+        );
+      },
+    );
   }
 
   Future<void> _navigateToAddFriends(Category category) async {

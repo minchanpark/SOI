@@ -1289,7 +1289,17 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                             waveformData: waveformData,
                           ),
                         ),
-                      /* if (_hasComments)
+                      if (_hasCaption && !widget.post.hasAudio)
+                        Positioned(
+                          left: 16.w,
+                          right: (_hasComments || _hasPendingMarker)
+                              ? 56.w
+                              : 16.w,
+                          bottom: 18.h,
+                          child: _buildCaptionOverlay(true),
+                        ),
+                      if (!widget.post.hasAudio &&
+                          (_hasComments || _hasPendingMarker))
                         Positioned(
                           bottom: 18.h,
                           right: 18.w,
@@ -1305,13 +1315,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                               height: 25,
                             ),
                           ),
-                        ),*/
-                      if (_hasCaption && !widget.post.hasAudio)
-                        Positioned(
-                          left: 16.w,
-                          right: 16.w,
-                          bottom: 18.h,
-                          child: _buildCaptionOverlay(true),
                         ),
                       ..._buildCommentAvatars(),
                       if (pendingMarker != null) pendingMarker,

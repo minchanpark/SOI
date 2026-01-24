@@ -5,34 +5,36 @@ import '../../../../api/models/category.dart';
 
 class CategoryInfoSection extends StatelessWidget {
   final Category category;
+  final VoidCallback? onTap;
 
-  const CategoryInfoSection({super.key, required this.category});
+  const CategoryInfoSection({super.key, required this.category, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 62.h,
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1c1c1c),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'category.name_label',
-            style: TextStyle(
-              color: const Color(0xFFAAAAAA),
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Pretendard Variable',
-            ),
-          ).tr(),
-          Flexible(
-            child: Text(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1c1c1c),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'category.name_label',
+              style: TextStyle(
+                color: const Color(0xFFAAAAAA),
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'Pretendard Variable',
+              ),
+            ).tr(),
+            SizedBox(height: 8.h),
+            Text(
               category.name,
               style: TextStyle(
                 color: Colors.white,
@@ -43,8 +45,8 @@ class CategoryInfoSection extends StatelessWidget {
               overflow: TextOverflow.visible,
               maxLines: 1,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
