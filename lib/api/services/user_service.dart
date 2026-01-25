@@ -98,6 +98,51 @@ class UserService {
   // 로그인
   // ============================================
 
+  /// 닉네임(ID)으로 로그인
+  ///
+  /// [nickName]으로 로그인합니다.
+  /// 성공 시 사용자 정보(User) 반환, 실패 시 예외를 throw합니다.
+  ///
+  /// 반환값:
+  /// - 기존 회원: User (사용자 정보)
+  /// - 신규 회원: null (회원가입 필요)
+  ///
+  /// Throws:
+  /// - [NetworkException]: 네트워크 연결 실패
+  /// - [NotFoundException]: 등록되지 않은 닉네임
+  /// - [SoiApiException]: 기타 API 에러
+  Future<User?> loginWithNickname(String nickName) async {
+    try {
+      final response = await _userApi.loginByNickname(nickName);
+
+      if (response == null) {
+        return null;
+      }
+
+      // ApiResponseDto 언래핑
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '로그인 실패');
+      }
+
+      if (response.data == null) {
+        return null;
+      }
+
+      return User.fromDto(response.data!);
+    } on ApiException catch (e) {
+      // 404는 신규 회원을 의미할 수 있음
+      if (e.code == 404) {
+        return null;
+      }
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
+    } catch (e) {
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '로그인 실패: $e', originalException: e);
+    }
+  }
+
   /// 전화번호로 로그인
   ///
   /// SMS 인증이 완료된 [phoneNum]으로 로그인합니다.

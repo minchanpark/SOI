@@ -112,6 +112,38 @@ class UserController extends ChangeNotifier {
   // 로그인/로그아웃
   // ============================================
 
+  /// 닉네임(ID)으로 로그인
+  /// [nickName]으로 로그인합니다.
+  ///
+  /// Parameters:
+  ///   - [nickName]: 로그인할 닉네임/ID (String)
+  ///
+  /// Returns: 로그인된 사용자 정보 (User)
+  ///   - null: 로그인 실패
+
+  Future<User?> loginWithNickname(String nickName) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final user = await _userService.loginWithNickname(nickName);
+      _currentUser = user;
+
+      // 로그인 성공 시 상태 저장
+      if (user != null) {
+        await saveLoginState(userId: user.id, phoneNumber: user.phoneNumber);
+      }
+
+      _setLoading(false);
+      notifyListeners();
+      return user;
+    } catch (e) {
+      _setError('로그인 실패: $e');
+      _setLoading(false);
+      return null;
+    }
+  }
+
   /// 로그인
   /// [phoneNumber]로 로그인합니다.
   ///
@@ -143,7 +175,6 @@ class UserController extends ChangeNotifier {
       return null;
     }
   }
-
 
   /// 로그아웃
   /// 현재 로그인된 사용자를 로그아웃 처리합니다.

@@ -76,21 +76,132 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
       resizeToAvoidBottomInset: false,
-      body: PageView(
-        controller: _pageController,
-        physics: NeverScrollableScrollPhysics(),
-        onPageChanged: (index) {
-          setState(() {
-            currentPage = index;
-          });
-        },
-        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
-      ),
+      body: _buildNicknameLoginPage(),
+      // 전화번호/SMS 인증 로그인 (주석 처리)
+      // body: PageView(
+      //   controller: _pageController,
+      //   physics: NeverScrollableScrollPhysics(),
+      //   onPageChanged: (index) {
+      //     setState(() {
+      //       currentPage = index;
+      //     });
+      //   },
+      //   children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
+      // ),
     );
   }
 
   // -------------------------
-  // 1. 전화번호 입력 페이지
+  // 닉네임 로그인 페이지
+  // -------------------------
+  Widget _buildNicknameLoginPage() {
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
+    return Stack(
+      children: [
+        // 뒤로가기 버튼
+        Positioned(
+          top: 60.h,
+          left: 20.w,
+          child: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+        ),
+
+        // 입력 필드
+        Positioned(
+          top: 0.35.sh,
+          left: 0,
+          right: 0,
+          child: Column(
+            children: [
+              Text(
+                'SOI 접속을 위해 닉네임을 입력해주세요.',
+                style: TextStyle(
+                  color: const Color(0xFFF8F8F8),
+                  fontSize: 18,
+                  fontFamily: GoogleFonts.inter().fontFamily,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24.h),
+              Container(
+                width: 239.w,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Color(0xff323232),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  children: [
+                    SizedBox(width: 17.w),
+                    Icon(
+                      Icons.person_outline,
+                      color: const Color(0xffC0C0C0),
+                      size: 24.sp,
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.text,
+                        textAlign: TextAlign.start,
+                        cursorHeight: 16.h,
+                        cursorColor: const Color(0xFFF8F8F8),
+                        style: TextStyle(
+                          color: const Color(0xFFF8F8F8),
+                          fontSize: 16,
+                          fontFamily: 'Pretendard',
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.08,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: '닉네임',
+                          hintStyle: TextStyle(
+                            color: const Color(0xFFCBCBCB),
+                            fontSize: 16,
+                            fontFamily: 'Pretendard',
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          _hasPhone.value = value.isNotEmpty;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 계속하기 버튼
+        Positioned(
+          bottom: keyboardHeight > 0 ? keyboardHeight + 20.h : 50.h,
+          left: 0,
+          right: 0,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _hasPhone,
+            builder: (context, hasNicknameValue, child) {
+              return ContinueButton(
+                isEnabled: hasNicknameValue && !_isSendingCode,
+                text: _isSendingCode ? '로그인 중...' : '로그인',
+                onPressed: () => _loginWithNickname(),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // -------------------------
+  // 1. 전화번호 입력 페이지 (주석 처리)
   // -------------------------
   Widget _buildPhoneNumberPage() {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
@@ -367,7 +478,57 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // -------------------------
-  // SMS 인증번호 발송
+  // 닉네임으로 로그인
+  // -------------------------
+  Future<void> _loginWithNickname() async {
+    if (_isSendingCode) return;
+
+    setState(() {
+      _isSendingCode = true;
+    });
+
+    final nickname = _phoneController.text.trim();
+
+    if (nickname.isEmpty) {
+      _showErrorSnackBar('닉네임을 입력해주세요.');
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      debugPrint("로그인 시도: $nickname");
+      final user = await _apiUserController!.loginWithNickname(nickname);
+
+      if (user != null) {
+        // 기존 회원 - 홈으로 이동
+        debugPrint('로그인 성공: ${user.userId}');
+        _goHomePage();
+      } else {
+        // 신규 회원 - 회원가입 페이지로 이동
+        debugPrint('신규 회원 - 회원가입 필요');
+        _showErrorSnackBar('등록되지 않은 닉네임입니다. 회원가입을 진행해주세요.');
+        // if (mounted) {
+        //   Navigator.pushNamed(context, '/auth');
+        // }
+      }
+    } catch (e) {
+      debugPrint('로그인 오류: $e');
+      _showErrorSnackBar('로그인에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingCode = false;
+        });
+      }
+    }
+  }
+
+  // -------------------------
+  // SMS 인증번호 발송 (주석 처리)
   // -------------------------
   Future<void> _sendSmsCode() async {
     if (_isSendingCode) return;
