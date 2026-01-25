@@ -8,7 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
@@ -999,7 +999,6 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       }
 
       final Uint8List bytes = response.bodyBytes;
-      dynamic result;
 
       if (isVideo) {
         // 비디오의 경우: 임시 파일로 저장 후 갤러리에 저장
@@ -1008,10 +1007,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         final tempFile = File('${tempDir.path}/$fileName');
         await tempFile.writeAsBytes(bytes);
 
-        result = await ImageGallerySaver.saveFile(
-          tempFile.path,
-          name: fileName,
-        );
+        await Gal.putVideo(tempFile.path);
 
         // 임시 파일 삭제
         try {
@@ -1019,18 +1015,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         } catch (_) {}
       } else {
         // 이미지의 경우: 바로 저장
-        result = await ImageGallerySaver.saveImage(
-          bytes,
-          quality: 100,
-          name: "SOI_${DateTime.now().millisecondsSinceEpoch}",
-        );
+        await Gal.putImageBytes(bytes);
       }
 
-      if (result['isSuccess'] == true || result != null) {
-        _showSnackBar('갤러리에 저장되었습니다.');
-      } else {
-        _showSnackBar('저장에 실패했습니다.');
-      }
+      _showSnackBar('갤러리에 저장되었습니다.');
     } catch (e) {
       debugPrint('다운로드 실패: $e');
       _showSnackBar('다운로드 중 오류가 발생했습니다.');
