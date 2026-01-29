@@ -1,7 +1,6 @@
 import UIKit
 import Flutter
 import FirebaseCore
-import FirebaseAuth
 import UserNotifications
 import AVFoundation
 
@@ -45,9 +44,6 @@ import AVFoundation
   
   // MARK: - URL Handling
   override func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-    if Auth.auth().canHandle(url) {
-      return true
-    }
     return super.application(app, open: url, options: options)
   }
 }
@@ -65,22 +61,6 @@ extension AppDelegate {
       print("  - Bundle ID: \(options.bundleID ?? "N/A")")
       print("  - GCM Sender ID: \(options.gcmSenderID ?? "N/A")")
     }
-    
-    // Auth 설정 (reCAPTCHA 등)
-    configureAuthSettings()
-  }
-
-  
-  private func configureAuthSettings() {
-    let authSettings = Auth.auth().settings
-    
-    #if DEBUG
-    authSettings?.isAppVerificationDisabledForTesting = true
-    print("DEBUG 모드: 앱 검증 비활성화 (테스트용)")
-    #else
-    authSettings?.isAppVerificationDisabledForTesting = false
-    print("RELEASE 모드: 실제 APNs 토큰 사용")
-    #endif
   }
 }
 
@@ -118,19 +98,6 @@ extension AppDelegate {
   private func handleAPNsTokenRegistration(_ deviceToken: Data) {
     let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
     print("APNs Token received: \(tokenString)")
-    
-    // Firebase Auth에 APNs 토큰 설정
-    let firebaseAuth = Auth.auth()
-    
-    #if DEBUG
-    firebaseAuth.setAPNSToken(deviceToken, type: .sandbox)
-    print("APNs Token set for SANDBOX environment")
-    #else
-    firebaseAuth.setAPNSToken(deviceToken, type: .prod)
-    print("APNs Token set for PRODUCTION environment")
-    #endif
-    
-    print("APNs Token이 Firebase Auth에 등록되었습니다.")
   }
   
   private func handleAPNsRegistrationFailure(_ error: Error) {
@@ -139,10 +106,6 @@ extension AppDelegate {
   }
   
   private func handleRemoteNotification(_ userInfo: [AnyHashable : Any], completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-    if Auth.auth().canHandleNotification(userInfo) {
-      completionHandler(.newData)
-      return
-    }
     completionHandler(.noData)
   }
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:app_links/app_links.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -56,7 +55,6 @@ import 'views/about_setting/privacy.dart';
 import 'views/about_setting/terms_of_service.dart';
 import 'views/home_navigator_screen.dart';
 import 'views/launch_video_screen.dart';
-import 'firebase_options.dart';
 
 void main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -71,9 +69,6 @@ void main() async {
 
   // .env 파일 로드
   await dotenv.load(fileName: ".env");
-
-  // Firebase 초기화
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // 한국어 로케일 초기화
   await initializeDateFormatting('ko_KR', null);

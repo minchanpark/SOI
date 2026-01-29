@@ -12,6 +12,7 @@ import '../../api/controller/category_controller.dart';
 import '../../api/controller/media_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/models/user.dart';
+import '../about_feed/manager/feed_data_manager.dart';
 import '../../utils/snackbar_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -340,6 +341,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await apiUserController.logout();
 
       if (mounted) {
+        // 로그아웃시, 피드의 캐시를 비운다.
+        context.read<FeedDataManager>().reset();
+      }
+
+      if (mounted) {
         // 로그아웃 성공 시 로그인 화면으로 이동
         Navigator.of(
           context,
@@ -478,6 +484,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final deletion = apiUserController.deleteUser(
         apiUserController.currentUser!.id,
       );
+
+      // 회원탈퇴시, 피드의 캐시를 비운다.
+      if (mounted) {
+        context.read<FeedDataManager>().reset();
+      }
 
       if (mounted) {
         // 로딩 다이얼로그 닫기 후 즉시 시작 화면으로 이동

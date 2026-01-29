@@ -33,13 +33,14 @@ class FeedDataManager extends ChangeNotifier {
   static const int _pageSize = 5; // 한 번에 보여줄 게시물 수 --> 5개
   int _visibleCount = 0; // 현재 노출된 게시물 수
 
-  VoidCallback? _onStateChanged;
-  Function(List<FeedPostItem>)? _onPostsLoaded;
+  VoidCallback? _onStateChanged; // 상태 변경 콜백 --> 상태가 변경되면 호출
+  Function(List<FeedPostItem>)?
+  _onPostsLoaded; // 피드 게시물 로드 완료 콜백 --> 게시물이 로드되면 호출
 
-  // PostController 구독 관련
-  PostController? _postController;
+  PostController? _postController; // 구독 중인 PostController
   BuildContext? _context;
-  VoidCallback? _postsChangedListener;
+  VoidCallback? _postsChangedListener; // 게시물 변경 감지 리스너
+  int? _lastUserId; // 마지막으로 로드한 사용자의 ID
 
   // ======== 조회(Getter) ===========
   // 포함된 메소드들
@@ -155,21 +156,6 @@ class FeedDataManager extends ChangeNotifier {
     BuildContext context, {
     bool forceRefresh = false,
   }) async {
-    if (!forceRefresh && _allPosts.isNotEmpty) {
-      _isLoading = false;
-
-      // 현재 로드된 게시물의 개수가 0개라면
-      if (_visibleCount == 0) {
-        // 처음 로드 시에는 5개만 보여주기
-        _visibleCount = _allPosts.length < _pageSize
-            ? _allPosts.length
-            : _pageSize;
-      }
-      _hasMoreData = _visibleCount < _allPosts.length;
-      _notifyStateChanged();
-      return;
-    }
-
     /// 피드를 로드하는 메소드입니다.
     /// 사용자 카테고리별로 게시물을 불러와서 결합하고 정렬합니다.
     ///
@@ -178,16 +164,46 @@ class FeedDataManager extends ChangeNotifier {
     /// - [forceRefresh]: true면 서버에서 강제 새로고침
     final isInitialLoad = !_isLoadingMore; // 처음 로드하는 것인지의 여부를 체크합니다.
     try {
+      final userController = Provider.of<UserController>(
+        context,
+        listen: false,
+      );
+      if (userController.currentUser == null) {
+        await userController.tryAutoLogin();
+      }
+      final currentUser = userController.currentUser;
+      if (currentUser == null) {
+        throw Exception('로그인이 필요합니다.');
+      }
+
+      // 유저가 변경되면 캐시를 초기화하고 강제 새로고침합니다.
+      if (_lastUserId != null && _lastUserId != currentUser.id) {
+        reset(notify: false);
+        forceRefresh = true;
+      }
+      _lastUserId = currentUser.id;
+
+      if (!forceRefresh && _allPosts.isNotEmpty) {
+        _isLoading = false;
+
+        // 현재 로드된 게시물의 개수가 0개라면
+        if (_visibleCount == 0) {
+          // 처음 로드 시에는 5개만 보여주기
+          _visibleCount = _allPosts.length < _pageSize
+              ? _allPosts.length
+              : _pageSize;
+        }
+        _hasMoreData = _visibleCount < _allPosts.length;
+        _notifyStateChanged();
+        return;
+      }
+
       if (isInitialLoad) {
         _isLoading = true; // 처음 로드하는 경우라면, 로딩 상태를 설정합니다.
         _hasMoreData = false; // 더 보여줄 데이터 없음으로 초기화
         _notifyStateChanged();
       }
 
-      final userController = Provider.of<UserController>(
-        context,
-        listen: false,
-      );
       final categoryController = Provider.of<api_category.CategoryController>(
         context,
         listen: false,
@@ -200,14 +216,6 @@ class FeedDataManager extends ChangeNotifier {
         context,
         listen: false,
       );
-
-      if (userController.currentUser == null) {
-        await userController.tryAutoLogin();
-      }
-      final currentUser = userController.currentUser;
-      if (currentUser == null) {
-        throw Exception('로그인이 필요합니다.');
-      }
 
       // 피드 캐싱/노출(5개씩)은 `loadUserCategoriesAndPhotos`와 `_visibleCount`에서 담당합니다.
       // 사용자 카테고리 로드
@@ -261,11 +269,8 @@ class FeedDataManager extends ChangeNotifier {
         status: FriendStatus.blocked,
       );
       if (blockedUsers.isNotEmpty) {
-        final blockedIds =
-            blockedUsers.map((user) => user.userId).toSet();
-        combined.removeWhere(
-          (item) => blockedIds.contains(item.post.nickName),
-        );
+        final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+        combined.removeWhere((item) => blockedIds.contains(item.post.nickName));
       }
 
       // 게시물 작성일 기준 내림차순 정렬
@@ -377,6 +382,23 @@ class FeedDataManager extends ChangeNotifier {
     }
     _hasMoreData = _visibleCount < _allPosts.length;
     _notifyStateChanged();
+  }
+
+  /// 피드 캐시 및 상태 초기화
+  /// 피드의 상태를 초기화하고, 필요시 상태 변경 알림을 호출합니다.
+  ///
+  /// Parameters:
+  /// - [notify]: true면 상태 변경 알림 호출
+  void reset({bool notify = true}) {
+    _allPosts = [];
+    _visibleCount = 0;
+    _hasMoreData = false;
+    _isLoading = false;
+    _isLoadingMore = false;
+    _lastUserId = null;
+    if (notify) {
+      _notifyStateChanged();
+    }
   }
 
   @override

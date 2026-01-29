@@ -21,7 +21,15 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios deploy_to_testflight
 ```
 
-Flutter 앱을 빌드하고 TestFlight에 배포합니다.
+Flutter 앱을 빌드하고 TestFlight에 배포합니다. (pubspec build 자동 증가)
+
+### ios upload_shorebird
+
+```sh
+[bundle exec] fastlane ios upload_shorebird
+```
+
+Shorebird로 빌드하고 App Store Connect(TestFlight)에 업로드합니다. (pubspec build 자동 증가 + 버전 일치 보장)
 
 ----
 
