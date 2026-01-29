@@ -216,7 +216,7 @@ class CameraManager(
         val imageCaptureBuilder =
             ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-        runCatching {
+        try {
             imageCaptureBuilder.setMirrorMode(
                 if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
                     MirrorMode.MIRROR_MODE_ON
@@ -224,6 +224,8 @@ class CameraManager(
                     MirrorMode.MIRROR_MODE_OFF
                 },
             )
+        } catch (_: UnsupportedOperationException) {
+            // Mirror mode not supported on some devices; fall back to default.
         }
         imageCapture = imageCaptureBuilder.build()
 
@@ -232,7 +234,7 @@ class CameraManager(
                 .setQualitySelector(QualitySelector.from(Quality.HD))
                 .build()
         val videoCaptureBuilder = VideoCapture.Builder(recorder)
-        runCatching {
+        try {
             videoCaptureBuilder.setMirrorMode(
                 if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
                     MirrorMode.MIRROR_MODE_ON
@@ -240,6 +242,8 @@ class CameraManager(
                     MirrorMode.MIRROR_MODE_OFF
                 },
             )
+        } catch (_: UnsupportedOperationException) {
+            // Mirror mode not supported on some devices; fall back to default.
         }
         videoCapture = videoCaptureBuilder.build()
 
