@@ -322,17 +322,19 @@ class _PhotoDisplayWidgetState extends State<PhotoDisplayWidget> {
             if (snapshot.connectionState == ConnectionState.done) {
               debugPrint("isFromCamera: ${widget.isFromCamera}");
 
-              // 카메라에서 촬영한 비디오: 항상 화면에 맞춤
+              // 카메라에서 촬영한 비디오: 사진과 동일하게 cover 비율 적용
               if (widget.isFromCamera) {
                 return SizedBox(
                   width: widget.width,
                   height: widget.height,
-                  child: FittedBox(
-                    fit: BoxFit.fill,
-                    child: SizedBox(
-                      width: _videoController!.value.size.width,
-                      height: _videoController!.value.size.height,
-                      child: VideoPlayer(_videoController!),
+                  child: ClipRect(
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: _videoController!.value.size.width,
+                        height: _videoController!.value.size.height,
+                        child: VideoPlayer(_videoController!),
+                      ),
                     ),
                   ),
                 );

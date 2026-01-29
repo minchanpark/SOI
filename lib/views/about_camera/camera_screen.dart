@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import '../../api/services/camera_service.dart';
 import 'widgets/camera_app_bar.dart';
@@ -140,6 +141,18 @@ class _CameraScreenState extends State<CameraScreen>
     }
 
     try {
+      final cameraStatus = await Permission.camera.request();
+      if (!cameraStatus.isGranted) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          _showSnackBar(
+            tr('camera.preview_start_failed', context: context),
+          );
+        }
+        return;
+      }
       final bool alreadyActive = _cameraService.isSessionActive;
 
       if (!alreadyActive) {
@@ -721,6 +734,20 @@ class _CameraScreenState extends State<CameraScreen>
                         try {
                           final stopwatch = Stopwatch()..start();
                           debugPrint('[GalleryPick] tap');
+                          final permissionState =
+                              await PhotoManager.requestPermissionExtend();
+                          if (!permissionState.hasAccess) {
+                            if (!context.mounted) {
+                              return;
+                            }
+                            _showSnackBar(
+                              tr(
+                                'camera.gallery_access_failed',
+                                context: context,
+                              ),
+                            );
+                            return;
+                          }
                           final List<AssetEntity>? pickedAssets =
                               await AssetPicker.pickAssets(
                             context,

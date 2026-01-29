@@ -76,23 +76,24 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
       resizeToAvoidBottomInset: false,
-      body: _buildNicknameLoginPage(),
-      // 전화번호/SMS 인증 로그인 (주석 처리)
-      // body: PageView(
-      //   controller: _pageController,
-      //   physics: NeverScrollableScrollPhysics(),
-      //   onPageChanged: (index) {
-      //     setState(() {
-      //       currentPage = index;
-      //     });
-      //   },
-      //   children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
-      // ),
+      // ✅ 현재 로그인 플로우: 전화번호 → 인증번호
+      body: PageView(
+        controller: _pageController,
+        physics: NeverScrollableScrollPhysics(),
+        onPageChanged: (index) {
+          setState(() {
+            currentPage = index;
+          });
+        },
+        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
+      ),
+      // ❌ 기존 닉네임 로그인 플로우 (보관용, 주석 처리)
+      // body: _buildNicknameLoginPage(),
     );
   }
 
   // -------------------------
-  // 닉네임 로그인 페이지
+  // 닉네임 로그인 페이지 (주석 처리 유지)
   // -------------------------
   Widget _buildNicknameLoginPage() {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
@@ -478,7 +479,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // -------------------------
-  // 닉네임으로 로그인
+  // 닉네임으로 로그인 (주석 처리 유지)
   // -------------------------
   Future<void> _loginWithNickname() async {
     if (_isSendingCode) return;
