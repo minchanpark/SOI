@@ -21,6 +21,7 @@ class CameraAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       leadingWidth: 90.w,
+      centerTitle: true,
       title: Column(
         children: [
           Text(

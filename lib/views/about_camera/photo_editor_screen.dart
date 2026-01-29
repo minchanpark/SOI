@@ -1653,6 +1653,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       backgroundColor: Colors.black,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

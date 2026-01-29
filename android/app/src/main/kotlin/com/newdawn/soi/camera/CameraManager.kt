@@ -10,6 +10,7 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.MirrorMode
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.ViewPort
@@ -212,30 +213,51 @@ class CameraManager(
         val preview = Preview.Builder().build()
         preview.setSurfaceProvider(view.surfaceProvider)
 
-        imageCapture =
+        val imageCaptureBuilder =
             ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
+        runCatching {
+            imageCaptureBuilder.setMirrorMode(
+                if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                    MirrorMode.MIRROR_MODE_ON
+                } else {
+                    MirrorMode.MIRROR_MODE_OFF
+                },
+            )
+        }
+        imageCapture = imageCaptureBuilder.build()
 
         val recorder =
             Recorder.Builder()
                 .setQualitySelector(QualitySelector.from(Quality.HD))
                 .build()
-        videoCapture = VideoCapture.withOutput(recorder)
+        val videoCaptureBuilder = VideoCapture.Builder(recorder)
+        runCatching {
+            videoCaptureBuilder.setMirrorMode(
+                if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                    MirrorMode.MIRROR_MODE_ON
+                } else {
+                    MirrorMode.MIRROR_MODE_OFF
+                },
+            )
+        }
+        videoCapture = videoCaptureBuilder.build()
 
         val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
 
         val rotation = view.display?.rotation ?: 0
         val viewPort =
             ViewPort.Builder(Rational(view.width, view.height), rotation)
-                .setScaleType(ViewPort.ScaleType.FILL_CENTER)
+                .setScaleType(ViewPort.FILL_CENTER)
                 .build()
+        val imageCaptureUseCase = imageCapture ?: return false
+        val videoCaptureUseCase = videoCapture ?: return false
         val useCaseGroup =
             UseCaseGroup.Builder()
                 .setViewPort(viewPort)
                 .addUseCase(preview)
-                .addUseCase(imageCapture)
-                .addUseCase(videoCapture)
+                .addUseCase(imageCaptureUseCase)
+                .addUseCase(videoCaptureUseCase)
                 .build()
 
         provider.unbindAll()
@@ -253,7 +275,16 @@ class CameraManager(
         }
 
         val photoFile = createOutputFile(Environment.DIRECTORY_PICTURES, ".jpg")
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        val metadata =
+            ImageCapture.Metadata().apply {
+                if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                    setReversedHorizontal(true)
+                }
+            }
+        val outputOptions =
+            ImageCapture.OutputFileOptions.Builder(photoFile)
+                .setMetadata(metadata)
+                .build()
         capture.takePicture(
             outputOptions,
             cameraExecutor,
