@@ -9,7 +9,7 @@ import '../../../api/controller/post_controller.dart';
 import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/audio_controller.dart';
-import '../../../views/about_feed/manager/feed_data_manager.dart';
+import '../../about_feed/manager/feed_data_manager.dart';
 import '../report/report_bottom_sheet.dart';
 
 /// API 기반 음성 댓글 리스트 Bottom Sheet
@@ -188,9 +188,7 @@ class _ApiCommentRow extends StatelessWidget {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          '신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.',
-        ),
+        content: Text('신고가 접수되었습니다. 신고 내용을 관리자가 확인 후, 판단 후에 처리하도록 하겠습니다.'),
         backgroundColor: Color(0xFF5A5A5A),
       ),
     );

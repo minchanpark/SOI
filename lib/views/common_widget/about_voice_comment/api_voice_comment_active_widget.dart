@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/views/common_widget/api_photo/voice_comment_widget.dart';
+import 'package:soi/views/common_widget/about_voice_comment/voice_comment_widget.dart';
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/user_controller.dart';

@@ -19,8 +19,8 @@ import '../../../utils/position_converter.dart';
 import '../../about_archiving/screens/archive_detail/api_category_photos_screen.dart';
 import 'first_line_ellipsis_text.dart';
 import 'api_audio_control_widget.dart';
-import 'api_voice_comment_list_sheet.dart';
-import 'pending_api_voice_comment.dart';
+import '../about_voice_comment/api_voice_comment_list_sheet.dart';
+import '../about_voice_comment/pending_api_voice_comment.dart';
 import 'package:soi/api/controller/media_controller.dart';
 
 /// API 사진/비디오 표시 위젯
@@ -44,6 +44,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final int categoryId;
   final String categoryName;
   final bool isArchive;
+  final bool isFromCamera;
   final Map<int, List<Comment>> postComments;
   final Function(int, Offset) onProfileImageDragged;
   final Function(Post) onToggleAudio;
@@ -56,6 +57,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
     required this.categoryId,
     required this.categoryName,
     this.isArchive = false,
+    this.isFromCamera = false,
     required this.postComments,
     required this.onProfileImageDragged,
     required this.onToggleAudio,
@@ -145,6 +147,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this); // 앱의 라이프사이클의 변화를 감지하기 위해 옵저버 등록
+    _isImageCoverMode = widget.isFromCamera;
+    _isVideoCoverMode = widget.isFromCamera;
     _isShowingComments =
         _hasComments || _hasPendingMarker; // 댓글/대기 마커가 있으면 댓글 표시
     _mediaController = Provider.of<MediaController>(
@@ -190,6 +194,12 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   @override
   void didUpdateWidget(covariant ApiPhotoDisplayWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFromCamera != widget.isFromCamera) {
+      setState(() {
+        _isImageCoverMode = widget.isFromCamera;
+        _isVideoCoverMode = widget.isFromCamera;
+      });
+    }
     if (_hasComments && !_autoOpenedOnce) {
       setState(() {
         _isShowingComments = true;
@@ -511,7 +521,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18.0),
                   child: FittedBox(
-                    fit: _isVideoCoverMode ? BoxFit.fill : BoxFit.contain,
+                    fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
                     child: SizedBox(
                       width: controller.value.size.width,
                       height: controller.value.size.height,
@@ -576,7 +586,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
               fadeOutDuration: Duration.zero,
               width: _imageWidth.w,
               height: _imageHeight.h,
-              fit: _isImageCoverMode ? BoxFit.fill : BoxFit.contain, // 더블탭으로 전환
+              fit: _isImageCoverMode
+                  ? BoxFit.contain
+                  : BoxFit.cover, // 더블탭으로 전환
               memCacheWidth: ((354.w * dpr).round()),
               maxWidthDiskCache: (354.w * dpr).round(),
               placeholder: (context, _) => Shimmer.fromColors(

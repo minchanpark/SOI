@@ -6,9 +6,9 @@ import '../../../api/models/comment.dart';
 import '../../../api/controller/audio_controller.dart';
 import 'api_photo_display_widget.dart';
 import 'api_user_info_widget.dart';
-import 'api_voice_recording_widget.dart';
-import 'api_voice_comment_list_sheet.dart';
-import 'pending_api_voice_comment.dart';
+import '../about_voice_comment/api_voice_recording_widget.dart';
+import '../about_voice_comment/api_voice_comment_list_sheet.dart';
+import '../about_voice_comment/pending_api_voice_comment.dart';
 import '../report/report_bottom_sheet.dart';
 
 /// API 기반 사진 카드 위젯
@@ -23,6 +23,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
   final bool isOwner;
   final bool isArchive;
   final bool isCategory;
+  final bool isFromCamera;
 
   // postId별 선택된 이모지 (부모가 관리)
   final String? selectedEmoji;
@@ -58,6 +59,7 @@ class ApiPhotoCardWidget extends StatefulWidget {
     required this.isOwner,
     this.isArchive = false,
     this.isCategory = false,
+    this.isFromCamera = false,
     this.selectedEmoji,
     this.onEmojiSelected,
     this.onReportSubmitted,
@@ -117,6 +119,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 categoryId: widget.categoryId,
                 categoryName: widget.categoryName,
                 isArchive: widget.isArchive,
+                isFromCamera: widget.isFromCamera,
                 postComments: widget.postComments,
                 onProfileImageDragged: widget.onProfileImageDragged,
                 onToggleAudio: widget.onToggleAudio,
@@ -131,11 +134,10 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
                 onCommentsReloadRequested: widget.onCommentsReloadRequested,
-                onReportSubmitted:
-                    widget.onReportSubmitted == null
-                        ? null
-                        : (result) =>
-                            widget.onReportSubmitted!(widget.post, result),
+                onReportSubmitted: widget.onReportSubmitted == null
+                    ? null
+                    : (result) =>
+                          widget.onReportSubmitted!(widget.post, result),
 
                 // 부모 상태 반영
                 selectedEmoji: widget.selectedEmoji,

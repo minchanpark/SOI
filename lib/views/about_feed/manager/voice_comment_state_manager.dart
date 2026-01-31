@@ -12,7 +12,7 @@ import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/models/comment_creation_result.dart';
 import '../../../utils/position_converter.dart';
-import '../../common_widget/api_photo/pending_api_voice_comment.dart';
+import '../../common_widget/about_voice_comment/pending_api_voice_comment.dart';
 
 /// API 기반 음성/텍스트 댓글 상태 매니저
 /// 각 게시물별로 음성/텍스트 댓글의 활성화 상태, 저장 상태, 대기 중인 댓글 등을 관리

@@ -56,8 +56,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    // (배포버전 프리즈 방지) 전역 imageCache.clear()는 캐시가 큰 실사용 환경에서
-    // dispose 타이밍에 수 초 프리즈를 만들 수 있어 제거합니다.
     super.dispose();
   }
 
@@ -150,9 +148,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final user = userController.currentUser;
 
     if (user != null) {
-      context.read<api.NotificationController>().invalidateCache();
-      await _loadFriendRequestCountFromGetFriendApi();
-      await _loadNotifications();
+      context.read<api.NotificationController>().invalidateCache(); // 캐시 무효화
+      await _loadFriendRequestCountFromGetFriendApi(); // 친구 요청 개수 갱신
+      await _loadNotifications(); // 알림 갱신
     }
   }
 
@@ -160,7 +158,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(), // AppBar
+      // Body
       body: Column(
         children: [
           SizedBox(height: 20.h),
@@ -170,31 +169,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  /// AppBar 구성
+  /// AppBar
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.black,
       elevation: 0,
       centerTitle: false,
       iconTheme: const IconThemeData(color: Color(0xffd9d9d9)),
-      title: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            tr('notification.title', context: context),
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              color: const Color(0xFFF8F8F8),
-              fontSize: 20.sp,
-              fontFamily: 'Pretendard Variable',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+      title: Text(
+        tr('notification.title', context: context),
+        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+          color: const Color(0xFFF8F8F8),
+          fontSize: 20.sp,
+          fontFamily: 'Pretendard Variable',
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
 
-  /// Body 구성
+  /// Body
   Widget _buildBody() {
     // 친구 요청 섹션은 알림 데이터 로딩/에러/빈 상태와 상관없이 항상 노출
     final showNotificationList =
@@ -254,7 +248,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).pushNamed('/friend_requests');
+        Navigator.of(context).pushNamed('/friend_request');
       },
       child: Padding(
         padding: EdgeInsets.only(left: 19.w),

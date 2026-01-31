@@ -106,8 +106,11 @@ class _CameraScreenState extends State<CameraScreen>
     WidgetsBinding.instance.addObserver(this);
 
     if (widget.isActive) {
-      // 비동기 카메라 초기화 시작
-      _cameraInitialization = _initializeCameraAsync();
+      // iOS 플랫폼뷰가 붙기 전에 초기화를 시작하면 레이스가 발생할 수 있어
+      // 첫 프레임 이후로 초기화 타이밍을 지연합니다.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _cameraInitialization ??= _initializeCameraAsync();
+      });
     } else {
       // 비활성 상태에서는 세션만 준비
       unawaited(_cameraService.prepareSessionIfPermitted());
@@ -134,22 +137,24 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // 비동기 카메라 초기화
+  /// 비동기 카메라 초기화
   Future<void> _initializeCameraAsync() async {
     if (_isInitialized || !mounted) {
       return;
     }
 
     try {
-      final cameraStatus = await Permission.camera.request();
+      // iOS에서 초기 진입 타이밍 레이스 방지 (플랫폼뷰 준비 대기)
+      if (Platform.isIOS) {
+        await Future.delayed(const Duration(milliseconds: 150));
+      }
+      // 앱 설정의 권한 상태만 확인하고, 리소스/세션 실패는 조용히 무시합니다.
+      final cameraStatus = await Permission.camera.status;
       if (!cameraStatus.isGranted) {
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
-          _showSnackBar(
-            tr('camera.preview_start_failed', context: context),
-          );
         }
         return;
       }
@@ -183,7 +188,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // 디바이스별 사용 가능한 줌 레벨 로드
+  /// 디바이스별 사용 가능한 줌 레벨 로드
   Future<void> _loadAvailableZoomLevels() async {
     if (!mounted) {
       return;
@@ -223,6 +228,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// 줌 레벨을 UI에 적용
   void _applyZoomLevels(List<double> availableLevels) {
     if (!mounted) {
       return;
@@ -245,9 +251,7 @@ class _CameraScreenState extends State<CameraScreen>
     });
   }
 
-  // 주석 처리: Flutter(UI) 드래그 줌 관련 로직은 일단 비활성화합니다.
-
-  // 비디오 녹화 이벤트 리스너 설정
+  /// 비디오 녹화 이벤트 리스너 설정
   void _setupVideoListeners() {
     // 비디오 녹화 시에 처리
     _videoRecordedSubscription = _cameraService.onVideoRecorded.listen((
@@ -287,7 +291,7 @@ class _CameraScreenState extends State<CameraScreen>
     });
   }
 
-  // 개선된 갤러리 첫 번째 이미지 로딩
+  /// 개선된 갤러리 첫 번째 이미지 로딩
   Future<void> _loadFirstGalleryImage() async {
     // 비디오 녹화 중에는 갤러리 이미지 로드하지 않음
     if (_isLoadingGallery || _isVideoRecording) return;
@@ -343,7 +347,7 @@ class _CameraScreenState extends State<CameraScreen>
     super.dispose();
   }
 
-  // 앱 라이프사이클 상태 변화 감지
+  /// 앱 라이프사이클 상태 변화 감지
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 앱이 다시 활성화될 때 카메라 세션 복구
@@ -376,7 +380,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // cameraservice에 플래시 토글 요청
+  /// cameraservice에 플래시 토글 요청
   Future<void> _toggleFlash() async {
     try {
       final bool newFlashState = !isFlashOn;
@@ -390,7 +394,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  // cameraservice에 사진 촬영 요청
+  /// cameraservice에 사진 촬영 요청
   Future<void> _takePicture() async {
     if (_isNavigatingToEditor) {
       return;
@@ -443,6 +447,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// cameraservice에 비디오 녹화 시작 요청
   Future<void> _startVideoRecording() async {
     if (_isVideoRecording) {
       return;
@@ -486,6 +491,7 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// cameraservice에 비디오 녹화 중지 요청
   Future<void> _stopVideoRecording({bool isCancelled = false}) async {
     if (!_isVideoRecording) {
       if (!_videoStartInFlight) {
@@ -571,7 +577,6 @@ class _CameraScreenState extends State<CameraScreen>
         if (_videoProgress.value >= 1.0) {
           _videoProgress.value = 1.0;
           _stopVideoProgressTimer();
-          // 자동 중지는 Swift 플러그인에서 처리됨
         }
       },
     );
@@ -750,12 +755,14 @@ class _CameraScreenState extends State<CameraScreen>
                           }
                           final List<AssetEntity>? pickedAssets =
                               await AssetPicker.pickAssets(
-                            context,
-                            pickerConfig: const AssetPickerConfig(
-                              maxAssets: 1,
-                              requestType: RequestType.common,
-                            ),
-                          );
+                                context,
+                                pickerConfig: AssetPickerConfig(
+                                  maxAssets: 1,
+                                  requestType: RequestType.common,
+                                  textDelegate:
+                                      EnglishAssetPickerTextDelegate(),
+                                ),
+                              );
                           debugPrint(
                             '[GalleryPick] picker done: ${stopwatch.elapsedMilliseconds}ms',
                           );

@@ -26,7 +26,7 @@ import '../../../../api/controller/audio_controller.dart';
 import '../../../../utils/position_converter.dart';
 import '../../../../utils/snackbar_utils.dart';
 import '../../../common_widget/api_photo/api_photo_card_widget.dart';
-import '../../../common_widget/api_photo/pending_api_voice_comment.dart';
+import '../../../common_widget/about_voice_comment/pending_api_voice_comment.dart';
 import '../../../common_widget/report/report_bottom_sheet.dart';
 import '../../../../api/models/friend.dart';
 

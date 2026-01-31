@@ -195,11 +195,11 @@ class NotificationController extends ChangeNotifier {
 
   /// 캐시 무효화
   void invalidateCache() {
-    _cachedResult = null;
-    _cachedFriendNotifications = null;
-    _lastLoadedUserId = null;
-    _lastLoadTime = null;
-    notifyListeners();
+    _cachedResult = null; // 캐시된 전체 알림 무효화
+    _cachedFriendNotifications = null; // 캐시된 친구 알림 무효화
+    _lastLoadedUserId = null; // 마지막 로드된 사용자 ID 초기화
+    _lastLoadTime = null; // 마지막 로드 시간 초기화
+    notifyListeners(); // 상태 변경 알림
   }
 
   /// 강제 새로고침

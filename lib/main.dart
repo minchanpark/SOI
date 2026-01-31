@@ -10,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soi/api/controller/audio_controller.dart';
@@ -28,6 +29,7 @@ import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 
 import 'package:soi/api/controller/category_search_controller.dart'
     as api_category_search;
+import 'package:soi/views/about_friends/friend_request_screen.dart';
 
 // New API Services (Backend REST API)
 import 'api/api.dart' as api;
@@ -171,6 +173,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _primePhotoLibraryPermission();
     _linkSubscription = _appLinks.uriLinkStream.listen(
       _handleIncomingUri,
       onError: (error) {
@@ -192,6 +195,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _lockPortraitOrientation();
     }
+  }
+
+  void _primePhotoLibraryPermission() {
+    Future.microtask(() async {
+      try {
+        await PhotoManager.requestPermissionExtend();
+      } catch (e) {
+        debugPrint('Photo permission prefetch failed: $e');
+      }
+    });
   }
 
   Future<void> _handleInitialLink() async {
@@ -414,6 +427,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             '/contact_manager': (context) => const FriendManagementScreen(),
             '/friend_list_add': (context) => const FriendListAddScreen(),
             '/friend_list': (context) => const FriendListScreen(),
+            '/friend_request': (context) => const FriendRequestScreen(),
 
             '/feed_home': (context) => const FeedHomeScreen(),
             '/profile_screen': (context) => const ProfileScreen(),

@@ -344,12 +344,16 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
         ensureConfigured(startRunning: false, completion: completion)
     }
 
-    func ensureConfigured(startRunning: Bool = true, settleDelayMs: Int = 100, completion: @escaping (Result<Void, Error>) -> Void) {
+    func ensureConfigured(startRunning: Bool = true, waitForStart: Bool = true, settleDelayMs: Int = 100, completion: @escaping (Result<Void, Error>) -> Void) {
         sessionQueue.async {
             if self.isConfigured {
                 if startRunning {
                     self.startSessionIfNeeded()
-                    self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                    if waitForStart {
+                        self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                    } else {
+                        completion(.success(()))
+                    }
                 } else {
                     completion(.success(()))
                 }
@@ -361,7 +365,11 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
                 self.isConfigured = true
                 if startRunning {
                     self.startSessionIfNeeded()
-                    self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                    if waitForStart {
+                        self.waitForSessionToStart(settleDelayMs: settleDelayMs, completion: completion)
+                    } else {
+                        completion(.success(()))
+                    }
                 } else {
                     completion(.success(()))
                 }
@@ -716,7 +724,7 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     }
 
     func resumeSession(completion: @escaping (Result<Void, Error>) -> Void) {
-        ensureConfigured { outcome in
+        ensureConfigured(waitForStart: false) { outcome in
             completion(outcome)
         }
     }
@@ -889,7 +897,7 @@ fileprivate final class CameraSessionManager: NSObject, AVCapturePhotoCaptureDel
     func registerPreviewLayer(_ layer: AVCaptureVideoPreviewLayer) {
         layer.videoGravity = .resizeAspectFill
         layer.session = captureSession
-        ensureConfigured(startRunning: false) { _ in }
+        ensureConfigured(startRunning: true, waitForStart: false) { _ in }
     }
 
     func updatePreviewBounds(_ bounds: CGRect) {
