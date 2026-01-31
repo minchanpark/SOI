@@ -72,9 +72,12 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
 class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     with WidgetsBindingObserver {
   static const double _avatarSize = 27.0;
-  static const double _avatarRadius = 13.5;
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
+  static const double _tagPadding = 4.0; // 태그 주변을 두르는 띠의 패딩
+  static const double _tagPointerHeight = 5.0; // 태그 아래 삼각형 포인터 높이
+  static const double _tagPointerWidth = 10.0; // 태그 아래 삼각형 포인터 너비
+  static const double _tagPointerOverlap = 2.0; // 삼각형이 태그 띠와 겹치는 정도
 
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
@@ -619,6 +622,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     return _buildUnsupportedMedia();
   }
 
+  /// 지원되지 않는 미디어 표시 위젯 빌드
   Widget _buildUnsupportedMedia() {
     return Container(
       width: _imageWidth.w,
@@ -632,6 +636,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  /// 미디어를 로딩할 때 보여줄 플레이스홀더 빌드
   Widget _buildMediaPlaceholder() {
     return Shimmer.fromColors(
       baseColor: Colors.grey[800]!,
@@ -645,6 +650,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   }
 
   /// 댓글의 프로필 이미지를 위치에 맞게 배치
+  /// 댓글이 위치 정보를 가지고 있고, 댓글 표시가 활성화된 경우에만 아바타를 표시합니다.
   List<Widget> _buildCommentAvatars() {
     if (!_isShowingComments) return const [];
 
@@ -657,6 +663,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         .toList();
 
     final actualSize = Size(_imageWidth.w, _imageHeight.h);
+    final tagDiameter = _avatarSize + (_tagPadding * 2);
 
     return List<Widget>.generate(filteredComments.length, (index) {
       final comment = filteredComments[index];
@@ -681,8 +688,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       final isSelected = _selectedCommentKey == key;
 
       return Positioned(
-        left: clamped.dx - _avatarRadius,
-        top: clamped.dy - _avatarRadius,
+        left: clamped.dx - (tagDiameter / 2),
+        top: clamped.dy - (tagDiameter / 2),
         child: GestureDetector(
           onTap: () => _openCommentSheet(key),
           onLongPress: () => _handleCommentLongPress(
@@ -690,11 +697,16 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             commentId: comment.id,
             position: clamped,
           ),
-          child: _buildCircleAvatar(
-            imageUrl: comment.userProfile,
-            size: _avatarSize,
-            showBorder: isSelected,
-            borderColor: Colors.white,
+          // 드래그로 프로필 이미지 위치 조정
+          child: _buildTagBubble(
+            contentSize: _avatarSize,
+            // 댓글 아바타 빌드
+            child: _buildCircleAvatar(
+              imageUrl: comment.userProfile,
+              size: _avatarSize,
+              showBorder: isSelected,
+              borderColor: Colors.white,
+            ),
           ),
         ),
       );
@@ -716,10 +728,12 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       actualSize,
     );
     final clamped = PositionConverter.clampPosition(absolute, actualSize);
+    final ringSize = _avatarSize + 3.0;
+    final tagDiameter = ringSize + (_tagPadding * 2);
 
     return Positioned(
-      left: clamped.dx - _avatarRadius,
-      top: clamped.dy - _avatarRadius,
+      left: clamped.dx - (tagDiameter / 2),
+      top: clamped.dy - (tagDiameter / 2),
       child: IgnorePointer(
         child: _buildPendingProgressAvatar(
           imageUrl: pending.profileImageUrlKey,
@@ -732,7 +746,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   }
 
   /// 원형 아바타 위젯 빌드
-  /// 프로필 이미지 URL을 사용하여 원형 아바타를 생성합니다.
+  /// : 프로필 이미지를 원형 아바타로 표시하는 위젯을 빌드합니다.
   ///
   /// Parameters:
   ///   - [imageUrl]: 아바타 이미지 URL
@@ -749,23 +763,70 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     final ringSize = size + 3.0;
 
     // 원형 프로그레스 링과 아바타를 겹쳐서 표시
+    return _buildTagBubble(
+      contentSize: ringSize,
+      child: SizedBox(
+        width: ringSize,
+        height: ringSize,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: ringSize,
+              height: ringSize,
+              child: CircularProgressIndicator(
+                value: progress?.clamp(0.0, 2.0),
+                strokeWidth: 2.0,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+            _buildCircleAvatar(
+              imageUrl: imageUrl,
+              size: size,
+              opacity: opacity,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 태그 버블 위젯 빌드
+  /// : 댓글 태그를 원형 버블 형태로 표시하는 위젯을 빌드합니다.
+  ///
+  /// Parameters:
+  ///   - [child]: 태그 내부에 표시할 위젯
+  ///   - [contentSize]: 태그 내부 콘텐츠 크기
+  Widget _buildTagBubble({required Widget child, required double contentSize}) {
+    final tagDiameter = contentSize + (_tagPadding * 2);
+
     return SizedBox(
-      width: ringSize,
-      height: ringSize,
-      child: Stack(
-        alignment: Alignment.center,
+      width: tagDiameter,
+      height: tagDiameter + _tagPointerHeight,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: ringSize,
-            height: ringSize,
-            child: CircularProgressIndicator(
-              value: progress?.clamp(0.0, 2.0),
-              strokeWidth: 2.0,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-              backgroundColor: Colors.transparent,
+          Container(
+            width: tagDiameter,
+            height: tagDiameter,
+            decoration: const BoxDecoration(
+              color: Color(0xFF000000),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: child,
+          ),
+          Transform.translate(
+            offset: Offset(0, -_tagPointerOverlap),
+            child: SizedBox(
+              width: _tagPointerWidth,
+              height: _tagPointerHeight,
+              child: CustomPaint(
+                painter: const _TagPointerPainter(color: Color(0xFF000000)),
+              ),
             ),
           ),
-          _buildCircleAvatar(imageUrl: imageUrl, size: size, opacity: opacity),
         ],
       ),
     );
@@ -1022,40 +1083,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       );
     }
 
-    // 3D: 댓글에 태그되는 프로필이 사진 위에서 떠 보이도록(원형 그림자 + 하이라이트)
-    final avatar3d = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          if (isCaption != true)
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 1.0),
-              blurRadius: 2,
-              spreadRadius: -2,
-            ),
-        ],
-      ),
-      foregroundDecoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.06),
-            Colors.transparent,
-            Colors.black.withValues(alpha: 0.10),
-          ],
-          stops: const [0.0, 0.6, 1.0],
-        ),
-      ),
-      child: avatarContent,
-    );
-
     return opacity < 1.0
-        ? Opacity(opacity: opacity, child: avatar3d)
-        : avatar3d;
+        ? Opacity(opacity: opacity, child: avatarContent)
+        : avatarContent;
   }
 
   /// 기본 영역 탭 처리
@@ -1340,5 +1370,29 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         ),
       ),
     );
+  }
+}
+
+class _TagPointerPainter extends CustomPainter {
+  const _TagPointerPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TagPointerPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
