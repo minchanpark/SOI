@@ -6,9 +6,6 @@ import '../../../api/models/comment.dart';
 import '../../../api/controller/user_controller.dart';
 
 /// API 기반 음성 녹음 활성화 상태 위젯
-///
-/// Firebase 버전의 VoiceCommentActiveWidget과 동일한 디자인을 유지하면서
-/// Post 모델을 사용합니다.
 class ApiVoiceCommentActiveWidget extends StatelessWidget {
   final Post post;
   final Map<int, bool> voiceCommentActiveStates;
@@ -50,10 +47,6 @@ class ApiVoiceCommentActiveWidget extends StatelessWidget {
               hasRealTimeComment && voiceCommentActiveStates[post.id] != true;
 
           final hasPendingTextComment = pendingTextComments?[post.id] ?? false;
-
-          debugPrint(
-            '🔴 [ApiActiveWidget] postId=${post.id}, shouldStartAsSaved=$shouldStartAsSaved, hasPendingTextComment=$hasPendingTextComment',
-          );
 
           return VoiceCommentWidget(
             autoStart: !shouldStartAsSaved && !hasPendingTextComment,

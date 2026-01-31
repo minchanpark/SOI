@@ -180,6 +180,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
           left: 0,
           right: 0,
           bottom: bottomPadding,
+          // 텍스트/음성 댓글 입력 모드 전환되는 위젯
           child: ApiVoiceRecordingWidget(
             post: widget.post,
             voiceCommentActiveStates: widget.voiceCommentActiveStates,

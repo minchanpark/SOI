@@ -220,7 +220,7 @@ class VoiceCommentStateManager {
   void onProfileImageDragged(int postId, Offset absolutePosition) {
     final imageSize = Size(354.w, 500.h);
 
-    // 절대 위치를 상대 위치로 변환
+    // 포인터 끝점 기준 좌표를 상대 위치로 변환
     final relativePosition = PositionConverter.toRelativePosition(
       absolutePosition,
       imageSize,

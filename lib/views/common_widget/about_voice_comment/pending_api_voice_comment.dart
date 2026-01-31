@@ -1,9 +1,9 @@
 import 'dart:ui';
 
 /// API 버전 pending 댓글 "마커" 데이터 (UI 표시에 필요한 최소 정보)
-/// - 사진 위에 프로필 태그를 띄우기 위한 위치/프로필 키만 보관합니다.
+/// - 사진 위 태그의 포인터 끝점 기준 좌표/프로필 키만 보관합니다.
 typedef PendingApiCommentMarker = ({
-  Offset relativePosition,
+  Offset relativePosition, // 포인터 끝점 기준 상대 좌표
   String? profileImageUrlKey,
   double? progress,
 });

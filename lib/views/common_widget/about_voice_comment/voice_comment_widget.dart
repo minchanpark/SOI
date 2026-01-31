@@ -8,10 +8,11 @@ import '../../../api/controller/audio_controller.dart';
 import '../../../api/controller/media_controller.dart';
 import '../../../api/controller/user_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
+import '../api_photo/tag_pointer.dart';
 
 /// 음성 댓글 전용 위젯
 /// 피드 화면에서 음성 댓글을 녹음하고 재생하는 기능을 제공합니다.
-/// AudioRecorderWidget보다 단순하고 음성 댓글에 최적화되어 있습니다.
+///
 enum VoiceCommentState {
   idle, // 초기 상태 (녹음 버튼 표시)
   recording, // 녹음 중
@@ -74,6 +75,8 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
   bool _isFinalizingPlacement = false; // 중복 저장 방지
   final GlobalKey _profileDraggableKey = GlobalKey();
+  static const double _defaultAvatarSize = 54.0;
+  static const double _placementAvatarSize = 27.0;
 
   /// 이전 녹음 상태 (애니메이션 제어용)
   VoiceCommentState? _lastState;
@@ -230,7 +233,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         _currentState = VoiceCommentState.recording;
       });
     } catch (e) {
-      debugPrint('❌ 녹음 시작 오류: $e');
+      debugPrint('녹음 시작 오류: $e');
       setState(() {
         _lastState = _currentState;
         _currentState = VoiceCommentState.idle;
@@ -337,9 +340,9 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 파형 데이터를 추출하고 PlayerController를 준비
   Future<void> _stopAndPreparePlayback() async {
     try {
-      // ✅ 중복 정지 방지
+      // 중복 정지 방지
       if (!_audioController.isRecording) {
-        debugPrint('⚠️ 이미 녹음이 중지되었습니다');
+        debugPrint('이미 녹음이 중지되었습니다');
         return;
       }
 
@@ -353,12 +356,12 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         waveformData = waveformData.map((value) => value.abs()).toList();
       }
 
-      // ✅ 순차적으로 중지: 먼저 waveform controller
+      // 순차적으로 중지: 먼저 waveform controller
       if (_recorderController.isRecording) {
         await _recorderController.stop();
       }
 
-      // ✅ 그 다음 native recorder (이제 동기적으로 처리됨)
+      // 그 다음 native recorder (이제 동기적으로 처리됨)
       await _audioController.stopRecordingSimple();
 
       final filePath = _audioController.currentRecordingPath;
@@ -388,7 +391,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         );
       }
     } catch (e) {
-      debugPrint('❌ 녹음 중지 오류: $e');
+      debugPrint('녹음 중지 오류: $e');
     }
   }
 
@@ -879,7 +882,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       _playerController?.dispose();
       _playerController = null;
     } catch (e) {
-      debugPrint('❌ 컨트롤러 정리 중 오류: $e');
+      debugPrint('컨트롤러 정리 중 오류: $e');
     }
   }
 
@@ -897,17 +900,21 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       return child;
     }
 
-    final profileWidget = _buildProfileAvatar();
+    final profileWidget = _buildProfileAvatar(size: _placementAvatarSize);
+    final dragWidget = TagBubble(
+      contentSize: _placementAvatarSize,
+      child: profileWidget,
+    );
 
     return Draggable<String>(
       key: _profileDraggableKey,
       data: 'profile_image',
-      dragAnchorStrategy: pointerDragAnchorStrategy,
+      dragAnchorStrategy: _tagPointerDragAnchor,
       feedback: Transform.scale(
         scale: 1.2,
-        child: Opacity(opacity: 0.8, child: profileWidget),
+        child: Opacity(opacity: 0.8, child: dragWidget),
       ),
-      childWhenDragging: Opacity(opacity: 0.3, child: profileWidget),
+      childWhenDragging: Opacity(opacity: 0.3, child: dragWidget),
       onDragStarted: _beginPlacementFromWaveform,
       child: child,
     );
@@ -917,21 +924,29 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// isPlacementMode에 따라 배치 완료/취소 로직 실행
   /// placing/saved 상태에서 사용
   Widget _buildProfileDraggable({required bool isPlacementMode}) {
-    final profileWidget = _buildProfileAvatar();
+    final avatarSize = isPlacementMode
+        ? _placementAvatarSize
+        : _defaultAvatarSize;
+    final profileWidget = _buildProfileAvatar(size: avatarSize);
+    final dragWidget = isPlacementMode
+        ? TagBubble(contentSize: avatarSize, child: profileWidget)
+        : profileWidget;
 
     if (widget.onProfileImageDragged == null) {
-      return profileWidget;
+      return dragWidget;
     }
 
     return Draggable<String>(
       key: isPlacementMode ? _profileDraggableKey : null,
       data: 'profile_image',
-      dragAnchorStrategy: pointerDragAnchorStrategy,
+      dragAnchorStrategy: isPlacementMode
+          ? _tagPointerDragAnchor
+          : pointerDragAnchorStrategy,
       feedback: Transform.scale(
         scale: 1.2,
-        child: Opacity(opacity: 0.8, child: profileWidget),
+        child: Opacity(opacity: 0.8, child: dragWidget),
       ),
-      childWhenDragging: Opacity(opacity: 0.3, child: profileWidget),
+      childWhenDragging: Opacity(opacity: 0.3, child: dragWidget),
       onDragStarted: isPlacementMode ? _holdParentScroll : null,
       onDraggableCanceled: (velocity, offset) {
         if (!isPlacementMode) {
@@ -948,13 +963,21 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
           _finalizePlacement();
         }
       },
-      child: profileWidget,
+      child: dragWidget,
     );
+  }
+
+  Offset _tagPointerDragAnchor(
+    Draggable<Object> draggable,
+    BuildContext context,
+    Offset position,
+  ) {
+    return TagBubble.pointerTipOffset(contentSize: _placementAvatarSize);
   }
 
   /// 프로필 아바타 위젯 생성
   /// profileImageUrl이 있으면 CachedNetworkImage 사용, 없으면 기본 아이콘 표시
-  Widget _buildProfileAvatar() {
+  Widget _buildProfileAvatar({required double size}) {
     return Consumer2<UserController, MediaController>(
       builder: (context, userController, mediaController, _) {
         final profileSource =
@@ -968,7 +991,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
           future: future,
           builder: (context, snapshot) {
             final resolvedUrl = snapshot.data ?? widget.profileImageUrl;
-            return _buildAvatarFromUrl(resolvedUrl);
+            return _buildAvatarFromUrl(resolvedUrl, size: size);
           },
         );
       },
@@ -998,7 +1021,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     return future;
   }
 
-  Widget _buildAvatarFromUrl(String? imageUrl) {
+  Widget _buildAvatarFromUrl(String? imageUrl, {required double size}) {
     // 3D: 프로필 태그가 떠 보이도록 원형 그림자 + 하이라이트
     final avatar3dShadow = [
       BoxShadow(
@@ -1016,8 +1039,8 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     ];
 
     return Container(
-      width: 54,
-      height: 54,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: avatar3dShadow,
@@ -1039,10 +1062,10 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
           ? ClipOval(
               child: CachedNetworkImage(
                 imageUrl: imageUrl,
-                width: 54,
-                height: 54,
-                memCacheWidth: (54 * 2).round(),
-                maxWidthDiskCache: (54 * 2).round(),
+                width: size,
+                height: size,
+                memCacheWidth: (size * 2).round(),
+                maxWidthDiskCache: (size * 2).round(),
                 fit: BoxFit.cover,
                 placeholder: (context, url) {
                   return Container(

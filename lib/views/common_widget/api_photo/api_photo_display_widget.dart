@@ -21,6 +21,7 @@ import 'first_line_ellipsis_text.dart';
 import 'api_audio_control_widget.dart';
 import '../about_voice_comment/api_voice_comment_list_sheet.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
+import 'tag_pointer.dart';
 import 'package:soi/api/controller/media_controller.dart';
 
 /// API 사진/비디오 표시 위젯
@@ -74,15 +75,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   static const double _avatarSize = 27.0;
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
-  static const double _tagPadding = 4.0; // 태그 주변을 두르는 띠의 패딩
-  static const double _tagPointerHeight = 5.0; // 태그 아래 삼각형 포인터 높이
-  static const double _tagPointerWidth = 10.0; // 태그 아래 삼각형 포인터 너비
-  static const double _tagPointerOverlap = 2.0; // 삼각형이 태그 띠와 겹치는 정도
 
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
     final phase = SchedulerBinding.instance.schedulerPhase;
-    // Avoid mutating the element/render tree during layout/paint/semantics work.
     if (phase == SchedulerPhase.persistentCallbacks ||
         phase == SchedulerPhase.midFrameMicrotasks) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -524,7 +520,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18.0),
                   child: FittedBox(
-                    fit: _isVideoCoverMode ? BoxFit.cover : BoxFit.contain,
+                    fit: _isVideoCoverMode ? BoxFit.contain : BoxFit.cover,
                     child: SizedBox(
                       width: controller.value.size.width,
                       height: controller.value.size.height,
@@ -649,6 +645,24 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     );
   }
 
+  Offset _clampTagAnchor(
+    Offset anchor,
+    Size containerSize,
+    double contentSize,
+  ) {
+    final diameter = TagBubble.diameterForContent(contentSize: contentSize);
+    final tipOffset = TagBubble.pointerTipOffset(contentSize: contentSize);
+    final minX = diameter / 2;
+    final maxX = containerSize.width - diameter / 2;
+    final minY = tipOffset.dy;
+    final maxY = containerSize.height;
+
+    return Offset(
+      anchor.dx.clamp(minX, maxX),
+      anchor.dy.clamp(minY, maxY),
+    );
+  }
+
   /// 댓글의 프로필 이미지를 위치에 맞게 배치
   /// 댓글이 위치 정보를 가지고 있고, 댓글 표시가 활성화된 경우에만 아바타를 표시합니다.
   List<Widget> _buildCommentAvatars() {
@@ -663,7 +677,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         .toList();
 
     final actualSize = Size(_imageWidth.w, _imageHeight.h);
-    final tagDiameter = _avatarSize + (_tagPadding * 2);
+    final tagTipOffset = TagBubble.pointerTipOffset(
+      contentSize: _avatarSize,
+    );
 
     return List<Widget>.generate(filteredComments.length, (index) {
       final comment = filteredComments[index];
@@ -676,7 +692,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         relative,
         actualSize,
       );
-      final clamped = PositionConverter.clampPosition(absolute, actualSize);
+      final clamped = _clampTagAnchor(absolute, actualSize, _avatarSize);
       final hideOther =
           _showActionOverlay &&
           _selectedCommentKey != null &&
@@ -688,8 +704,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       final isSelected = _selectedCommentKey == key;
 
       return Positioned(
-        left: clamped.dx - (tagDiameter / 2),
-        top: clamped.dy - (tagDiameter / 2),
+        left: clamped.dx - tagTipOffset.dx,
+        top: clamped.dy - tagTipOffset.dy,
         child: GestureDetector(
           onTap: () => _openCommentSheet(key),
           onLongPress: () => _handleCommentLongPress(
@@ -698,7 +714,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             position: clamped,
           ),
           // 드래그로 프로필 이미지 위치 조정
-          child: _buildTagBubble(
+          child: TagBubble(
             contentSize: _avatarSize,
             // 댓글 아바타 빌드
             child: _buildCircleAvatar(
@@ -727,13 +743,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       pending.relativePosition,
       actualSize,
     );
-    final clamped = PositionConverter.clampPosition(absolute, actualSize);
-    final ringSize = _avatarSize + 3.0;
-    final tagDiameter = ringSize + (_tagPadding * 2);
+    final clamped = _clampTagAnchor(absolute, actualSize, _avatarSize);
+    final tagTipOffset = TagBubble.pointerTipOffset(
+      contentSize: _avatarSize,
+    );
 
     return Positioned(
-      left: clamped.dx - (tagDiameter / 2),
-      top: clamped.dy - (tagDiameter / 2),
+      left: clamped.dx - tagTipOffset.dx,
+      top: clamped.dy - tagTipOffset.dy,
       child: IgnorePointer(
         child: _buildPendingProgressAvatar(
           imageUrl: pending.profileImageUrlKey,
@@ -759,21 +776,17 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     required double? progress, // 업로드 진행률 (0.0 ~ 1.0)
     double opacity = 1.0, // 프로필 이미지 투명도 (기본값 1.0)
   }) {
-    // 프로그레스 링 크기
-    final ringSize = size + 3.0;
-
-    // 원형 프로그레스 링과 아바타를 겹쳐서 표시
-    return _buildTagBubble(
-      contentSize: ringSize,
+    return TagBubble(
+      contentSize: size,
       child: SizedBox(
-        width: ringSize,
-        height: ringSize,
+        width: size,
+        height: size,
         child: Stack(
           alignment: Alignment.center,
           children: [
             SizedBox(
-              width: ringSize,
-              height: ringSize,
+              width: size,
+              height: size,
               child: CircularProgressIndicator(
                 value: progress?.clamp(0.0, 2.0),
                 strokeWidth: 2.0,
@@ -788,46 +801,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// 태그 버블 위젯 빌드
-  /// : 댓글 태그를 원형 버블 형태로 표시하는 위젯을 빌드합니다.
-  ///
-  /// Parameters:
-  ///   - [child]: 태그 내부에 표시할 위젯
-  ///   - [contentSize]: 태그 내부 콘텐츠 크기
-  Widget _buildTagBubble({required Widget child, required double contentSize}) {
-    final tagDiameter = contentSize + (_tagPadding * 2);
-
-    return SizedBox(
-      width: tagDiameter,
-      height: tagDiameter + _tagPointerHeight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: tagDiameter,
-            height: tagDiameter,
-            decoration: const BoxDecoration(
-              color: Color(0xFF000000),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: child,
-          ),
-          Transform.translate(
-            offset: Offset(0, -_tagPointerOverlap),
-            child: SizedBox(
-              width: _tagPointerWidth,
-              height: _tagPointerHeight,
-              child: CustomPaint(
-                painter: const _TagPointerPainter(color: Color(0xFF000000)),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1254,11 +1227,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                     builderContext.findRenderObject() as RenderBox?;
                 if (renderBox == null) return;
                 final localPosition = renderBox.globalToLocal(details.offset);
-                final adjusted = Offset(
-                  localPosition.dx + 32,
-                  localPosition.dy + 32,
+                final tipOffset = TagBubble.pointerTipOffset(
+                  contentSize: _avatarSize,
                 );
-                widget.onProfileImageDragged(widget.post.id, adjusted);
+                widget.onProfileImageDragged(
+                  widget.post.id,
+                  localPosition + tipOffset,
+                );
               },
               builder: (context, candidateData, rejectedData) {
                 return GestureDetector(
@@ -1370,29 +1345,5 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         ),
       ),
     );
-  }
-}
-
-class _TagPointerPainter extends CustomPainter {
-  const _TagPointerPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TagPointerPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

@@ -5,9 +5,7 @@ import 'api_voice_comment_active_widget.dart';
 import 'api_voice_comment_text_widget.dart';
 
 /// API 기반 음성 녹음 위젯
-///
-/// Firebase 버전의 VoiceRecordingWidget과 동일한 디자인을 유지하면서
-/// Post 모델을 사용합니다.
+/// : 음성 댓글 입력 모드와 텍스트 댓글 입력 모드를 전환합니다.
 class ApiVoiceRecordingWidget extends StatelessWidget {
   final Post post;
   final Map<int, bool> voiceCommentActiveStates;
@@ -52,6 +50,7 @@ class ApiVoiceRecordingWidget extends StatelessWidget {
           );
         },
         child: voiceCommentActiveStates[post.id] == true
+            // 음성 댓글 입력 모드
             ? ApiVoiceCommentActiveWidget(
                 post: post,
                 voiceCommentActiveStates: voiceCommentActiveStates,
@@ -63,6 +62,7 @@ class ApiVoiceRecordingWidget extends StatelessWidget {
                 onSaveCompleted: onSaveCompleted,
                 pendingTextComments: pendingTextComments,
               )
+            // 텍스트 댓글 입력 모드
             : ApiVoiceCommentTextWidget(
                 postId: post.id,
                 onToggleVoiceComment: onToggleVoiceComment,
