@@ -35,7 +35,9 @@ class Post {
   final String nickName;
   final String? content;
   final String? postFileKey;
+  final String? postFileUrl;
   final String? userProfileImageKey;
+  final String? userProfileImageUrl;
   final String? audioUrl;
   final String? waveformData;
   final int? duration;
@@ -47,7 +49,9 @@ class Post {
     required this.nickName,
     this.content,
     this.postFileKey,
+    this.postFileUrl,
     this.userProfileImageKey,
+    this.userProfileImageUrl,
     this.audioUrl,
     this.waveformData,
     this.duration,
@@ -62,7 +66,9 @@ class Post {
       nickName: dto.nickname ?? '',
       content: dto.content,
       postFileKey: dto.postFileKey,
+      postFileUrl: dto.postFileUrl,
       userProfileImageKey: dto.userProfileImageKey,
+      userProfileImageUrl: dto.userProfileImageUrl,
       audioUrl: dto.audioFileKey,
       waveformData: dto.waveformData,
       duration: dto.duration,
@@ -78,7 +84,9 @@ class Post {
       nickName: json['nickName'] as String? ?? '',
       content: json['content'] as String?,
       userProfileImageKey: json['userProfileImageKey'] as String?,
+      userProfileImageUrl: json['userProfileImageUrl'] as String?,
       postFileKey: json['postFileKey'] as String?,
+      postFileUrl: json['postFileUrl'] as String?,
       audioUrl: json['audioFileKey'] as String?,
       waveformData: json['waveformData'] as String?,
       duration: json['duration'] as int?,
@@ -94,7 +102,9 @@ class Post {
       'nickName': nickName,
       'content': content,
       'postFileKey': postFileKey,
+      'postFileUrl': postFileUrl,
       'userProfileImageKey': userProfileImageKey,
+      'userProfileImageUrl': userProfileImageUrl,
       'audioFileKey': audioUrl,
       'waveformData': waveformData,
       'duration': duration,
@@ -124,9 +134,11 @@ class Post {
     String? nickName,
     String? content,
     String? postFileKey,
+    String? postFileUrl,
     String? audioUrl,
     String? waveformData,
     String? userProfileImageKey,
+    String? userProfileImageUrl,
     int? duration,
     bool? isActive,
     DateTime? createdAt,
@@ -136,9 +148,11 @@ class Post {
       nickName: nickName ?? this.nickName,
       content: content ?? this.content,
       postFileKey: postFileKey,
+      postFileUrl: postFileUrl,
       audioUrl: audioUrl,
       waveformData: waveformData ?? this.waveformData,
       userProfileImageKey: userProfileImageKey ?? this.userProfileImageKey,
+      userProfileImageUrl: userProfileImageUrl ?? this.userProfileImageUrl,
       duration: duration ?? this.duration,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

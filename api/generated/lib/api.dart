@@ -70,6 +70,7 @@ part 'model/friend_resp_dto.dart';
 part 'model/friend_update_resp_dto.dart';
 part 'model/notification_get_all_resp_dto.dart';
 part 'model/notification_resp_dto.dart';
+part 'model/notification_user_resp_dto.dart';
 part 'model/post_create_req_dto.dart';
 part 'model/post_resp_dto.dart';
 part 'model/post_update_req_dto.dart';

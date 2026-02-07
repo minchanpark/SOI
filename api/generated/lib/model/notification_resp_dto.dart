@@ -23,6 +23,7 @@ class NotificationRespDto {
     this.isRead,
     this.categoryIdForPost,
     this.relatedId,
+    this.categoryInvitedUsers = const [],
   });
 
   ///
@@ -99,6 +100,8 @@ class NotificationRespDto {
   ///
   int? relatedId;
 
+  List<NotificationUserRespDto> categoryInvitedUsers;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is NotificationRespDto &&
     other.id == id &&
@@ -110,7 +113,8 @@ class NotificationRespDto {
     other.type == type &&
     other.isRead == isRead &&
     other.categoryIdForPost == categoryIdForPost &&
-    other.relatedId == relatedId;
+    other.relatedId == relatedId &&
+    _deepEquality.equals(other.categoryInvitedUsers, categoryInvitedUsers);
 
   @override
   int get hashCode =>
@@ -124,10 +128,11 @@ class NotificationRespDto {
     (type == null ? 0 : type!.hashCode) +
     (isRead == null ? 0 : isRead!.hashCode) +
     (categoryIdForPost == null ? 0 : categoryIdForPost!.hashCode) +
-    (relatedId == null ? 0 : relatedId!.hashCode);
+    (relatedId == null ? 0 : relatedId!.hashCode) +
+    (categoryInvitedUsers.hashCode);
 
   @override
-  String toString() => 'NotificationRespDto[id=$id, text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, type=$type, isRead=$isRead, categoryIdForPost=$categoryIdForPost, relatedId=$relatedId]';
+  String toString() => 'NotificationRespDto[id=$id, text=$text, name=$name, nickname=$nickname, userProfileKey=$userProfileKey, imageUrl=$imageUrl, type=$type, isRead=$isRead, categoryIdForPost=$categoryIdForPost, relatedId=$relatedId, categoryInvitedUsers=$categoryInvitedUsers]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -181,6 +186,7 @@ class NotificationRespDto {
     } else {
       json[r'relatedId'] = null;
     }
+      json[r'categoryInvitedUsers'] = this.categoryInvitedUsers;
     return json;
   }
 
@@ -213,6 +219,7 @@ class NotificationRespDto {
         isRead: mapValueOfType<bool>(json, r'isRead'),
         categoryIdForPost: mapValueOfType<int>(json, r'categoryIdForPost'),
         relatedId: mapValueOfType<int>(json, r'relatedId'),
+        categoryInvitedUsers: NotificationUserRespDto.listFromJson(json[r'categoryInvitedUsers']),
       );
     }
     return null;

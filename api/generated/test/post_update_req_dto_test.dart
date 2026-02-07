@@ -26,8 +26,8 @@ void main() {
       // TODO
     });
 
-    // String userId
-    test('to test the property `userId`', () async {
+    // String nickname
+    test('to test the property `nickname`', () async {
       // TODO
     });
 
@@ -53,6 +53,16 @@ void main() {
 
     // int duration
     test('to test the property `duration`', () async {
+      // TODO
+    });
+
+    // bool isFromGallery
+    test('to test the property `isFromGallery`', () async {
+      // TODO
+    });
+
+    // double savedAspectRatio
+    test('to test the property `savedAspectRatio`', () async {
       // TODO
     });
 

@@ -51,7 +51,8 @@ class Category {
       id: dto.id ?? 0,
       name: dto.name ?? '',
       nickNames: dto.nicknames,
-      photoUrl: dto.categoryPhotoKey,
+      photoUrl: dto.categoryPhotoUrl,
+
       isNew: dto.isNew ?? false,
       totalUserCount: dto.totalUserNum ?? 0,
       isPinned: dto.isPinned ?? false,

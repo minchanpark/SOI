@@ -5,7 +5,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/api/models/post.dart';
@@ -50,50 +49,18 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
 
     try {
       final postController = context.read<PostController>();
-      final mediaController = context.read<MediaController>();
 
       final posts = await postController.getAllPosts(
         userId: user.id,
         postStatus: PostStatus.deleted,
       );
 
-      final imageKeysToResolve = <String>[];
-      final postIdsForResolvedKeys = <int>[];
-
       _imageUrlByPostId.clear();
 
       for (final post in posts) {
-        final keyOrUrl = post.postFileKey;
-        if (keyOrUrl == null || keyOrUrl.isEmpty) continue;
-
-        // 이미 URL인 경우
-        final uri = Uri.tryParse(keyOrUrl);
-        if (uri != null && uri.hasScheme) {
-          _imageUrlByPostId[post.id] = keyOrUrl;
-          continue;
-        }
-
-        // 비디오인 경우: 썸네일 캐시에서 조회
-        if (post.isVideo) {
-          final thumbnailKey = mediaController.getThumbnailForVideo(keyOrUrl);
-          if (thumbnailKey != null) {
-            imageKeysToResolve.add(thumbnailKey);
-            postIdsForResolvedKeys.add(post.id);
-          }
-        } else {
-          // 이미지인 경우: 일반 처리
-          imageKeysToResolve.add(keyOrUrl);
-          postIdsForResolvedKeys.add(post.id);
-        }
-      }
-
-      if (imageKeysToResolve.isNotEmpty) {
-        final urls = await mediaController.getPresignedUrls(imageKeysToResolve);
-        final count = urls.length < postIdsForResolvedKeys.length
-            ? urls.length
-            : postIdsForResolvedKeys.length;
-        for (var i = 0; i < count; i++) {
-          _imageUrlByPostId[postIdsForResolvedKeys[i]] = urls[i];
+        final url = post.postFileUrl;
+        if (url != null && url.isNotEmpty) {
+          _imageUrlByPostId[post.id] = url;
         }
       }
 
@@ -288,6 +255,10 @@ class _DeletedPostListScreenState extends State<DeletedPostListScreen> {
               if (imageUrl != null && imageUrl.isNotEmpty)
                 CachedNetworkImage(
                   imageUrl: imageUrl,
+                  cacheKey: post.postFileKey,
+                  useOldImageOnUrlChange: true,
+                  fadeInDuration: Duration.zero,
+                  fadeOutDuration: Duration.zero,
                   fit: BoxFit.cover,
                   memCacheWidth: (175 * 2).round(),
                   maxWidthDiskCache: (175 * 2).round(),

@@ -110,7 +110,8 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!widget.isArchive) SizedBox(height: 90.h),
+              // 피드 페이지에 SOI Appbar를 표시하지 않는 경우를 대비한 공간 확보
+              // if (!widget.isArchive) SizedBox(height: 90.h),
 
               // 사진 표시 위젯
               ApiPhotoDisplayWidget(

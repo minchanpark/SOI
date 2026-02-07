@@ -26,11 +26,6 @@ void main() {
       // TODO
     });
 
-    // String categoryPhotoKey
-    test('to test the property `categoryPhotoKey`', () async {
-      // TODO
-    });
-
     // List<int> receiverIds (default value: const [])
     test('to test the property `receiverIds`', () async {
       // TODO

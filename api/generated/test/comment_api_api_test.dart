@@ -21,8 +21,17 @@ void main() {
     //
     // 댓글을 추가합니다.
     //
-    //Future<ApiResponseDtoObject> create2(CommentReqDto commentReqDto) async
-    test('test create2', () async {
+    //Future<ApiResponseDtoObject> create3(CommentReqDto commentReqDto) async
+    test('test create3', () async {
+      // TODO
+    });
+
+    // 댓글 삭제
+    //
+    // id를 통해서 댓글을 삭제합니다.
+    //
+    //Future<ApiResponseDtoListObject> deleteComment(int postId) async
+    test('test deleteComment', () async {
       // TODO
     });
 

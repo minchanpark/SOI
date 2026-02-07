@@ -118,6 +118,32 @@ class CategoryService {
   // 카테고리 조회
   // ============================================
 
+  /// 단일 페이지 카테고리 DTO 조회 (내부 헬퍼)
+  ///
+  /// API 호출 + null/에러 체크를 한 곳에서 처리합니다.
+  /// 매핑 전 원시 DTO를 반환하여 호출측에서 필요한 항목만 변환할 수 있습니다.
+  ///
+  /// Returns: DTO 리스트 (빈 리스트 = 데이터 없음 또는 마지막 페이지)
+  Future<List<CategoryRespDto>> _fetchCategoryPage({
+    required String filterValue,
+    required int userId,
+    required int page,
+  }) async {
+    final response = await _categoryApi.getCategories(
+      filterValue,
+      userId,
+      page: page,
+    );
+
+    if (response == null) return const [];
+
+    if (response.success != true) {
+      throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
+    }
+
+    return response.data;
+  }
+
   /// 사용자의 카테고리 목록 조회
   ///
   /// [userId]가 속한 카테고리 목록을 조회합니다.
@@ -125,6 +151,9 @@ class CategoryService {
   /// Parameters:
   /// - [userId]: 사용자 ID
   /// - [filter]: 카테고리 필터 (ALL, PUBLIC, PRIVATE)
+  /// - [page]: 시작 페이지 (기본값: 0)
+  /// - [fetchAllPages]: 모든 페이지를 조회할지 여부 (기본값: true)
+  /// - [maxPages]: 최대 조회 페이지 수 (기본값: 50)
   ///
   /// Returns: 카테고리 목록 (List<Category>)
   Future<List<Category>> getCategories({
@@ -135,66 +164,51 @@ class CategoryService {
     int maxPages = 50,
   }) async {
     try {
+      // 단일 페이지 조회
       if (!fetchAllPages) {
-        final response = await _categoryApi.getCategories(
-          filter.value,
-          userId,
+        final dtos = await _fetchCategoryPage(
+          filterValue: filter.value,
+          userId: userId,
           page: page,
         );
-
-        if (response == null) {
-          return [];
-        }
-
-        if (response.success != true) {
-          throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
-        }
-
-        return response.data.map((dto) => Category.fromDto(dto)).toList();
+        return dtos.map((dto) => Category.fromDto(dto)).toList();
       }
 
+      // 전체 페이지 조회
       final allCategories = <Category>[];
       final seenIds = <int>{};
       var currentPage = page;
-      var pagesFetched = 0;
+      int? firstPageSize;
 
-      while (pagesFetched < maxPages) {
-        final response = await _categoryApi.getCategories(
-          filter.value,
-          userId,
+      for (var i = 0; i < maxPages; i++) {
+        final dtos = await _fetchCategoryPage(
+          filterValue: filter.value,
+          userId: userId,
           page: currentPage,
         );
 
-        if (response == null) {
-          break;
-        }
+        if (dtos.isEmpty) break;
 
-        if (response.success != true) {
-          throw SoiApiException(message: response.message ?? '카테고리 목록 조회 실패');
-        }
+        // 첫 페이지 크기를 기록하여 마지막 페이지 감지에 활용
+        firstPageSize ??= dtos.length;
 
-        final pageItems = response.data
-            .map((dto) => Category.fromDto(dto))
-            .toList();
-        if (pageItems.isEmpty) {
-          break;
-        }
-
+        // DTO id로 중복 체크 후 Category 객체 생성 (불필요한 객체 생성 방지)
         var addedCount = 0;
-        for (final item in pageItems) {
-          if (seenIds.add(item.id)) {
-            allCategories.add(item);
+        for (final dto in dtos) {
+          final dtoId = dto.id;
+          if (dtoId != null && seenIds.add(dtoId)) {
+            allCategories.add(Category.fromDto(dto));
             addedCount++;
           }
         }
 
-        // 서버가 같은 페이지를 반복해서 반환할 경우 무한 루프 방지
-        if (addedCount == 0) {
-          break;
-        }
+        // 서버가 같은 페이지를 반복 반환할 경우 무한 루프 방지
+        if (addedCount == 0) break;
+
+        // 마지막 페이지 감지: 반환 항목이 첫 페이지보다 적으면 종료
+        if (dtos.length < firstPageSize) break;
 
         currentPage++;
-        pagesFetched++;
       }
 
       return allCategories;
@@ -206,21 +220,6 @@ class CategoryService {
       if (e is SoiApiException) rethrow;
       throw SoiApiException(message: '카테고리 목록 조회 실패: $e', originalException: e);
     }
-  }
-
-  /// 전체 카테고리 조회 (편의 메서드)
-  Future<List<Category>> getAllCategories(int userId) async {
-    return getCategories(userId: userId, filter: CategoryFilter.all);
-  }
-
-  /// 공개(그룹) 카테고리만 조회 (편의 메서드)
-  Future<List<Category>> getPublicCategories(int userId) async {
-    return getCategories(userId: userId, filter: CategoryFilter.public_);
-  }
-
-  /// 비공개(개인) 카테고리만 조회 (편의 메서드)
-  Future<List<Category>> getPrivateCategories(int userId) async {
-    return getCategories(userId: userId, filter: CategoryFilter.private_);
   }
 
   // ============================================

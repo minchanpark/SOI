@@ -144,6 +144,7 @@ Class | Method | HTTP request | Description
  - [FriendUpdateRespDto](doc//FriendUpdateRespDto.md)
  - [NotificationGetAllRespDto](doc//NotificationGetAllRespDto.md)
  - [NotificationRespDto](doc//NotificationRespDto.md)
+ - [NotificationUserRespDto](doc//NotificationUserRespDto.md)
  - [PostCreateReqDto](doc//PostCreateReqDto.md)
  - [PostRespDto](doc//PostRespDto.md)
  - [PostUpdateReqDto](doc//PostUpdateReqDto.md)

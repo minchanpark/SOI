@@ -21,6 +21,8 @@ class PostCreateReqDto {
     this.categoryId = const [],
     this.waveformData,
     this.duration,
+    this.savedAspectRatio,
+    this.isFromGallery,
   });
 
   ///
@@ -69,6 +71,22 @@ class PostCreateReqDto {
   ///
   int? duration;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? savedAspectRatio;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? isFromGallery;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostCreateReqDto &&
     other.userId == userId &&
@@ -78,7 +96,9 @@ class PostCreateReqDto {
     _deepEquality.equals(other.audioFileKey, audioFileKey) &&
     _deepEquality.equals(other.categoryId, categoryId) &&
     other.waveformData == waveformData &&
-    other.duration == duration;
+    other.duration == duration &&
+    other.savedAspectRatio == savedAspectRatio &&
+    other.isFromGallery == isFromGallery;
 
   @override
   int get hashCode =>
@@ -90,10 +110,12 @@ class PostCreateReqDto {
     (audioFileKey.hashCode) +
     (categoryId.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
-    (duration == null ? 0 : duration!.hashCode);
+    (duration == null ? 0 : duration!.hashCode) +
+    (savedAspectRatio == null ? 0 : savedAspectRatio!.hashCode) +
+    (isFromGallery == null ? 0 : isFromGallery!.hashCode);
 
   @override
-  String toString() => 'PostCreateReqDto[userId=$userId, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration]';
+  String toString() => 'PostCreateReqDto[userId=$userId, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, categoryId=$categoryId, waveformData=$waveformData, duration=$duration, savedAspectRatio=$savedAspectRatio, isFromGallery=$isFromGallery]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -124,6 +146,16 @@ class PostCreateReqDto {
       json[r'duration'] = this.duration;
     } else {
       json[r'duration'] = null;
+    }
+    if (this.savedAspectRatio != null) {
+      json[r'savedAspectRatio'] = this.savedAspectRatio;
+    } else {
+      json[r'savedAspectRatio'] = null;
+    }
+    if (this.isFromGallery != null) {
+      json[r'isFromGallery'] = this.isFromGallery;
+    } else {
+      json[r'isFromGallery'] = null;
     }
     return json;
   }
@@ -161,6 +193,8 @@ class PostCreateReqDto {
             : const [],
         waveformData: mapValueOfType<String>(json, r'waveformData'),
         duration: mapValueOfType<int>(json, r'duration'),
+        savedAspectRatio: mapValueOfType<double>(json, r'savedAspectRatio'),
+        isFromGallery: mapValueOfType<bool>(json, r'isFromGallery'),
       );
     }
     return null;

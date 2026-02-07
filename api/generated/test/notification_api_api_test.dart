@@ -21,7 +21,7 @@ void main() {
     //
     // 알림들을 조회합니다.
     //
-    //Future<ApiResponseDtoNotificationGetAllRespDto> getAll(int userId) async
+    //Future<ApiResponseDtoNotificationGetAllRespDto> getAll(int userId, int page) async
     test('test getAll', () async {
       // TODO
     });
@@ -30,7 +30,7 @@ void main() {
     //
     // 친구 요청 알림들을 조회합니다.
     //
-    //Future<ApiResponseDtoListNotificationRespDto> getFriend(int userId) async
+    //Future<ApiResponseDtoListNotificationRespDto> getFriend(int userId, int page) async
     test('test getFriend', () async {
       // TODO
     });

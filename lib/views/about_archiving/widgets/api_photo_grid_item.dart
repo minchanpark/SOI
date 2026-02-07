@@ -71,7 +71,8 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   @override
   void didUpdateWidget(covariant ApiPhotoGridItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
+    if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey ||
+        oldWidget.post.userProfileImageUrl != widget.post.userProfileImageUrl) {
       _loadProfileImage(widget.post.userProfileImageKey);
     }
     if (oldWidget.post.audioUrl != widget.post.audioUrl) {
@@ -193,33 +194,14 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     return null;
   }
 
-  /// 프로필 이미지 로드
-  Future<void> _loadProfileImage(String? profileKey) async {
-    if (profileKey == null || profileKey.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _profileImageUrl = null;
-        _isLoadingProfile = false;
-      });
-      return;
-    }
-
-    setState(() => _isLoadingProfile = true);
-    try {
-      final url = await _mediaController.getPresignedUrl(profileKey);
-      if (!mounted) return;
-      setState(() {
-        _profileImageUrl = url;
-        _isLoadingProfile = false;
-      });
-    } catch (e) {
-      debugPrint('[ApiPhotoGridItem] 프로필 이미지 로드 실패: $e');
-      if (!mounted) return;
-      setState(() {
-        _profileImageUrl = null;
-        _isLoadingProfile = false;
-      });
-    }
+  /// 프로필 이미지 URL 설정 (서버에서 직접 제공)
+  void _loadProfileImage(String? profileKey) {
+    if (!mounted) return;
+    final url = widget.post.userProfileImageUrl;
+    setState(() {
+      _profileImageUrl = (url != null && url.isNotEmpty) ? url : null;
+      _isLoadingProfile = false;
+    });
   }
 
   Future<void> _loadAudioUrl(String? audioKey) async {
@@ -292,6 +274,11 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
                   : (widget.postUrl.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: widget.postUrl,
+                            // presigned URL이 바뀌어도 같은 파일이면 디스크 캐시 재사용
+                            cacheKey: widget.post.postFileKey,
+                            useOldImageOnUrlChange: true,
+                            fadeInDuration: Duration.zero,
+                            fadeOutDuration: Duration.zero,
                             memCacheWidth: (175 * 2).round(),
                             maxWidthDiskCache: (175 * 2).round(),
                             fit: BoxFit.cover,
@@ -426,9 +413,13 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
 
     return CachedNetworkImage(
       key: ValueKey(
-        'profile_${widget.post.nickName}_${_profileImageUrl.hashCode}',
+        'profile_${widget.post.nickName}_${widget.post.userProfileImageKey}',
       ),
       imageUrl: _profileImageUrl!,
+      cacheKey: widget.post.userProfileImageKey,
+      useOldImageOnUrlChange: true,
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
       memCacheWidth: (28 * 5).round(),
       maxWidthDiskCache: (28 * 5).round(),
       imageBuilder: (context, imageProvider) =>

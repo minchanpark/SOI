@@ -21,35 +21,44 @@ void main() {
     //
     // 게시물을 추가합니다.
     //
-    //Future<ApiResponseDtoBoolean> create(PostCreateReqDto postCreateReqDto) async
-    test('test create', () async {
+    //Future<ApiResponseDtoBoolean> create1(PostCreateReqDto postCreateReqDto) async
+    test('test create1', () async {
       // TODO
     });
 
     // 게시물 삭제
     //
-    // 게시물을 삭제합니다. 삭제된건 일단 휴지통으로 이동됨
+    // id로 게시물을 삭제합니다.
     //
-    //Future<ApiResponseDtoObject> delete(int postId) async
-    test('test delete', () async {
+    //Future<ApiResponseDtoObject> delete2(int postId) async
+    test('test delete2', () async {
       // TODO
     });
 
-    // 메인페이지에 띄울 게시물 조회
+    // 전체 게시물 조회
     //
-    // 사용자가 포함된 카테고리의 모든 게시물을 리턴해줌
+    // 사용자가 포함된 카테고리의 모든 게시물을 상태 (활성화, 삭제됨, 비활성화)에따라 리턴해줌  page에 원하는 페이지 번호를 입력 0부터 시작
     //
-    //Future<ApiResponseDtoListPostRespDto> findAllByUserId(int userId) async
+    //Future<ApiResponseDtoListPostRespDto> findAllByUserId(int userId, String postStatus, { int page }) async
     test('test findAllByUserId', () async {
       // TODO
     });
 
     // 카테고리에 해당하는 게시물 조회
     //
-    // 카테고리 아이디로 해당 카테고리에 속한 게시물을 조회합니다.
+    // 카테고리 아이디, 유저아이디로 해당 카테고리에 속한 게시물을 조회합니다.  page에 원하는 페이지 번호를 입력 0부터 시작
     //
-    //Future<ApiResponseDtoListPostRespDto> findByCategoryId(int categoryId) async
+    //Future<ApiResponseDtoListPostRespDto> findByCategoryId(int categoryId, int userId, { int notificationId, int page }) async
     test('test findByCategoryId', () async {
+      // TODO
+    });
+
+    // 게시물 상태변경
+    //
+    // 게시물 상태를 변경합니다. ACTIVE : 활성화 SOFTDELETE : 삭제(휴지통) INACTIVE : 비활성화
+    //
+    //Future<ApiResponseDtoObject> setPost(int postId, String postStatus) async
+    test('test setPost', () async {
       // TODO
     });
 
@@ -66,8 +75,8 @@ void main() {
     //
     // 게시물을 수정합니다.
     //
-    //Future<ApiResponseDtoObject> update1(PostUpdateReqDto postUpdateReqDto) async
-    test('test update1', () async {
+    //Future<ApiResponseDtoObject> update3(PostUpdateReqDto postUpdateReqDto) async
+    test('test update3', () async {
       // TODO
     });
 

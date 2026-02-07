@@ -22,7 +22,6 @@ import 'api_audio_control_widget.dart';
 import '../about_voice_comment/api_voice_comment_list_sheet.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
 import 'tag_pointer.dart';
-import 'package:soi/api/controller/media_controller.dart';
 
 /// API 사진/비디오 표시 위젯
 /// 게시물의 사진 또는 비디오를 표시하고, 댓글 아바타 및 캡션 오버레이를 관리합니다.
@@ -99,7 +98,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   bool _isCaptionExpanded = false;
   String? _uploaderProfileImageUrl;
   bool _isProfileLoading = false;
-  late final MediaController _mediaController;
 
   /// 댓글 목록을 해당 게시물 ID로부터 가져오는 getter
   List<Comment> get _postComments =>
@@ -150,23 +148,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     _isVideoCoverMode = widget.isFromCamera;
     _isShowingComments =
         _hasComments || _hasPendingMarker; // 댓글/대기 마커가 있으면 댓글 표시
-    _mediaController = Provider.of<MediaController>(
-      context,
-      listen: false,
-    ); // 미디어 컨트롤러 인스턴스 가져오기
     _scheduleProfileLoad(widget.post.userProfileImageKey); // 프로필 이미지 로드 예약
 
-    if (widget.post.postFileKey?.isNotEmpty ?? false) {
-      // 추가: presigned URL은 매번 달라질 수 있어서(=캐시 미스),
-      // 이미 발급/캐싱된 URL이 있으면 첫 프레임부터 바로 보여주도록 합니다.
-      postImageUrl = _mediaController.peekPresignedUrl(
-        widget.post.postFileKey!,
-      );
-
-      _loadPostImage(widget.post.postFileKey!); // 게시물 이미지 로드
-    } else {
-      postImageUrl = null; // 게시물 이미지 키가 없으면 null로 설정
-    }
+    // 서버에서 제공하는 postFileUrl을 직접 사용
+    final url = widget.post.postFileUrl;
+    postImageUrl = (url != null && url.isNotEmpty) ? url : null;
     _ensureVideoController(); // 비디오 컨트롤러 초기화
   }
 
@@ -212,74 +198,28 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         _isShowingComments = true;
       });
     }
-    // 프로필 이미지 키가 변경되었는지 확인
-    if (oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
+    // 프로필 이미지 URL이 변경되었는지 확인
+    if (oldWidget.post.userProfileImageUrl != widget.post.userProfileImageUrl ||
+        oldWidget.post.userProfileImageKey != widget.post.userProfileImageKey) {
       // 프로필 이미지가 변경되었으므로 프레임 콜백으로 로드 예약
       _scheduleProfileLoad(widget.post.userProfileImageKey);
     }
 
-    // 게시물 이미지 키가 변경되었는지 확인
-    if (oldWidget.post.postFileKey != widget.post.postFileKey) {
-      // 추가: 새 key의 presigned URL이 캐시에 있으면 즉시 UI에 반영(쉬머 최소화)
+    // 게시물 이미지 URL이 변경되었는지 확인
+    if (oldWidget.post.postFileUrl != widget.post.postFileUrl ||
+        oldWidget.post.postFileKey != widget.post.postFileKey) {
       _safeSetState(() {
-        final newKey = widget.post.postFileKey;
-        postImageUrl = (newKey != null && newKey.isNotEmpty)
-            ? _mediaController.peekPresignedUrl(newKey)
-            : null;
+        final url = widget.post.postFileUrl;
+        postImageUrl = (url != null && url.isNotEmpty) ? url : null;
       });
-
-      // 게시물 이미지가 변경되었으므로 새로 로드
-      _loadPostImage(widget.post.postFileKey!);
 
       // 비디오 컨트롤러 갱신
       _ensureVideoController(forceRecreate: true);
     }
-    // 게시물 이미지 키가 동일한 경우
+    // 게시물 이미지가 동일한 경우
     else {
       // 비디오 컨트롤러 갱신
       _ensureVideoController();
-    }
-  }
-
-  /// 게시물 이미지 로드
-  ///
-  /// Parameters:
-  ///   - [key]: 미디어 파일의 키
-  Future<void> _loadPostImage(String key) async {
-    // 키가 비어있는 경우 처리
-    if (widget.post.postFileKey == null || widget.post.postFileKey!.isEmpty) {
-      _safeSetState(() {
-        // 이미지 URL을 null로 설정
-        postImageUrl = null;
-      });
-      return;
-    }
-
-    try {
-      // 추가: 네트워크 요청 전에, 캐시된 presigned URL이 있으면 먼저 보여줍니다.
-      final cached = _mediaController.peekPresignedUrl(key);
-      if (cached != null && cached != postImageUrl) {
-        _safeSetState(() {
-          postImageUrl = cached;
-        });
-      }
-
-      // 미디어 컨트롤러를 사용하여 presignedURL 가져오기
-      final url = await _mediaController.getPresignedUrl(key);
-      if (!mounted) return;
-      _safeSetState(() {
-        // 가지고 온 URL을 postImageUrl에 설정
-        postImageUrl = url;
-      });
-
-      // 비디오 컨트롤러 갱신
-      _ensureVideoController();
-    } catch (_) {
-      if (!mounted) return;
-      _safeSetState(() {
-        // 오류 발생 시 이미지 URL을 null로 설정
-        postImageUrl = null;
-      });
     }
   }
 
@@ -415,36 +355,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     return null;
   }
 
-  /// 프로필 이미지 로드
-  ///
-  /// Parameters:
-  ///  - [key]: 프로필 이미지의 미디어 키
-  Future<void> _loadProfileImage(String? key) async {
-    // 키가 없거나 비어있는 경우 처리
-    if (key == null || key.isEmpty) {
-      _safeSetState(() {
-        // 프로필 이미지 URL을 null로 설정
-        _uploaderProfileImageUrl = null;
-        _isProfileLoading = false;
-      });
-      return;
-    }
-
-    _safeSetState(() => _isProfileLoading = true);
-    try {
-      final url = await _mediaController.getPresignedUrl(key);
-      if (!mounted) return;
-      _safeSetState(() {
-        _uploaderProfileImageUrl = url;
-        _isProfileLoading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      _safeSetState(() {
-        _uploaderProfileImageUrl = null;
-        _isProfileLoading = false;
-      });
-    }
+  /// 프로필 이미지 설정 (서버에서 제공하는 URL 직접 사용)
+  void _loadProfileImage(String? key) {
+    final url = widget.post.userProfileImageUrl;
+    _safeSetState(() {
+      _uploaderProfileImageUrl = (url != null && url.isNotEmpty) ? url : null;
+      _isProfileLoading = false;
+    });
   }
 
   /// 프로필 이미지 로드를 프레임 콜백으로 예약
@@ -657,10 +574,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     final minY = tipOffset.dy;
     final maxY = containerSize.height;
 
-    return Offset(
-      anchor.dx.clamp(minX, maxX),
-      anchor.dy.clamp(minY, maxY),
-    );
+    return Offset(anchor.dx.clamp(minX, maxX), anchor.dy.clamp(minY, maxY));
   }
 
   /// 댓글의 프로필 이미지를 위치에 맞게 배치
@@ -677,9 +591,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         .toList();
 
     final actualSize = Size(_imageWidth.w, _imageHeight.h);
-    final tagTipOffset = TagBubble.pointerTipOffset(
-      contentSize: _avatarSize,
-    );
+    final tagTipOffset = TagBubble.pointerTipOffset(contentSize: _avatarSize);
 
     return List<Widget>.generate(filteredComments.length, (index) {
       final comment = filteredComments[index];
@@ -744,9 +656,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       actualSize,
     );
     final clamped = _clampTagAnchor(absolute, actualSize, _avatarSize);
-    final tagTipOffset = TagBubble.pointerTipOffset(
-      contentSize: _avatarSize,
-    );
+    final tagTipOffset = TagBubble.pointerTipOffset(contentSize: _avatarSize);
 
     return Positioned(
       left: clamped.dx - tagTipOffset.dx,
@@ -927,6 +837,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                       imageUrl: _uploaderProfileImageUrl,
                       size: avatarSize,
                       isCaption: isCaption,
+                      cacheKey: widget.post.userProfileImageKey,
                     ),
             ),
             SizedBox(width: 12.w),
@@ -991,6 +902,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     double borderWidth = 1.5,
     double opacity = 1.0,
     bool? isCaption,
+    String? cacheKey,
   }) {
     Widget avatarContent;
 
@@ -999,6 +911,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       avatarContent = ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl,
+          cacheKey: cacheKey,
+          useOldImageOnUrlChange: cacheKey != null,
+          fadeInDuration: Duration.zero,
+          fadeOutDuration: Duration.zero,
           width: size,
           height: size,
           fit: BoxFit.cover,
@@ -1282,9 +1198,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                                   widget.categoryName,
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 16,
+                                    fontSize: 14.sp,
                                     fontWeight: FontWeight.w600,
-                                    fontFamily: 'Pretendard',
+                                    fontFamily: 'Pretendard Variable',
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
@@ -1306,31 +1222,34 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                             waveformData: waveformData,
                           ),
                         ),
-                      if (_hasCaption && !widget.post.hasAudio)
+                      if (!widget.post.hasAudio &&
+                          (_hasCaption || _hasComments || _hasPendingMarker))
                         Positioned(
                           left: 16.w,
-                          right: (_hasComments || _hasPendingMarker)
-                              ? 56.w
-                              : 16.w,
+                          right: 16.w,
                           bottom: 18.h,
-                          child: _buildCaptionOverlay(true),
-                        ),
-                      if (!widget.post.hasAudio &&
-                          (_hasComments || _hasPendingMarker))
-                        Positioned(
-                          bottom: 18.h,
-                          right: 18.w,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isShowingComments = !_isShowingComments;
-                              });
-                            },
-                            child: Image.asset(
-                              "assets/comment_profile_icon.png",
-                              width: 25,
-                              height: 25,
-                            ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_hasCaption)
+                                Expanded(child: _buildCaptionOverlay(true)),
+                              if (_hasComments || _hasPendingMarker) ...[
+                                if (_hasCaption) SizedBox(width: 12.w),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isShowingComments = !_isShowingComments;
+                                    });
+                                  },
+                                  child: Image.asset(
+                                    "assets/comment_profile_icon.png",
+                                    width: 25,
+                                    height: 25,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ..._buildCommentAvatars(),

@@ -26,6 +26,11 @@ void main() {
       // TODO
     });
 
+    // List<String> nicknames (default value: const [])
+    test('to test the property `nicknames`', () async {
+      // TODO
+    });
+
     // String categoryPhotoUrl
     test('to test the property `categoryPhotoUrl`', () async {
       // TODO
@@ -36,13 +41,33 @@ void main() {
       // TODO
     });
 
+    // int totalUserNum
+    test('to test the property `totalUserNum`', () async {
+      // TODO
+    });
+
     // bool isPinned
     test('to test the property `isPinned`', () async {
       // TODO
     });
 
-    // List<String> usersProfile (default value: const [])
-    test('to test the property `usersProfile`', () async {
+    // List<String> usersProfileKey (default value: const [])
+    test('to test the property `usersProfileKey`', () async {
+      // TODO
+    });
+
+    // List<String> usersProfileUrl (default value: const [])
+    test('to test the property `usersProfileUrl`', () async {
+      // TODO
+    });
+
+    // DateTime pinnedAt
+    test('to test the property `pinnedAt`', () async {
+      // TODO
+    });
+
+    // DateTime lastPhotoUploadedAt
+    test('to test the property `lastPhotoUploadedAt`', () async {
       // TODO
     });
 

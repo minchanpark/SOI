@@ -82,3 +82,6 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
+
+# Google Cloud Service Account credentials
+android/soi-sns-*.json

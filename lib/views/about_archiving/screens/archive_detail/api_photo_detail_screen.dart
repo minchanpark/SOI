@@ -15,7 +15,6 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
 import '../../../../api/models/comment_creation_result.dart';
-import '../../../../api/models/user.dart' as api_user;
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
 import '../../../../api/controller/category_controller.dart' as api_category;
@@ -398,35 +397,18 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _loadCommentsForPost(_posts[index].id);
   }
 
-  /// 현재 게시물 작성자의 프로필 이미지 로드
-  Future<void> _loadUserProfileImage() async {
+  /// 현재 게시물 작성자의 프로필 이미지 로드 (서버에서 제공하는 URL 직접 사용)
+  void _loadUserProfileImage() {
     final currentPost = _posts[_currentIndex];
-    try {
-      final userId = int.tryParse(currentPost.nickName);
-      api_user.User? user;
-      if (userId != null) {
-        user = await _userController?.getUser(userId);
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _userProfileImageUrl = user?.profileImageUrlKey ?? '';
-        _userName = currentPost.nickName;
-        _isLoadingProfile = false;
-        _userProfileImages[currentPost.nickName] = _userProfileImageUrl;
-        _profileLoadingStates[currentPost.nickName] = false;
-        _userNames[currentPost.nickName] = _userName;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _userName = currentPost.nickName;
-        _isLoadingProfile = false;
-        _userProfileImages[currentPost.nickName] = '';
-        _profileLoadingStates[currentPost.nickName] = false;
-        _userNames[currentPost.nickName] = currentPost.nickName;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _userProfileImageUrl = currentPost.userProfileImageUrl ?? '';
+      _userName = currentPost.nickName;
+      _isLoadingProfile = false;
+      _userProfileImages[currentPost.nickName] = _userProfileImageUrl;
+      _profileLoadingStates[currentPost.nickName] = false;
+      _userNames[currentPost.nickName] = _userName;
+    });
   }
 
   /// 게시물의 댓글 로드
@@ -967,29 +949,14 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   Future<void> _downloadPhoto() async {
     try {
       final currentPost = _posts[_currentIndex];
-      final mediaKey = currentPost.postFileKey;
+      final mediaUrl = currentPost.postFileUrl;
 
-      if (mediaKey == null || mediaKey.isEmpty) {
+      if (mediaUrl == null || mediaUrl.isEmpty) {
         _showSnackBar('다운로드할 미디어가 없습니다.');
         return;
       }
 
       final isVideo = currentPost.isVideo;
-
-      // MediaController로 presigned URL 획득
-      final mediaController = context.read<MediaController>();
-      String? mediaUrl = mediaKey;
-
-      // URL이 아닌 키인 경우 presigned URL 획득
-      final uri = Uri.tryParse(mediaKey);
-      if (uri == null || !uri.hasScheme) {
-        mediaUrl = await mediaController.getPresignedUrl(mediaKey);
-      }
-
-      if (mediaUrl == null || mediaUrl.isEmpty) {
-        _showSnackBar('미디어 URL을 가져올 수 없습니다.');
-        return;
-      }
 
       // 미디어 다운로드
       final response = await http.get(Uri.parse(mediaUrl));

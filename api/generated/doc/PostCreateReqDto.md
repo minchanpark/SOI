@@ -16,6 +16,8 @@ Name | Type | Description | Notes
 **categoryId** | **List<int>** |  | [optional] [default to const []]
 **waveformData** | **String** |  | [optional] 
 **duration** | **int** |  | [optional] 
+**savedAspectRatio** | **double** |  | [optional] 
+**isFromGallery** | **bool** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

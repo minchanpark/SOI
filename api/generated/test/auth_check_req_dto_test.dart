@@ -16,8 +16,8 @@ void main() {
   // final instance = AuthCheckReqDto();
 
   group('test AuthCheckReqDto', () {
-    // String phoneNumber
-    test('to test the property `phoneNumber`', () async {
+    // String phoneNum
+    test('to test the property `phoneNum`', () async {
       // TODO
     });
 

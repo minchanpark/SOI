@@ -203,7 +203,6 @@ class PostController extends ChangeNotifier {
   }
 
   /// 카테고리별 게시물 조회
-  ///
   /// 특정 카테고리에 속한 게시물만 조회합니다.
   ///
   /// Parameters:

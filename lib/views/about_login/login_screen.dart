@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
       resizeToAvoidBottomInset: false,
-      // ✅ 현재 로그인 플로우: 전화번호 → 인증번호
+      // 현재 로그인 플로우: 전화번호 → 인증번호
       body: PageView(
         controller: _pageController,
         physics: NeverScrollableScrollPhysics(),
@@ -85,9 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
             currentPage = index;
           });
         },
-        children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
+        //children: [_buildPhoneNumberPage(), _buildSmsCodePage()],
+        children: [_buildNicknameLoginPage()],
       ),
-      // ❌ 기존 닉네임 로그인 플로우 (보관용, 주석 처리)
+      // 기존 닉네임 로그인 플로우 (보관용, 주석 처리)
       // body: _buildNicknameLoginPage(),
     );
   }

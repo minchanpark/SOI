@@ -40,6 +40,7 @@ doc/FriendUpdateRespDto.md
 doc/NotificationAPIApi.md
 doc/NotificationGetAllRespDto.md
 doc/NotificationRespDto.md
+doc/NotificationUserRespDto.md
 doc/PostAPIApi.md
 doc/PostCreateReqDto.md
 doc/PostRespDto.md
@@ -106,6 +107,7 @@ lib/model/friend_resp_dto.dart
 lib/model/friend_update_resp_dto.dart
 lib/model/notification_get_all_resp_dto.dart
 lib/model/notification_resp_dto.dart
+lib/model/notification_user_resp_dto.dart
 lib/model/post_create_req_dto.dart
 lib/model/post_resp_dto.dart
 lib/model/post_update_req_dto.dart

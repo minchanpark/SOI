@@ -28,10 +28,19 @@ void main() {
 
     // 친구 추가
     //
-    // 사용자 id를 통해 친구추가를 합니다.
+    // 사용자 전화번호를 통해 친구추가를 합니다.
     //
-    //Future<ApiResponseDtoFriendRespDto> create(FriendReqDto friendReqDto) async
-    test('test create', () async {
+    //Future<ApiResponseDtoFriendRespDto> create2(FriendCreateReqDto friendCreateReqDto) async
+    test('test create2', () async {
+      // TODO
+    });
+
+    // nickname으로 친구 추가
+    //
+    // 사용자 nickName을 통해 친구추가를 합니다.
+    //
+    //Future<ApiResponseDtoFriendRespDto> createByNickName(FriendCreateByNickNameReqDto friendCreateByNickNameReqDto) async
+    test('test createByNickName', () async {
       // TODO
     });
 
@@ -48,8 +57,17 @@ void main() {
     //
     // 유저의 id (user_id 말고 그냥 id)를 통해 모든 친구를 조회합니다.
     //
-    //Future<ApiResponseDtoListUserFindRespDto> getAllFriend(int id) async
+    //Future<ApiResponseDtoListUserFindRespDto> getAllFriend(int id, String friendStatus) async
     test('test getAllFriend', () async {
+      // TODO
+    });
+
+    // 연락처에 있는 친구들 관계확인
+    //
+    // 유저의 id와 연락처에 있는 친구들 전화번호를 List로 받아서 관계를 리턴합니다.
+    //
+    //Future<ApiResponseDtoListFriendCheckRespDto> getAllFriend1(int id, List<String> friendPhoneNums) async
+    test('test getAllFriend1', () async {
       // TODO
     });
 
@@ -64,7 +82,7 @@ void main() {
 
     // 친구 상태 업데이트
     //
-    // 친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+    // 친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
     //
     //Future<ApiResponseDtoFriendRespDto> update(FriendUpdateRespDto friendUpdateRespDto) async
     test('test update', () async {

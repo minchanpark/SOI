@@ -248,6 +248,8 @@ class ApiClient {
           return NotificationGetAllRespDto.fromJson(value);
         case 'NotificationRespDto':
           return NotificationRespDto.fromJson(value);
+        case 'NotificationUserRespDto':
+          return NotificationUserRespDto.fromJson(value);
         case 'PostCreateReqDto':
           return PostCreateReqDto.fromJson(value);
         case 'PostRespDto':

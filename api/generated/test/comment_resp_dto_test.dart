@@ -16,8 +16,18 @@ void main() {
   // final instance = CommentRespDto();
 
   group('test CommentRespDto', () {
+    // int id
+    test('to test the property `id`', () async {
+      // TODO
+    });
+
     // String userProfile
     test('to test the property `userProfile`', () async {
+      // TODO
+    });
+
+    // String nickname
+    test('to test the property `nickname`', () async {
       // TODO
     });
 
@@ -36,8 +46,8 @@ void main() {
       // TODO
     });
 
-    // String waveformdata
-    test('to test the property `waveformdata`', () async {
+    // String waveFormData
+    test('to test the property `waveFormData`', () async {
       // TODO
     });
 

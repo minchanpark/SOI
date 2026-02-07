@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/controller/category_controller.dart' as api_category;
@@ -304,7 +305,29 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: Colors.black, body: _buildBody());
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        centerTitle: true,
+        title: Column(
+          children: [
+            Text(
+              'SOI',
+              style: TextStyle(
+                color: const Color(0xfff9f9f9),
+                fontSize: 20.sp,
+                fontFamily: GoogleFonts.inter().fontFamily,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 30.h),
+          ],
+        ),
+        backgroundColor: Colors.black,
+        toolbarHeight: 70.h,
+      ),
+      body: _buildBody(),
+    );
   }
 
   Widget _buildBody() {

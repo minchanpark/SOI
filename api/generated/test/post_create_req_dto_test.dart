@@ -16,13 +16,13 @@ void main() {
   // final instance = PostCreateReqDto();
 
   group('test PostCreateReqDto', () {
-    // int id
-    test('to test the property `id`', () async {
+    // int userId
+    test('to test the property `userId`', () async {
       // TODO
     });
 
-    // int userId
-    test('to test the property `userId`', () async {
+    // String nickname
+    test('to test the property `nickname`', () async {
       // TODO
     });
 
@@ -31,12 +31,12 @@ void main() {
       // TODO
     });
 
-    // String postFileKey
+    // List<String> postFileKey (default value: const [])
     test('to test the property `postFileKey`', () async {
       // TODO
     });
 
-    // String audioFileKey
+    // List<String> audioFileKey (default value: const [])
     test('to test the property `audioFileKey`', () async {
       // TODO
     });
@@ -53,6 +53,16 @@ void main() {
 
     // int duration
     test('to test the property `duration`', () async {
+      // TODO
+    });
+
+    // double savedAspectRatio
+    test('to test the property `savedAspectRatio`', () async {
+      // TODO
+    });
+
+    // bool isFromGallery
+    test('to test the property `isFromGallery`', () async {
       // TODO
     });
 

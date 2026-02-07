@@ -221,7 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<File> _compressProfileImage(File file) async {
     try {
       final targetPath =
-          '${file.parent.path}/profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          '${file.parent.path}/profile_${DateTime.now().millisecondsSinceEpoch}.webp';
 
       final compressedFile = await FlutterImageCompress.compressAndGetFile(
         file.absolute.path,
@@ -229,7 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         quality: 70,
         minWidth: 1080,
         minHeight: 1080,
-        format: CompressFormat.jpeg,
+        format: CompressFormat.webp,
       );
 
       // XFile을 File로 변환

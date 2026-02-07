@@ -5,7 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api/controller/media_controller.dart';
 import 'package:soi/views/about_archiving/screens/category_edit/category_editor_screen.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
 import 'package:soi/views/about_friends/friend_list_add_screen.dart';
@@ -17,9 +16,12 @@ import '../../../../api/controller/user_controller.dart';
 import '../../../../api/models/category.dart';
 import '../../../../api/models/friend.dart';
 import '../../../../api/models/post.dart';
+import '../../../../api/models/user.dart';
 import '../../../../theme/theme.dart';
 import '../../widgets/archive_card_widget/archive_card_placeholders.dart';
 import '../../widgets/api_photo_grid_item.dart';
+
+import 'package:flutter/foundation.dart' as foundation show kDebugMode;
 
 /// 카테고리 내에서 사진(포스트)들을 그리드 형식으로 보여주는 화면
 /// Post를 조회하여서 카테고리 내에 사진이 포함된 포스트들을 필터링 후 표시
@@ -46,8 +48,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   List<Post> _posts = []; // 로드된 포스트 목록
   Category? _category; // 갱신된 카테고리 정보
 
-  List<String> _postImageUrls = []; // 포스트 이미지 URL 목록
-
   Timer? _autoRefreshTimer; // 자동 새로고침 타이머
   static const Duration _autoRefreshInterval = Duration(
     minutes: 30,
@@ -55,7 +55,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
   PostController? postController;
   UserController? userController;
-  MediaController? mediaController;
   FriendController? friendController;
   VoidCallback? _postsChangedListener; // 포스트 변경을 감지하는 리스너
 
@@ -79,7 +78,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       // 게시물 추가 알림을 놓치지 않도록 즉시 등록
       postController = Provider.of<PostController>(context, listen: false);
       userController = Provider.of<UserController>(context, listen: false);
-      mediaController = Provider.of<MediaController>(context, listen: false);
       friendController = Provider.of<FriendController>(context, listen: false);
       _attachPostChangedListenerIfNeeded();
 
@@ -130,7 +128,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         if (mounted) {
           setState(() {
             _posts = cached.posts; // 캐시된 포스트 사용
-            _postImageUrls = cached.imageUrls; // 캐시된 이미지 URL 사용
             _isLoading = false; // 로딩 완료
             _errorMessageKey = null; // 에러 없음
           });
@@ -143,18 +140,32 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         _errorMessageKey = null;
       });
 
-      // 카테고리 내 포스트 조회
-      final posts = await postController!.getPostsByCategory(
-        categoryId: _currentCategory.id,
-        userId: currentUser.id,
-        notificationId: null,
-      );
+      // ⚡ 카테고리 포스트 조회 & 차단 유저 조회를 병렬로 실행
+      // 두 API는 서로 의존성이 없으므로 동시에 호출하여 대기 시간을 절반으로 줄임
+      final stopwatch = Stopwatch()..start();
 
-      final blockedUsers = await friendController!.getAllFriends(
-        userId: currentUser.id,
-        status: FriendStatus.blocked,
-      );
+      // 병렬 API 호출
+      final results = await Future.wait([
+        postController!.getPostsByCategory(
+          categoryId: _currentCategory.id,
+          userId: currentUser.id,
+          notificationId: null,
+        ),
+        friendController!.getAllFriends(
+          userId: currentUser.id,
+          status: FriendStatus.blocked,
+        ),
+      ]);
+
+      final posts = results[0] as List<Post>;
+      final blockedUsers = results[1] as List<User>;
       final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+
+      if (foundation.kDebugMode) {
+        debugPrint(
+          '⏱️ [_loadPosts] API 병렬 호출 (posts + blocked): ${stopwatch.elapsedMilliseconds}ms',
+        );
+      }
 
       // 미디어(사진/비디오)가 포함된 포스트 필터링
       final mediaPosts = posts
@@ -165,23 +176,18 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
           })
           .toList(growable: false);
 
-      // 파일 키 목록 생성
-      final postFileKeys = mediaPosts.map((e) => e.postFileKey!).toList();
-
-      // Presigned URL 발급
-      final urls = await mediaController!.getPresignedUrls(postFileKeys);
-
-      // post와 URL 정렬 맞추기
-      final alignedUrls = List<String>.generate(
-        mediaPosts.length,
-        (index) => index < urls.length ? urls[index] : '',
-        growable: false,
-      );
+      if (foundation.kDebugMode) {
+        debugPrint(
+          '⏱️ [_loadPosts] 필터링 완료 (${mediaPosts.length}개 미디어 포스트): ${stopwatch.elapsedMilliseconds}ms',
+        );
+        debugPrint(
+          '⏱️ [_loadPosts] 총 소요: ${stopwatch.elapsedMilliseconds}ms',
+        );
+      }
 
       if (mounted) {
         setState(() {
           _posts = mediaPosts;
-          _postImageUrls = alignedUrls;
           _isLoading = false;
         });
       }
@@ -189,7 +195,6 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       // 캐시에 저장
       _categoryPostsCache[cacheKey] = _CategoryPostsCacheEntry(
         posts: List<Post>.unmodifiable(mediaPosts),
-        imageUrls: List<String>.unmodifiable(alignedUrls),
         cachedAt: DateTime.now(),
       );
     } catch (e) {
@@ -482,13 +487,10 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
-          final postImage = index < _postImageUrls.length
-              ? _postImageUrls[index]
-              : '';
 
           return ApiPhotoGridItem(
             post: post,
-            postUrl: postImage,
+            postUrl: post.postFileUrl ?? '',
             allPosts: _posts,
             currentIndex: index,
             categoryName: _currentCategory.name,
@@ -536,12 +538,10 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 /// 카테고리별 포스트 캐시 항목 클래스
 class _CategoryPostsCacheEntry {
   final List<Post> posts;
-  final List<String> imageUrls;
   final DateTime cachedAt;
 
   const _CategoryPostsCacheEntry({
     required this.posts,
-    required this.imageUrls,
     required this.cachedAt,
   });
 }

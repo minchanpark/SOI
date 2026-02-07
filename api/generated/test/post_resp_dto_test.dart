@@ -16,8 +16,13 @@ void main() {
   // final instance = PostRespDto();
 
   group('test PostRespDto', () {
-    // String userId
-    test('to test the property `userId`', () async {
+    // int id
+    test('to test the property `id`', () async {
+      // TODO
+    });
+
+    // String nickname
+    test('to test the property `nickname`', () async {
       // TODO
     });
 
@@ -26,8 +31,23 @@ void main() {
       // TODO
     });
 
+    // String userProfileImageKey
+    test('to test the property `userProfileImageKey`', () async {
+      // TODO
+    });
+
+    // String userProfileImageUrl
+    test('to test the property `userProfileImageUrl`', () async {
+      // TODO
+    });
+
     // String postFileKey
     test('to test the property `postFileKey`', () async {
+      // TODO
+    });
+
+    // String postFileUrl
+    test('to test the property `postFileUrl`', () async {
       // TODO
     });
 

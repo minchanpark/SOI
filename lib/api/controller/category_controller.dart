@@ -16,7 +16,7 @@ class CategoryController extends ChangeNotifier {
   static const Duration _cacheTimeout = Duration(seconds: 30);
 
   // 현재 표시 중인 카테고리 (마지막으로 로드한 filter의 데이터)
-  List<model.Category> _currentCategories = [];
+  List<model.Category> _currentCategories = const [];
 
   // 로딩 상태
   bool _isLoading = false;
@@ -37,11 +37,15 @@ class CategoryController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// 캐시된 카테고리 목록 (현재 filter 기준)
-  List<model.Category> get categories => List.unmodifiable(_currentCategories);
+  ///
+  /// 캐시에 불변 리스트로 저장되므로 별도 래핑 없이 바로 반환합니다.
+  List<model.Category> get categories => _currentCategories;
 
   /// filter별 캐시된 카테고리 목록 조회
+  ///
+  /// 캐시에 불변 리스트로 저장되므로 별도 래핑 없이 바로 반환합니다.
   List<model.Category> getCategoriesByFilter(model.CategoryFilter filter) {
-    return List.unmodifiable(_categoriesCache[filter] ?? []);
+    return _categoriesCache[filter] ?? const [];
   }
 
   /// 전체 카테고리 (ALL filter)
@@ -87,9 +91,11 @@ class CategoryController extends ChangeNotifier {
             _categoriesCache.containsKey(model.CategoryFilter.private_);
 
         if (hasAllCaches) {
-          _currentCategories = _categoriesCache[filter]!;
-
-          notifyListeners();
+          final cached = _categoriesCache[filter]!;
+          if (!identical(_currentCategories, cached)) {
+            _currentCategories = cached;
+            notifyListeners();
+          }
           return _currentCategories;
         }
       }
@@ -98,8 +104,11 @@ class CategoryController extends ChangeNotifier {
         // PUBLIC 또는 PRIVATE 필터: 해당 필터만 캐시되어 있으면 됨
         if (_categoriesCache.containsKey(filter) &&
             _categoriesCache[filter]!.isNotEmpty) {
-          _currentCategories = _categoriesCache[filter]!;
-          notifyListeners();
+          final cached = _categoriesCache[filter]!;
+          if (!identical(_currentCategories, cached)) {
+            _currentCategories = cached;
+            notifyListeners();
+          }
           return _currentCategories;
         }
       }
@@ -137,14 +146,17 @@ class CategoryController extends ChangeNotifier {
           ),
         ]);
 
-        // 각 filter별 캐시 저장
-        _categoriesCache[model.CategoryFilter.all] =
-            results[0]; // 전체 카테고리 목록 캐시를 저장
-        _categoriesCache[model.CategoryFilter.public_] =
-            results[1]; // 공개 카테고리 목록 캐시를 저장
-        _categoriesCache[model.CategoryFilter.private_] =
-            results[2]; // 비공개 카테고리 목록 캐시를 저장
-        _currentCategories = results[0]; // ALL을 현재 카테고리로 설정
+        // 각 filter별 캐시 저장 (불변 리스트로 저장하여 getter에서 래핑 비용 제거)
+        _categoriesCache[model.CategoryFilter.all] = List.unmodifiable(
+          results[0],
+        );
+        _categoriesCache[model.CategoryFilter.public_] = List.unmodifiable(
+          results[1],
+        );
+        _categoriesCache[model.CategoryFilter.private_] = List.unmodifiable(
+          results[2],
+        );
+        _currentCategories = _categoriesCache[model.CategoryFilter.all]!;
       } else {
         // PUBLIC 또는 PRIVATE 필터: 해당 필터만 로드
         final categories = await _categoryService.getCategories(
@@ -155,8 +167,8 @@ class CategoryController extends ChangeNotifier {
           maxPages: maxPages,
         );
 
-        _categoriesCache[filter] = categories;
-        _currentCategories = categories;
+        _categoriesCache[filter] = List.unmodifiable(categories);
+        _currentCategories = _categoriesCache[filter]!;
       }
 
       _lastLoadedUserId = userId;
@@ -175,7 +187,7 @@ class CategoryController extends ChangeNotifier {
   /// 캐시 무효화
   void invalidateCache() {
     _categoriesCache.clear();
-    _currentCategories = [];
+    _currentCategories = const [];
     _lastLoadedUserId = null;
     _lastLoadTime = null;
     notifyListeners();
@@ -189,28 +201,23 @@ class CategoryController extends ChangeNotifier {
   void markCategoryAsViewed(int categoryId) {
     bool updated = false;
 
-    bool updateList(List<model.Category>? categories) {
-      if (categories == null) return false;
+    // 불변 리스트 대응: 원본을 수정하지 않고 새 리스트를 생성하여 반환
+    List<model.Category> updateList(List<model.Category> categories) {
       final index = categories.indexWhere((c) => c.id == categoryId);
-      if (index == -1) return false;
+      if (index == -1) return categories;
       final target = categories[index];
-      if (!target.isNew) return false;
-      categories[index] = target.copyWith(isNew: false);
-      return true;
+      if (!target.isNew) return categories;
+      final newList = List<model.Category>.from(categories);
+      newList[index] = target.copyWith(isNew: false);
+      updated = true;
+      return List.unmodifiable(newList);
     }
 
     // 현재 목록 갱신
-    updated = updateList(_currentCategories) || updated;
+    _currentCategories = updateList(_currentCategories);
 
     // 필터별 캐시 갱신
-    _categoriesCache.updateAll((key, value) {
-      final list = List<model.Category>.from(value);
-      if (updateList(list)) {
-        updated = true;
-        return list;
-      }
-      return value;
-    });
+    _categoriesCache.updateAll((key, value) => updateList(value));
 
     if (updated) {
       notifyListeners();
@@ -229,7 +236,7 @@ class CategoryController extends ChangeNotifier {
   ) {
     bool updated = false;
 
-    // 특정 카테고리만 갱신하는 내부 함수
+    // 특정 카테고리만 갱신하는 내부 함수 (불변 리스트 유지)
     List<model.Category> updateList(List<model.Category> categories) {
       final index = categories.indexWhere((c) => c.id == categoryId);
       if (index == -1) return categories;
@@ -237,7 +244,7 @@ class CategoryController extends ChangeNotifier {
       final newList = List<model.Category>.from(categories);
       newList[index] = update(newList[index]);
       updated = true;
-      return newList;
+      return List.unmodifiable(newList);
     }
 
     // 현재 목록 갱신
@@ -670,11 +677,13 @@ class CategoryController extends ChangeNotifier {
   }
 
   void _setLoading(bool value) {
+    if (_isLoading == value) return;
     _isLoading = value;
     notifyListeners();
   }
 
   void _setError(String message) {
+    if (_errorMessage == message) return;
     _errorMessage = message;
     notifyListeners();
   }

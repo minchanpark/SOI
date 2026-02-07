@@ -24,13 +24,13 @@ class VideoThumbnailGenerator {
       // 임시 디렉토리 가져오기
       final tempDir = await getTemporaryDirectory();
       final thumbnailPath =
-          '${tempDir.path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          '${tempDir.path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.webp';
 
       // video_thumbnail 패키지를 사용하여 썸네일 생성
       final thumbnail = await VideoThumbnail.thumbnailFile(
         video: videoPath,
         thumbnailPath: thumbnailPath,
-        imageFormat: ImageFormat.JPEG,
+        imageFormat: ImageFormat.WEBP,
         maxWidth: maxWidth,
         maxHeight: maxHeight,
         quality: quality,

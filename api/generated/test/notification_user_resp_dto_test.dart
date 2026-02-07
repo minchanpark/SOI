@@ -11,18 +11,13 @@
 import 'package:soi_api_client/api.dart';
 import 'package:test/test.dart';
 
-// tests for UserFindRespDto
+// tests for NotificationUserRespDto
 void main() {
-  // final instance = UserFindRespDto();
+  // final instance = NotificationUserRespDto();
 
-  group('test UserFindRespDto', () {
+  group('test NotificationUserRespDto', () {
     // int id
     test('to test the property `id`', () async {
-      // TODO
-    });
-
-    // String name
-    test('to test the property `name`', () async {
       // TODO
     });
 
@@ -31,13 +26,13 @@ void main() {
       // TODO
     });
 
-    // String profileImageKey
-    test('to test the property `profileImageKey`', () async {
+    // String name
+    test('to test the property `name`', () async {
       // TODO
     });
 
-    // bool active
-    test('to test the property `active`', () async {
+    // String profileImageKey
+    test('to test the property `profileImageKey`', () async {
       // TODO
     });
 

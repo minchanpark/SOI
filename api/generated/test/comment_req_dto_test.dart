@@ -36,8 +36,8 @@ void main() {
       // TODO
     });
 
-    // String audioUrl
-    test('to test the property `audioUrl`', () async {
+    // String audioKey
+    test('to test the property `audioKey`', () async {
       // TODO
     });
 

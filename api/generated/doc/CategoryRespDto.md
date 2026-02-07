@@ -11,11 +11,12 @@ Name | Type | Description | Notes
 **id** | **int** |  | [optional] 
 **name** | **String** |  | [optional] 
 **nicknames** | **List<String>** |  | [optional] [default to const []]
-**categoryPhotoKey** | **String** |  | [optional] 
+**categoryPhotoUrl** | **String** |  | [optional] 
 **isNew** | **bool** |  | [optional] 
 **totalUserNum** | **int** |  | [optional] 
 **isPinned** | **bool** |  | [optional] 
 **usersProfileKey** | **List<String>** |  | [optional] [default to const []]
+**usersProfileUrl** | **List<String>** |  | [optional] [default to const []]
 **pinnedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **lastPhotoUploadedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 

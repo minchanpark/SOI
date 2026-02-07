@@ -1354,7 +1354,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       final thumbnailPath = await VideoThumbnail.thumbnailFile(
         video: videoPath,
         thumbnailPath: tempDir.path,
-        imageFormat: ImageFormat.JPEG,
+        imageFormat: ImageFormat.WEBP,
         maxWidth: 720,
         quality: 80,
       );
@@ -1632,7 +1632,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }) async {
     final targetPath = p.join(
       tempDir.path,
-      'soi_upload_${DateTime.now().millisecondsSinceEpoch}_$suffix.jpg',
+      'soi_upload_${DateTime.now().millisecondsSinceEpoch}_$suffix.webp',
     );
 
     final compressedXFile = await FlutterImageCompress.compressAndGetFile(
@@ -1641,7 +1641,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       quality: quality,
       minWidth: dimension,
       minHeight: dimension,
-      format: CompressFormat.jpeg,
+      format: CompressFormat.webp,
     );
 
     return compressedXFile != null ? File(compressedXFile.path) : null;

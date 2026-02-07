@@ -197,6 +197,10 @@ class _CategoryCoverPhotoSelectorScreenState
                           children: [
                             CachedNetworkImage(
                               imageUrl: photo.url,
+                              cacheKey: photo.key,
+                              useOldImageOnUrlChange: true,
+                              fadeInDuration: Duration.zero,
+                              fadeOutDuration: Duration.zero,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
