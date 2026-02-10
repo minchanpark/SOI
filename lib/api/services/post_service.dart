@@ -71,6 +71,8 @@ class PostService {
     List<int> categoryIds = const [],
     String? waveformData,
     int? duration,
+    double? savedAspectRatio,
+    bool? isFromGallery,
   }) async {
     try {
       final dto = PostCreateReqDto(
@@ -82,6 +84,8 @@ class PostService {
         categoryId: categoryIds,
         waveformData: waveformData,
         duration: duration,
+        savedAspectRatio: savedAspectRatio,
+        isFromGallery: isFromGallery,
       );
 
       final response = await _postApi.create1(dto);
@@ -117,6 +121,8 @@ class PostService {
     String? audioFileKey,
     String? waveformData,
     int? duration,
+    double? savedAspectRatio,
+    bool? isFromGallery,
   }) async {
     try {
       final dto = PostCreateReqDto(
@@ -128,6 +134,8 @@ class PostService {
         audioFileKey: _wrapFileKey(audioFileKey),
         waveformData: waveformData,
         duration: duration,
+        savedAspectRatio: savedAspectRatio,
+        isFromGallery: isFromGallery,
       );
 
       final response = await _postApi.create1WithHttpInfo(dto);

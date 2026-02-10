@@ -95,6 +95,8 @@ class PostController extends ChangeNotifier {
     List<int> categoryIds = const [],
     String? waveformData,
     int? duration,
+    double? savedAspectRatio,
+    bool? isFromGallery,
   }) async {
     _setLoading(true);
     _clearError();
@@ -116,6 +118,8 @@ class PostController extends ChangeNotifier {
         categoryIds: categoryIds,
         waveformData: waveformData,
         duration: duration,
+        savedAspectRatio: savedAspectRatio,
+        isFromGallery: isFromGallery,
       );
       if (kDebugMode) debugPrint("[PostController] 게시물 생성 결과: $result");
       _setLoading(false);
@@ -138,6 +142,8 @@ class PostController extends ChangeNotifier {
     String? audioFileKey,
     String? waveformData,
     int? duration,
+    double? savedAspectRatio,
+    bool? isFromGallery,
   }) async {
     debugPrint("[PostController] createPostAndReturnId 호출됨");
     try {
@@ -157,6 +163,8 @@ class PostController extends ChangeNotifier {
         audioFileKey: audioFileKey,
         waveformData: waveformData,
         duration: duration,
+        savedAspectRatio: savedAspectRatio,
+        isFromGallery: isFromGallery,
       );
     } catch (e) {
       _setError('[PostController]게시물 생성 실패: $e');
