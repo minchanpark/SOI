@@ -10,12 +10,12 @@
 
 part of openapi.api;
 
-class ApiResponseDtoListCommentRespDto {
-  /// Returns a new [ApiResponseDtoListCommentRespDto] instance.
-  ApiResponseDtoListCommentRespDto({
-    this.success,
-    this.data = const [],
-    this.message,
+class SortObject {
+  /// Returns a new [SortObject] instance.
+  SortObject({
+    this.sorted,
+    this.empty,
+    this.unsorted,
   });
 
   ///
@@ -24,9 +24,7 @@ class ApiResponseDtoListCommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  bool? success;
-
-  List<CommentRespDto> data;
+  bool? sorted;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -34,44 +32,56 @@ class ApiResponseDtoListCommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? message;
+  bool? empty;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? unsorted;
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is ApiResponseDtoListCommentRespDto &&
-    other.success == success &&
-    _deepEquality.equals(other.data, data) &&
-    other.message == message;
+  bool operator ==(Object other) => identical(this, other) || other is SortObject &&
+    other.sorted == sorted &&
+    other.empty == empty &&
+    other.unsorted == unsorted;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (success == null ? 0 : success!.hashCode) +
-    (data.hashCode) +
-    (message == null ? 0 : message!.hashCode);
+    (sorted == null ? 0 : sorted!.hashCode) +
+    (empty == null ? 0 : empty!.hashCode) +
+    (unsorted == null ? 0 : unsorted!.hashCode);
 
   @override
-  String toString() => 'ApiResponseDtoListCommentRespDto[success=$success, data=$data, message=$message]';
+  String toString() => 'SortObject[sorted=$sorted, empty=$empty, unsorted=$unsorted]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.success != null) {
-      json[r'success'] = this.success;
+    if (this.sorted != null) {
+      json[r'sorted'] = this.sorted;
     } else {
-      json[r'success'] = null;
+      json[r'sorted'] = null;
     }
-      json[r'data'] = this.data;
-    if (this.message != null) {
-      json[r'message'] = this.message;
+    if (this.empty != null) {
+      json[r'empty'] = this.empty;
     } else {
-      json[r'message'] = null;
+      json[r'empty'] = null;
+    }
+    if (this.unsorted != null) {
+      json[r'unsorted'] = this.unsorted;
+    } else {
+      json[r'unsorted'] = null;
     }
     return json;
   }
 
-  /// Returns a new [ApiResponseDtoListCommentRespDto] instance and imports its values from
+  /// Returns a new [SortObject] instance and imports its values from
   /// [value] if it's a [Map], null otherwise.
   // ignore: prefer_constructors_over_static_methods
-  static ApiResponseDtoListCommentRespDto? fromJson(dynamic value) {
+  static SortObject? fromJson(dynamic value) {
     if (value is Map) {
       final json = value.cast<String, dynamic>();
 
@@ -80,26 +90,26 @@ class ApiResponseDtoListCommentRespDto {
       // Note 2: this code is stripped in release mode!
       assert(() {
         requiredKeys.forEach((key) {
-          assert(json.containsKey(key), 'Required key "ApiResponseDtoListCommentRespDto[$key]" is missing from JSON.');
-          assert(json[key] != null, 'Required key "ApiResponseDtoListCommentRespDto[$key]" has a null value in JSON.');
+          assert(json.containsKey(key), 'Required key "SortObject[$key]" is missing from JSON.');
+          assert(json[key] != null, 'Required key "SortObject[$key]" has a null value in JSON.');
         });
         return true;
       }());
 
-      return ApiResponseDtoListCommentRespDto(
-        success: mapValueOfType<bool>(json, r'success'),
-        data: CommentRespDto.listFromJson(json[r'data']),
-        message: mapValueOfType<String>(json, r'message'),
+      return SortObject(
+        sorted: mapValueOfType<bool>(json, r'sorted'),
+        empty: mapValueOfType<bool>(json, r'empty'),
+        unsorted: mapValueOfType<bool>(json, r'unsorted'),
       );
     }
     return null;
   }
 
-  static List<ApiResponseDtoListCommentRespDto> listFromJson(dynamic json, {bool growable = false,}) {
-    final result = <ApiResponseDtoListCommentRespDto>[];
+  static List<SortObject> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <SortObject>[];
     if (json is List && json.isNotEmpty) {
       for (final row in json) {
-        final value = ApiResponseDtoListCommentRespDto.fromJson(row);
+        final value = SortObject.fromJson(row);
         if (value != null) {
           result.add(value);
         }
@@ -108,12 +118,12 @@ class ApiResponseDtoListCommentRespDto {
     return result.toList(growable: growable);
   }
 
-  static Map<String, ApiResponseDtoListCommentRespDto> mapFromJson(dynamic json) {
-    final map = <String, ApiResponseDtoListCommentRespDto>{};
+  static Map<String, SortObject> mapFromJson(dynamic json) {
+    final map = <String, SortObject>{};
     if (json is Map && json.isNotEmpty) {
       json = json.cast<String, dynamic>(); // ignore: parameter_assignments
       for (final entry in json.entries) {
-        final value = ApiResponseDtoListCommentRespDto.fromJson(entry.value);
+        final value = SortObject.fromJson(entry.value);
         if (value != null) {
           map[entry.key] = value;
         }
@@ -122,14 +132,14 @@ class ApiResponseDtoListCommentRespDto {
     return map;
   }
 
-  // maps a json object with a list of ApiResponseDtoListCommentRespDto-objects as value to a dart map
-  static Map<String, List<ApiResponseDtoListCommentRespDto>> mapListFromJson(dynamic json, {bool growable = false,}) {
-    final map = <String, List<ApiResponseDtoListCommentRespDto>>{};
+  // maps a json object with a list of SortObject-objects as value to a dart map
+  static Map<String, List<SortObject>> mapListFromJson(dynamic json, {bool growable = false,}) {
+    final map = <String, List<SortObject>>{};
     if (json is Map && json.isNotEmpty) {
       // ignore: parameter_assignments
       json = json.cast<String, dynamic>();
       for (final entry in json.entries) {
-        map[entry.key] = ApiResponseDtoListCommentRespDto.listFromJson(entry.value, growable: growable,);
+        map[entry.key] = SortObject.listFromJson(entry.value, growable: growable,);
       }
     }
     return map;

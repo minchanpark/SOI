@@ -14,16 +14,21 @@ class CommentRespDto {
   /// Returns a new [CommentRespDto] instance.
   CommentRespDto({
     this.id,
-    this.userProfile,
+    this.userProfileUrl,
+    this.userProfileKey,
+    this.userId,
     this.nickname,
     this.text,
     this.emojiId,
+    this.replyUserName,
     this.audioUrl,
     this.waveFormData,
     this.duration,
     this.locationX,
     this.locationY,
     this.commentType,
+    this.fileUrl,
+    this.fileKey,
   });
 
   ///
@@ -40,7 +45,23 @@ class CommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userProfile;
+  String? userProfileUrl;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userProfileKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? userId;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -65,6 +86,14 @@ class CommentRespDto {
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
   int? emojiId;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? replyUserName;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -108,37 +137,63 @@ class CommentRespDto {
 
   CommentRespDtoCommentTypeEnum? commentType;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? fileUrl;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? fileKey;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is CommentRespDto &&
     other.id == id &&
-    other.userProfile == userProfile &&
+    other.userProfileUrl == userProfileUrl &&
+    other.userProfileKey == userProfileKey &&
+    other.userId == userId &&
     other.nickname == nickname &&
     other.text == text &&
     other.emojiId == emojiId &&
+    other.replyUserName == replyUserName &&
     other.audioUrl == audioUrl &&
     other.waveFormData == waveFormData &&
     other.duration == duration &&
     other.locationX == locationX &&
     other.locationY == locationY &&
-    other.commentType == commentType;
+    other.commentType == commentType &&
+    other.fileUrl == fileUrl &&
+    other.fileKey == fileKey;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
-    (userProfile == null ? 0 : userProfile!.hashCode) +
+    (userProfileUrl == null ? 0 : userProfileUrl!.hashCode) +
+    (userProfileKey == null ? 0 : userProfileKey!.hashCode) +
+    (userId == null ? 0 : userId!.hashCode) +
     (nickname == null ? 0 : nickname!.hashCode) +
     (text == null ? 0 : text!.hashCode) +
     (emojiId == null ? 0 : emojiId!.hashCode) +
+    (replyUserName == null ? 0 : replyUserName!.hashCode) +
     (audioUrl == null ? 0 : audioUrl!.hashCode) +
     (waveFormData == null ? 0 : waveFormData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (locationX == null ? 0 : locationX!.hashCode) +
     (locationY == null ? 0 : locationY!.hashCode) +
-    (commentType == null ? 0 : commentType!.hashCode);
+    (commentType == null ? 0 : commentType!.hashCode) +
+    (fileUrl == null ? 0 : fileUrl!.hashCode) +
+    (fileKey == null ? 0 : fileKey!.hashCode);
 
   @override
-  String toString() => 'CommentRespDto[id=$id, userProfile=$userProfile, nickname=$nickname, text=$text, emojiId=$emojiId, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
+  String toString() => 'CommentRespDto[id=$id, userProfileUrl=$userProfileUrl, userProfileKey=$userProfileKey, userId=$userId, nickname=$nickname, text=$text, emojiId=$emojiId, replyUserName=$replyUserName, audioUrl=$audioUrl, waveFormData=$waveFormData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType, fileUrl=$fileUrl, fileKey=$fileKey]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -147,10 +202,20 @@ class CommentRespDto {
     } else {
       json[r'id'] = null;
     }
-    if (this.userProfile != null) {
-      json[r'userProfile'] = this.userProfile;
+    if (this.userProfileUrl != null) {
+      json[r'userProfileUrl'] = this.userProfileUrl;
     } else {
-      json[r'userProfile'] = null;
+      json[r'userProfileUrl'] = null;
+    }
+    if (this.userProfileKey != null) {
+      json[r'userProfileKey'] = this.userProfileKey;
+    } else {
+      json[r'userProfileKey'] = null;
+    }
+    if (this.userId != null) {
+      json[r'userId'] = this.userId;
+    } else {
+      json[r'userId'] = null;
     }
     if (this.nickname != null) {
       json[r'nickname'] = this.nickname;
@@ -166,6 +231,11 @@ class CommentRespDto {
       json[r'emojiId'] = this.emojiId;
     } else {
       json[r'emojiId'] = null;
+    }
+    if (this.replyUserName != null) {
+      json[r'replyUserName'] = this.replyUserName;
+    } else {
+      json[r'replyUserName'] = null;
     }
     if (this.audioUrl != null) {
       json[r'audioUrl'] = this.audioUrl;
@@ -197,6 +267,16 @@ class CommentRespDto {
     } else {
       json[r'commentType'] = null;
     }
+    if (this.fileUrl != null) {
+      json[r'fileUrl'] = this.fileUrl;
+    } else {
+      json[r'fileUrl'] = null;
+    }
+    if (this.fileKey != null) {
+      json[r'fileKey'] = this.fileKey;
+    } else {
+      json[r'fileKey'] = null;
+    }
     return json;
   }
 
@@ -220,16 +300,21 @@ class CommentRespDto {
 
       return CommentRespDto(
         id: mapValueOfType<int>(json, r'id'),
-        userProfile: mapValueOfType<String>(json, r'userProfile'),
+        userProfileUrl: mapValueOfType<String>(json, r'userProfileUrl'),
+        userProfileKey: mapValueOfType<String>(json, r'userProfileKey'),
+        userId: mapValueOfType<int>(json, r'userId'),
         nickname: mapValueOfType<String>(json, r'nickname'),
         text: mapValueOfType<String>(json, r'text'),
         emojiId: mapValueOfType<int>(json, r'emojiId'),
+        replyUserName: mapValueOfType<String>(json, r'replyUserName'),
         audioUrl: mapValueOfType<String>(json, r'audioUrl'),
         waveFormData: mapValueOfType<String>(json, r'waveFormData'),
         duration: mapValueOfType<int>(json, r'duration'),
         locationX: mapValueOfType<double>(json, r'locationX'),
         locationY: mapValueOfType<double>(json, r'locationY'),
         commentType: CommentRespDtoCommentTypeEnum.fromJson(json[r'commentType']),
+        fileUrl: mapValueOfType<String>(json, r'fileUrl'),
+        fileKey: mapValueOfType<String>(json, r'fileKey'),
       );
     }
     return null;
@@ -296,12 +381,16 @@ class CommentRespDtoCommentTypeEnum {
   static const EMOJI = CommentRespDtoCommentTypeEnum._(r'EMOJI');
   static const TEXT = CommentRespDtoCommentTypeEnum._(r'TEXT');
   static const AUDIO = CommentRespDtoCommentTypeEnum._(r'AUDIO');
+  static const PHOTO = CommentRespDtoCommentTypeEnum._(r'PHOTO');
+  static const REPLY = CommentRespDtoCommentTypeEnum._(r'REPLY');
 
   /// List of all possible values in this [enum][CommentRespDtoCommentTypeEnum].
   static const values = <CommentRespDtoCommentTypeEnum>[
     EMOJI,
     TEXT,
     AUDIO,
+    PHOTO,
+    REPLY,
   ];
 
   static CommentRespDtoCommentTypeEnum? fromJson(dynamic value) => CommentRespDtoCommentTypeEnumTypeTransformer().decode(value);
@@ -343,6 +432,8 @@ class CommentRespDtoCommentTypeEnumTypeTransformer {
         case r'EMOJI': return CommentRespDtoCommentTypeEnum.EMOJI;
         case r'TEXT': return CommentRespDtoCommentTypeEnum.TEXT;
         case r'AUDIO': return CommentRespDtoCommentTypeEnum.AUDIO;
+        case r'PHOTO': return CommentRespDtoCommentTypeEnum.PHOTO;
+        case r'REPLY': return CommentRespDtoCommentTypeEnum.REPLY;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');

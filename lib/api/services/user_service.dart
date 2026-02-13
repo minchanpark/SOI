@@ -532,6 +532,13 @@ class UserService {
   SoiApiException _handleApiException(ApiException e) {
     debugPrint('API Error [${e.code}]: ${e.message}');
 
+    if (_isTransportFailure(e.message)) {
+      return NetworkException(
+        message: '네트워크 연결을 확인해주세요.',
+        originalException: e,
+      );
+    }
+
     switch (e.code) {
       case 400:
         return BadRequestException(
@@ -566,5 +573,14 @@ class UserService {
           originalException: e,
         );
     }
+  }
+
+  bool _isTransportFailure(String? message) {
+    if (message == null) return false;
+    final normalized = message.toLowerCase();
+    return normalized.contains('socket operation failed') ||
+        normalized.contains('tls/ssl communication failed') ||
+        normalized.contains('http connection failed') ||
+        normalized.contains('i/o operation failed');
   }
 }

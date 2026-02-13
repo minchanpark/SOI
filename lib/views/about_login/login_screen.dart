@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/api_exception.dart';
 import 'package:soi/api/controller/user_controller.dart' as api;
 import 'package:solar_icons/solar_icons.dart';
 import '../../theme/theme.dart';
@@ -517,8 +518,26 @@ class _LoginScreenState extends State<LoginScreen> {
         //   Navigator.pushNamed(context, '/auth');
         // }
       }
+    } on NetworkException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '닉네임 로그인',
+        defaultMessage: '로그인에 실패했습니다. 다시 시도해주세요.',
+      );
+    } on BadRequestException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '닉네임 로그인',
+        defaultMessage: '로그인에 실패했습니다. 다시 시도해주세요.',
+      );
+    } on SoiApiException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '닉네임 로그인',
+        defaultMessage: '로그인에 실패했습니다. 다시 시도해주세요.',
+      );
     } catch (e) {
-      debugPrint('로그인 오류: $e');
+      debugPrint('닉네임 로그인 알 수 없는 오류: $e');
       _showErrorSnackBar('로그인에 실패했습니다. 다시 시도해주세요.');
     } finally {
       if (mounted) {
@@ -665,8 +684,26 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushNamed(context, '/auth');
         }
       }
+    } on NetworkException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '인증/로그인',
+        defaultMessage: '인증에 실패했습니다. 다시 시도해주세요.',
+      );
+    } on BadRequestException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '인증/로그인',
+        defaultMessage: '인증에 실패했습니다. 다시 시도해주세요.',
+      );
+    } on SoiApiException catch (e) {
+      _handleLoginException(
+        e,
+        logPrefix: '인증/로그인',
+        defaultMessage: '인증에 실패했습니다. 다시 시도해주세요.',
+      );
     } catch (e) {
-      debugPrint('인증/로그인 오류: $e');
+      debugPrint('인증/로그인 알 수 없는 오류: $e');
       _showErrorSnackBar('인증에 실패했습니다. 다시 시도해주세요.');
     } finally {
       if (mounted) {
@@ -680,6 +717,25 @@ class _LoginScreenState extends State<LoginScreen> {
   // -------------------------
   // 유틸리티 메서드
   // -------------------------
+  void _handleLoginException(
+    SoiApiException error, {
+    required String logPrefix,
+    required String defaultMessage,
+  }) {
+    if (error is NetworkException) {
+      debugPrint('$logPrefix 네트워크 오류: ${error.message}');
+      _showErrorSnackBar('네트워크 연결이 불안정합니다. 다시 시도해주세요.');
+      return;
+    }
+    if (error is BadRequestException) {
+      debugPrint('$logPrefix 요청 오류: ${error.message}');
+      _showErrorSnackBar('입력한 정보를 확인한 뒤 다시 시도해주세요.');
+      return;
+    }
+    debugPrint('$logPrefix API 오류: ${error.message}');
+    _showErrorSnackBar(defaultMessage);
+  }
+
   void _goToNextPage() {
     _pageController.nextPage(
       duration: const Duration(milliseconds: 300),

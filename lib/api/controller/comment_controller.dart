@@ -49,8 +49,11 @@ class CommentController extends ChangeNotifier {
     required int postId,
     required int userId,
     int? emojiId,
+    int? parentId,
+    int? replyUserId,
     String? text,
     String? audioKey,
+    String? fileKey,
     String? waveformData,
     int? duration,
     double? locationX,
@@ -65,7 +68,13 @@ class CommentController extends ChangeNotifier {
           type ??
           (emojiId != null
               ? CommentType.emoji
-              : (audioKey != null ? CommentType.audio : CommentType.text));
+              : (audioKey != null && audioKey.trim().isNotEmpty
+                    ? CommentType.audio
+                    : (replyUserId != null || parentId != null
+                          ? CommentType.reply
+                          : (fileKey != null && fileKey.trim().isNotEmpty
+                                ? CommentType.photo
+                                : CommentType.text))));
 
       final normalizedText = (text?.trim().isEmpty ?? true)
           ? null
@@ -76,6 +85,9 @@ class CommentController extends ChangeNotifier {
       final normalizedWaveform = (waveformData?.trim().isEmpty ?? true)
           ? null
           : waveformData!.trim();
+      final normalizedFileKey = (fileKey?.trim().isEmpty ?? true)
+          ? null
+          : fileKey!.trim();
 
       // Swagger에서 동작하는 형태에 맞춰, 서버가 null 값에 민감할 수 있는 필드들을 기본값으로 맞춥니다.
       final payloadText = inferredType == CommentType.emoji
@@ -95,8 +107,11 @@ class CommentController extends ChangeNotifier {
         postId: postId,
         userId: userId,
         emojiId: inferredType == CommentType.emoji ? emojiId : null,
+        parentId: parentId,
+        replyUserId: replyUserId,
         text: payloadText,
         audioFileKey: payloadAudioKey,
+        fileKey: normalizedFileKey,
         waveformData: payloadWaveform,
         duration: payloadDuration,
         locationX: locationX,

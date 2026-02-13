@@ -66,6 +66,11 @@ void main() {
       // TODO
     });
 
+    // String postType
+    test('to test the property `postType`', () async {
+      // TODO
+    });
+
 
   });
 

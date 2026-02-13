@@ -75,6 +75,22 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
 
+  // 기본 비율
+  // static const double _defaultAspectRatio = _imageWidth / _imageHeight;
+
+  /// 저장된 aspect ratio를 기반으로 실제 표시할 높이 계산
+  double get _displayHeight {
+    final savedRatio = widget.post.savedAspectRatio;
+    if (savedRatio != null && savedRatio > 0) {
+      // savedAspectRatio = width / height 이므로 height = width / aspectRatio
+      return _imageWidth.w / savedRatio;
+    }
+    return _imageHeight.h;
+  }
+
+  /// 실제 이미지/비디오 표시 크기
+  Size get _imageSize => Size(_imageWidth.w, _displayHeight);
+
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
     final phase = SchedulerBinding.instance.schedulerPhase;
@@ -422,9 +438,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 });
               },
               child: Container(
-                width: _imageWidth.w,
-                height: _imageHeight.h,
-                clipBehavior: Clip.antiAlias, // BoxFit.cover 시 overflow 방지
+                width: _imageSize.width,
+                height: _imageSize.height,
+                //clipBehavior: Clip.antiAlias, // BoxFit.cover 시 overflow 방지
                 decoration: BoxDecoration(
                   color: Colors.black, // 원본 비율일 때 여백 색상
                   border: Border.all(
@@ -463,8 +479,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
           baseColor: Colors.grey[800]!,
           highlightColor: Colors.grey[600]!,
           child: Container(
-            width: _imageWidth.w,
-            height: _imageHeight.h,
+            width: _imageSize.width,
+            height: _imageSize.height,
             color: Colors.grey[800],
           ),
         );
@@ -479,8 +495,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
           });
         },
         child: Container(
-          width: _imageWidth.w,
-          height: _imageHeight.h,
+          width: _imageSize.width,
+          height: _imageSize.height,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.black, // 원본 비율일 때 여백 색상
@@ -500,8 +516,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
               useOldImageOnUrlChange: true, // URL 변경 시에도 이전 이미지 유지(체감 깜빡임 감소)
               fadeInDuration: Duration.zero, // 로드 후 페이드 제거(체감 쉬머 감소)
               fadeOutDuration: Duration.zero,
-              width: _imageWidth.w,
-              height: _imageHeight.h,
+              width: _imageSize.width,
+              height: _imageSize.height,
               fit: _isImageCoverMode
                   ? BoxFit.contain
                   : BoxFit.cover, // 더블탭으로 전환
@@ -511,14 +527,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 baseColor: Colors.grey[800]!,
                 highlightColor: Colors.grey[600]!,
                 child: Container(
-                  width: _imageWidth.w,
-                  height: _imageHeight.h,
+                  width: _imageSize.width,
+                  height: _imageSize.height,
                   color: Colors.grey[800],
                 ),
               ),
               errorWidget: (context, _, __) => Container(
-                width: _imageWidth.w,
-                height: _imageHeight.h,
+                width: _imageSize.width,
+                height: _imageSize.height,
                 color: Colors.grey[800],
                 child: Icon(
                   Icons.broken_image,
@@ -538,8 +554,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   /// 지원되지 않는 미디어 표시 위젯 빌드
   Widget _buildUnsupportedMedia() {
     return Container(
-      width: _imageWidth.w,
-      height: _imageHeight.h,
+      width: _imageSize.width,
+      height: _imageSize.height,
       color: Colors.grey[800],
       child: Icon(
         Icons.image_not_supported,
@@ -555,8 +571,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       baseColor: Colors.grey[800]!,
       highlightColor: Colors.grey[600]!,
       child: Container(
-        width: _imageWidth.w,
-        height: _imageHeight.h,
+        width: _imageSize.width,
+        height: _imageSize.height,
         color: Colors.grey[800],
       ),
     );
@@ -583,14 +599,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     if (!_isShowingComments) return const [];
 
     final filteredComments = _postComments
-        .where(
-          (c) =>
-              (c.type == CommentType.text || c.type == CommentType.audio) &&
-              c.hasLocation,
-        )
+        .where((c) => c.type != CommentType.emoji && c.hasLocation)
         .toList();
 
-    final actualSize = Size(_imageWidth.w, _imageHeight.h);
+    final actualSize = _imageSize;
     final tagTipOffset = TagBubble.pointerTipOffset(contentSize: _avatarSize);
 
     return List<Widget>.generate(filteredComments.length, (index) {
@@ -630,7 +642,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
             contentSize: _avatarSize,
             // 댓글 아바타 빌드
             child: _buildCircleAvatar(
-              imageUrl: comment.userProfile,
+              imageUrl: comment.userProfileUrl,
               size: _avatarSize,
               showBorder: isSelected,
               borderColor: Colors.white,
@@ -650,7 +662,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       return null;
     }
 
-    final actualSize = Size(_imageWidth.w, _imageHeight.h);
+    final actualSize = _imageSize;
     final absolute = PositionConverter.toAbsolutePosition(
       pending.relativePosition,
       actualSize,
@@ -726,7 +738,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     final popupWidth = 180.0;
     double left = _selectedCommentPosition!.dx;
     double top = _selectedCommentPosition!.dy + 20;
-    final imageWidth = _imageWidth.w;
+    final imageWidth = _imageSize.width;
 
     if (left + popupWidth > imageWidth) {
       left = imageWidth - popupWidth - 8;
@@ -1132,8 +1144,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
 
     return Center(
       child: SizedBox(
-        width: _imageWidth.w,
-        height: _imageHeight.h,
+        width: _imageSize.width,
+        height: _imageSize.height,
         child: Builder(
           builder: (builderContext) {
             return DragTarget<String>(

@@ -6,16 +6,25 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detail_screen.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import '../../../api/models/post.dart';
 import '../../../api/controller/audio_controller.dart';
 import '../../../api/controller/media_controller.dart';
+import '../../../api/controller/comment_controller.dart';
+import '../../../utils/video_thumbnail_cache.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
-/// REST API 기반 사진 그리드 아이템 위젯
+/// 카테고리 내에서 사진 그리드 아이템을 표시하는 위젯
 ///
-/// Firebase 버전의 PhotoGridItem과 동일한 UI를 유지하면서
-/// Post 모델을 사용합니다.
+/// Parameters:
+/// - [postUrl]: 게시물 이미지 URL
+/// - [post]: 단일 게시물 정보를 담은 Post 모델
+/// - [allPosts]: 모든 게시물 정보를 담은 Post 모델 리스트
+/// - [currentIndex]: 현재 인덱스
+/// - [categoryName]: 카테고리 이름
+/// - [categoryId]: 카테고리 ID
+/// - [onPostsDeleted]: 사진 삭제 후 콜백 함수
+///
+/// Returns: 사진 그리드 아이템 위젯
 class ApiPhotoGridItem extends StatefulWidget {
   final String postUrl; // post 이미지 url -> post사진을 띄우기 위한 파라미터입니다.
   final Post post; // Post 모델 -> 단일 게시물 정보를 담고 있습니다.
@@ -55,16 +64,20 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   Uint8List? _videoThumbnailBytes;
   bool _isVideoThumbnailLoading = false;
 
+  // 댓글 개수
+  int _commentCount = 0;
+
   @override
   void initState() {
     super.initState();
     _initializeWaveformData();
     _mediaController = Provider.of<MediaController>(context, listen: false);
-    _loadAudioUrl(widget.post.audioUrl);
+    // _loadAudioUrl(widget.post.audioUrl);
     _loadVideoThumbnailIfNeeded();
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProfileImage(widget.post.userProfileImageKey);
+      _loadCommentCount();
     });
   }
 
@@ -103,29 +116,35 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     final url = widget.postUrl;
     if (url.isEmpty) return;
 
+    final cacheKey = widget.post.postFileKey ?? url;
+
+    // 동기적 메모리 캐시 확인 (즉시 반영)
+    if (!forceReload) {
+      final memHit = VideoThumbnailCache.getFromMemory(cacheKey);
+      if (memHit != null) {
+        if (!mounted) return;
+        setState(() {
+          _videoThumbnailBytes = memHit;
+          _isVideoThumbnailLoading = false;
+        });
+        return;
+      }
+    }
+
     if (!mounted) return;
     setState(() => _isVideoThumbnailLoading = true);
 
-    try {
-      final bytes = await VideoThumbnail.thumbnailData(
-        video: url,
-        imageFormat: ImageFormat.JPEG,
-        maxWidth: 350,
-        quality: 70,
-      );
-      if (!mounted) return;
-      setState(() {
-        _videoThumbnailBytes = bytes;
-        _isVideoThumbnailLoading = false;
-      });
-    } catch (e) {
-      debugPrint('[ApiPhotoGridItem] 비디오 썸네일 생성 실패: $e');
-      if (!mounted) return;
-      setState(() {
-        _videoThumbnailBytes = null;
-        _isVideoThumbnailLoading = false;
-      });
-    }
+    // 3-tier 조회: Memory → Disk → Generate
+    final bytes = await VideoThumbnailCache.getThumbnail(
+      videoUrl: url,
+      cacheKey: cacheKey,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _videoThumbnailBytes = bytes;
+      _isVideoThumbnailLoading = false;
+    });
   }
 
   /// waveformData String을 `List<double>`로 파싱
@@ -240,6 +259,31 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     }
   }
 
+  /// 댓글 개수 로드
+  Future<void> _loadCommentCount() async {
+    if (!mounted) return;
+
+    try {
+      final commentController = Provider.of<CommentController>(
+        context,
+        listen: false,
+      );
+      final count = await commentController.getCommentCount(
+        postId: widget.post.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        _commentCount = count;
+      });
+    } catch (e) {
+      debugPrint('[ApiPhotoGridItem] 댓글 개수 로드 실패: $e');
+      if (!mounted) return;
+      setState(() {
+        _commentCount = 0;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -310,6 +354,35 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
             ),
           ),
 
+          // 댓글 개수 (우측 하단)
+          if (_commentCount > 0)
+            Positioned(
+              bottom: 8.h,
+              right: 8.w,
+              child: Row(
+                children: [
+                  Text(
+                    '$_commentCount',
+                    style: TextStyle(
+                      color: const Color(0xFFF8F8F8),
+                      fontSize: 14,
+                      fontFamily: 'Pretendard Variable',
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.40,
+                    ),
+                  ),
+                  SizedBox(width: (5.96).w),
+                  Image.asset(
+                    'assets/comment_icon.png',
+                    width: (15.75),
+                    height: (15.79),
+                    color: Color(0xfff9f9f9),
+                  ),
+                  SizedBox(width: (10.29)),
+                ],
+              ),
+            ),
+
           // 하단 프로필 + 파형
           Column(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -360,26 +433,64 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
 
   Widget _buildVideoThumbnail() {
     if (_videoThumbnailBytes != null) {
-      return Image.memory(
-        _videoThumbnailBytes!,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(
+            _videoThumbnailBytes!,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            // 메모리 최적화: 디코딩 시 크기 제한
+            cacheWidth: 262, // 175 * 1.5
+          ),
+          // 비디오 재생 아이콘 표시
+          Center(
+            child: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.play_arrow, color: Colors.white, size: 24.sp),
+            ),
+          ),
+        ],
       );
     }
 
     if (_isVideoThumbnailLoading) {
-      return Shimmer.fromColors(
-        baseColor: Colors.grey.shade800,
-        highlightColor: Colors.grey.shade700,
-        period: const Duration(milliseconds: 1500),
-        child: Container(color: Colors.grey.shade800),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Shimmer.fromColors(
+            baseColor: Colors.grey.shade800,
+            highlightColor: Colors.grey.shade700,
+            period: const Duration(milliseconds: 1500),
+            child: Container(color: Colors.grey.shade800),
+          ),
+          // ✨ 로딩 중에도 비디오 아이콘 표시
+          Center(
+            child: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.videocam,
+                color: Colors.white.withValues(alpha: 0.7),
+                size: 24.sp,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     return Container(
       color: Colors.grey.shade800,
       alignment: Alignment.center,
-      child: Icon(Icons.image, color: Colors.grey.shade600, size: 32.sp),
+      child: Icon(Icons.videocam, color: Colors.grey.shade600, size: 32.sp),
     );
   }
 

@@ -377,6 +377,10 @@ class _ApiCommentRow extends StatelessWidget {
         return _buildTextRow(context); // 텍스트 댓글
       case CommentType.audio:
         return _buildAudioRow(context); // 음성 댓글
+      case CommentType.photo:
+        return _buildTextRow(context); // 사진 댓글(텍스트 UI 재사용)
+      case CommentType.reply:
+        return _buildTextRow(context); // 답글 댓글(텍스트 UI 재사용)
     }
   }
 
@@ -398,7 +402,7 @@ class _ApiCommentRow extends StatelessWidget {
 
   /// 이모지 댓글 UI
   Widget _buildEmojiRow(BuildContext context) {
-    final profileUrl = comment.userProfile ?? '';
+    final profileUrl = comment.userProfileUrl ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
     final emoji = _emojiFromId(comment.emojiId);
     final currentUserId = context.read<UserController>().currentUser?.userId;
@@ -470,7 +474,7 @@ class _ApiCommentRow extends StatelessWidget {
   /// 텍스트 댓글 UI
   Widget _buildTextRow(BuildContext context) {
     // userProfile은 프로필 이미지 URL
-    final profileUrl = comment.userProfile ?? '';
+    final profileUrl = comment.userProfileUrl ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
     final currentUserId = context.read<UserController>().currentUser?.userId;
     final showActions = _canShowActions(currentUserId);
@@ -551,7 +555,7 @@ class _ApiCommentRow extends StatelessWidget {
 
   /// 음성 댓글 UI
   Widget _buildAudioRow(BuildContext context) {
-    final profileUrl = comment.userProfile ?? '';
+    final profileUrl = comment.userProfileUrl ?? '';
     final userName = comment.nickname ?? '알 수 없는 사용자';
     final currentUserId = context.read<UserController>().currentUser?.userId;
     final showActions = _canShowActions(currentUserId);

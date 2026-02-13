@@ -188,8 +188,6 @@ class ApiClient {
           return ApiResponseDtoFriendRespDto.fromJson(value);
         case 'ApiResponseDtoListCategoryRespDto':
           return ApiResponseDtoListCategoryRespDto.fromJson(value);
-        case 'ApiResponseDtoListCommentRespDto':
-          return ApiResponseDtoListCommentRespDto.fromJson(value);
         case 'ApiResponseDtoListFriendCheckRespDto':
           return ApiResponseDtoListFriendCheckRespDto.fromJson(value);
         case 'ApiResponseDtoListNotificationRespDto':
@@ -216,6 +214,8 @@ class ApiClient {
           return ApiResponseDtoPostRespDto.fromJson(value);
         case 'ApiResponseDtoReportResponseDto':
           return ApiResponseDtoReportResponseDto.fromJson(value);
+        case 'ApiResponseDtoSliceCommentRespDto':
+          return ApiResponseDtoSliceCommentRespDto.fromJson(value);
         case 'ApiResponseDtoUserRespDto':
           return ApiResponseDtoUserRespDto.fromJson(value);
         case 'AuthCheckReqDto':
@@ -250,6 +250,8 @@ class ApiClient {
           return NotificationRespDto.fromJson(value);
         case 'NotificationUserRespDto':
           return NotificationUserRespDto.fromJson(value);
+        case 'PageableObject':
+          return PageableObject.fromJson(value);
         case 'PostCreateReqDto':
           return PostCreateReqDto.fromJson(value);
         case 'PostRespDto':
@@ -264,6 +266,10 @@ class ApiClient {
           return ReportSearchRequestDto.fromJson(value);
         case 'ReportUpdateReqDto':
           return ReportUpdateReqDto.fromJson(value);
+        case 'SliceCommentRespDto':
+          return SliceCommentRespDto.fromJson(value);
+        case 'SortObject':
+          return SortObject.fromJson(value);
         case 'SortOptionDto':
           return SortOptionDto.fromJson(value);
         case 'UserCreateReqDto':

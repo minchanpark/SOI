@@ -35,12 +35,21 @@ void main() {
       // TODO
     });
 
-    // 댓글 조회
+    // 대댓글 조회
+    //
+    // 댓글에 달린 대댓글을 조회합니다.
+    //
+    //Future<ApiResponseDtoSliceCommentRespDto> getChildComment(int parentCommentId, int page) async
+    test('test getChildComment', () async {
+      // TODO
+    });
+
+    // 원댓글 조회
     //
     // 게시물에 달린 댓글을 조회합니다.
     //
-    //Future<ApiResponseDtoListCommentRespDto> getComment(int postId) async
-    test('test getComment', () async {
+    //Future<ApiResponseDtoSliceCommentRespDto> getParentComment(int postId, int page) async
+    test('test getParentComment', () async {
       // TODO
     });
 

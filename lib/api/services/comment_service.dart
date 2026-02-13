@@ -29,6 +29,8 @@ import '../models/models.dart';
 /// ```
 class CommentService {
   final CommentAPIApi _commentApi;
+  static const int _defaultPage = 0;
+  static const int _maxSliceFetchPages = 100;
 
   CommentService({CommentAPIApi? commentApi})
     : _commentApi = commentApi ?? SoiApiClient.instance.commentApi;
@@ -59,8 +61,11 @@ class CommentService {
     required int postId,
     required int userId,
     int? emojiId,
+    int? parentId,
+    int? replyUserId,
     String? text,
     String? audioFileKey,
+    String? fileKey,
     String? waveformData,
     int? duration,
     double? locationX,
@@ -88,8 +93,11 @@ class CommentService {
         postId: postId,
         userId: userId,
         emojiId: emojiId,
+        parentId: parentId,
+        replyUserId: replyUserId,
         text: text,
         audioKey: audioFileKey,
+        fileKey: fileKey,
         waveformData: processedWaveformData,
         duration: duration,
         locationX: locationX,
@@ -240,23 +248,37 @@ class CommentService {
   ///
   /// [postId]에 해당하는 게시물의 모든 댓글을 조회합니다.
   ///
-  /// Returns: 댓글 목록 (List<Comment>)
+  /// Returns: 댓글 목록 (`List<Comment>`)
   ///
   /// Throws:
   /// - [NotFoundException]: 게시물을 찾을 수 없음
   Future<List<Comment>> getComments({required int postId}) async {
     try {
-      final response = await _commentApi.getComment(postId);
+      final parentComments = await _fetchAllSliceComments(
+        fetchPage: (page) => _commentApi.getParentComment(postId, page),
+        errorMessage: '댓글 조회 실패',
+      );
 
-      if (response == null) {
+      if (parentComments.isEmpty) {
         return [];
       }
 
-      if (response.success != true) {
-        throw SoiApiException(message: response.message ?? '댓글 조회 실패');
+      final merged = <Comment>[];
+      for (final parent in parentComments) {
+        merged.add(Comment.fromDto(parent));
+        final parentId = parent.id;
+        if (parentId == null) {
+          continue;
+        }
+
+        final childComments = await _fetchAllSliceComments(
+          fetchPage: (page) => _commentApi.getChildComment(parentId, page),
+          errorMessage: '대댓글 조회 실패',
+        );
+        merged.addAll(childComments.map(Comment.fromDto));
       }
 
-      return response.data.map((dto) => Comment.fromDto(dto)).toList();
+      return merged;
     } on ApiException catch (e) {
       throw _handleApiException(e);
     } on SocketException catch (e) {
@@ -273,6 +295,47 @@ class CommentService {
   Future<int> getCommentCount({required int postId}) async {
     final comments = await getComments(postId: postId);
     return comments.length;
+  }
+
+  Future<List<CommentRespDto>> _fetchAllSliceComments({
+    required Future<ApiResponseDtoSliceCommentRespDto?> Function(int page)
+    fetchPage,
+    required String errorMessage,
+  }) async {
+    final result = <CommentRespDto>[];
+    var page = _defaultPage;
+
+    for (var i = 0; i < _maxSliceFetchPages; i++) {
+      final response = await fetchPage(page);
+      if (response == null) {
+        return result;
+      }
+
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? errorMessage);
+      }
+
+      final slice = response.data;
+      if (slice == null) {
+        return result;
+      }
+
+      final content = slice.content;
+      if (content.isNotEmpty) {
+        result.addAll(content);
+      }
+
+      final shouldContinue =
+          slice.last == false && slice.empty != true && content.isNotEmpty;
+      if (!shouldContinue) {
+        return result;
+      }
+
+      page += 1;
+    }
+
+    debugPrint('[CommentService] 댓글 페이지 조회 제한($_maxSliceFetchPages) 도달');
+    return result;
   }
 
   // ============================================
@@ -323,6 +386,10 @@ class CommentService {
         return CommentReqDtoCommentTypeEnum.AUDIO;
       case CommentType.emoji:
         return CommentReqDtoCommentTypeEnum.EMOJI;
+      case CommentType.photo:
+        return CommentReqDtoCommentTypeEnum.PHOTO;
+      case CommentType.reply:
+        return CommentReqDtoCommentTypeEnum.REPLY;
       default:
         return CommentReqDtoCommentTypeEnum.TEXT;
     }

@@ -17,9 +17,13 @@ Name | Type | Description | Notes
 **postFileUrl** | **String** |  | [optional] 
 **audioFileKey** | **String** |  | [optional] 
 **waveformData** | **String** |  | [optional] 
+**commentCount** | **int** |  | [optional] 
 **duration** | **int** |  | [optional] 
 **isActive** | **bool** |  | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**savedAspectRatio** | **double** |  | [optional] 
+**isFromGallery** | **bool** |  | [optional] 
+**postType** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

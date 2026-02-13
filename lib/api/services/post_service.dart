@@ -73,6 +73,7 @@ class PostService {
     int? duration,
     double? savedAspectRatio,
     bool? isFromGallery,
+    PostType? postType,
   }) async {
     try {
       final dto = PostCreateReqDto(
@@ -86,6 +87,9 @@ class PostService {
         duration: duration,
         savedAspectRatio: savedAspectRatio,
         isFromGallery: isFromGallery,
+        postType: _toCreatePostTypeEnum(
+          _resolveCreatePostType(postType: postType, postFileKeys: postFileKey),
+        ),
       );
 
       final response = await _postApi.create1(dto);
@@ -123,19 +127,27 @@ class PostService {
     int? duration,
     double? savedAspectRatio,
     bool? isFromGallery,
+    PostType? postType,
   }) async {
     try {
+      final normalizedPostFileKeys = _wrapFileKey(postFileKey);
       final dto = PostCreateReqDto(
         userId: userId,
         nickname: nickName,
         content: content,
         categoryId: categoryIds,
-        postFileKey: _wrapFileKey(postFileKey),
+        postFileKey: normalizedPostFileKeys,
         audioFileKey: _wrapFileKey(audioFileKey),
         waveformData: waveformData,
         duration: duration,
         savedAspectRatio: savedAspectRatio,
         isFromGallery: isFromGallery,
+        postType: _toCreatePostTypeEnum(
+          _resolveCreatePostType(
+            postType: postType,
+            postFileKeys: normalizedPostFileKeys,
+          ),
+        ),
       );
 
       final response = await _postApi.create1WithHttpInfo(dto);
@@ -335,6 +347,9 @@ class PostService {
     int? categoryId,
     String? waveformData,
     int? duration,
+    bool? isFromGallery,
+    double? savedAspectRatio,
+    PostType? postType,
   }) async {
     try {
       final dto = PostUpdateReqDto(
@@ -345,6 +360,11 @@ class PostService {
         categoryId: categoryId,
         waveformData: waveformData,
         duration: duration,
+        isFromGallery: isFromGallery,
+        savedAspectRatio: savedAspectRatio,
+        postType: _toUpdatePostTypeEnum(
+          _resolveUpdatePostType(postType: postType, postFileKey: postFileKey),
+        ),
       );
 
       final response = await _postApi.update3(dto);
@@ -491,5 +511,42 @@ class PostService {
   List<String> _wrapFileKey(String? key) {
     if (key == null || key.isEmpty) return const [];
     return [key];
+  }
+
+  PostType _resolveCreatePostType({
+    required List<String> postFileKeys,
+    PostType? postType,
+  }) {
+    if (postType != null) return postType;
+    final hasMedia = postFileKeys.any((key) => key.trim().isNotEmpty);
+    return hasMedia ? PostType.multiMedia : PostType.textOnly;
+  }
+
+  PostType? _resolveUpdatePostType({PostType? postType, String? postFileKey}) {
+    if (postType != null) return postType;
+    if (postFileKey == null) return null;
+    return postFileKey.trim().isEmpty ? PostType.textOnly : PostType.multiMedia;
+  }
+
+  PostCreateReqDtoPostTypeEnum? _toCreatePostTypeEnum(PostType? postType) {
+    switch (postType) {
+      case PostType.textOnly:
+        return PostCreateReqDtoPostTypeEnum.TEXT_ONLY;
+      case PostType.multiMedia:
+        return PostCreateReqDtoPostTypeEnum.MULTIMEDIA;
+      default:
+        return null;
+    }
+  }
+
+  PostUpdateReqDtoPostTypeEnum? _toUpdatePostTypeEnum(PostType? postType) {
+    switch (postType) {
+      case PostType.textOnly:
+        return PostUpdateReqDtoPostTypeEnum.TEXT_ONLY;
+      case PostType.multiMedia:
+        return PostUpdateReqDtoPostTypeEnum.MULTIMEDIA;
+      default:
+        return null;
+    }
   }
 }

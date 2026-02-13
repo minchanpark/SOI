@@ -11,17 +11,17 @@
 import 'package:soi_api_client/api.dart';
 import 'package:test/test.dart';
 
-// tests for ApiResponseDtoListCommentRespDto
+// tests for ApiResponseDtoSliceCommentRespDto
 void main() {
-  // final instance = ApiResponseDtoListCommentRespDto();
+  // final instance = ApiResponseDtoSliceCommentRespDto();
 
-  group('test ApiResponseDtoListCommentRespDto', () {
+  group('test ApiResponseDtoSliceCommentRespDto', () {
     // bool success
     test('to test the property `success`', () async {
       // TODO
     });
 
-    // List<CommentRespDto> data (default value: const [])
+    // SliceCommentRespDto data
     test('to test the property `data`', () async {
       // TODO
     });

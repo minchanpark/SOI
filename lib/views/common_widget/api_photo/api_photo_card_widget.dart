@@ -134,18 +134,10 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 post: widget.post,
                 isCurrentUserPost: widget.isOwner,
                 onDeletePressed: widget.onDeletePressed,
-                onCommentsReloadRequested: widget.onCommentsReloadRequested,
                 onReportSubmitted: widget.onReportSubmitted == null
                     ? null
                     : (result) =>
                           widget.onReportSubmitted!(widget.post, result),
-
-                // 부모 상태 반영
-                selectedEmoji: widget.selectedEmoji,
-
-                // 부모 상태 갱신
-                onEmojiSelected: widget.onEmojiSelected,
-
                 onCommentPressed: () {
                   // 댓글 리스트 Bottom Sheet 표시
                   final comments = widget.postComments[widget.post.id] ?? [];

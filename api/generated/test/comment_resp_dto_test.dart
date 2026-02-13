@@ -21,8 +21,18 @@ void main() {
       // TODO
     });
 
-    // String userProfile
-    test('to test the property `userProfile`', () async {
+    // String userProfileUrl
+    test('to test the property `userProfileUrl`', () async {
+      // TODO
+    });
+
+    // String userProfileKey
+    test('to test the property `userProfileKey`', () async {
+      // TODO
+    });
+
+    // int userId
+    test('to test the property `userId`', () async {
       // TODO
     });
 
@@ -38,6 +48,11 @@ void main() {
 
     // int emojiId
     test('to test the property `emojiId`', () async {
+      // TODO
+    });
+
+    // String replyUserName
+    test('to test the property `replyUserName`', () async {
       // TODO
     });
 
@@ -68,6 +83,16 @@ void main() {
 
     // String commentType
     test('to test the property `commentType`', () async {
+      // TODO
+    });
+
+    // String fileUrl
+    test('to test the property `fileUrl`', () async {
+      // TODO
+    });
+
+    // String fileKey
+    test('to test the property `fileKey`', () async {
       // TODO
     });
 

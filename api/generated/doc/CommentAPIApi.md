@@ -11,7 +11,8 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create3**](CommentAPIApi.md#create3) | **POST** /comment/create | 댓글 추가
 [**deleteComment**](CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
-[**getComment**](CommentAPIApi.md#getcomment) | **GET** /comment/get | 댓글 조회
+[**getChildComment**](CommentAPIApi.md#getchildcomment) | **GET** /comment/get-child | 대댓글 조회
+[**getParentComment**](CommentAPIApi.md#getparentcomment) | **GET** /comment/get-parent | 원댓글 조회
 
 
 # **create3**
@@ -100,10 +101,55 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **getComment**
-> ApiResponseDtoListCommentRespDto getComment(postId)
+# **getChildComment**
+> ApiResponseDtoSliceCommentRespDto getChildComment(parentCommentId, page)
 
-댓글 조회
+대댓글 조회
+
+댓글에 달린 대댓글을 조회합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = CommentAPIApi();
+final parentCommentId = 789; // int | 
+final page = 56; // int | 
+
+try {
+    final result = api_instance.getChildComment(parentCommentId, page);
+    print(result);
+} catch (e) {
+    print('Exception when calling CommentAPIApi->getChildComment: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **parentCommentId** | **int**|  | 
+ **page** | **int**|  | 
+
+### Return type
+
+[**ApiResponseDtoSliceCommentRespDto**](ApiResponseDtoSliceCommentRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getParentComment**
+> ApiResponseDtoSliceCommentRespDto getParentComment(postId, page)
+
+원댓글 조회
 
 게시물에 달린 댓글을 조회합니다.
 
@@ -113,12 +159,13 @@ import 'package:soi_api_client/api.dart';
 
 final api_instance = CommentAPIApi();
 final postId = 789; // int | 
+final page = 56; // int | 
 
 try {
-    final result = api_instance.getComment(postId);
+    final result = api_instance.getParentComment(postId, page);
     print(result);
 } catch (e) {
-    print('Exception when calling CommentAPIApi->getComment: $e\n');
+    print('Exception when calling CommentAPIApi->getParentComment: $e\n');
 }
 ```
 
@@ -127,10 +174,11 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **postId** | **int**|  | 
+ **page** | **int**|  | 
 
 ### Return type
 
-[**ApiResponseDtoListCommentRespDto**](ApiResponseDtoListCommentRespDto.md)
+[**ApiResponseDtoSliceCommentRespDto**](ApiResponseDtoSliceCommentRespDto.md)
 
 ### Authorization
 

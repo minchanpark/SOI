@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **duration** | **int** |  | [optional] 
 **savedAspectRatio** | **double** |  | [optional] 
 **isFromGallery** | **bool** |  | [optional] 
+**postType** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

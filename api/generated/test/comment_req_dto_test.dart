@@ -31,6 +31,16 @@ void main() {
       // TODO
     });
 
+    // int parentId
+    test('to test the property `parentId`', () async {
+      // TODO
+    });
+
+    // int replyUserId
+    test('to test the property `replyUserId`', () async {
+      // TODO
+    });
+
     // String text
     test('to test the property `text`', () async {
       // TODO
@@ -38,6 +48,11 @@ void main() {
 
     // String audioKey
     test('to test the property `audioKey`', () async {
+      // TODO
+    });
+
+    // String fileKey
+    test('to test the property `fileKey`', () async {
       // TODO
     });
 

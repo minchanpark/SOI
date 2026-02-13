@@ -1,0 +1,4 @@
+interface:
+  display_name: "API Lib Sync"
+  short_description: "Sync lib/api with root api contract changes (fast path)"
+  default_prompt: "Use $api-lib-sync in fast mode: run impact detection first, keep contract-only scope, then update only impacted lib/api wrappers."

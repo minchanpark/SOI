@@ -1,4 +1,4 @@
-# soi_api_client.model.ApiResponseDtoListCommentRespDto
+# soi_api_client.model.ApiResponseDtoSliceCommentRespDto
 
 ## Load the model package
 ```dart
@@ -9,7 +9,7 @@ import 'package:soi_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **success** | **bool** |  | [optional] 
-**data** | [**List<CommentRespDto>**](CommentRespDto.md) |  | [optional] [default to const []]
+**data** | [**SliceCommentRespDto**](SliceCommentRespDto.md) |  | [optional] 
 **message** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

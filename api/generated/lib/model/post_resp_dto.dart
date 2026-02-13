@@ -22,9 +22,13 @@ class PostRespDto {
     this.postFileUrl,
     this.audioFileKey,
     this.waveformData,
+    this.commentCount,
     this.duration,
     this.isActive,
     this.createdAt,
+    this.savedAspectRatio,
+    this.isFromGallery,
+    this.postType,
   });
 
   ///
@@ -105,6 +109,14 @@ class PostRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
+  int? commentCount;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   int? duration;
 
   ///
@@ -123,6 +135,24 @@ class PostRespDto {
   ///
   DateTime? createdAt;
 
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? savedAspectRatio;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? isFromGallery;
+
+  PostRespDtoPostTypeEnum? postType;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostRespDto &&
     other.id == id &&
@@ -134,9 +164,13 @@ class PostRespDto {
     other.postFileUrl == postFileUrl &&
     other.audioFileKey == audioFileKey &&
     other.waveformData == waveformData &&
+    other.commentCount == commentCount &&
     other.duration == duration &&
     other.isActive == isActive &&
-    other.createdAt == createdAt;
+    other.createdAt == createdAt &&
+    other.savedAspectRatio == savedAspectRatio &&
+    other.isFromGallery == isFromGallery &&
+    other.postType == postType;
 
   @override
   int get hashCode =>
@@ -150,12 +184,16 @@ class PostRespDto {
     (postFileUrl == null ? 0 : postFileUrl!.hashCode) +
     (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
+    (commentCount == null ? 0 : commentCount!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (isActive == null ? 0 : isActive!.hashCode) +
-    (createdAt == null ? 0 : createdAt!.hashCode);
+    (createdAt == null ? 0 : createdAt!.hashCode) +
+    (savedAspectRatio == null ? 0 : savedAspectRatio!.hashCode) +
+    (isFromGallery == null ? 0 : isFromGallery!.hashCode) +
+    (postType == null ? 0 : postType!.hashCode);
 
   @override
-  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, userProfileImageUrl=$userProfileImageUrl, postFileKey=$postFileKey, postFileUrl=$postFileUrl, audioFileKey=$audioFileKey, waveformData=$waveformData, duration=$duration, isActive=$isActive, createdAt=$createdAt]';
+  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, userProfileImageUrl=$userProfileImageUrl, postFileKey=$postFileKey, postFileUrl=$postFileUrl, audioFileKey=$audioFileKey, waveformData=$waveformData, commentCount=$commentCount, duration=$duration, isActive=$isActive, createdAt=$createdAt, savedAspectRatio=$savedAspectRatio, isFromGallery=$isFromGallery, postType=$postType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -204,6 +242,11 @@ class PostRespDto {
     } else {
       json[r'waveformData'] = null;
     }
+    if (this.commentCount != null) {
+      json[r'commentCount'] = this.commentCount;
+    } else {
+      json[r'commentCount'] = null;
+    }
     if (this.duration != null) {
       json[r'duration'] = this.duration;
     } else {
@@ -218,6 +261,21 @@ class PostRespDto {
       json[r'createdAt'] = this.createdAt!.toUtc().toIso8601String();
     } else {
       json[r'createdAt'] = null;
+    }
+    if (this.savedAspectRatio != null) {
+      json[r'savedAspectRatio'] = this.savedAspectRatio;
+    } else {
+      json[r'savedAspectRatio'] = null;
+    }
+    if (this.isFromGallery != null) {
+      json[r'isFromGallery'] = this.isFromGallery;
+    } else {
+      json[r'isFromGallery'] = null;
+    }
+    if (this.postType != null) {
+      json[r'postType'] = this.postType;
+    } else {
+      json[r'postType'] = null;
     }
     return json;
   }
@@ -250,9 +308,13 @@ class PostRespDto {
         postFileUrl: mapValueOfType<String>(json, r'postFileUrl'),
         audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),
         waveformData: mapValueOfType<String>(json, r'waveformData'),
+        commentCount: mapValueOfType<int>(json, r'commentCount'),
         duration: mapValueOfType<int>(json, r'duration'),
         isActive: mapValueOfType<bool>(json, r'is_active'),
         createdAt: mapDateTime(json, r'createdAt', r''),
+        savedAspectRatio: mapValueOfType<double>(json, r'savedAspectRatio'),
+        isFromGallery: mapValueOfType<bool>(json, r'isFromGallery'),
+        postType: PostRespDtoPostTypeEnum.fromJson(json[r'postType']),
       );
     }
     return null;
@@ -302,4 +364,78 @@ class PostRespDto {
   static const requiredKeys = <String>{
   };
 }
+
+
+class PostRespDtoPostTypeEnum {
+  /// Instantiate a new enum with the provided [value].
+  const PostRespDtoPostTypeEnum._(this.value);
+
+  /// The underlying value of this enum member.
+  final String value;
+
+  @override
+  String toString() => value;
+
+  String toJson() => value;
+
+  static const TEXT_ONLY = PostRespDtoPostTypeEnum._(r'TEXT_ONLY');
+  static const MULTIMEDIA = PostRespDtoPostTypeEnum._(r'MULTIMEDIA');
+
+  /// List of all possible values in this [enum][PostRespDtoPostTypeEnum].
+  static const values = <PostRespDtoPostTypeEnum>[
+    TEXT_ONLY,
+    MULTIMEDIA,
+  ];
+
+  static PostRespDtoPostTypeEnum? fromJson(dynamic value) => PostRespDtoPostTypeEnumTypeTransformer().decode(value);
+
+  static List<PostRespDtoPostTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <PostRespDtoPostTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = PostRespDtoPostTypeEnum.fromJson(row);
+        if (value != null) {
+          result.add(value);
+        }
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [PostRespDtoPostTypeEnum] to String,
+/// and [decode] dynamic data back to [PostRespDtoPostTypeEnum].
+class PostRespDtoPostTypeEnumTypeTransformer {
+  factory PostRespDtoPostTypeEnumTypeTransformer() => _instance ??= const PostRespDtoPostTypeEnumTypeTransformer._();
+
+  const PostRespDtoPostTypeEnumTypeTransformer._();
+
+  String encode(PostRespDtoPostTypeEnum data) => data.value;
+
+  /// Decodes a [dynamic value][data] to a PostRespDtoPostTypeEnum.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  PostRespDtoPostTypeEnum? decode(dynamic data, {bool allowNull = true}) {
+    if (data != null) {
+      switch (data) {
+        case r'TEXT_ONLY': return PostRespDtoPostTypeEnum.TEXT_ONLY;
+        case r'MULTIMEDIA': return PostRespDtoPostTypeEnum.MULTIMEDIA;
+        default:
+          if (!allowNull) {
+            throw ArgumentError('Unknown enum value to decode: $data');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// Singleton [PostRespDtoPostTypeEnumTypeTransformer] instance.
+  static PostRespDtoPostTypeEnumTypeTransformer? _instance;
+}
+
 

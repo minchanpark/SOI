@@ -220,13 +220,13 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
   Widget _buildGridView(List<Category> categories, String searchQuery) {
     return GridView.builder(
       key: ValueKey('shared_grid_${categories.length}_$searchQuery'),
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: (168 / 229),
-        mainAxisSpacing: 15.sp,
-        crossAxisSpacing: 15.sp,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
@@ -291,13 +291,13 @@ class _SharedArchivesScreenState extends State<SharedArchivesScreen>
   /// Shimmer 로딩 그리드
   Widget _buildShimmerGrid() {
     return GridView.builder(
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
-      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: (168 / 229),
-        mainAxisSpacing: 15.sp,
-        crossAxisSpacing: 15.sp,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
       ),
       itemCount: 6,
       itemBuilder: (context, index) {

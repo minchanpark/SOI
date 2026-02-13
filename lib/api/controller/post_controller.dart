@@ -29,6 +29,10 @@ class PostController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // ✨ Controller 레벨 캐시
+  final Map<String, _CachedCategoryPosts> _categoryCache = {};
+  static const Duration _controllerCacheTtl = Duration(hours: 1);
+
   // 게시물 변경 리스너 목록
   final List<VoidCallback> _onPostsChangedListeners = [];
 
@@ -44,6 +48,9 @@ class PostController extends ChangeNotifier {
 
   /// 게시물 변경 알림
   void _notifyPostsChanged() {
+    // ✨ 캐시 무효화 (게시물 변경 시)
+    clearAllCache();
+
     for (final listener in _onPostsChangedListeners) {
       listener();
     }
@@ -97,6 +104,7 @@ class PostController extends ChangeNotifier {
     int? duration,
     double? savedAspectRatio,
     bool? isFromGallery,
+    PostType? postType,
   }) async {
     _setLoading(true);
     _clearError();
@@ -120,6 +128,7 @@ class PostController extends ChangeNotifier {
         duration: duration,
         savedAspectRatio: savedAspectRatio,
         isFromGallery: isFromGallery,
+        postType: postType,
       );
       if (kDebugMode) debugPrint("[PostController] 게시물 생성 결과: $result");
       _setLoading(false);
@@ -144,6 +153,7 @@ class PostController extends ChangeNotifier {
     int? duration,
     double? savedAspectRatio,
     bool? isFromGallery,
+    PostType? postType,
   }) async {
     debugPrint("[PostController] createPostAndReturnId 호출됨");
     try {
@@ -165,6 +175,7 @@ class PostController extends ChangeNotifier {
         duration: duration,
         savedAspectRatio: savedAspectRatio,
         isFromGallery: isFromGallery,
+        postType: postType,
       );
     } catch (e) {
       _setError('[PostController]게시물 생성 실패: $e');
@@ -227,6 +238,19 @@ class PostController extends ChangeNotifier {
     int? notificationId,
     int page = 0,
   }) async {
+    // 캐시 키 생성
+    final cacheKey = '$userId:$categoryId:$page';
+
+    // 캐시 확인 (만료 안 된 것만)
+    final cached = _categoryCache[cacheKey];
+    if (cached != null &&
+        DateTime.now().difference(cached.cachedAt) < _controllerCacheTtl) {
+      if (kDebugMode) {
+        debugPrint('📦 [PostController] 캐시 히트: $cacheKey');
+      }
+      return cached.posts;
+    }
+
     _setLoading(true);
     _clearError();
 
@@ -237,11 +261,26 @@ class PostController extends ChangeNotifier {
         notificationId: notificationId,
         page: page,
       );
+
+      // 캐시 저장
+      _categoryCache[cacheKey] = _CachedCategoryPosts(
+        posts: posts,
+        cachedAt: DateTime.now(),
+      );
+
       _setLoading(false);
       return posts;
     } catch (e) {
       _setError('카테고리 게시물 조회 실패: $e');
       _setLoading(false);
+
+      // 에러 시 만료된 캐시라도 반환
+      if (cached != null) {
+        if (kDebugMode) {
+          debugPrint('⚠️ [PostController] 에러 발생, 만료된 캐시 사용');
+        }
+        return cached.posts;
+      }
       return [];
     }
   }
@@ -295,6 +334,9 @@ class PostController extends ChangeNotifier {
     int? categoryId,
     String? waveformData,
     int? duration,
+    bool? isFromGallery,
+    double? savedAspectRatio,
+    PostType? postType,
   }) async {
     _setLoading(true);
     _clearError();
@@ -308,6 +350,9 @@ class PostController extends ChangeNotifier {
         categoryId: categoryId,
         waveformData: waveformData,
         duration: duration,
+        isFromGallery: isFromGallery,
+        savedAspectRatio: savedAspectRatio,
+        postType: postType,
       );
       _setLoading(false);
       if (result) _notifyPostsChanged();
@@ -385,6 +430,26 @@ class PostController extends ChangeNotifier {
   }
 
   // ============================================
+  // 캐시 관리
+  // ============================================
+
+  /// 특정 카테고리의 캐시 무효화
+  void invalidateCategoryCache(int categoryId) {
+    _categoryCache.removeWhere((key, _) => key.contains(':$categoryId:'));
+    if (kDebugMode) {
+      debugPrint('[PostController] 카테고리 $categoryId 캐시 무효화');
+    }
+  }
+
+  /// 전체 캐시 초기화
+  void clearAllCache() {
+    _categoryCache.clear();
+    if (kDebugMode) {
+      debugPrint('[PostController] 전체 캐시 초기화');
+    }
+  }
+
+  // ============================================
   // 에러 처리
   // ============================================
 
@@ -408,4 +473,12 @@ class PostController extends ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
   }
+}
+
+/// 카테고리별 포스트 캐시 항목 클래스
+class _CachedCategoryPosts {
+  final List<Post> posts;
+  final DateTime cachedAt;
+
+  _CachedCategoryPosts({required this.posts, required this.cachedAt});
 }

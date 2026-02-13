@@ -61,6 +61,11 @@ void main() {
       // TODO
     });
 
+    // int commentCount
+    test('to test the property `commentCount`', () async {
+      // TODO
+    });
+
     // int duration
     test('to test the property `duration`', () async {
       // TODO
@@ -73,6 +78,21 @@ void main() {
 
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
+      // TODO
+    });
+
+    // double savedAspectRatio
+    test('to test the property `savedAspectRatio`', () async {
+      // TODO
+    });
+
+    // bool isFromGallery
+    test('to test the property `isFromGallery`', () async {
+      // TODO
+    });
+
+    // String postType
+    test('to test the property `postType`', () async {
       // TODO
     });
 

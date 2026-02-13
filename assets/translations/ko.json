@@ -29,9 +29,9 @@
   },
   "archive": {
     "tabs": {
-      "all": "전체",
-      "shared": "공유앨범",
-      "mine": "나의 앨범"
+      "all": "All",
+      "shared": "Shared",
+      "mine": "My"
     },
     "menu": {
       "edit_name": "카테고리 이름 수정",

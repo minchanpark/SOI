@@ -11,6 +11,7 @@ enum AppNotificationType {
   commentAdded('COMMENT_ADDED'),
   commentAudioAdded('COMMENT_AUDIO_ADDED'),
   commentReactAdded('COMMENT_REACT_ADDED'),
+  commentReplyAdded('COMMENT_REPLY_ADDED'),
   friendRequest('FRIEND_REQUEST'),
   friendRespond('FRIEND_RESPOND');
 
@@ -103,6 +104,8 @@ class AppNotification {
         return AppNotificationType.commentAudioAdded;
       case NotificationRespDtoTypeEnum.COMMENT_REACT_ADDED:
         return AppNotificationType.commentReactAdded;
+      case NotificationRespDtoTypeEnum.COMMENT_REPLY_ADDED:
+        return AppNotificationType.commentReplyAdded;
       case NotificationRespDtoTypeEnum.FRIEND_REQUEST:
         return AppNotificationType.friendRequest;
       case NotificationRespDtoTypeEnum.FRIEND_RESPOND:
@@ -114,7 +117,6 @@ class AppNotification {
 
   /// JSON에서 AppNotification 모델 생성
   factory AppNotification.fromJson(Map<String, dynamic> json) {
-    final dynamic typeValue = json['type'];
     return AppNotification(
       id: json['id'] as int?,
       text: json['text'] as String?,
@@ -124,11 +126,18 @@ class AppNotification {
           (json['userProfileKey'] as String?) ??
           (json['userProfile'] as String?),
       imageUrl: json['imageUrl'] as String?,
-      type: _typeFromString(typeValue as String?),
+      type: _typeFromJsonValue(json['type']),
       isRead: json['isRead'] as bool?,
       categoryIdForPost: json['categoryIdForPost'] as int?,
       relatedId: json['relatedId'] as int?,
     );
+  }
+
+  static AppNotificationType? _typeFromJsonValue(dynamic raw) {
+    if (raw is NotificationRespDtoTypeEnum) {
+      return _typeFromDto(raw);
+    }
+    return _typeFromString(raw?.toString());
   }
 
   static AppNotificationType? _typeFromString(String? type) {
@@ -145,6 +154,8 @@ class AppNotification {
         return AppNotificationType.commentAudioAdded;
       case 'COMMENT_REACT_ADDED':
         return AppNotificationType.commentReactAdded;
+      case 'COMMENT_REPLY_ADDED':
+        return AppNotificationType.commentReplyAdded;
       case 'FRIEND_REQUEST':
         return AppNotificationType.friendRequest;
       case 'FRIEND_RESPOND':

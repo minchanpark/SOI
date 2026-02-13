@@ -143,38 +143,35 @@ class _ApiArchiveProfileRowWidgetState
 
     // +N 배지 포함 시 너비 계산
     final badgeCount = remainingCount > 0 ? 1 : 0;
-    final totalWidth = (displayCount - 1 + badgeCount) * 12.0 + 19.0;
+    final totalWidth = (displayCount - 1 + badgeCount) * 12.0 + (23.44);
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SizedBox(
-        height: 19,
-        width: totalWidth,
-        child: Stack(
-          children: [
-            // displayCount개 프로필 표시
-            ...List.generate(displayCount, (index) {
-              // 키가 있고, presigned URL이 캐시에 있으면 사용
-              final key = index < widget.profileUrlKeys.length
-                  ? widget.profileUrlKeys[index]
-                  : '';
-              final imageUrl = _presignedUrlCache[key] ?? '';
+    return SizedBox(
+      height: (23.44),
+      width: totalWidth,
+      child: Stack(
+        children: [
+          // displayCount개 프로필 표시
+          ...List.generate(displayCount, (index) {
+            // 키가 있고, presigned URL이 캐시에 있으면 사용
+            final key = index < widget.profileUrlKeys.length
+                ? widget.profileUrlKeys[index]
+                : '';
+            final imageUrl = _presignedUrlCache[key] ?? '';
 
-              return Positioned(
-                left: index * 12.0,
-                child: imageUrl.isEmpty
-                    ? _buildDefaultAvatar()
-                    : _buildProfileImage(imageUrl),
-              );
-            }),
-            // +N 배지 표시 (3명 초과 시)
-            if (remainingCount > 0)
-              Positioned(
-                left: displayCount * 12.0,
-                child: _buildRemainingBadge(remainingCount),
-              ),
-          ],
-        ),
+            return Positioned(
+              right: index * 12.0,
+              child: imageUrl.isEmpty
+                  ? _buildDefaultAvatar()
+                  : _buildProfileImage(imageUrl),
+            );
+          }),
+          // +N 배지 표시 (3명 초과 시)
+          if (remainingCount > 0)
+            Positioned(
+              right: displayCount * 12.0,
+              child: _buildRemainingBadge(remainingCount),
+            ),
+        ],
       ),
     );
   }
@@ -182,8 +179,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 기본 아바타 (이미지 없을 때)
   Widget _buildDefaultAvatar() {
     return Container(
-      width: 19,
-      height: 19,
+      width: (23.44),
+      height: (23.44),
       decoration: BoxDecoration(
         color: Colors.grey.shade700,
         shape: BoxShape.circle,
@@ -196,8 +193,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 프로필 이미지 빌드
   Widget _buildProfileImage(String imageUrl) {
     return Container(
-      width: 19,
-      height: 19,
+      width: (23.44),
+      height: (23.44),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFF1C1C1C), width: 1.5),
@@ -205,8 +202,8 @@ class _ApiArchiveProfileRowWidgetState
       child: ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl,
-          width: 19,
-          height: 19,
+          width: (23.44),
+          height: (23.44),
           fit: BoxFit.cover,
           fadeInDuration: Duration.zero,
           fadeOutDuration: Duration.zero,
@@ -214,14 +211,14 @@ class _ApiArchiveProfileRowWidgetState
             baseColor: Colors.grey.shade800,
             highlightColor: Colors.grey.shade700,
             child: Container(
-              width: 19,
-              height: 19,
+              width: (23.44),
+              height: (23.44),
               color: Colors.grey.shade800,
             ),
           ),
           errorWidget: (context, url, error) => Container(
-            width: 19,
-            height: 19,
+            width: (23.44),
+            height: (23.44),
             color: Colors.grey.shade700,
             child: const Icon(Icons.person, size: 12, color: Colors.white54),
           ),
@@ -233,8 +230,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 남은 인원수 배지 (+N)
   Widget _buildRemainingBadge(int count) {
     return Container(
-      width: 19,
-      height: 19,
+      width: (23.44),
+      height: (23.44),
       decoration: BoxDecoration(
         color: const Color(0xFF3A3A3A),
         shape: BoxShape.circle,

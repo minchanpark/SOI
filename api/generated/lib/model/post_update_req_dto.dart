@@ -23,6 +23,7 @@ class PostUpdateReqDto {
     this.duration,
     this.isFromGallery,
     this.savedAspectRatio,
+    this.postType,
   });
 
   ///
@@ -105,6 +106,8 @@ class PostUpdateReqDto {
   ///
   double? savedAspectRatio;
 
+  PostUpdateReqDtoPostTypeEnum? postType;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is PostUpdateReqDto &&
     other.postId == postId &&
@@ -116,7 +119,8 @@ class PostUpdateReqDto {
     other.waveformData == waveformData &&
     other.duration == duration &&
     other.isFromGallery == isFromGallery &&
-    other.savedAspectRatio == savedAspectRatio;
+    other.savedAspectRatio == savedAspectRatio &&
+    other.postType == postType;
 
   @override
   int get hashCode =>
@@ -130,10 +134,11 @@ class PostUpdateReqDto {
     (waveformData == null ? 0 : waveformData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (isFromGallery == null ? 0 : isFromGallery!.hashCode) +
-    (savedAspectRatio == null ? 0 : savedAspectRatio!.hashCode);
+    (savedAspectRatio == null ? 0 : savedAspectRatio!.hashCode) +
+    (postType == null ? 0 : postType!.hashCode);
 
   @override
-  String toString() => 'PostUpdateReqDto[postId=$postId, categoryId=$categoryId, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, waveformData=$waveformData, duration=$duration, isFromGallery=$isFromGallery, savedAspectRatio=$savedAspectRatio]';
+  String toString() => 'PostUpdateReqDto[postId=$postId, categoryId=$categoryId, nickname=$nickname, content=$content, postFileKey=$postFileKey, audioFileKey=$audioFileKey, waveformData=$waveformData, duration=$duration, isFromGallery=$isFromGallery, savedAspectRatio=$savedAspectRatio, postType=$postType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -187,6 +192,11 @@ class PostUpdateReqDto {
     } else {
       json[r'savedAspectRatio'] = null;
     }
+    if (this.postType != null) {
+      json[r'postType'] = this.postType;
+    } else {
+      json[r'postType'] = null;
+    }
     return json;
   }
 
@@ -219,6 +229,7 @@ class PostUpdateReqDto {
         duration: mapValueOfType<int>(json, r'duration'),
         isFromGallery: mapValueOfType<bool>(json, r'isFromGallery'),
         savedAspectRatio: mapValueOfType<double>(json, r'savedAspectRatio'),
+        postType: PostUpdateReqDtoPostTypeEnum.fromJson(json[r'postType']),
       );
     }
     return null;
@@ -268,4 +279,78 @@ class PostUpdateReqDto {
   static const requiredKeys = <String>{
   };
 }
+
+
+class PostUpdateReqDtoPostTypeEnum {
+  /// Instantiate a new enum with the provided [value].
+  const PostUpdateReqDtoPostTypeEnum._(this.value);
+
+  /// The underlying value of this enum member.
+  final String value;
+
+  @override
+  String toString() => value;
+
+  String toJson() => value;
+
+  static const TEXT_ONLY = PostUpdateReqDtoPostTypeEnum._(r'TEXT_ONLY');
+  static const MULTIMEDIA = PostUpdateReqDtoPostTypeEnum._(r'MULTIMEDIA');
+
+  /// List of all possible values in this [enum][PostUpdateReqDtoPostTypeEnum].
+  static const values = <PostUpdateReqDtoPostTypeEnum>[
+    TEXT_ONLY,
+    MULTIMEDIA,
+  ];
+
+  static PostUpdateReqDtoPostTypeEnum? fromJson(dynamic value) => PostUpdateReqDtoPostTypeEnumTypeTransformer().decode(value);
+
+  static List<PostUpdateReqDtoPostTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <PostUpdateReqDtoPostTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = PostUpdateReqDtoPostTypeEnum.fromJson(row);
+        if (value != null) {
+          result.add(value);
+        }
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [PostUpdateReqDtoPostTypeEnum] to String,
+/// and [decode] dynamic data back to [PostUpdateReqDtoPostTypeEnum].
+class PostUpdateReqDtoPostTypeEnumTypeTransformer {
+  factory PostUpdateReqDtoPostTypeEnumTypeTransformer() => _instance ??= const PostUpdateReqDtoPostTypeEnumTypeTransformer._();
+
+  const PostUpdateReqDtoPostTypeEnumTypeTransformer._();
+
+  String encode(PostUpdateReqDtoPostTypeEnum data) => data.value;
+
+  /// Decodes a [dynamic value][data] to a PostUpdateReqDtoPostTypeEnum.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  PostUpdateReqDtoPostTypeEnum? decode(dynamic data, {bool allowNull = true}) {
+    if (data != null) {
+      switch (data) {
+        case r'TEXT_ONLY': return PostUpdateReqDtoPostTypeEnum.TEXT_ONLY;
+        case r'MULTIMEDIA': return PostUpdateReqDtoPostTypeEnum.MULTIMEDIA;
+        default:
+          if (!allowNull) {
+            throw ArgumentError('Unknown enum value to decode: $data');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// Singleton [PostUpdateReqDtoPostTypeEnumTypeTransformer] instance.
+  static PostUpdateReqDtoPostTypeEnumTypeTransformer? _instance;
+}
+
 

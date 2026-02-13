@@ -481,7 +481,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   /// - [postId]: 프로필 이미지가 드래그된 게시물 ID
   /// - [absolutePosition]: 드래그된 절대 위치
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
-    final imageSize = Size(354.w, 500.h); // 프로필 이미지 크기 (고정값)
+    // 해당 post를 찾아서 savedAspectRatio 사용
+    final post = _posts.firstWhere((p) => p.id == postId, orElse: () => _posts[_currentIndex]);
+    final aspectRatio = post.savedAspectRatio;
+    final width = 354.w;
+    final height = (aspectRatio != null && aspectRatio > 0) ? width / aspectRatio : 500.h;
+    final imageSize = Size(width, height);
     // 포인터 끝점 기준 좌표를 상대 위치로 변환
     final relativePosition = PositionConverter.toRelativePosition(
       absolutePosition,

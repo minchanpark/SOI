@@ -61,8 +61,22 @@ class GalleryThumbnail extends StatelessWidget {
     return _buildPlaceholder();
   }
 
+  /// 갤러리 썸네일 로드 실패 시 표시되는 플레이스홀더 위젯입니다.
   Widget _buildPlaceholder() {
-    return _buildShimmer();
+    // 로드 실패 시 정적 아이콘 표시 (shimmer와 구분하여 사용자 혼란 방지)
+    return Container(
+      width: size.w,
+      height: size.h,
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Icon(
+        Icons.photo_library,
+        color: Colors.grey[600],
+        size: size * 0.5,
+      ),
+    );
   }
 
   Widget _buildShimmer() {

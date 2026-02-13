@@ -18,6 +18,7 @@ import '../../../../api/models/friend.dart';
 import '../../../../api/models/post.dart';
 import '../../../../api/models/user.dart';
 import '../../../../theme/theme.dart';
+import '../../../../utils/video_thumbnail_cache.dart';
 import '../../widgets/archive_card_widget/archive_card_placeholders.dart';
 import '../../widgets/api_photo_grid_item.dart';
 
@@ -122,25 +123,41 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         userId: currentUser.id,
         categoryId: _currentCategory.id,
       );
-      // 캐시에서 유효한 항목 가져오기
-      final cached = _getValidCache(cacheKey);
-      if (!forceRefresh && cached != null) {
+
+      // Optimistic UI: 만료된 캐시도 일단 사용
+      final cached = _getValidCache(cacheKey, allowExpired: true);
+      final freshCache = _getValidCache(cacheKey, allowExpired: false);
+
+      if (cached != null && !forceRefresh) {
+        // 즉시 캐시 데이터 표시 (만료 여부와 관계없이)
         if (mounted) {
           setState(() {
-            _posts = cached.posts; // 캐시된 포스트 사용
-            _isLoading = false; // 로딩 완료
-            _errorMessageKey = null; // 에러 없음
+            _posts = cached.posts;
+            _isLoading = false;
+            _errorMessageKey = null;
           });
         }
-        return;
+
+        // 캐시가 신선하면 여기서 종료
+        if (freshCache != null) {
+          if (foundation.kDebugMode) {
+            debugPrint('[_loadPosts] 신선한 캐시 사용, API 호출 생략');
+          }
+          return;
+        }
+        // 만료된 캐시인 경우 백그라운드에서 새로고침 계속 진행
+        // (UI는 이미 표시됨)
+        if (foundation.kDebugMode) {
+          debugPrint('[_loadPosts] 만료된 캐시 표시, 백그라운드 갱신 시작');
+        }
+      } else {
+        setState(() {
+          _isLoading = true;
+          _errorMessageKey = null;
+        });
       }
 
-      setState(() {
-        _isLoading = true;
-        _errorMessageKey = null;
-      });
-
-      // ⚡ 카테고리 포스트 조회 & 차단 유저 조회를 병렬로 실행
+      // 카테고리 포스트 조회 & 차단 유저 조회를 병렬로 실행
       // 두 API는 서로 의존성이 없으므로 동시에 호출하여 대기 시간을 절반으로 줄임
       final stopwatch = Stopwatch()..start();
 
@@ -163,7 +180,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
       if (foundation.kDebugMode) {
         debugPrint(
-          '⏱️ [_loadPosts] API 병렬 호출 (posts + blocked): ${stopwatch.elapsedMilliseconds}ms',
+          '[_loadPosts] API 병렬 호출 (posts + blocked): ${stopwatch.elapsedMilliseconds}ms',
         );
       }
 
@@ -178,11 +195,9 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
       if (foundation.kDebugMode) {
         debugPrint(
-          '⏱️ [_loadPosts] 필터링 완료 (${mediaPosts.length}개 미디어 포스트): ${stopwatch.elapsedMilliseconds}ms',
+          '[_loadPosts] 필터링 완료 (${mediaPosts.length}개 미디어 포스트): ${stopwatch.elapsedMilliseconds}ms',
         );
-        debugPrint(
-          '⏱️ [_loadPosts] 총 소요: ${stopwatch.elapsedMilliseconds}ms',
-        );
+        debugPrint('[_loadPosts] 총 소요: ${stopwatch.elapsedMilliseconds}ms');
       }
 
       if (mounted) {
@@ -197,13 +212,28 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         posts: List<Post>.unmodifiable(mediaPosts),
         cachedAt: DateTime.now(),
       );
+
+      // ✨ 비디오 썸네일 프리페칭 (백그라운드)
+      _prefetchVideoThumbnails(mediaPosts);
     } catch (e) {
       debugPrint('[ApiCategoryPhotosScreen] 포스트 로드 실패: $e');
+      // ✨ Optimistic UI: 에러 시에도 기존 캐시 데이터 유지
       if (mounted) {
-        setState(() {
-          _errorMessageKey = 'archive.photo_load_failed';
-          _isLoading = false;
-        });
+        // 캐시된 데이터가 없을 때만 에러 메시지 표시
+        if (_posts.isEmpty) {
+          setState(() {
+            _errorMessageKey = 'archive.photo_load_failed';
+            _isLoading = false;
+          });
+        } else {
+          // 캐시된 데이터가 있으면 유지하고 로딩만 종료
+          setState(() {
+            _isLoading = false;
+          });
+          if (foundation.kDebugMode) {
+            debugPrint('[_loadPosts] 갱신 실패했지만 캐시 데이터 유지');
+          }
+        }
       }
     }
   }
@@ -212,6 +242,38 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   Future<void> _onRefresh() async {
     await _loadPosts(forceRefresh: true);
     _startAutoRefreshTimer();
+  }
+
+  /// 비디오 썸네일 프리페칭
+  ///
+  /// 화면에 표시될 비디오들의 썸네일을 백그라운드에서 미리 생성합니다.
+  /// 이를 통해 사용자가 그리드를 스크롤할 때 썸네일이 즉시 표시됩니다.
+  void _prefetchVideoThumbnails(List<Post> posts) {
+    final videoPosts = posts.where((post) => post.isVideo).toList();
+
+    if (videoPosts.isEmpty) return;
+
+    // 처음 10개 비디오만 프리페칭 (초기 뷰포트 + 약간의 여유)
+    final videosToFetch = videoPosts.take(10).toList();
+
+    if (foundation.kDebugMode) {
+      debugPrint('[VideoThumbnail] ${videosToFetch.length}개 비디오 썸네일 프리페칭 시작');
+    }
+
+    for (final post in videosToFetch) {
+      final url = post.postFileUrl;
+      if (url == null || url.isEmpty) continue;
+
+      final cacheKey = post.postFileKey ?? url;
+
+      // 이미 메모리 캐시에 있으면 스킵
+      if (VideoThumbnailCache.getFromMemory(cacheKey) != null) {
+        continue;
+      }
+
+      // 백그라운드에서 3-tier 조회 (Memory → Disk → Generate)
+      VideoThumbnailCache.getThumbnail(videoUrl: url, cacheKey: cacheKey);
+    }
   }
 
   /// 자동 새로고침 타이머 시작
@@ -269,15 +331,23 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   ///
   /// Parameters:
   /// - [key]: 캐시 키
+  /// - [allowExpired]: 만료된 캐시도 반환할지 여부 (Optimistic UI용)
   ///
   /// Returns: 유효한 캐시 항목 또는 null
-  _CategoryPostsCacheEntry? _getValidCache(String key) {
+  _CategoryPostsCacheEntry? _getValidCache(
+    String key, {
+    bool allowExpired = false,
+  }) {
     final cached = _categoryPostsCache[key];
     if (cached == null) return null;
-    if (DateTime.now().difference(cached.cachedAt) >= _cacheTtl) {
-      _categoryPostsCache.remove(key);
+
+    final isExpired = DateTime.now().difference(cached.cachedAt) >= _cacheTtl;
+
+    // 만료되었지만 allowExpired=true면 반환 (Optimistic UI용)
+    if (isExpired && !allowExpired) {
       return null;
     }
+
     return cached;
   }
 
@@ -540,8 +610,5 @@ class _CategoryPostsCacheEntry {
   final List<Post> posts;
   final DateTime cachedAt;
 
-  const _CategoryPostsCacheEntry({
-    required this.posts,
-    required this.cachedAt,
-  });
+  const _CategoryPostsCacheEntry({required this.posts, required this.cachedAt});
 }

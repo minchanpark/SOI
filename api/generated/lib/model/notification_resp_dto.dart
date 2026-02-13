@@ -289,6 +289,7 @@ class NotificationRespDtoTypeEnum {
   static const COMMENT_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_ADDED');
   static const COMMENT_AUDIO_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_AUDIO_ADDED');
   static const COMMENT_REACT_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_REACT_ADDED');
+  static const COMMENT_REPLY_ADDED = NotificationRespDtoTypeEnum._(r'COMMENT_REPLY_ADDED');
   static const FRIEND_REQUEST = NotificationRespDtoTypeEnum._(r'FRIEND_REQUEST');
   static const FRIEND_RESPOND = NotificationRespDtoTypeEnum._(r'FRIEND_RESPOND');
 
@@ -300,6 +301,7 @@ class NotificationRespDtoTypeEnum {
     COMMENT_ADDED,
     COMMENT_AUDIO_ADDED,
     COMMENT_REACT_ADDED,
+    COMMENT_REPLY_ADDED,
     FRIEND_REQUEST,
     FRIEND_RESPOND,
   ];
@@ -346,6 +348,7 @@ class NotificationRespDtoTypeEnumTypeTransformer {
         case r'COMMENT_ADDED': return NotificationRespDtoTypeEnum.COMMENT_ADDED;
         case r'COMMENT_AUDIO_ADDED': return NotificationRespDtoTypeEnum.COMMENT_AUDIO_ADDED;
         case r'COMMENT_REACT_ADDED': return NotificationRespDtoTypeEnum.COMMENT_REACT_ADDED;
+        case r'COMMENT_REPLY_ADDED': return NotificationRespDtoTypeEnum.COMMENT_REPLY_ADDED;
         case r'FRIEND_REQUEST': return NotificationRespDtoTypeEnum.FRIEND_REQUEST;
         case r'FRIEND_RESPOND': return NotificationRespDtoTypeEnum.FRIEND_RESPOND;
         default:

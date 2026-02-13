@@ -2,23 +2,34 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:soi/api/models/post.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../../api/controller/category_controller.dart';
+import '../../../../api/controller/post_controller.dart';
+import '../../../../api/controller/user_controller.dart';
+import '../../../../api/controller/friend_controller.dart';
 import '../../../../api/models/category.dart' as api_category;
+import '../../../../api/models/friend.dart';
 import '../../screens/archive_detail/api_category_photos_screen.dart';
 import 'api_archive_profile_row_widget.dart';
 import 'api_archive_popup_menu_widget.dart';
 import 'archive_card_models.dart';
 import 'archive_card_placeholders.dart';
 
-/// REST API 기반 아카이브 카드 위젯
+import 'package:flutter/foundation.dart' show kDebugMode;
+
+/// 카테고리 카드를 표시하는 위젯
 ///
-/// [category]: 카테고리 데이터
-/// [isEditMode]: 편집 모드 여부
-/// [isEditing]: 현재 편집 중인지 여부
-/// [editingController]: 편집 중인 텍스트 컨트롤러
-/// [onStartEdit]: 편집 시작 콜백
-/// [layoutMode]: 아카이브 레이아웃 모드
+/// Parameters:
+/// - [category]: 표시할 카테고리 데이터
+/// - [isEditMode]: 편집 모드 여부
+/// - [isEditing]: 현재 편집 중인지 여부
+/// - [editingController]: 편집 중인 텍스트 컨트롤러
+/// - [onStartEdit]: 편집 시작 콜백
+/// - [layoutMode]: 아카이브 레이아웃 모드
+///
+/// Returns:
+/// - [Widget]: 카테고리 카드 위젯
 class ApiArchiveCardWidget extends StatelessWidget {
   final api_category.Category category;
   final bool isEditMode;
@@ -43,69 +54,69 @@ class ApiArchiveCardWidget extends StatelessWidget {
   }
 
   Widget _buildGridLayout(BuildContext context) {
-    return Container(
-      key: ValueKey('grid_${category.id}'),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1C),
-        borderRadius: BorderRadius.circular(6.61),
-        border: Border.all(width: 1, color: Colors.transparent),
-      ),
-      child: InkWell(
-        onTap: isEditMode
-            ? null
-            : () {
-                final latestCategory =
-                    context.read<CategoryController>().getCategoryById(
-                      category.id,
-                    ) ??
-                    category;
-                // REST API 버전의 CategoryPhotosScreen으로 이동
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ApiCategoryPhotosScreen(category: latestCategory),
-                  ),
+    return InkWell(
+      onTap: isEditMode
+          ? null
+          : () {
+              final latestCategory =
+                  context.read<CategoryController>().getCategoryById(
+                    category.id,
+                  ) ??
+                  category;
+
+              // ✨ 프리페칭: 네비게이션 시작과 동시에 데이터 로드
+              final postController = context.read<PostController>();
+              final userController = context.read<UserController>();
+              final friendController = context.read<FriendController>();
+              final currentUser = userController.currentUser;
+
+              // 백그라운드에서 데이터 프리페칭 시작 (await 없이)
+              if (currentUser != null) {
+                _prefetchCategoryData(
+                  postController: postController,
+                  friendController: friendController,
+                  categoryId: latestCategory.id,
+                  userId: currentUser.id,
                 );
-              },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.topLeft,
-              children: [
-                // 카테고리 이미지 위젯 빌드
-                _buildCategoryImage(
-                  width: 146.7,
-                  height: 146.8,
-                  borderRadius: 6.61,
+              }
+
+              // 동시에 화면 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ApiCategoryPhotosScreen(category: latestCategory),
                 ),
-                // 고정 배지 위젯 빌드
-                _buildPinnedBadge(top: 5, left: 5),
-                // 신규 배지 위젯 빌드
-                _buildNewBadge(top: 6.43, left: 127),
-              ],
-            ),
-            SizedBox(height: (8.7).h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(left: 14, right: 8),
-                    child: _buildTitleWidget(context, fontSize: 14),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(right: 5),
-                  child: _buildPopupMenu(),
-                ),
-              ],
-            ),
-            SizedBox(height: (16.87).h),
-            Padding(
-              padding: EdgeInsets.only(left: 12),
+              );
+            },
+      child: Stack(
+        children: [
+          // 카테고리 이미지 (전체 채우기)
+          _buildCategoryImage(
+            width: 170.sp,
+            height: 204.sp,
+            borderRadius: 10.7,
+          ),
+
+          // 고정 배지
+          // TODO: 위치 조정 필요
+          _buildPinnedBadge(top: 5, left: 5),
+
+          // 신규 배지
+          // TODO: 위치 조정 필요
+          _buildNewBadge(top: 6.43, left: 127),
+
+          // 카테고리 제목: 왼쪽 위
+          Padding(
+            padding: EdgeInsets.only(left: 15.sp, top: 15.sp),
+            child: _buildTitleWidget(context, fontSize: 16.sp),
+          ),
+
+          // 프로필 Row: 오른쪽 아래
+          Padding(
+            padding: EdgeInsets.only(right: (8.39).sp, bottom: 9.sp),
+            child: Align(
+              alignment: Alignment.bottomRight,
               child: Selector<CategoryController, CategoryProfileRowData>(
                 selector: (_, controller) {
                   final latest = controller.getCategoryById(category.id);
@@ -117,7 +128,6 @@ class ApiArchiveCardWidget extends StatelessWidget {
                   );
                 },
                 builder: (context, data, _) {
-                  // 프로필 행 위젯 빌드 --> 프로필을 row로 표시
                   return ApiArchiveProfileRowWidget(
                     profileUrlKeys: data.profileUrlKeys,
                     totalUserCount: data.totalUserCount,
@@ -125,8 +135,8 @@ class ApiArchiveCardWidget extends StatelessWidget {
                 },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -138,10 +148,9 @@ class ApiArchiveCardWidget extends StatelessWidget {
         controller: editingController,
         style: TextStyle(
           color: const Color(0xFFF8F8F8),
-          fontSize: 14,
-          fontFamily: 'Pretendard ',
-          fontWeight: FontWeight.w400,
-          letterSpacing: -0.40,
+          fontSize: fontSize,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Pretendard Variable',
         ),
         cursorColor: const Color(0xfff9f9f9),
         decoration: const InputDecoration(
@@ -217,6 +226,10 @@ class ApiArchiveCardWidget extends StatelessWidget {
               width: width,
               height: height,
 
+              // Opacity 적용
+              color: Colors.white.withValues(alpha: 0.8),
+              colorBlendMode: BlendMode.modulate,
+
               // 메모리 캐시, 디스크 캐시 해상도 조정
               // MediaQuery.of(context).devicePixelRatio: 디바이스 픽셀 비율 고려
               memCacheWidth:
@@ -226,6 +239,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
                   (width * MediaQuery.of(context).devicePixelRatio * 1.5)
                       .round(),
               fit: BoxFit.cover,
+
               // shimmer placeholder 및 에러 위젯 처리
               // shimmer는 한번만 보여주고, 이후에는 기본 아이콘을 보여줍니다.
               placeholder: (context, url) => ShimmerOnceThenFallbackIcon(
@@ -314,5 +328,40 @@ class ApiArchiveCardWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// 카테고리 데이터 프리페칭
+  ///
+  /// 화면 전환 전에 미리 데이터를 로드하여 즉시 표시 가능하도록 합니다.
+  /// 네비게이션 애니메이션(~300ms) 동안 API 호출이 완료될 수 있습니다.
+  Future<void> _prefetchCategoryData({
+    required PostController postController,
+    required FriendController friendController,
+    required int categoryId,
+    required int userId,
+  }) async {
+    try {
+      // 병렬로 프리페칭
+      await Future.wait([
+        postController.getPostsByCategory(
+          categoryId: categoryId,
+          userId: userId,
+          notificationId: null,
+        ),
+        friendController.getAllFriends(
+          userId: userId,
+          status: FriendStatus.blocked,
+        ),
+      ]);
+
+      if (kDebugMode) {
+        debugPrint('[Prefetch] 카테고리 $categoryId 데이터 프리페칭 완료');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Prefetch] 프리페칭 실패 (무시됨): $e');
+      }
+      // 프리페칭 실패는 무시 (화면에서 다시 시도함)
+    }
   }
 }

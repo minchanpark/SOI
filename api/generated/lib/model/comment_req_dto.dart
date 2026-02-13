@@ -16,8 +16,11 @@ class CommentReqDto {
     this.userId,
     this.emojiId,
     this.postId,
+    this.parentId,
+    this.replyUserId,
     this.text,
     this.audioKey,
+    this.fileKey,
     this.waveformData,
     this.duration,
     this.locationX,
@@ -55,6 +58,22 @@ class CommentReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
+  int? parentId;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? replyUserId;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   String? text;
 
   ///
@@ -64,6 +83,14 @@ class CommentReqDto {
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
   String? audioKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? fileKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -104,8 +131,11 @@ class CommentReqDto {
     other.userId == userId &&
     other.emojiId == emojiId &&
     other.postId == postId &&
+    other.parentId == parentId &&
+    other.replyUserId == replyUserId &&
     other.text == text &&
     other.audioKey == audioKey &&
+    other.fileKey == fileKey &&
     other.waveformData == waveformData &&
     other.duration == duration &&
     other.locationX == locationX &&
@@ -118,8 +148,11 @@ class CommentReqDto {
     (userId == null ? 0 : userId!.hashCode) +
     (emojiId == null ? 0 : emojiId!.hashCode) +
     (postId == null ? 0 : postId!.hashCode) +
+    (parentId == null ? 0 : parentId!.hashCode) +
+    (replyUserId == null ? 0 : replyUserId!.hashCode) +
     (text == null ? 0 : text!.hashCode) +
     (audioKey == null ? 0 : audioKey!.hashCode) +
+    (fileKey == null ? 0 : fileKey!.hashCode) +
     (waveformData == null ? 0 : waveformData!.hashCode) +
     (duration == null ? 0 : duration!.hashCode) +
     (locationX == null ? 0 : locationX!.hashCode) +
@@ -127,7 +160,7 @@ class CommentReqDto {
     (commentType == null ? 0 : commentType!.hashCode);
 
   @override
-  String toString() => 'CommentReqDto[userId=$userId, emojiId=$emojiId, postId=$postId, text=$text, audioKey=$audioKey, waveformData=$waveformData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
+  String toString() => 'CommentReqDto[userId=$userId, emojiId=$emojiId, postId=$postId, parentId=$parentId, replyUserId=$replyUserId, text=$text, audioKey=$audioKey, fileKey=$fileKey, waveformData=$waveformData, duration=$duration, locationX=$locationX, locationY=$locationY, commentType=$commentType]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -146,6 +179,16 @@ class CommentReqDto {
     } else {
       json[r'postId'] = null;
     }
+    if (this.parentId != null) {
+      json[r'parentId'] = this.parentId;
+    } else {
+      json[r'parentId'] = null;
+    }
+    if (this.replyUserId != null) {
+      json[r'replyUserId'] = this.replyUserId;
+    } else {
+      json[r'replyUserId'] = null;
+    }
     if (this.text != null) {
       json[r'text'] = this.text;
     } else {
@@ -155,6 +198,11 @@ class CommentReqDto {
       json[r'audioKey'] = this.audioKey;
     } else {
       json[r'audioKey'] = null;
+    }
+    if (this.fileKey != null) {
+      json[r'fileKey'] = this.fileKey;
+    } else {
+      json[r'fileKey'] = null;
     }
     if (this.waveformData != null) {
       json[r'waveformData'] = this.waveformData;
@@ -206,8 +254,11 @@ class CommentReqDto {
         userId: mapValueOfType<int>(json, r'userId'),
         emojiId: mapValueOfType<int>(json, r'emojiId'),
         postId: mapValueOfType<int>(json, r'postId'),
+        parentId: mapValueOfType<int>(json, r'parentId'),
+        replyUserId: mapValueOfType<int>(json, r'replyUserId'),
         text: mapValueOfType<String>(json, r'text'),
         audioKey: mapValueOfType<String>(json, r'audioKey'),
+        fileKey: mapValueOfType<String>(json, r'fileKey'),
         waveformData: mapValueOfType<String>(json, r'waveformData'),
         duration: mapValueOfType<int>(json, r'duration'),
         locationX: mapValueOfType<double>(json, r'locationX'),
@@ -279,12 +330,16 @@ class CommentReqDtoCommentTypeEnum {
   static const EMOJI = CommentReqDtoCommentTypeEnum._(r'EMOJI');
   static const TEXT = CommentReqDtoCommentTypeEnum._(r'TEXT');
   static const AUDIO = CommentReqDtoCommentTypeEnum._(r'AUDIO');
+  static const PHOTO = CommentReqDtoCommentTypeEnum._(r'PHOTO');
+  static const REPLY = CommentReqDtoCommentTypeEnum._(r'REPLY');
 
   /// List of all possible values in this [enum][CommentReqDtoCommentTypeEnum].
   static const values = <CommentReqDtoCommentTypeEnum>[
     EMOJI,
     TEXT,
     AUDIO,
+    PHOTO,
+    REPLY,
   ];
 
   static CommentReqDtoCommentTypeEnum? fromJson(dynamic value) => CommentReqDtoCommentTypeEnumTypeTransformer().decode(value);
@@ -326,6 +381,8 @@ class CommentReqDtoCommentTypeEnumTypeTransformer {
         case r'EMOJI': return CommentReqDtoCommentTypeEnum.EMOJI;
         case r'TEXT': return CommentReqDtoCommentTypeEnum.TEXT;
         case r'AUDIO': return CommentReqDtoCommentTypeEnum.AUDIO;
+        case r'PHOTO': return CommentReqDtoCommentTypeEnum.PHOTO;
+        case r'REPLY': return CommentReqDtoCommentTypeEnum.REPLY;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');

@@ -262,13 +262,13 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
   Widget _buildGridView(List<int> categoryIds, String searchQuery) {
     return GridView.builder(
       key: ValueKey('grid_${categoryIds.length}_$searchQuery'),
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: (168 / 229),
-        mainAxisSpacing: 15.sp,
-        crossAxisSpacing: 15.sp,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
       ),
       itemCount: categoryIds.length,
       itemBuilder: (context, index) {
@@ -345,13 +345,13 @@ class _AllArchivesScreenState extends State<AllArchivesScreen>
   /// 로딩 중일떄, 일반 CircularProgressIndicator 대신 표시
   Widget _buildShimmerGrid() {
     return GridView.builder(
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, bottom: 20.h),
-      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: (168 / 229),
-        mainAxisSpacing: 15.sp,
-        crossAxisSpacing: 15.sp,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
       ),
       itemCount: 6,
       itemBuilder: (context, index) {

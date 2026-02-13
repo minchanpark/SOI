@@ -175,10 +175,48 @@ class _CameraScreenState extends State<CameraScreen>
         _supportsLiveSwitch = _cameraService.supportsLiveSwitch;
       });
 
-      // 갤러리 및 줌 레벨 로딩을 동시에 비동기 실행하여 O(1) 초기화 유지
-      unawaited(
-        Future.wait([_loadFirstGalleryImage(), _loadAvailableZoomLevels()]),
-      );
+      // iOS에서 Photo Library 준비 시간을 고려한 지연 로드
+      if (Platform.isIOS) {
+        debugPrint('[Gallery] iOS: Starting gallery load with retry logic');
+
+        // 첫 시도
+        unawaited(_loadFirstGalleryImage());
+
+        // 1차 재시도 (Photo Library가 준비될 때까지 대기)
+        unawaited(Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted && _firstGalleryImage == null) {
+            debugPrint('[Gallery] iOS: Retry #1 (800ms)');
+            // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
+            if (_isLoadingGallery) {
+              setState(() {
+                _isLoadingGallery = false;
+              });
+            }
+            _loadFirstGalleryImage();
+          }
+        }));
+
+        // 2차 재시도
+        unawaited(Future.delayed(const Duration(milliseconds: 2000), () {
+          if (mounted && _firstGalleryImage == null) {
+            debugPrint('[Gallery] iOS: Retry #2 (2000ms)');
+            // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
+            if (_isLoadingGallery) {
+              setState(() {
+                _isLoadingGallery = false;
+              });
+            }
+            _loadFirstGalleryImage();
+          }
+        }));
+
+        unawaited(_loadAvailableZoomLevels());
+      } else {
+        // Android는 기존 방식 유지
+        unawaited(
+          Future.wait([_loadFirstGalleryImage(), _loadAvailableZoomLevels()]),
+        );
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -296,6 +334,7 @@ class _CameraScreenState extends State<CameraScreen>
     // 비디오 녹화 중에는 갤러리 이미지 로드하지 않음
     if (_isLoadingGallery || _isVideoRecording) return;
 
+    debugPrint('[Gallery] Loading started');
     setState(() {
       _isLoadingGallery = true;
       _galleryError = null;
@@ -305,13 +344,17 @@ class _CameraScreenState extends State<CameraScreen>
       final AssetEntity? firstImage = await _cameraService
           .getFirstGalleryImage();
 
+      debugPrint('[Gallery] Got asset: ${firstImage != null}');
+
       if (mounted) {
         setState(() {
           _firstGalleryImage = firstImage;
           _isLoadingGallery = false;
         });
+        debugPrint('[Gallery] State updated, isLoading: false, hasImage: ${firstImage != null}');
       }
     } catch (e) {
+      debugPrint('[Gallery] Error: $e');
       if (mounted) {
         setState(() {
           _galleryError = tr('camera.gallery_access_failed', context: context);

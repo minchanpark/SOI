@@ -130,18 +130,20 @@ class CommentAPIApi {
     return null;
   }
 
-  /// 댓글 조회
+  /// 대댓글 조회
   ///
-  /// 게시물에 달린 댓글을 조회합니다.
+  /// 댓글에 달린 대댓글을 조회합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
   /// Parameters:
   ///
-  /// * [int] postId (required):
-  Future<Response> getCommentWithHttpInfo(int postId,) async {
+  /// * [int] parentCommentId (required):
+  ///
+  /// * [int] page (required):
+  Future<Response> getChildCommentWithHttpInfo(int parentCommentId, int page,) async {
     // ignore: prefer_const_declarations
-    final path = r'/comment/get';
+    final path = r'/comment/get-child';
 
     // ignore: prefer_final_locals
     Object? postBody;
@@ -150,7 +152,8 @@ class CommentAPIApi {
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
 
-      queryParams.addAll(_queryParams('', 'postId', postId));
+      queryParams.addAll(_queryParams('', 'parentCommentId', parentCommentId));
+      queryParams.addAll(_queryParams('', 'page', page));
 
     const contentTypes = <String>[];
 
@@ -166,15 +169,17 @@ class CommentAPIApi {
     );
   }
 
-  /// 댓글 조회
+  /// 대댓글 조회
   ///
-  /// 게시물에 달린 댓글을 조회합니다.
+  /// 댓글에 달린 대댓글을 조회합니다.
   ///
   /// Parameters:
   ///
-  /// * [int] postId (required):
-  Future<ApiResponseDtoListCommentRespDto?> getComment(int postId,) async {
-    final response = await getCommentWithHttpInfo(postId,);
+  /// * [int] parentCommentId (required):
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoSliceCommentRespDto?> getChildComment(int parentCommentId, int page,) async {
+    final response = await getChildCommentWithHttpInfo(parentCommentId, page,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -182,7 +187,70 @@ class CommentAPIApi {
     // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListCommentRespDto',) as ApiResponseDtoListCommentRespDto;
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoSliceCommentRespDto',) as ApiResponseDtoSliceCommentRespDto;
+    
+    }
+    return null;
+  }
+
+  /// 원댓글 조회
+  ///
+  /// 게시물에 달린 댓글을 조회합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  ///
+  /// * [int] page (required):
+  Future<Response> getParentCommentWithHttpInfo(int postId, int page,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/comment/get-parent';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'postId', postId));
+      queryParams.addAll(_queryParams('', 'page', page));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 원댓글 조회
+  ///
+  /// 게시물에 달린 댓글을 조회합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] postId (required):
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoSliceCommentRespDto?> getParentComment(int postId, int page,) async {
+    final response = await getParentCommentWithHttpInfo(postId, page,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoSliceCommentRespDto',) as ApiResponseDtoSliceCommentRespDto;
     
     }
     return null;

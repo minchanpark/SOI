@@ -1,5 +1,6 @@
 import 'dart:async'; // Timer 사용을 위해 추가
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,14 +8,18 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/category_controller.dart';
+import 'package:soi/api/controller/friend_controller.dart';
 import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/api/controller/category_search_controller.dart';
 import 'package:soi/api/models/category.dart';
+import 'package:soi/api/models/friend.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/snackbar_utils.dart';
+import '../../../utils/video_thumbnail_cache.dart';
 import '../../about_friends/friend_list_add_screen.dart';
 import '../widgets/overlapping_profiles_widget.dart';
 import 'archive_detail/all_archives_screen.dart';
@@ -48,6 +53,11 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
   UserController? _userController;
   MediaController? _mediaController;
+
+  // ✨ 프리페칭 관련
+  PostController? _postController;
+  FriendController? _friendController;
+  bool _hasPrefetchedPosts = false;
 
   // UserController 리스너 참조 저장 --> 프로필 이미지 변경 감지 및 처리
   VoidCallback? _userListener;
@@ -125,6 +135,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     // MediaController를 먼저 준비해야 사용자 정보 변경 시 즉시 로딩 가능
     _mediaController ??= Provider.of<MediaController>(context, listen: false);
 
+    // ✨ 프리페칭용 컨트롤러 준비
+    _postController ??= Provider.of<PostController>(context, listen: false);
+    _friendController ??= Provider.of<FriendController>(context, listen: false);
+
     final userController = Provider.of<UserController>(context, listen: false);
     if (_userController != userController) {
       if (_userListener != null) {
@@ -162,8 +176,59 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       if (_categorySearchController?.searchQuery.isNotEmpty == true) {
         _applySearch();
       }
+      // ✨ 카테고리 로드 완료 시 포스트 프리페칭 시작
+      _prefetchPostsForCategories();
     };
     _categoryController?.addListener(_categoryDataListener!);
+  }
+
+  /// 카테고리 목록이 로드되면 각 카테고리의 포스트를 백그라운드에서 프리페칭
+  ///
+  /// 사용자가 카테고리를 탭하기 전에 데이터를 미리 로드하여
+  /// 카테고리 진입 시 즉시 표시되도록 합니다.
+  void _prefetchPostsForCategories() {
+    if (_hasPrefetchedPosts) return;
+
+    final categories = _categoryController?.allCategories;
+    if (categories == null || categories.isEmpty) return;
+
+    final userId = _userController?.currentUser?.id;
+    if (userId == null) return;
+
+    _hasPrefetchedPosts = true;
+
+    // 처음 6개 카테고리만 프리페칭 (그리드 뷰에 보이는 수)
+    final categoriesToFetch = categories.take(6).toList();
+
+    if (kDebugMode) {
+      debugPrint('[ArchiveMain] ${categoriesToFetch.length}개 카테고리 포스트 프리페칭 시작');
+    }
+
+    for (final category in categoriesToFetch) {
+      // PostController 캐시에 저장되므로 나중에 카테고리 진입 시 즉시 사용
+      _postController
+          ?.getPostsByCategory(categoryId: category.id, userId: userId)
+          .then((posts) {
+            // 비디오 썸네일도 프리페칭
+            final videoPosts = posts.where((p) => p.isVideo).take(4).toList();
+            for (final post in videoPosts) {
+              final url = post.postFileUrl;
+              if (url == null || url.isEmpty) continue;
+              final cacheKey = post.postFileKey ?? url;
+              if (VideoThumbnailCache.getFromMemory(cacheKey) != null) continue;
+              VideoThumbnailCache.getThumbnail(
+                videoUrl: url,
+                cacheKey: cacheKey,
+              );
+            }
+          });
+    }
+
+    // blocked friends도 프리페칭
+    _friendController?.getAllFriends(
+      userId: userId,
+      status: FriendStatus.blocked,
+    );
   }
 
   /// 프로필 이미지 presigned URL 로드
@@ -689,9 +754,9 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           labelKey,
           style: TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16.sp,
-            fontFamily: 'Pretendard',
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+            fontFamily: 'Pretendard Variable',
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

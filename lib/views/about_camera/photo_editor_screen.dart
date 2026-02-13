@@ -2,6 +2,7 @@ import 'dart:async';
 //import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -43,7 +44,7 @@ class _UploadPerfTrace {
   }
 }
 
-/// 파형 데이터를 인코딩하는 함수s
+/// 파형 데이터를 인코딩하는 함수
 ///
 /// Parameters:
 /// - [waveformData]: 파형 데이터 리스트
@@ -107,6 +108,8 @@ class _UploadPayload {
   final List<double>? waveformData; // 음성 파형 데이터
   final int? audioDurationSeconds; // 음성 재생 시간 (초)
   final int usageCount; // 미디어 사용 횟수
+  final double? aspectRatio; // 미디어의 가로세로 비율 (width/height)
+  final bool isFromGallery; // 갤러리에서 선택한 미디어인지 여부
 
   const _UploadPayload({
     required this.userId,
@@ -115,11 +118,13 @@ class _UploadPayload {
     required this.mediaPath,
     required this.isVideo,
     required this.usageCount,
+    required this.isFromGallery,
     this.audioFile,
     this.audioPath,
     this.caption,
     this.waveformData,
     this.audioDurationSeconds,
+    this.aspectRatio,
   });
 }
 
@@ -940,7 +945,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   }) async {
     final perf = _UploadPerfTrace('PhotoEditor.upload.bg');
     try {
-      final mediaResult = await _uploadMediaForPost(payload: payload);
+      final mediaResult = await _uploadMediaForPost(
+        payload: payload,
+      ); // 미디어 업로드
       perf.mark('media uploaded');
       if (mediaResult == null) {
         throw Exception('미디어 업로드에 실패했습니다.');
@@ -1018,6 +1025,41 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
+  /// 이미지 파일의 aspect ratio(가로세로 비율)을 계산합니다.
+  ///
+  /// Parameters:
+  ///   - [file]: aspect ratio를 계산할 이미지 파일
+  ///
+  /// Returns:
+  ///  - 이미지의 가로세로 비율 (width / height), 계산 실패 시 null 반환
+  Future<double?> _calculateImageAspectRatio(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+
+      final width = image.width.toDouble();
+      final height = image.height.toDouble();
+
+      image.dispose();
+      codec.dispose();
+
+      if (height == 0) return null;
+      return width / height;
+    } catch (e) {
+      debugPrint('[PhotoEditor] 이미지 aspect ratio 계산 실패: $e');
+      return null;
+    }
+  }
+
+  /// 스냅샷에서 업로드 페이로드를 준비하는 메서드입니다.
+  ///
+  /// Parameters:
+  ///   - [snapshot]: 업로드에 필요한 모든 데이터를 담은 스냅샷 객체
+  ///
+  /// Returns:
+  ///   - 업로드에 필요한 데이터 묶음, 준비 실패 시 null 반환
   Future<_UploadPayload?> _prepareUploadPayloadFromSnapshot(
     _UploadSnapshot snapshot,
   ) async {
@@ -1057,9 +1099,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
     }
 
-    File? audioFile;
-    String? audioPath;
-    final candidatePath = snapshot.recordedAudioPath;
+    File? audioFile; // 첨부할 오디오 파일
+    String? audioPath; // 첨부할 오디오 파일 경로
+    final candidatePath = snapshot.recordedAudioPath; // 녹음된 오디오 파일 경로
     if (candidatePath != null && candidatePath.isNotEmpty) {
       // 녹음된 오디오 파일 존재 여부 확인
       final file = File(candidatePath);
@@ -1069,10 +1111,13 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       }
     }
 
-    final captionText = snapshot.captionText;
-    final caption = captionText.isNotEmpty ? captionText : '';
-    final hasCaption = caption.isNotEmpty;
+    final captionText = snapshot.captionText; // 캡션 텍스트
+    final caption = captionText.isNotEmpty
+        ? captionText
+        : ''; // 캡션이 비어있지 않으면 사용
+    final hasCaption = caption.isNotEmpty; // 캡션 존재 여부
 
+    // 오디오 첨부 여부 결정
     final shouldIncludeAudio =
         !hasCaption &&
         audioFile != null &&
@@ -1080,6 +1125,12 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
     // 파형 데이터는 오디오가 첨부되는 경우에만 포함
     final waveform = shouldIncludeAudio ? snapshot.recordedWaveformData : null;
+
+    // 미디어의 aspect ratio 계산 (이미지만 지원, 비디오는 추후 추가 가능)
+    double? aspectRatio; // 미디어의 원래 가로세로 비율
+    if (!snapshot.isVideo) {
+      aspectRatio = await _calculateImageAspectRatio(mediaFile);
+    }
 
     // 업로드 페이로드 생성
     return _UploadPayload(
@@ -1098,6 +1149,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       usageCount: snapshot.categoryIds.isNotEmpty
           ? snapshot.categoryIds.length
           : 1,
+      aspectRatio: aspectRatio, // 미디어의 가로세로 비율 전달
+      isFromGallery: !widget.isFromCamera, // 갤러리 출처 여부 전달
     );
   }
 
@@ -1233,7 +1286,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     // (배포버전 성능) 대용량 문자열 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
     if (kDebugMode) {
       debugPrint(
-        "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: $categoryIds\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}",
+        "[PhotoEditor] userId: ${payload.userId}\nnickName: ${payload.nickName}\ncontent: ${payload.caption}\npostFileKey: ${mediaResult.mediaKeys}\naudioFileKey: ${mediaResult.audioKeys}\ncategoryIds: $categoryIds\nwaveformData: $waveformJson\nduration: ${payload.audioDurationSeconds}\naspectRatio: ${payload.aspectRatio}\nisFromGallery: ${payload.isFromGallery}",
       );
     }
 
@@ -1247,6 +1300,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       categoryIds: categoryIds,
       waveformData: waveformJson,
       duration: payload.audioDurationSeconds,
+      savedAspectRatio: payload.aspectRatio,
+      isFromGallery: payload.isFromGallery,
     );
 
     // (배포버전 성능) 대용량 문자열 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.

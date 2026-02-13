@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soi/api/models/user.dart';
+import 'package:soi/api/api_exception.dart';
 import 'package:soi/api/services/user_service.dart';
 import 'package:soi/utils/username_validator.dart';
 
@@ -137,10 +138,23 @@ class UserController extends ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return user;
-    } catch (e) {
+    } on NotFoundException {
+      _currentUser = null;
+      _setLoading(false);
+      notifyListeners();
+      return null;
+    } on SoiApiException catch (e) {
       _setError('로그인 실패: $e');
       _setLoading(false);
-      return null;
+      rethrow;
+    } catch (e) {
+      final wrapped = SoiApiException(
+        message: '로그인 실패: $e',
+        originalException: e,
+      );
+      _setError(wrapped.message);
+      _setLoading(false);
+      throw wrapped;
     }
   }
 
@@ -169,10 +183,23 @@ class UserController extends ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return user;
-    } catch (e) {
+    } on NotFoundException {
+      _currentUser = null;
+      _setLoading(false);
+      notifyListeners();
+      return null;
+    } on SoiApiException catch (e) {
       _setError('로그인 실패: $e');
       _setLoading(false);
-      return null;
+      rethrow;
+    } catch (e) {
+      final wrapped = SoiApiException(
+        message: '로그인 실패: $e',
+        originalException: e,
+      );
+      _setError(wrapped.message);
+      _setLoading(false);
+      throw wrapped;
     }
   }
 
