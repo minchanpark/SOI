@@ -320,11 +320,11 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 30.h),
+            // SizedBox(height: 30.h),
           ],
         ),
         backgroundColor: Colors.black,
-        toolbarHeight: 70.h,
+        // toolbarHeight: 70.h,
       ),
       body: _buildBody(),
     );

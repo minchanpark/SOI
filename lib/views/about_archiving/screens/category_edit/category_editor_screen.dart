@@ -32,8 +32,15 @@ import '../../widgets/category_edit_widget/notification_setting_section.dart';
 ///  - [category]: 편집할 카테고리 데이터 모델
 class CategoryEditorScreen extends StatefulWidget {
   final Category category;
+  final String? initialCoverPhotoUrl;
+  final String? initialCoverPhotoCacheKey;
 
-  const CategoryEditorScreen({super.key, required this.category});
+  const CategoryEditorScreen({
+    super.key,
+    required this.category,
+    this.initialCoverPhotoUrl,
+    this.initialCoverPhotoCacheKey,
+  });
 
   @override
   State<CategoryEditorScreen> createState() => _CategoryEditorScreenState();
@@ -49,11 +56,13 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
 
   // 표지사진 URL(Resolved) 캐시
   String? _coverPhotoUrl;
+  String? _coverPhotoCacheKey;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _seedInitialCoverPhoto();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshCategoryCoverPhoto();
       _loadMembers();
@@ -100,28 +109,72 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
     return controller.getCategoryById(widget.category.id) ?? widget.category;
   }
 
+  void _seedInitialCoverPhoto() {
+    final directCategoryUrl = _asAbsoluteUrl(widget.category.photoUrl);
+    final seededUrl = widget.initialCoverPhotoUrl ?? directCategoryUrl;
+    final seededSource = seededUrl ?? widget.category.photoUrl;
+
+    _coverPhotoUrl = seededUrl;
+    _coverPhotoCacheKey =
+        widget.initialCoverPhotoCacheKey ??
+        _buildCoverPhotoCacheKey(
+          categoryId: widget.category.id,
+          source: seededSource,
+        );
+  }
+
+  String? _asAbsoluteUrl(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme) return null;
+    return value;
+  }
+
+  String? _buildCoverPhotoCacheKey({
+    required int categoryId,
+    required String? source,
+  }) {
+    if (source == null || source.isEmpty) return null;
+    final uri = Uri.tryParse(source);
+    final normalized =
+        uri?.replace(query: '', fragment: '').toString() ?? source;
+    return 'category_header_${categoryId}_$normalized';
+  }
+
+  void _setCoverPhoto({required String? url, required String? cacheKey}) {
+    if (_coverPhotoUrl == url && _coverPhotoCacheKey == cacheKey) return;
+    setState(() {
+      _coverPhotoUrl = url;
+      _coverPhotoCacheKey = cacheKey;
+    });
+  }
+
   Future<void> _refreshCategoryCoverPhoto() async {
     final controller = context.read<api_category.CategoryController>();
     final currentCategory = _getCurrentCategory(controller);
     final photoKey = currentCategory.photoUrl;
+    final cacheKey = _buildCoverPhotoCacheKey(
+      categoryId: currentCategory.id,
+      source: photoKey,
+    );
 
     if (photoKey == null || photoKey.isEmpty) {
       if (!mounted) return;
-      setState(() => _coverPhotoUrl = null);
+      _setCoverPhoto(url: null, cacheKey: null);
       return;
     }
 
-    final uri = Uri.tryParse(photoKey);
-    if (uri != null && uri.hasScheme) {
+    final directUrl = _asAbsoluteUrl(photoKey);
+    if (directUrl != null) {
       if (!mounted) return;
-      setState(() => _coverPhotoUrl = photoKey);
+      _setCoverPhoto(url: directUrl, cacheKey: cacheKey);
       return;
     }
 
     final mediaController = context.read<MediaController>();
     final url = await mediaController.getPresignedUrl(photoKey);
     if (!mounted) return;
-    setState(() => _coverPhotoUrl = url);
+    _setCoverPhoto(url: url, cacheKey: cacheKey);
   }
 
   Future<void> _loadMembers() async {
@@ -244,6 +297,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
                   // 표지사진 수정 섹션
                   CategoryCoverSection(
                     imageUrl: _coverPhotoUrl,
+                    imageCacheKey: _coverPhotoCacheKey,
                     onTap: () => _showCoverPhotoBottomSheet(context),
                   ),
 

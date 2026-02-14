@@ -361,3 +361,5 @@ dart analyze <changed-files>
 
 ### 검증 방법
 - 변경 시 본 문서 내 모든 정량값이 코드 상수와 일치하는지 교차검증한다.
+
+<!-- codex-autoload-test-marker: 2026-02-14T01:58:08Z -->

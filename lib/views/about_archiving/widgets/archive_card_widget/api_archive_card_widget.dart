@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:soi/api/models/post.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../../api/controller/category_controller.dart';
 import '../../../../api/controller/post_controller.dart';
@@ -11,8 +12,8 @@ import '../../../../api/controller/friend_controller.dart';
 import '../../../../api/models/category.dart' as api_category;
 import '../../../../api/models/friend.dart';
 import '../../screens/archive_detail/api_category_photos_screen.dart';
+import '../../screens/archive_detail/widgets/category_photos_header+body/api_category_header_image_prefetch.dart';
 import 'api_archive_profile_row_widget.dart';
-import 'api_archive_popup_menu_widget.dart';
 import 'archive_card_models.dart';
 import 'archive_card_placeholders.dart';
 
@@ -62,9 +63,17 @@ class ApiArchiveCardWidget extends StatelessWidget {
                   context.read<CategoryController>().getCategoryById(
                     category.id,
                   ) ??
-                  category;
+                  category; // 최신 카테고리 데이터 가져오기 (업데이트된 정보 반영)
+              final headerImagePrefetch =
+                  CategoryHeaderImagePrefetch.fromCategory(
+                    latestCategory,
+                  ); // 프리페칭 페이로드 생성
+              if (headerImagePrefetch != null) {
+                // 프리페칭: 네비게이션 시작과 동시에 헤더 이미지 프리페칭
+                _prefetchCategoryHeaderImage(context, headerImagePrefetch);
+              }
 
-              // ✨ 프리페칭: 네비게이션 시작과 동시에 데이터 로드
+              // 프리페칭: 네비게이션 시작과 동시에 데이터 로드
               final postController = context.read<PostController>();
               final userController = context.read<UserController>();
               final friendController = context.read<FriendController>();
@@ -72,6 +81,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
 
               // 백그라운드에서 데이터 프리페칭 시작 (await 없이)
               if (currentUser != null) {
+                // 카테고리 데이터 프리페칭 (포스트, 친구 목록 등)
                 _prefetchCategoryData(
                   postController: postController,
                   friendController: friendController,
@@ -84,8 +94,10 @@ class ApiArchiveCardWidget extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      ApiCategoryPhotosScreen(category: latestCategory),
+                  builder: (context) => ApiCategoryPhotosScreen(
+                    category: latestCategory,
+                    prefetchedHeaderImage: headerImagePrefetch,
+                  ),
                 ),
               );
             },
@@ -185,19 +197,6 @@ class ApiArchiveCardWidget extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         );
       },
-    );
-  }
-
-  /// 팝업 메뉴 위젯 빌드
-  Widget _buildPopupMenu() {
-    if (isEditMode) {
-      return SizedBox(width: 30, height: 30);
-    }
-
-    return ApiArchivePopupMenuWidget(
-      category: category,
-      onEditName: onStartEdit,
-      child: Icon(Icons.more_vert, color: Colors.white, size: 22),
     );
   }
 
@@ -334,6 +333,15 @@ class ApiArchiveCardWidget extends StatelessWidget {
   ///
   /// 화면 전환 전에 미리 데이터를 로드하여 즉시 표시 가능하도록 합니다.
   /// 네비게이션 애니메이션(~300ms) 동안 API 호출이 완료될 수 있습니다.
+  void _prefetchCategoryHeaderImage(
+    BuildContext context,
+    CategoryHeaderImagePrefetch payload,
+  ) {
+    unawaited(
+      CategoryHeaderImagePrefetchRegistry.prefetchIfNeeded(context, payload),
+    );
+  }
+
   Future<void> _prefetchCategoryData({
     required PostController postController,
     required FriendController friendController,

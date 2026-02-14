@@ -14,12 +14,14 @@ import 'package:soi/api/controller/friend_controller.dart';
 class ApiArchiveProfileRowWidget extends StatefulWidget {
   final List<String> profileUrlKeys;
   final int totalUserCount;
+  final double avatarSize;
 
   const ApiArchiveProfileRowWidget({
     super.key,
     required this.profileUrlKeys,
     this.totalUserCount = 0,
-  });
+    this.avatarSize = 23.44,
+  }) : assert(avatarSize > 0);
 
   @override
   State<ApiArchiveProfileRowWidget> createState() =>
@@ -140,13 +142,16 @@ class _ApiArchiveProfileRowWidgetState
     final remainingCount = widget.totalUserCount > 3
         ? widget.totalUserCount - 3
         : 0;
+    const overlapSpacing = 12.0;
+    final avatarSize = widget.avatarSize;
 
     // +N 배지 포함 시 너비 계산
     final badgeCount = remainingCount > 0 ? 1 : 0;
-    final totalWidth = (displayCount - 1 + badgeCount) * 12.0 + (23.44);
+    final totalWidth =
+        (displayCount - 1 + badgeCount) * overlapSpacing + avatarSize;
 
     return SizedBox(
-      height: (23.44),
+      height: avatarSize,
       width: totalWidth,
       child: Stack(
         children: [
@@ -159,7 +164,7 @@ class _ApiArchiveProfileRowWidgetState
             final imageUrl = _presignedUrlCache[key] ?? '';
 
             return Positioned(
-              right: index * 12.0,
+              right: index * overlapSpacing,
               child: imageUrl.isEmpty
                   ? _buildDefaultAvatar()
                   : _buildProfileImage(imageUrl),
@@ -168,7 +173,7 @@ class _ApiArchiveProfileRowWidgetState
           // +N 배지 표시 (3명 초과 시)
           if (remainingCount > 0)
             Positioned(
-              right: displayCount * 12.0,
+              right: displayCount * overlapSpacing,
               child: _buildRemainingBadge(remainingCount),
             ),
         ],
@@ -179,8 +184,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 기본 아바타 (이미지 없을 때)
   Widget _buildDefaultAvatar() {
     return Container(
-      width: (23.44),
-      height: (23.44),
+      width: widget.avatarSize,
+      height: widget.avatarSize,
       decoration: BoxDecoration(
         color: Colors.grey.shade700,
         shape: BoxShape.circle,
@@ -193,8 +198,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 프로필 이미지 빌드
   Widget _buildProfileImage(String imageUrl) {
     return Container(
-      width: (23.44),
-      height: (23.44),
+      width: widget.avatarSize,
+      height: widget.avatarSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFF1C1C1C), width: 1.5),
@@ -202,8 +207,8 @@ class _ApiArchiveProfileRowWidgetState
       child: ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl,
-          width: (23.44),
-          height: (23.44),
+          width: widget.avatarSize,
+          height: widget.avatarSize,
           fit: BoxFit.cover,
           fadeInDuration: Duration.zero,
           fadeOutDuration: Duration.zero,
@@ -211,14 +216,14 @@ class _ApiArchiveProfileRowWidgetState
             baseColor: Colors.grey.shade800,
             highlightColor: Colors.grey.shade700,
             child: Container(
-              width: (23.44),
-              height: (23.44),
+              width: widget.avatarSize,
+              height: widget.avatarSize,
               color: Colors.grey.shade800,
             ),
           ),
           errorWidget: (context, url, error) => Container(
-            width: (23.44),
-            height: (23.44),
+            width: widget.avatarSize,
+            height: widget.avatarSize,
             color: Colors.grey.shade700,
             child: const Icon(Icons.person, size: 12, color: Colors.white54),
           ),
@@ -230,8 +235,8 @@ class _ApiArchiveProfileRowWidgetState
   /// 남은 인원수 배지 (+N)
   Widget _buildRemainingBadge(int count) {
     return Container(
-      width: (23.44),
-      height: (23.44),
+      width: widget.avatarSize,
+      height: widget.avatarSize,
       decoration: BoxDecoration(
         color: const Color(0xFF3A3A3A),
         shape: BoxShape.circle,

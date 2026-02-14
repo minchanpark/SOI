@@ -9,7 +9,6 @@ import 'package:soi/views/about_archiving/screens/archive_detail/api_photo_detai
 import '../../../api/models/post.dart';
 import '../../../api/controller/audio_controller.dart';
 import '../../../api/controller/media_controller.dart';
-import '../../../api/controller/comment_controller.dart';
 import '../../../utils/video_thumbnail_cache.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
@@ -32,6 +31,7 @@ class ApiPhotoGridItem extends StatefulWidget {
   final int currentIndex; // 현재 인덱스 -> 상세 화면으로 전달하기 위해 받아옵니다.
   final String categoryName; // 카테고리 이름 -> 상세 화면으로 전달하기 위해 받아옵니다.
   final int categoryId; // 카테고리 ID -> 상세 화면으로 전달하기 위해 받아옵니다.
+  final int initialCommentCount; // 상위에서 프리패치된 댓글 개수
   final ValueChanged<List<int>>?
   onPostsDeleted; // 사진 삭제 후 콜백 --> 삭제된 게시물 ID 리스트를 전달하는 이유는 상위 위젯에서 해당 게시물을 제거하기 위함입니다.
 
@@ -43,6 +43,7 @@ class ApiPhotoGridItem extends StatefulWidget {
     required this.currentIndex,
     required this.categoryName,
     required this.categoryId,
+    required this.initialCommentCount,
     this.onPostsDeleted,
   });
 
@@ -70,6 +71,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   @override
   void initState() {
     super.initState();
+    _commentCount = widget.initialCommentCount;
     _initializeWaveformData();
     _mediaController = Provider.of<MediaController>(context, listen: false);
     // _loadAudioUrl(widget.post.audioUrl);
@@ -77,7 +79,6 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     // 빌드 완료 후 프로필 이미지 로드 (notifyListeners 충돌 방지)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProfileImage(widget.post.userProfileImageKey);
-      _loadCommentCount();
     });
   }
 
@@ -95,8 +96,14 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
         oldWidget.post.postFileKey != widget.post.postFileKey) {
       _loadVideoThumbnailIfNeeded(forceReload: true);
     }
+    if (oldWidget.initialCommentCount != widget.initialCommentCount) {
+      setState(() {
+        _commentCount = widget.initialCommentCount;
+      });
+    }
   }
 
+  /// 비디오 썸네일 로드
   Future<void> _loadVideoThumbnailIfNeeded({bool forceReload = false}) async {
     if (!widget.post.isVideo) {
       if (!mounted) return;
@@ -259,31 +266,6 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     }
   }
 
-  /// 댓글 개수 로드
-  Future<void> _loadCommentCount() async {
-    if (!mounted) return;
-
-    try {
-      final commentController = Provider.of<CommentController>(
-        context,
-        listen: false,
-      );
-      final count = await commentController.getCommentCount(
-        postId: widget.post.id,
-      );
-      if (!mounted) return;
-      setState(() {
-        _commentCount = count;
-      });
-    } catch (e) {
-      debugPrint('[ApiPhotoGridItem] 댓글 개수 로드 실패: $e');
-      if (!mounted) return;
-      setState(() {
-        _commentCount = 0;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -309,10 +291,10 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
         children: [
           // 미디어(사진/비디오 썸네일)
           SizedBox(
-            width: 175,
-            height: 232,
+            width: 170.sp,
+            height: 204.sp,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(11),
               child: widget.post.isVideo
                   ? _buildVideoThumbnail()
                   : (widget.postUrl.isNotEmpty
@@ -323,8 +305,8 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
                             useOldImageOnUrlChange: true,
                             fadeInDuration: Duration.zero,
                             fadeOutDuration: Duration.zero,
-                            memCacheWidth: (175 * 2).round(),
-                            maxWidthDiskCache: (175 * 2).round(),
+                            memCacheWidth: (170 * 2).round(),
+                            maxWidthDiskCache: (170 * 2).round(),
                             fit: BoxFit.cover,
                             placeholder: (context, url) => Shimmer.fromColors(
                               baseColor: Colors.grey.shade800,
@@ -355,33 +337,32 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
           ),
 
           // 댓글 개수 (우측 하단)
-          if (_commentCount > 0)
-            Positioned(
-              bottom: 8.h,
-              right: 8.w,
-              child: Row(
-                children: [
-                  Text(
-                    '$_commentCount',
-                    style: TextStyle(
-                      color: const Color(0xFFF8F8F8),
-                      fontSize: 14,
-                      fontFamily: 'Pretendard Variable',
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: -0.40,
-                    ),
+          Positioned(
+            bottom: 8.h,
+            right: 8.w,
+            child: Row(
+              children: [
+                Text(
+                  '$_commentCount',
+                  style: TextStyle(
+                    color: const Color(0xFFF8F8F8),
+                    fontSize: 14,
+                    fontFamily: 'Pretendard Variable',
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: -0.40,
                   ),
-                  SizedBox(width: (5.96).w),
-                  Image.asset(
-                    'assets/comment_icon.png',
-                    width: (15.75),
-                    height: (15.79),
-                    color: Color(0xfff9f9f9),
-                  ),
-                  SizedBox(width: (10.29)),
-                ],
-              ),
+                ),
+                SizedBox(width: (5.96).w),
+                Image.asset(
+                  'assets/comment_icon.png',
+                  width: (15.75),
+                  height: (15.79),
+                  color: Color(0xfff9f9f9),
+                ),
+                SizedBox(width: (10.29)),
+              ],
             ),
+          ),
 
           // 하단 프로필 + 파형
           Column(

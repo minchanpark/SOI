@@ -1,9 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:soi/views/about_archiving/screens/category_edit/category_editor_screen.dart';
 import 'package:soi/views/about_archiving/widgets/api_category_members_bottom_sheet.dart';
@@ -19,20 +18,38 @@ import '../../../../api/models/post.dart';
 import '../../../../api/models/user.dart';
 import '../../../../theme/theme.dart';
 import '../../../../utils/video_thumbnail_cache.dart';
-import '../../widgets/archive_card_widget/archive_card_placeholders.dart';
-import '../../widgets/api_photo_grid_item.dart';
+import 'widgets/category_photos_header+body/api_category_header_image_prefetch.dart';
+import 'widgets/category_photos_header+body/api_category_photos_body_slivers.dart';
+import 'widgets/category_photos_header+body/api_category_photos_header.dart';
 
 import 'package:flutter/foundation.dart' as foundation show kDebugMode;
 
-/// 카테고리 내에서 사진(포스트)들을 그리드 형식으로 보여주는 화면
-/// Post를 조회하여서 카테고리 내에 사진이 포함된 포스트들을 필터링 후 표시
+/// 카테고리 사진 화면
+/// 카테고리에 속한 사진(포스트)을 그리드 형태로 보여주는 화면입니다.
+/// 사용자는 이 화면에서 카테고리 멤버를 확인하고, 카테고리를 편집할 수 있습니다.
+///
+/// 주요 기능:
+/// - 카테고리에 속한 사진(포스트) 목록을 로드하여 그리드로 표시
+/// - 로딩, 에러, 빈 상태에 따른 UI 표시
+/// - 당겨서 새로고침 기능
+/// - 자동 새로고침 타이머 (30분마다)
+/// - 카테고리 멤버 확인 및 친구 추가 기능
+/// - 카테고리 편집 화면으로 이동 기능
 ///
 /// Parameters:
-/// - [category]: 사진을 불러올 카테고리 정보
+/// - [category]: 사진을 보여줄 카테고리 정보
+///
+/// Returns:
+/// - [ApiCategoryPhotosScreen]: 카테고리에 속한 사진 그리드 화면을 표시하는 StatefulWidget
 class ApiCategoryPhotosScreen extends StatefulWidget {
   final Category category;
+  final CategoryHeaderImagePrefetch? prefetchedHeaderImage;
 
-  const ApiCategoryPhotosScreen({super.key, required this.category});
+  const ApiCategoryPhotosScreen({
+    super.key,
+    required this.category,
+    this.prefetchedHeaderImage,
+  });
 
   @override
   State<ApiCategoryPhotosScreen> createState() =>
@@ -43,11 +60,14 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   static const Duration _cacheTtl = Duration(minutes: 30); // 캐시 만료 시간
   static final Map<String, _CategoryPostsCacheEntry> _categoryPostsCache =
       {}; // 카테고리별 포스트 캐시를 관리하는 맵
+  static final Map<int, CategoryHeaderImagePrefetch> _headerImageMemoryCache =
+      {};
 
   bool _isLoading = true; // 로딩 상태
   String? _errorMessageKey; // 에러 메시지 키
   List<Post> _posts = []; // 로드된 포스트 목록
   Category? _category; // 갱신된 카테고리 정보
+  CategoryHeaderImagePrefetch? _headerImagePrefetch;
 
   Timer? _autoRefreshTimer; // 자동 새로고침 타이머
   static const Duration _autoRefreshInterval = Duration(
@@ -65,8 +85,14 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   void initState() {
     super.initState();
     _category = widget.category;
+    _headerImagePrefetch = _resolveInitialHeaderImagePrefetch();
+
     // 화면이 렌더링된 후 초기 데이터 로드
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_headerImagePrefetch != null) {
+        unawaited(_precacheHeaderImageIfNeeded(_headerImagePrefetch!));
+      }
+
       final categoryController = Provider.of<CategoryController>(
         context,
         listen: false,
@@ -100,14 +126,37 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     super.dispose();
   }
 
+  CategoryHeaderImagePrefetch? _resolveInitialHeaderImagePrefetch() {
+    if (widget.prefetchedHeaderImage != null) {
+      _headerImageMemoryCache[_currentCategory.id] =
+          widget.prefetchedHeaderImage!;
+      return widget.prefetchedHeaderImage;
+    }
+
+    final cached = _headerImageMemoryCache[_currentCategory.id];
+    if (cached != null) return cached;
+
+    final fallback = CategoryHeaderImagePrefetch.fromCategory(_currentCategory);
+    if (fallback != null) {
+      _headerImageMemoryCache[_currentCategory.id] = fallback;
+    }
+    return fallback;
+  }
+
+  Future<void> _precacheHeaderImageIfNeeded(
+    CategoryHeaderImagePrefetch payload,
+  ) {
+    return CategoryHeaderImagePrefetchRegistry.prefetchIfNeeded(
+      context,
+      payload,
+    );
+  }
+
   /// 카테고리 내 사진(포스트) 목록 로드
   Future<void> _loadPosts({bool forceRefresh = false}) async {
     if (!mounted) return;
 
     try {
-      // [FIX] 컨트롤러와 리스너는 initState에서 이미 초기화/등록됨
-      // (타이밍 이슈 방지: 게시물 추가 알림을 놓치지 않도록)
-
       // 현재 사용자 ID 가져오기
       final currentUser = userController!.currentUser;
       if (currentUser == null) {
@@ -213,11 +262,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         cachedAt: DateTime.now(),
       );
 
-      // ✨ 비디오 썸네일 프리페칭 (백그라운드)
+      // 비디오 썸네일 프리페칭 (백그라운드)
       _prefetchVideoThumbnails(mediaPosts);
     } catch (e) {
       debugPrint('[ApiCategoryPhotosScreen] 포스트 로드 실패: $e');
-      // ✨ Optimistic UI: 에러 시에도 기존 캐시 데이터 유지
+      // Optimistic UI: 에러 시에도 기존 캐시 데이터 유지
       if (mounted) {
         // 캐시된 데이터가 없을 때만 에러 메시지 표시
         if (_posts.isEmpty) {
@@ -399,209 +448,166 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
     // ID로 캐시된 카테고리 가져오기
     final updated = categoryController.getCategoryById(_currentCategory.id);
+    final current = updated ?? _currentCategory;
+    final nextHeaderImagePrefetch = CategoryHeaderImagePrefetch.fromCategory(
+      current,
+    );
+    final headerChanged =
+        _headerImagePrefetch?.imageUrl != nextHeaderImagePrefetch?.imageUrl ||
+        _headerImagePrefetch?.cacheKey != nextHeaderImagePrefetch?.cacheKey;
+
+    if (nextHeaderImagePrefetch != null) {
+      _headerImageMemoryCache[current.id] = nextHeaderImagePrefetch;
+    } else {
+      _headerImageMemoryCache.remove(current.id);
+    }
+
     if (mounted && updated != null) {
       setState(() {
         _category = updated;
+        _headerImagePrefetch = nextHeaderImagePrefetch;
       });
+    } else {
+      _headerImagePrefetch = nextHeaderImagePrefetch;
     }
-    return updated ?? _currentCategory;
+
+    if (headerChanged && nextHeaderImagePrefetch != null) {
+      unawaited(_precacheHeaderImageIfNeeded(nextHeaderImagePrefetch));
+    }
+    return current;
   }
+
+  /// 카테고리 편집 화면으로 이동하는 메서드
+  Future<void> _openCategoryEditor() async {
+    final prefetched = _headerImagePrefetch;
+    if (prefetched != null) {
+      // Editor 진입 직전에 한 번 더 워밍업해 첫 프레임 플리커를 줄입니다.
+      unawaited(_precacheHeaderImageIfNeeded(prefetched));
+    }
+
+    final categoryForEditor = _currentCategory.copyWith(
+      photoUrl: prefetched?.imageUrl ?? _currentCategory.photoUrl,
+    );
+
+    // 편집 화면에서 돌아온 후 카테고리 정보를 갱신하여 변경사항 반영
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoryEditorScreen(
+          category: categoryForEditor,
+          initialCoverPhotoUrl: prefetched?.imageUrl,
+          initialCoverPhotoCacheKey: prefetched?.cacheKey,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _refreshCategory();
+  }
+
+  /// 카테고리 멤버 바텀시트를 표시하는 메서드:
+  /// showApiCategoryMembersBottomSheet를 호출하여 현재 카테고리의 멤버 정보를 보여주는 바텀시트를 띄웁니다.
+  void _showCategoryMembersBottomSheet() {
+    showApiCategoryMembersBottomSheet(
+      context,
+      category: _currentCategory,
+      onAddFriendPressed: _handleAddFriends,
+    );
+  }
+
+  /// 그리드 레이아웃을 구성하는 메서드
+  SliverGridDelegateWithFixedCrossAxisCount _buildPhotoGridDelegate() {
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      childAspectRatio: 170 / 204,
+      mainAxisSpacing: 11.sp,
+      crossAxisSpacing: 11.sp,
+    );
+  }
+
+  /// 그리드 패딩을 반환하는 게터
+  EdgeInsets get _gridPadding => EdgeInsets.only(
+    left: (20.05).w,
+    right: (20.05).w,
+    top: 20.h,
+    bottom: 30.h,
+  );
 
   @override
   Widget build(BuildContext context) {
+    final topSafeArea = MediaQuery.paddingOf(context).top; // 상단 안전 영역 높이
+    final collapsedHeight = topSafeArea + kToolbarHeight; // 축소된 헤더 높이
+    final expandedHeight = math.max(
+      220.h,
+      collapsedHeight + 110.h,
+    ); // 확장된 헤더 높이
+
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      appBar: AppBar(
-        toolbarHeight: 90.h,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // 카테고리 이름
-            Expanded(
-              child: Text(
-                _currentCategory.name,
-                style: TextStyle(
-                  color: const Color(0xFFD9D9D9),
-                  fontSize: 20,
-                  fontFamily: GoogleFonts.inter().fontFamily,
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            // 멤버 수 표시
-            InkWell(
-              onTap: () {
-                showApiCategoryMembersBottomSheet(
-                  context,
-                  category: _currentCategory,
-                  onAddFriendPressed: _handleAddFriends,
-                );
+      body: RefreshIndicator(
+        onRefresh: _onRefresh, // 당겨서 새로고침 기능
+        color: Colors.white,
+        backgroundColor: Colors.grey.shade800,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            ApiCategoryPhotosHeader(
+              category: _currentCategory,
+              backgroundImageUrl: _headerImagePrefetch?.imageUrl,
+              backgroundImageCacheKey: _headerImagePrefetch?.cacheKey,
+              collapsedHeight: collapsedHeight,
+              expandedHeight: expandedHeight,
+              onBackPressed: () => Navigator.of(context).maybePop(),
+              onMembersPressed: _showCategoryMembersBottomSheet,
+              onMenuPressed: () {
+                unawaited(_openCategoryEditor());
               },
-              borderRadius: BorderRadius.circular(100),
-              child: SizedBox(
-                height: 50.h,
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.people, size: 25.sp, color: Colors.white),
-                      SizedBox(width: 2.w),
-                      Text(
-                        '${_currentCategory.totalUserCount}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
-            // 메뉴 버튼
-            IconButton(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        CategoryEditorScreen(category: _currentCategory),
-                  ),
-                );
-                if (!mounted) return;
-                // 카테고리 정보 갱신
-                await _refreshCategory();
-              },
-              icon: const Icon(Icons.menu),
-            ),
+            ..._buildBody(),
           ],
         ),
-        backgroundColor: AppTheme.lightTheme.colorScheme.surface,
       ),
-      body: _buildBody(),
     );
   }
 
-  Widget _buildBody() {
-    // 로딩 중
+  /// 화면 본문을 구성하는 메서드
+  List<Widget> _buildBody() {
     if (_isLoading) {
-      return _buildShimmerGrid();
+      return [
+        // 로딩 중에는 로딩 슬리버만 표시
+        ApiCategoryPhotosLoadingSliver(
+          padding: _gridPadding,
+          gridDelegate: _buildPhotoGridDelegate(),
+        ),
+      ];
     }
 
-    // 에러 발생
     if (_errorMessageKey != null) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 40.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _errorMessageKey!,
-                style: TextStyle(color: Colors.white, fontSize: 16.sp),
-                textAlign: TextAlign.center,
-              ).tr(),
-              SizedBox(height: 16.h),
-              ElevatedButton(
-                onPressed: _loadPosts,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white24,
-                ),
-                child: Text(
-                  'common.retry',
-                  style: TextStyle(color: Colors.white),
-                ).tr(),
-              ),
-            ],
-          ),
+      return [
+        // 에러 발생 시 에러 슬리버 표시
+        ApiCategoryPhotosErrorSliver(
+          errorMessageKey: _errorMessageKey!,
+          onRetry: _loadPosts,
         ),
-      );
+      ];
     }
 
-    // 사진 없음
     if (_posts.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 40.w),
-          child: Text(
-            'archive.empty_photos',
-            style: TextStyle(color: Colors.white, fontSize: 16.sp),
-            textAlign: TextAlign.center,
-          ).tr(),
-        ),
-      );
+      return [const ApiCategoryPhotosEmptySliver()];
     }
 
-    // 사진 그리드
-    return RefreshIndicator(
-      onRefresh: _onRefresh,
-      color: Colors.white,
-      backgroundColor: Colors.grey.shade800,
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12.w,
-          mainAxisSpacing: 15.h,
-          childAspectRatio: 175 / 233,
-        ),
-        padding: EdgeInsets.only(
-          left: 15.w,
-          right: 15.w,
-          top: 20.h,
-          bottom: 30.h,
-        ),
-        itemCount: _posts.length,
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-
-          return ApiPhotoGridItem(
-            post: post,
-            postUrl: post.postFileUrl ?? '',
-            allPosts: _posts,
-            currentIndex: index,
-            categoryName: _currentCategory.name,
-            categoryId: _currentCategory.id,
-            onPostsDeleted: (_) => _onRefresh(), // 사진 삭제 후 새로고침
-          );
-        },
+    return [
+      // 포스트가 있을 때,
+      ApiCategoryPhotosGridSliver(
+        posts: _posts,
+        categoryName: _currentCategory.name,
+        categoryId: _currentCategory.id,
+        padding: _gridPadding,
+        gridDelegate: _buildPhotoGridDelegate(),
+        onPostsDeleted: (_) => _onRefresh(),
       ),
-    );
-  }
-
-  /// 로딩 중일 때 표시할 Shimmer 그리드
-  Widget _buildShimmerGrid() {
-    return GridView.builder(
-      padding: EdgeInsets.only(
-        left: 15.w,
-        right: 15.w,
-        top: 20.h,
-        bottom: 30.h,
-      ),
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12.w,
-        mainAxisSpacing: 15.h,
-        childAspectRatio: 175 / 233,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, index) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return ShimmerOnceThenFallbackIcon(
-              width: constraints.maxWidth,
-              height: constraints.maxHeight,
-              borderRadius: 8,
-              shimmerCycles: 2, // shimmer기 몇번 돌지를 전달
-            );
-          },
-        );
-      },
-    );
+    ];
   }
 }
 

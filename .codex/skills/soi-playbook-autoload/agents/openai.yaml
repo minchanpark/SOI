@@ -1,0 +1,6 @@
+interface:
+  display_name: "SOI Playbook Autoload"
+  short_description: "Auto-load SOI playbook before each task"
+  default_prompt: "Use $soi-playbook-autoload to load docs/AI_AGENT_PLAYBOOK.md before handling any SOI request."
+policy:
+  allow_implicit_invocation: true

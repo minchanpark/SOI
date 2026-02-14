@@ -5,11 +5,13 @@ import 'package:easy_localization/easy_localization.dart';
 
 class CategoryCoverSection extends StatelessWidget {
   final String? imageUrl;
+  final String? imageCacheKey;
   final VoidCallback onTap;
 
   const CategoryCoverSection({
     super.key,
     required this.imageUrl,
+    this.imageCacheKey,
     required this.onTap,
   });
 
@@ -25,7 +27,10 @@ class CategoryCoverSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           image: imageUrl != null && imageUrl!.isNotEmpty
               ? DecorationImage(
-                  image: CachedNetworkImageProvider(imageUrl!),
+                  image: CachedNetworkImageProvider(
+                    imageUrl!,
+                    cacheKey: imageCacheKey,
+                  ),
                   fit: BoxFit.cover,
                 )
               : null,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Long File SRP Refactor"
+  short_description: "Refactor long files with SRP and shallow dependencies"
+  default_prompt: "Refactor this long file to enforce SRP, reduce dependency depth, and keep behavior unchanged."
