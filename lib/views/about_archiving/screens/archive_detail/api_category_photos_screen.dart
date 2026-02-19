@@ -58,6 +58,7 @@ class ApiCategoryPhotosScreen extends StatefulWidget {
 
 class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   static const Duration _cacheTtl = Duration(minutes: 30); // 캐시 만료 시간
+  static const int _kMaxCategoryPostsPages = 50; // 페이지 무한 조회 방지 안전 가드
   static final Map<String, _CategoryPostsCacheEntry> _categoryPostsCache =
       {}; // 카테고리별 포스트 캐시를 관리하는 맵
   static final Map<int, CategoryHeaderImagePrefetch> _headerImageMemoryCache =
@@ -78,6 +79,12 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   UserController? userController;
   FriendController? friendController;
   VoidCallback? _postsChangedListener; // 포스트 변경을 감지하는 리스너
+  int _pagingGeneration = 0; // 새 로드 시작 시 기존 백그라운드 페이징 무효화
+  bool _isBackgroundPaging = false; // 백그라운드에서 페이지를 로드 중인지 여부
+  bool _hasMorePages = false; // 추가 페이지가 있는지 여부
+  int _nextPage = 1; // 다음에 로드할 페이지 번호
+  final Set<int> _seenPostIds = <int>{};
+  Set<String> _blockedIds = <String>{};
 
   Category get _currentCategory => _category ?? widget.category;
 
@@ -155,6 +162,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   /// 카테고리 내 사진(포스트) 목록 로드
   Future<void> _loadPosts({bool forceRefresh = false}) async {
     if (!mounted) return;
+    final loadStopwatch = Stopwatch()..start();
+    final generation = ++_pagingGeneration;
+    _isBackgroundPaging = false;
+    _hasMorePages = false;
+    _nextPage = 1;
 
     try {
       // 현재 사용자 ID 가져오기
@@ -206,64 +218,71 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         });
       }
 
-      // 카테고리 포스트 조회 & 차단 유저 조회를 병렬로 실행
-      // 두 API는 서로 의존성이 없으므로 동시에 호출하여 대기 시간을 절반으로 줄임
-      final stopwatch = Stopwatch()..start();
-
-      // 병렬 API 호출
+      // 1단계: page=0 + 차단 유저를 병렬 조회 후 즉시 렌더
       final results = await Future.wait([
         postController!.getPostsByCategory(
           categoryId: _currentCategory.id,
           userId: currentUser.id,
           notificationId: null,
+          page: 0,
+          notifyLoading: false,
         ),
         friendController!.getAllFriends(
           userId: currentUser.id,
           status: FriendStatus.blocked,
         ),
       ]);
+      if (!mounted || generation != _pagingGeneration) return;
 
-      final posts = results[0] as List<Post>;
+      final firstPagePosts = results[0] as List<Post>;
       final blockedUsers = results[1] as List<User>;
-      final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+      _blockedIds = blockedUsers.map((user) => user.userId).toSet();
+      _seenPostIds.clear();
 
-      if (foundation.kDebugMode) {
-        debugPrint(
-          '[_loadPosts] API 병렬 호출 (posts + blocked): ${stopwatch.elapsedMilliseconds}ms',
-        );
-      }
-
-      // 미디어(사진/비디오)가 포함된 포스트 필터링
-      final mediaPosts = posts
-          .where((post) {
-            if (!post.hasMedia) return false;
-            if (blockedIds.isEmpty) return true;
-            return !blockedIds.contains(post.nickName);
-          })
-          .toList(growable: false);
-
-      if (foundation.kDebugMode) {
-        debugPrint(
-          '[_loadPosts] 필터링 완료 (${mediaPosts.length}개 미디어 포스트): ${stopwatch.elapsedMilliseconds}ms',
-        );
-        debugPrint('[_loadPosts] 총 소요: ${stopwatch.elapsedMilliseconds}ms');
-      }
+      final firstPageResult = _appendVisiblePosts(firstPagePosts);
+      final visiblePosts = firstPageResult.posts;
+      _nextPage = 1;
+      _hasMorePages = firstPagePosts.isNotEmpty;
+      _isBackgroundPaging = _hasMorePages;
 
       if (mounted) {
         setState(() {
-          _posts = mediaPosts;
+          _posts = visiblePosts;
           _isLoading = false;
         });
       }
 
-      // 캐시에 저장
-      _categoryPostsCache[cacheKey] = _CategoryPostsCacheEntry(
-        posts: List<Post>.unmodifiable(mediaPosts),
-        cachedAt: DateTime.now(),
-      );
+      _syncCategoryPostsCache(cacheKey);
 
       // 비디오 썸네일 프리페칭 (백그라운드)
-      _prefetchVideoThumbnails(mediaPosts);
+      _prefetchVideoThumbnails(visiblePosts);
+
+      if (foundation.kDebugMode) {
+        debugPrint(
+          '[_loadPosts] first-page latency=${loadStopwatch.elapsedMilliseconds}ms '
+          'fetched=${firstPagePosts.length} visible=${visiblePosts.length} '
+          'blockedRemoved=${firstPageResult.blockedRemoved} '
+          'deduped=${firstPageResult.duplicateRemoved}',
+        );
+      }
+
+      // 2단계: page=1..N 백그라운드 누적
+      if (_hasMorePages) {
+        unawaited(
+          _loadRemainingPagesInBackground(
+            generation: generation,
+            userId: currentUser.id,
+            categoryId: _currentCategory.id,
+            cacheKey: cacheKey,
+            startedAt: loadStopwatch,
+            loadedPages: 1,
+            totalFetchedPosts: firstPagePosts.length,
+            totalDedupedPosts: firstPageResult.duplicateRemoved,
+          ),
+        );
+      } else {
+        _isBackgroundPaging = false;
+      }
     } catch (e) {
       debugPrint('[ApiCategoryPhotosScreen] 포스트 로드 실패: $e');
       // Optimistic UI: 에러 시에도 기존 캐시 데이터 유지
@@ -291,6 +310,137 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   Future<void> _onRefresh() async {
     await _loadPosts(forceRefresh: true);
     _startAutoRefreshTimer();
+  }
+
+  /// 백그라운드에서 남은 페이지를 로드하는 메서드
+  /// Parameters:
+  /// - [generation]: 현재 페이징 세션을 식별하는 고유 번호로, 새 로드가 시작될 때마다 증가합니다.
+  ///                 백그라운드 작업이 오래 걸리는 경우, 사용자가 새로고침을 해서 새로운 로드가 시작될 수 있기 때문에,
+  ///                 이 값을 통해 오래된 백그라운드 작업이 결과를 반영하지 않도록 합니다.
+  /// - [userId]: 현재 사용자 ID로, API 호출에 필요합니다.
+  /// - [categoryId]: 현재 카테고리 ID로, API 호출에 필요합니다.
+  /// - [cacheKey]: 현재 카테고리의 캐시 키로, 새로 로드된 포스트 목록을 캐시에 저장할 때 사용합니다.
+  /// - [startedAt]: 전체 로드 작업이 시작된 시점의 Stopwatch로, 로드 작업의 지연 시간을 측정하는 데 사용합니다.
+  /// - [loadedPages]: 이미 로드된 페이지 수로, 첫 페이지는 이미 로드된 상태에서 이 메서드가 호출되므로 1로 시작합니다.
+  /// - [totalFetchedPosts]: 지금까지 API에서 받아온  포스트의 총 수로, 중복 제거 전의 수입니다.
+  /// - [totalDedupedPosts]: 지금까지 중복 제거 후 최종적으로 화면에 표시된 포스트의 총 수입니다.
+  ///
+  /// Returns: Future<void>로, 모든 페이지 로드가 완료되거나, 더 이상 로드할 페이지가 없거나, 또는 로드 작업이 무효화될 때 완료됩니다.
+  Future<void> _loadRemainingPagesInBackground({
+    required int generation,
+    required int userId,
+    required int categoryId,
+    required String cacheKey,
+    required Stopwatch startedAt,
+    required int loadedPages,
+    required int totalFetchedPosts,
+    required int totalDedupedPosts,
+  }) async {
+    var pagesLoaded = loadedPages;
+    var fetchedPosts = totalFetchedPosts;
+    var dedupedPosts = totalDedupedPosts;
+    try {
+      while (mounted &&
+          generation == _pagingGeneration &&
+          _hasMorePages &&
+          _nextPage < _kMaxCategoryPostsPages) {
+        final currentPage =
+            _nextPage; // 현재 로드할 페이지 번호를 nextPage에서 읽어와 지역 변수로 저장
+
+        // 다음 페이지 로드
+        final pagePosts = await postController!.getPostsByCategory(
+          categoryId: categoryId,
+          userId: userId,
+          notificationId: null,
+          page: currentPage,
+          notifyLoading: false,
+        );
+        if (!mounted || generation != _pagingGeneration) return;
+
+        if (pagePosts.isEmpty) {
+          _hasMorePages = false;
+          break;
+        }
+
+        pagesLoaded++; // 로드된 페이지 수 증가
+        fetchedPosts += pagePosts.length; // API에서 받아온 포스트 수 누적
+
+        final pageResult = _appendVisiblePosts(pagePosts);
+        dedupedPosts += pageResult.duplicateRemoved;
+
+        _nextPage = currentPage + 1;
+
+        if (pageResult.posts.isNotEmpty) {
+          setState(() {
+            _posts = List<Post>.unmodifiable([..._posts, ...pageResult.posts]);
+          });
+          _syncCategoryPostsCache(cacheKey);
+          _prefetchVideoThumbnails(pageResult.posts);
+        }
+      }
+      if (_nextPage >= _kMaxCategoryPostsPages) {
+        _hasMorePages = false;
+      }
+    } catch (e) {
+      if (foundation.kDebugMode) {
+        debugPrint('[ApiCategoryPhotosScreen] 백그라운드 페이징 실패: $e');
+      }
+    } finally {
+      if (generation == _pagingGeneration) {
+        _isBackgroundPaging = false;
+      }
+      if (foundation.kDebugMode && generation == _pagingGeneration) {
+        debugPrint(
+          '[_loadPosts] background complete latency=${startedAt.elapsedMilliseconds}ms '
+          'pages=$pagesLoaded fetched=$fetchedPosts loaded=${_posts.length} '
+          'deduped=$dedupedPosts hasMore=$_hasMorePages nextPage=$_nextPage '
+          'isBackgroundPaging=$_isBackgroundPaging',
+        );
+      }
+    }
+  }
+
+  /// 페이지에 새로 추가된 포스트 중에서 차단된 유저의 포스트와 중복된 포스트를 제거하고,
+  /// 최종적으로 화면에 표시할 포스트 목록과 제거된 포스트 수를 반환하는 메서드
+  ///
+  /// Parameters:
+  /// - [pagePosts]: 새로 로드된 페이지의 포스트 목록으로, API에서 받아온 원본 데이터입니다.
+  ///
+  /// Returns: _PageAppendResult 객체로, 화면에 표시할 포스트 목록과 제거된 차단된 유저의 포스트 수, 제거된 중복 포스트 수를 포함합니다.
+  _PageAppendResult _appendVisiblePosts(List<Post> pagePosts) {
+    final visible = <Post>[];
+    var blockedRemoved = 0;
+    var duplicateRemoved = 0;
+
+    for (final post in pagePosts) {
+      if (_blockedIds.contains(post.nickName)) {
+        blockedRemoved++;
+        continue;
+      }
+      if (!_seenPostIds.add(post.id)) {
+        duplicateRemoved++;
+        continue;
+      }
+      visible.add(post);
+    }
+
+    return _PageAppendResult(
+      posts: visible,
+      blockedRemoved: blockedRemoved,
+      duplicateRemoved: duplicateRemoved,
+    );
+  }
+
+  /// 카테고리별 포스트 캐시를 동기화하는 메서드
+  /// 현재 로드된 포스트 목록을 기반으로 캐시를 업데이트하여, 다음에 동일한 카테고리를 로드할 때 빠르게 데이터를 제공할 수 있도록 합니다.
+  ///
+  /// Parameters:
+  /// - [cacheKey]: 업데이트할 캐시 항목의 키로, 일반적으로 'userId:categoryId' 형식입니다.
+  void _syncCategoryPostsCache(String cacheKey) {
+    _categoryPostsCache[cacheKey] = _CategoryPostsCacheEntry(
+      posts: List<Post>.unmodifiable(_posts),
+      cachedAt: DateTime.now(),
+    );
   }
 
   /// 비디오 썸네일 프리페칭
@@ -612,9 +762,35 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 }
 
 /// 카테고리별 포스트 캐시 항목 클래스
+/// 각 카테고리에 대해 로드된 포스트 목록과 캐시된 시점을 함께 저장하여,
+/// 다음에 동일한 카테고리를 로드할 때 빠르게 데이터를 제공할 수 있도록 합니다.
+///
+/// Parameters:
+/// - [posts]: 캐시된 포스트 목록으로, 해당 카테고리에 속한 사진(포스트) 데이터를 포함합니다.
+/// - [cachedAt]: 캐시된 시점을 나타내는 DateTime 객체로, 캐시의 유효성을 판단하는 데 사용됩니다.
 class _CategoryPostsCacheEntry {
   final List<Post> posts;
   final DateTime cachedAt;
 
   const _CategoryPostsCacheEntry({required this.posts, required this.cachedAt});
+}
+
+/// 페이지에 새로 추가된 포스트 중에서 차단된 유저의 포스트와 중복된 포스트를 제거한 결과를 담는 클래스
+/// 새로 로드된 페이지의 포스트 목록에서 차단된 유저의 포스트와 이미 화면에 표시된 포스트를 제거한 후,
+/// 최종적으로 화면에 표시할 포스트 목록과 제거된 포스트 수를 함께 반환하는 데 사용됩니다.
+///
+/// Parameters:
+/// - [posts]: 화면에 표시할 최종 포스트 목록
+/// - [blockedRemoved]: 차단된 유저의 포스트로 인해 제거된 포스트 수
+/// - [duplicateRemoved]: 중복된 포스트로 인해 제거된 포스트 수
+class _PageAppendResult {
+  final List<Post> posts;
+  final int blockedRemoved;
+  final int duplicateRemoved;
+
+  const _PageAppendResult({
+    required this.posts,
+    required this.blockedRemoved,
+    required this.duplicateRemoved,
+  });
 }

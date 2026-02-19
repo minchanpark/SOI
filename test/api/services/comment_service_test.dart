@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:soi/api/api_exception.dart';
+import 'package:soi/api/models/comment.dart';
 import 'package:soi/api/services/comment_service.dart';
 import 'package:soi_api_client/api.dart';
 
@@ -37,6 +38,17 @@ class _FakeCommentApi extends CommentAPIApi {
   }
 }
 
+class _CreateCommentApi extends CommentAPIApi {
+  _CreateCommentApi({required this.onCreate});
+
+  final Future<ApiResponseDtoObject?> Function(CommentReqDto dto) onCreate;
+
+  @override
+  Future<ApiResponseDtoObject?> create3(CommentReqDto commentReqDto) {
+    return onCreate(commentReqDto);
+  }
+}
+
 ApiResponseDtoSliceCommentRespDto _sliceResponse({
   required List<CommentRespDto> content,
   required bool last,
@@ -60,6 +72,85 @@ CommentRespDto _commentDto(int id) {
 }
 
 void main() {
+  group('CommentService createComment payload normalization', () {
+    test('fills null values with 0/empty defaults for text comment', () async {
+      CommentReqDto? capturedDto;
+
+      final service = CommentService(
+        commentApi: _CreateCommentApi(
+          onCreate: (dto) async {
+            capturedDto = dto;
+            return ApiResponseDtoObject(success: true, data: null);
+          },
+        ),
+      );
+
+      final result = await service.createComment(
+        postId: 182,
+        userId: 46,
+        text: '  댓글 작성 테스트 46  ',
+        locationX: 0.7,
+        locationY: 0.7,
+        type: CommentType.text,
+      );
+
+      expect(result.success, isTrue);
+      expect(capturedDto, isNotNull);
+      expect(capturedDto!.userId, 46);
+      expect(capturedDto!.postId, 182);
+      expect(capturedDto!.emojiId, 0);
+      expect(capturedDto!.parentId, 0);
+      expect(capturedDto!.replyUserId, 0);
+      expect(capturedDto!.text, '댓글 작성 테스트 46');
+      expect(capturedDto!.audioKey, '');
+      expect(capturedDto!.fileKey, '');
+      expect(capturedDto!.waveformData, '');
+      expect(capturedDto!.duration, 0);
+      expect(capturedDto!.locationX, 0.7);
+      expect(capturedDto!.locationY, 0.7);
+      expect(capturedDto!.commentType, CommentReqDtoCommentTypeEnum.TEXT);
+    });
+
+    test(
+      'keeps audio payload and converts waveform for audio comment',
+      () async {
+        CommentReqDto? capturedDto;
+
+        final service = CommentService(
+          commentApi: _CreateCommentApi(
+            onCreate: (dto) async {
+              capturedDto = dto;
+              return ApiResponseDtoObject(success: true, data: null);
+            },
+          ),
+        );
+
+        final result = await service.createComment(
+          postId: 50,
+          userId: 60,
+          audioFileKey: 'audio/key.m4a',
+          waveformData: '[0.1,0.2,0.3]',
+          duration: 9,
+          type: CommentType.audio,
+        );
+
+        expect(result.success, isTrue);
+        expect(capturedDto, isNotNull);
+        expect(capturedDto!.emojiId, 0);
+        expect(capturedDto!.parentId, 0);
+        expect(capturedDto!.replyUserId, 0);
+        expect(capturedDto!.text, '');
+        expect(capturedDto!.audioKey, 'audio/key.m4a');
+        expect(capturedDto!.fileKey, '');
+        expect(capturedDto!.waveformData, '0.1,0.2,0.3');
+        expect(capturedDto!.duration, 9);
+        expect(capturedDto!.locationX, 0.0);
+        expect(capturedDto!.locationY, 0.0);
+        expect(capturedDto!.commentType, CommentReqDtoCommentTypeEnum.AUDIO);
+      },
+    );
+  });
+
   group('CommentService getComments pagination', () {
     test('merges parent and child comment pages', () async {
       final parentCalls = <String>[];

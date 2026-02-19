@@ -75,21 +75,9 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
 
-  // 기본 비율
-  // static const double _defaultAspectRatio = _imageWidth / _imageHeight;
-
-  /// 저장된 aspect ratio를 기반으로 실제 표시할 높이 계산
-  double get _displayHeight {
-    final savedRatio = widget.post.savedAspectRatio;
-    if (savedRatio != null && savedRatio > 0) {
-      // savedAspectRatio = width / height 이므로 height = width / aspectRatio
-      return _imageWidth.w / savedRatio;
-    }
-    return _imageHeight.h;
-  }
-
-  /// 실제 이미지/비디오 표시 크기
-  Size get _imageSize => Size(_imageWidth.w, _displayHeight);
+  /// 실제 이미지/비디오 표시 크기 (프레임 고정)
+  /// savedAspectRatio는 메타데이터로 유지하되, 피드 프레임 높이 계산에는 사용하지 않습니다.
+  Size get _imageSize => Size(_imageWidth.w, _imageHeight.h);
 
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
@@ -131,6 +119,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
 
   /// 게시글 존재 여부를 체크해서 return하는 getter
   bool get _hasCaption => widget.post.content?.isNotEmpty ?? false;
+
+  /// text-only 게시물 여부
+  bool get _isTextOnlyPost {
+    final hasText = widget.post.content?.trim().isNotEmpty ?? false;
+    return widget.post.postType == PostType.textOnly ||
+        (!widget.post.hasMedia && hasText);
+  }
 
   /// 게시물 이미지 또는 비디오의 URL을 저장하는 변수
   String? postImageUrl;
@@ -391,6 +386,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
 
   /// 미디어(이미지 또는 비디오) 콘텐츠 빌드
   Widget _buildMediaContent() {
+    // text-only 게시물인 경우, 미디어 대신 텍스트 콘텐츠 빌드
+    if (_isTextOnlyPost) {
+      return _buildTextOnlyContent();
+    }
+
     if (widget.post.isVideo) {
       if (postImageUrl == null || postImageUrl!.isEmpty) {
         // postImageUrl가 아직 로드되지 않았거나 비어있는 경우에 띄울 위젯 빌드
@@ -549,6 +549,52 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     }
 
     return _buildUnsupportedMedia();
+  }
+
+  /// text-only 게시물 콘텐츠 빌드
+  Widget _buildTextOnlyContent() {
+    final text = widget.post.content?.trim() ?? '';
+    return Container(
+      width: _imageSize.width,
+      height: _imageSize.height,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        border: Border.all(color: const Color(0xff2b2b2b), width: 2.0),
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18.0),
+        child: Container(
+          color: const Color(0xff1e1e1e),
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: const Color(0xfff8f8f8),
+                        fontSize: 30.sp,
+                        fontFamily: 'Pretendard Variable',
+                        fontWeight: FontWeight.w500,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   /// 지원되지 않는 미디어 표시 위젯 빌드
@@ -1141,6 +1187,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     final waveformData = _parseWaveformData(widget.post.waveformData);
     final pendingMarker = _buildPendingMarker();
     final deletePopup = _showActionOverlay ? _buildDeleteActionPopup() : null;
+    final showCaptionOverlay = _hasCaption && !_isTextOnlyPost;
+    final showCommentToggle = _hasComments || _hasPendingMarker;
 
     return Center(
       child: SizedBox(
@@ -1235,7 +1283,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                           ),
                         ),
                       if (!widget.post.hasAudio &&
-                          (_hasCaption || _hasComments || _hasPendingMarker))
+                          (showCaptionOverlay || showCommentToggle))
                         Positioned(
                           left: 16.w,
                           right: 16.w,
@@ -1244,10 +1292,10 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (_hasCaption)
+                              if (showCaptionOverlay)
                                 Expanded(child: _buildCaptionOverlay(true)),
-                              if (_hasComments || _hasPendingMarker) ...[
-                                if (_hasCaption) SizedBox(width: 12.w),
+                              if (showCommentToggle) ...[
+                                if (showCaptionOverlay) SizedBox(width: 12.w),
                                 GestureDetector(
                                   onTap: () {
                                     setState(() {

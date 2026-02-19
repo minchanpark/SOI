@@ -46,10 +46,15 @@ class CommentController extends ChangeNotifier {
 
   /// 댓글 생성
   Future<CommentCreationResult> createComment({
-    required int postId,
-    required int userId,
+    required int postId, // 댓글이 달릴 게시물 ID(대댓글도 동일하게 postId로 식별)
+    required int userId, // 댓글 작성자 ID
+    // 이모지 댓글인 경우 이모지 ID, 텍스트/음성/사진 댓글인 경우 0
     int? emojiId,
+
+    // 대댓글인 경우 부모 댓글 ID, 대댓글이 아닌 경우 0
     int? parentId,
+
+    // 대댓글인 경우 답글 대상 사용자 ID, 대댓글이 아닌 경우 0
     int? replyUserId,
     String? text,
     String? audioKey,
@@ -64,58 +69,57 @@ class CommentController extends ChangeNotifier {
     _clearError();
 
     try {
+      final normalizedEmojiId = emojiId ?? 0;
+      final normalizedParentId = parentId ?? 0;
+      final normalizedReplyUserId = replyUserId ?? 0;
+      final normalizedText = text?.trim() ?? '';
+      final normalizedAudioKey = audioKey?.trim() ?? '';
+      final normalizedWaveform = waveformData?.trim() ?? '';
+      final normalizedFileKey = fileKey?.trim() ?? '';
+      final normalizedDuration = duration ?? 0;
+      final normalizedLocationX = locationX ?? 0.0;
+      final normalizedLocationY = locationY ?? 0.0;
+
       final inferredType =
           type ??
-          (emojiId != null
+          (normalizedEmojiId > 0
               ? CommentType.emoji
-              : (audioKey != null && audioKey.trim().isNotEmpty
+              : (normalizedAudioKey.isNotEmpty
                     ? CommentType.audio
-                    : (replyUserId != null || parentId != null
+                    : (normalizedReplyUserId > 0 || normalizedParentId > 0
                           ? CommentType.reply
-                          : (fileKey != null && fileKey.trim().isNotEmpty
+                          : (normalizedFileKey.isNotEmpty
                                 ? CommentType.photo
                                 : CommentType.text))));
 
-      final normalizedText = (text?.trim().isEmpty ?? true)
-          ? null
-          : text!.trim();
-      final normalizedAudioKey = (audioKey?.trim().isEmpty ?? true)
-          ? null
-          : audioKey!.trim();
-      final normalizedWaveform = (waveformData?.trim().isEmpty ?? true)
-          ? null
-          : waveformData!.trim();
-      final normalizedFileKey = (fileKey?.trim().isEmpty ?? true)
-          ? null
-          : fileKey!.trim();
-
       // Swagger에서 동작하는 형태에 맞춰, 서버가 null 값에 민감할 수 있는 필드들을 기본값으로 맞춥니다.
-      final payloadText = inferredType == CommentType.emoji
+      final payloadText =
+          inferredType == CommentType.emoji || inferredType == CommentType.audio
           ? ''
           : normalizedText;
       final payloadAudioKey = inferredType == CommentType.audio
-          ? (normalizedAudioKey ?? '')
+          ? normalizedAudioKey
           : '';
       final payloadWaveform = inferredType == CommentType.audio
-          ? (normalizedWaveform ?? '')
+          ? normalizedWaveform
           : '';
       final payloadDuration = inferredType == CommentType.audio
-          ? (duration ?? 0)
+          ? normalizedDuration
           : 0;
 
       final result = await _commentService.createComment(
         postId: postId,
         userId: userId,
-        emojiId: inferredType == CommentType.emoji ? emojiId : null,
-        parentId: parentId,
-        replyUserId: replyUserId,
+        emojiId: inferredType == CommentType.emoji ? normalizedEmojiId : 0,
+        parentId: normalizedParentId,
+        replyUserId: normalizedReplyUserId,
         text: payloadText,
         audioFileKey: payloadAudioKey,
         fileKey: normalizedFileKey,
         waveformData: payloadWaveform,
         duration: payloadDuration,
-        locationX: locationX,
-        locationY: locationY,
+        locationX: normalizedLocationX,
+        locationY: normalizedLocationY,
         type: inferredType,
       );
       _setLoading(false);
@@ -128,6 +132,8 @@ class CommentController extends ChangeNotifier {
   }
 
   /// 텍스트 댓글 생성
+  /// createComment 메서드를 내부적으로 호출하여, payload/에러/상태 처리를 일관되게 유지합니다.
+  /// 원 댓글을 생성할 때, 사용하는 편의 메서드입니다.
   Future<CommentCreationResult> createTextComment({
     required int postId,
     required int userId,
@@ -135,27 +141,23 @@ class CommentController extends ChangeNotifier {
     required double locationX,
     required double locationY,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      final result = await _commentService.createTextComment(
-        postId: postId,
-        userId: userId,
-        text: text,
-        locationX: locationX,
-        locationY: locationY,
-      );
-      _setLoading(false);
-      return result;
-    } catch (e) {
-      _setError('텍스트 댓글 생성 실패: $e');
-      _setLoading(false);
-      return const CommentCreationResult.failure();
-    }
+    // createComment 단일 경로를 사용해 payload/에러/상태 처리를 일관되게 유지합니다.
+    return createComment(
+      postId: postId,
+      userId: userId,
+      emojiId: 0,
+      parentId: 0,
+      replyUserId: 0,
+      text: text,
+      locationX: locationX,
+      locationY: locationY,
+      type: CommentType.text,
+    );
   }
 
   /// 음성 댓글 생성
+  /// createComment 메서드를 내부적으로 호출하여, payload/에러/상태 처리를 일관되게 유지합니다.
+  /// 원 댓글을 생성할 때, 사용하는 편의 메서드입니다.
   Future<CommentCreationResult> createAudioComment({
     required int postId,
     required int userId,
@@ -165,26 +167,20 @@ class CommentController extends ChangeNotifier {
     required double locationX,
     required double locationY,
   }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      final result = await _commentService.createAudioComment(
-        postId: postId,
-        userId: userId,
-        audioFileKey: audioFileKey,
-        waveformData: waveformData,
-        duration: duration,
-        locationX: locationX,
-        locationY: locationY,
-      );
-      _setLoading(false);
-      return result;
-    } catch (e) {
-      _setError('음성 댓글 생성 실패: $e');
-      _setLoading(false);
-      return const CommentCreationResult.failure();
-    }
+    // createComment 단일 경로를 사용해 payload/에러/상태 처리를 일관되게 유지합니다.
+    return createComment(
+      postId: postId,
+      userId: userId,
+      emojiId: 0,
+      parentId: 0,
+      replyUserId: 0,
+      audioKey: audioFileKey,
+      waveformData: waveformData,
+      duration: duration,
+      locationX: locationX,
+      locationY: locationY,
+      type: CommentType.audio,
+    );
   }
 
   /// 이모지 댓글 생성

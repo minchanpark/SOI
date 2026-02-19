@@ -68,6 +68,12 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   // 댓글 개수
   int _commentCount = 0;
 
+  bool get _isTextOnlyPost {
+    final hasText = widget.post.content?.trim().isNotEmpty ?? false;
+    return widget.post.postType == PostType.textOnly ||
+        (!widget.post.hasMedia && hasText);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -295,7 +301,9 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
             height: 204.sp,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(11),
-              child: widget.post.isVideo
+              child: _isTextOnlyPost
+                  ? _buildTextOnlyCard()
+                  : widget.post.isVideo
                   ? _buildVideoThumbnail()
                   : (widget.postUrl.isNotEmpty
                         ? CachedNetworkImage(
@@ -472,6 +480,32 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
       color: Colors.grey.shade800,
       alignment: Alignment.center,
       child: Icon(Icons.videocam, color: Colors.grey.shade600, size: 32.sp),
+    );
+  }
+
+  Widget _buildTextOnlyCard() {
+    final text = widget.post.content?.trim() ?? '';
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xff1e1e1e),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Colors.white12, width: 0.8),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        maxLines: 7,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: const Color(0xfff8f8f8),
+          fontSize: 14.sp,
+          fontFamily: 'Pretendard Variable',
+          fontWeight: FontWeight.w500,
+          height: 1.4,
+        ),
+      ),
     );
   }
 

@@ -13,6 +13,7 @@ import 'widgets/camera_capture_button.dart';
 import 'widgets/camera_preview_container.dart';
 import 'widgets/camera_zoom_controls.dart';
 import 'widgets/gallery_thumbnail.dart';
+import '../../utils/app_route_observer.dart';
 import 'photo_editor_screen.dart';
 
 enum _PendingVideoAction { none, stop, cancel }
@@ -27,7 +28,7 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen>
-    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin, RouteAware {
   // Swift와 통신할 플랫폼 채널
   final CameraService _cameraService = CameraService.instance;
 
@@ -54,6 +55,10 @@ class _CameraScreenState extends State<CameraScreen>
 
   // 카메라 로딩 중 상태
   bool _isLoading = true;
+  bool isTextMode = true;
+  final TextEditingController _textModeController = TextEditingController();
+  final FocusNode _textModeFocusNode = FocusNode();
+  ModalRoute<void>? _subscribedRoute;
 
   // 갤러리 미리보기 상태 관리
   AssetEntity? _firstGalleryImage;
@@ -90,6 +95,9 @@ class _CameraScreenState extends State<CameraScreen>
 
   // 최대 녹화 시간 --> 30초
   static const int _maxVideoDurationSeconds = 30;
+  bool get _hasInputText => _textModeController.text.trim().isNotEmpty;
+  double get _previewWidth => 354.w;
+  double get _previewHeight => 500.h;
 
   // IndexedStack에서 상태 유지
   @override
@@ -101,20 +109,26 @@ class _CameraScreenState extends State<CameraScreen>
     super.initState();
 
     _setupVideoListeners();
+    _textModeController.addListener(_handleTextModeChanged);
 
     // 앱 라이프사이클 옵저버 등록
     WidgetsBinding.instance.addObserver(this);
 
-    if (widget.isActive) {
+    if (widget.isActive && !isTextMode) {
       // iOS 플랫폼뷰가 붙기 전에 초기화를 시작하면 레이스가 발생할 수 있어
       // 첫 프레임 이후로 초기화 타이밍을 지연합니다.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _cameraInitialization ??= _initializeCameraAsync();
       });
-    } else {
+    } else if (!widget.isActive && !isTextMode) {
       // 비활성 상태에서는 세션만 준비
       unawaited(_cameraService.prepareSessionIfPermitted());
     }
+  }
+
+  void _handleTextModeChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -122,6 +136,9 @@ class _CameraScreenState extends State<CameraScreen>
     super.didUpdateWidget(oldWidget);
 
     if (!oldWidget.isActive && widget.isActive) {
+      if (isTextMode) {
+        return;
+      }
       if (_isInitialized) {
         // 초기화되면 카메라 세션 재개
         unawaited(_cameraService.resumeCamera());
@@ -133,8 +150,38 @@ class _CameraScreenState extends State<CameraScreen>
     }
 
     if (oldWidget.isActive && !widget.isActive) {
-      unawaited(_cameraService.pauseCamera());
+      _resetTextInputState();
+      if (!isTextMode) {
+        unawaited(_cameraService.pauseCamera());
+      }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final route = ModalRoute.of(context);
+    if (route == null) {
+      return;
+    }
+
+    final modalRoute = route as ModalRoute<void>;
+    if (_subscribedRoute == modalRoute) {
+      return;
+    }
+
+    if (_subscribedRoute != null) {
+      appRouteObserver.unsubscribe(this);
+    }
+
+    _subscribedRoute = modalRoute;
+    appRouteObserver.subscribe(this, modalRoute);
+  }
+
+  @override
+  void didPushNext() {
+    _resetTextInputState();
   }
 
   /// 비동기 카메라 초기화
@@ -183,32 +230,36 @@ class _CameraScreenState extends State<CameraScreen>
         unawaited(_loadFirstGalleryImage());
 
         // 1차 재시도 (Photo Library가 준비될 때까지 대기)
-        unawaited(Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted && _firstGalleryImage == null) {
-            debugPrint('[Gallery] iOS: Retry #1 (800ms)');
-            // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
-            if (_isLoadingGallery) {
-              setState(() {
-                _isLoadingGallery = false;
-              });
+        unawaited(
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (mounted && _firstGalleryImage == null) {
+              debugPrint('[Gallery] iOS: Retry #1 (800ms)');
+              // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
+              if (_isLoadingGallery) {
+                setState(() {
+                  _isLoadingGallery = false;
+                });
+              }
+              _loadFirstGalleryImage();
             }
-            _loadFirstGalleryImage();
-          }
-        }));
+          }),
+        );
 
         // 2차 재시도
-        unawaited(Future.delayed(const Duration(milliseconds: 2000), () {
-          if (mounted && _firstGalleryImage == null) {
-            debugPrint('[Gallery] iOS: Retry #2 (2000ms)');
-            // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
-            if (_isLoadingGallery) {
-              setState(() {
-                _isLoadingGallery = false;
-              });
+        unawaited(
+          Future.delayed(const Duration(milliseconds: 2000), () {
+            if (mounted && _firstGalleryImage == null) {
+              debugPrint('[Gallery] iOS: Retry #2 (2000ms)');
+              // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
+              if (_isLoadingGallery) {
+                setState(() {
+                  _isLoadingGallery = false;
+                });
+              }
+              _loadFirstGalleryImage();
             }
-            _loadFirstGalleryImage();
-          }
-        }));
+          }),
+        );
 
         unawaited(_loadAvailableZoomLevels());
       } else {
@@ -351,7 +402,9 @@ class _CameraScreenState extends State<CameraScreen>
           _firstGalleryImage = firstImage;
           _isLoadingGallery = false;
         });
-        debugPrint('[Gallery] State updated, isLoading: false, hasImage: ${firstImage != null}');
+        debugPrint(
+          '[Gallery] State updated, isLoading: false, hasImage: ${firstImage != null}',
+        );
       }
     } catch (e) {
       debugPrint('[Gallery] Error: $e');
@@ -386,6 +439,13 @@ class _CameraScreenState extends State<CameraScreen>
 
     // (배포버전 프리즈 방지) 전역 imageCache.clear()는 캐시가 큰 실사용 환경에서
     // dispose 타이밍에 수 초 프리즈를 만들 수 있어 제거합니다.
+    if (_subscribedRoute != null) {
+      appRouteObserver.unsubscribe(this);
+      _subscribedRoute = null;
+    }
+    _textModeController.removeListener(_handleTextModeChanged);
+    _textModeController.dispose();
+    _textModeFocusNode.dispose();
 
     super.dispose();
   }
@@ -395,7 +455,7 @@ class _CameraScreenState extends State<CameraScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 앱이 다시 활성화될 때 카메라 세션 복구
     if (state == AppLifecycleState.resumed) {
-      if (_isInitialized && widget.isActive) {
+      if (_isInitialized && widget.isActive && !isTextMode) {
         _cameraService.resumeCamera();
 
         // 갤러리 미리보기 새로고침 (다른 앱에서 사진을 찍었을 수 있음)
@@ -411,16 +471,99 @@ class _CameraScreenState extends State<CameraScreen>
           _pendingVideoAction != _PendingVideoAction.none) {
         unawaited(_stopVideoRecording(isCancelled: true));
       }
-      _cameraService.pauseCamera();
+      if (!isTextMode) {
+        _cameraService.pauseCamera();
+      }
     }
     // inactive 상태에서는 카메라만 일시 정지 (비디오 녹화는 유지)
     else if (state == AppLifecycleState.inactive) {
       // inactive: 일시적 비활성화 (알림, 전화 등)
       // 비디오 녹화는 중지하지 않고 카메라만 일시 정지
-      if (!_isVideoRecording) {
+      if (!isTextMode && !_isVideoRecording) {
         _cameraService.pauseCamera();
       }
     }
+  }
+
+  /// 카메라 모드 변경 처리
+  /// 텍스트 모드와 카메라 모드 간 전환을 관리하며, 녹화 중에는 텍스트 모드로 전환을 차단합니다.
+  ///
+  /// Parameters:
+  ///  - [enableTextMode]: true로 설정하면 텍스트 모드로 전환, false면 카메라 모드로 전환
+  Future<void> _onModeChanged(bool enableTextMode) async {
+    if (isTextMode == enableTextMode) {
+      return;
+    }
+
+    if (enableTextMode) {
+      if (_isVideoRecording ||
+          _videoStartInFlight ||
+          _pendingVideoAction != _PendingVideoAction.none) {
+        _showSnackBar(
+          tr('camera.text_mode_switch_blocked_recording', context: context),
+        );
+        return;
+      }
+
+      setState(() {
+        isTextMode = true;
+      });
+      unawaited(_cameraService.pauseCamera());
+      return;
+    }
+
+    setState(() {
+      isTextMode = false;
+    });
+    _resetTextInputState();
+
+    if (!widget.isActive) {
+      return;
+    }
+
+    if (_isInitialized) {
+      unawaited(_cameraService.resumeCamera());
+    } else {
+      _cameraInitialization ??= _initializeCameraAsync();
+    }
+  }
+
+  void _clearTextInput() {
+    _resetTextInputState(requestFocus: true);
+  }
+
+  void _resetTextInputState({bool requestFocus = false}) {
+    _textModeController.clear();
+    if (requestFocus) {
+      _textModeFocusNode.requestFocus();
+      return;
+    }
+    _textModeFocusNode.unfocus();
+  }
+
+  void _openTextEditor() {
+    final inputText = _textModeController.text.trim();
+    if (!mounted || inputText.isEmpty || _isNavigatingToEditor) {
+      return;
+    }
+
+    _textModeFocusNode.unfocus();
+    _isNavigatingToEditor = true;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoEditorScreen(inputText: inputText),
+      ),
+    ).whenComplete(() {
+      if (mounted) {
+        setState(() {
+          _isNavigatingToEditor = false;
+        });
+      } else {
+        _isNavigatingToEditor = false;
+      }
+    });
   }
 
   /// cameraservice에 플래시 토글 요청
@@ -736,6 +879,194 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// 카메라 모드 토글 UI 빌드
+  /// 텍스트 모드와 카메라 모드 간 전환을 위한 토글 버튼을 포함하는 컨테이너를 반환합니다.
+  Widget _buildModeToggle() {
+    return SizedBox(
+      width: 98.1.sp,
+      height: 45.sp,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0x99000000),
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildModeToggleButton(
+              iconPath: 'assets/text_mode.png',
+              iconWidth: 17.1.sp,
+              iconHeight: 18.sp,
+              isSelected: isTextMode,
+              onTap: () => _onModeChanged(true),
+            ),
+            _buildModeToggleButton(
+              iconPath: 'assets/camera_mode.png',
+              iconWidth: 19.29.sp,
+              iconHeight: 17.36.sp,
+              isSelected: !isTextMode,
+              onTap: () => _onModeChanged(false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewWithModeToggle(Widget zoomControls) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        _buildPreviewArea(zoomControls),
+        Positioned(bottom: 12.h, child: _buildModeToggle()),
+      ],
+    );
+  }
+
+  Widget _buildModeToggleButton({
+    required String iconPath,
+    required double iconWidth,
+    required double iconHeight,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 40.w,
+          height: 40.h,
+          child: Center(
+            child: Container(
+              width: 34.72.w,
+              height: 34.72.h,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF323232)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Image.asset(
+                  iconPath,
+                  width: iconWidth,
+                  height: iconHeight,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewArea(Widget zoomControls) {
+    if (isTextMode) {
+      return _buildTextInputPreview();
+    }
+
+    return CameraPreviewContainer(
+      initialization: _cameraInitialization,
+      isLoading: _isLoading,
+      cameraView: _cameraService.buildCameraView(),
+      showZoomControls: zoomLevels.isNotEmpty && !_isVideoRecording,
+      zoomControls: zoomControls,
+      isVideoRecording: _isVideoRecording,
+      isFlashOn: isFlashOn,
+      onToggleFlash: _toggleFlash,
+      showFlashButton: true,
+      width: _previewWidth,
+      height: _previewHeight,
+    );
+  }
+
+  Widget _buildTextInputPreview() {
+    final previewWidth = _previewWidth;
+    final previewHeight = _previewHeight;
+
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: previewWidth,
+          height: previewHeight,
+          color: const Color(0xFF111111),
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20.sp,
+                  _hasInputText ? 60.sp : 20.sp,
+                  20.sp,
+                  20.sp,
+                ),
+                child: TextField(
+                  controller: _textModeController,
+                  focusNode: _textModeFocusNode,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  maxLines: null,
+                  minLines: null,
+                  expands: true,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontFamily: 'Pretendard',
+                    fontWeight: FontWeight.w400,
+                  ),
+                  cursorColor: Colors.white,
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: tr('camera.text_input_hint', context: context),
+                    hintStyle: TextStyle(
+                      color: const Color(0xFFB9B9B9),
+                      fontSize: 16.sp,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+              if (_hasInputText)
+                Positioned(
+                  top: 8.sp,
+                  left: 8.sp,
+                  right: 8.sp,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: _clearTextInput,
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                      TextButton(
+                        onPressed: _openTextEditor,
+                        child: Text(
+                          tr('common.confirm', context: context),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.sp,
+                            fontFamily: 'Pretendard',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -753,146 +1084,155 @@ class _CameraScreenState extends State<CameraScreen>
         onNotificationsTap: () =>
             Navigator.pushNamed(context, '/notifications'),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 카메라 프리뷰를 띄우는 위젯 컨태이너
-            CameraPreviewContainer(
-              initialization: _cameraInitialization,
-              isLoading: _isLoading,
-              cameraView: _cameraService.buildCameraView(),
-              showZoomControls: zoomLevels.isNotEmpty && !_isVideoRecording,
-              zoomControls: zoomControls,
-              isVideoRecording: _isVideoRecording,
-              isFlashOn: isFlashOn,
-              onToggleFlash: _toggleFlash,
-              // 주석 처리: Flutter(UI) 드래그로 줌 조절 기능 비활성화 (두 손가락 핀치 줌만 사용)
-            ),
-            SizedBox(height: 20.h),
-            // 수정: 하단 버튼 레이아웃 변경 - 반응형
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+      body: SafeArea(
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
               children: [
-                // 갤러리 미리보기 버튼 (Service 상태 사용) - 반응형
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: InkWell(
-                      onTap: () async {
-                        try {
-                          final stopwatch = Stopwatch()..start();
-                          debugPrint('[GalleryPick] tap');
-                          final permissionState =
-                              await PhotoManager.requestPermissionExtend();
-                          if (!permissionState.hasAccess) {
-                            if (!context.mounted) {
-                              return;
-                            }
-                            _showSnackBar(
-                              tr(
-                                'camera.gallery_access_failed',
-                                context: context,
+                _buildPreviewWithModeToggle(zoomControls),
+                if (!isTextMode) ...[
+                  SizedBox(height: 20.h),
+                  // 수정: 하단 버튼 레이아웃 변경 - 반응형
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // 갤러리 미리보기 버튼 (Service 상태 사용) - 반응형
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: InkWell(
+                            onTap: () async {
+                              try {
+                                final stopwatch = Stopwatch()..start();
+                                debugPrint('[GalleryPick] tap');
+                                final permissionState =
+                                    await PhotoManager.requestPermissionExtend();
+                                if (!permissionState.hasAccess) {
+                                  if (!context.mounted) {
+                                    return;
+                                  }
+                                  _showSnackBar(
+                                    tr(
+                                      'camera.gallery_access_failed',
+                                      context: context,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final List<AssetEntity>? pickedAssets =
+                                    await AssetPicker.pickAssets(
+                                      context,
+                                      pickerConfig: AssetPickerConfig(
+                                        maxAssets: 1,
+                                        requestType: RequestType.common,
+                                        textDelegate:
+                                            EnglishAssetPickerTextDelegate(),
+                                      ),
+                                    );
+                                debugPrint(
+                                  '[GalleryPick] picker done: ${stopwatch.elapsedMilliseconds}ms',
+                                );
+                                // 수정: async gap 이후 context 사용(Navigator.push) 안전장치
+                                if (pickedAssets == null ||
+                                    pickedAssets.isEmpty ||
+                                    !context.mounted) {
+                                  debugPrint(
+                                    '[GalleryPick] cancelled or unmounted',
+                                  );
+                                  return;
+                                }
+
+                                final AssetEntity pickedAsset =
+                                    pickedAssets.first;
+                                final bool isVideo =
+                                    pickedAsset.type == AssetType.video;
+
+                                debugPrint(
+                                  '[GalleryPick] push editor (isVideo=$isVideo) at ${stopwatch.elapsedMilliseconds}ms',
+                                );
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PhotoEditorScreen(
+                                      asset: pickedAsset,
+                                      isVideo: isVideo,
+                                      isFromCamera: false,
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                _showSnackBar(
+                                  tr(
+                                    'camera.gallery_pick_failed',
+                                    context: context,
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8.76),
                               ),
-                            );
-                            return;
-                          }
-                          final List<AssetEntity>? pickedAssets =
-                              await AssetPicker.pickAssets(
-                                context,
-                                pickerConfig: AssetPickerConfig(
-                                  maxAssets: 1,
-                                  requestType: RequestType.common,
-                                  textDelegate:
-                                      EnglishAssetPickerTextDelegate(),
-                                ),
-                              );
-                          debugPrint(
-                            '[GalleryPick] picker done: ${stopwatch.elapsedMilliseconds}ms',
-                          );
-                          // 수정: async gap 이후 context 사용(Navigator.push) 안전장치
-                          if (pickedAssets == null ||
-                              pickedAssets.isEmpty ||
-                              !context.mounted) {
-                            debugPrint('[GalleryPick] cancelled or unmounted');
-                            return;
-                          }
-
-                          final AssetEntity pickedAsset = pickedAssets.first;
-                          final bool isVideo =
-                              pickedAsset.type == AssetType.video;
-
-                          debugPrint(
-                            '[GalleryPick] push editor (isVideo=$isVideo) at ${stopwatch.elapsedMilliseconds}ms',
-                          );
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PhotoEditorScreen(
-                                asset: pickedAsset,
-                                isVideo: isVideo,
-                                isFromCamera: false,
+                              // 갤러리 썸네일을 위젯 형태로 표시
+                              child: GalleryThumbnail(
+                                isLoading: _isLoadingGallery,
+                                asset: _firstGalleryImage,
+                                errorMessage: _galleryError,
+                                size: 46,
+                                borderRadius: 8.76,
                               ),
                             ),
-                          );
-                        } catch (e) {
-                          _showSnackBar(
-                            tr('camera.gallery_pick_failed', context: context),
-                          );
-                        }
-                      },
-                      child: Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8.76),
-                        ),
-                        // 갤러리 썸네일을 위젯 형태로 표시
-                        child: GalleryThumbnail(
-                          isLoading: _isLoadingGallery,
-                          asset: _firstGalleryImage,
-                          errorMessage: _galleryError,
-                          size: 46,
-                          borderRadius: 8.76,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
 
-                // 촬영 버튼 위젯 - 반응형
-                CameraCaptureButton(
-                  isVideoRecording: _isVideoRecording,
-                  videoProgress: _videoProgress,
-                  onTakePicture: _takePicture,
-                  onStartVideoRecording: _startVideoRecording,
-                  onStopVideoRecording: _stopVideoRecording,
-                ),
-
-                // 카메라 전환 버튼 - 개선된 반응형
-                Expanded(
-                  child: IconButton(
-                    onPressed:
-                        (_isVideoRecording && !_supportsLiveSwitch) ||
-                            _cameraSwitchInFlight
-                        ? null
-                        : _onSwitchCameraPressed,
-                    color: Color(0xffd9d9d9),
-                    icon: AnimatedRotation(
-                      turns: _cameraSwitchTurns,
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeOut,
-                      child: Image.asset(
-                        "assets/switch.png",
-                        width: 67.w,
-                        height: 56.h,
+                      // 촬영 버튼 위젯 - 반응형
+                      CameraCaptureButton(
+                        isVideoRecording: _isVideoRecording,
+                        videoProgress: _videoProgress,
+                        onTakePicture: _takePicture,
+                        onStartVideoRecording: _startVideoRecording,
+                        onStopVideoRecording: _stopVideoRecording,
                       ),
-                    ),
+
+                      // 카메라 전환 버튼 - 개선된 반응형
+                      Expanded(
+                        child: IconButton(
+                          onPressed:
+                              (_isVideoRecording && !_supportsLiveSwitch) ||
+                                  _cameraSwitchInFlight
+                              ? null
+                              : _onSwitchCameraPressed,
+                          color: Color(0xffd9d9d9),
+                          icon: AnimatedRotation(
+                            turns: _cameraSwitchTurns,
+                            duration: const Duration(milliseconds: 320),
+                            curve: Curves.easeOut,
+                            child: Image.asset(
+                              "assets/switch.png",
+                              width: 67.w,
+                              height: 56.h,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                  SizedBox(height: 30.h),
+                ] else ...[
+                  SizedBox(height: 20.h),
+                ],
               ],
             ),
-            SizedBox(height: 30.h),
-          ],
+          ),
         ),
       ),
     );

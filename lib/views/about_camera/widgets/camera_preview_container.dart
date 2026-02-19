@@ -18,6 +18,7 @@ class CameraPreviewContainer extends StatelessWidget {
     required this.isVideoRecording,
     required this.isFlashOn,
     required this.onToggleFlash,
+    this.showFlashButton = true,
 
     // 추가: Flutter(UI)에서 드래그로 줌을 조절할 수 있도록 콜백을 받습니다.
     this.onZoomDragStart, // 줌 드래그를 시작할 때 호출
@@ -37,6 +38,7 @@ class CameraPreviewContainer extends StatelessWidget {
   final bool isVideoRecording;
   final bool isFlashOn;
   final VoidCallback onToggleFlash;
+  final bool showFlashButton;
 
   // 추가: 프리뷰 위에 GestureDetector 오버레이를 올려 세로 드래그로 줌을 제어합니다.
   final GestureDragStartCallback? onZoomDragStart;
@@ -121,7 +123,7 @@ class CameraPreviewContainer extends StatelessWidget {
               ),
               /*  if (!isLoading && isVideoRecording)
                 Positioned(top: 12.h, child: recordingIndicator),*/
-              if (!isLoading && !isVideoRecording)
+              if (showFlashButton && !isLoading && !isVideoRecording)
                 IconButton(
                   onPressed: onToggleFlash,
                   icon: Icon(

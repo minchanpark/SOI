@@ -112,7 +112,7 @@ class PostController extends ChangeNotifier {
     // (배포버전 성능) 요청 payload 전체 로그는 프레임 드랍/프리즈를 유발할 수 있어 디버그에서만 출력합니다.
     if (kDebugMode) {
       debugPrint(
-        "[PostController]\nuserId: $userId\nnickName: $nickName\ncontent: $content\npostFileKey: $postFileKey\naudioFileKey: $audioFileKey\ncategoryIds: $categoryIds\nwaveformData: $waveformData\nduration: $duration",
+        "[PostController]\nuserId: $userId\nnickName: $nickName\ncontent: $content\npostFileKey: $postFileKey\naudioFileKey: $audioFileKey\ncategoryIds: $categoryIds\nwaveformData: $waveformData\nduration: $duration\nsavedAspectRatio: $savedAspectRatio\nisFromGallery: $isFromGallery\npostType: $postType",
       );
     }
 
@@ -230,6 +230,7 @@ class PostController extends ChangeNotifier {
   ///   - [notificationId]: 알림 ID (선택, 알림에서 접근 시 사용)
   ///     - 알림이 아닌 곳에서 호출할 경우, null을 전달
   ///   - [page]: 페이지 번호 (기본값: 0)
+  ///   - [notifyLoading]: false면 로딩/에러 notify를 생략 (백그라운드 페이징용)
   ///
   /// Returns: 게시물 목록 (List of Post)
   Future<List<Post>> getPostsByCategory({
@@ -237,6 +238,7 @@ class PostController extends ChangeNotifier {
     required int userId,
     int? notificationId,
     int page = 0,
+    bool notifyLoading = true, // 백그라운드 페이징 시 로딩/에러 상태를 UI에 알리지 않도록 하는 옵션
   }) async {
     // 캐시 키 생성
     final cacheKey = '$userId:$categoryId:$page';
@@ -246,13 +248,15 @@ class PostController extends ChangeNotifier {
     if (cached != null &&
         DateTime.now().difference(cached.cachedAt) < _controllerCacheTtl) {
       if (kDebugMode) {
-        debugPrint('📦 [PostController] 캐시 히트: $cacheKey');
+        debugPrint('[PostController] 캐시 히트: $cacheKey');
       }
       return cached.posts;
     }
 
-    _setLoading(true);
-    _clearError();
+    if (notifyLoading) {
+      _setLoading(true);
+      _clearError();
+    }
 
     try {
       final posts = await _postService.getPostsByCategory(
@@ -268,16 +272,24 @@ class PostController extends ChangeNotifier {
         cachedAt: DateTime.now(),
       );
 
-      _setLoading(false);
+      if (notifyLoading) {
+        // 백그라운드 페이징이 아닌 경우에만 로딩 상태 업데이트
+        _setLoading(false);
+      }
       return posts;
     } catch (e) {
-      _setError('카테고리 게시물 조회 실패: $e');
-      _setLoading(false);
+      if (notifyLoading) {
+        // 백그라운드 페이징이 아닌 경우에만 에러 상태 업데이트
+        _setError('카테고리 게시물 조회 실패: $e');
+        _setLoading(false);
+      } else if (kDebugMode) {
+        debugPrint('[PostController] 카테고리 게시물 백그라운드 조회 실패: $e');
+      }
 
       // 에러 시 만료된 캐시라도 반환
       if (cached != null) {
         if (kDebugMode) {
-          debugPrint('⚠️ [PostController] 에러 발생, 만료된 캐시 사용');
+          debugPrint('[PostController] 에러 발생, 만료된 캐시 사용');
         }
         return cached.posts;
       }

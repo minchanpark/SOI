@@ -34,6 +34,35 @@ class _FakePostApi extends PostAPIApi {
 
 void main() {
   group('PostService postType mapping', () {
+    test(
+      'uses explicit TEXT_ONLY postType for create and keeps categoryIds/content',
+      () async {
+        PostCreateReqDto? capturedDto;
+        final service = PostService(
+          postApi: _FakePostApi(
+            onCreate: (dto) async {
+              capturedDto = dto;
+              return ApiResponseDtoBoolean(success: true, data: true);
+            },
+          ),
+        );
+
+        final result = await service.createPost(
+          nickName: 'tester',
+          content: 'text-only content',
+          postFileKey: const [],
+          audioFileKey: const [],
+          categoryIds: const [10, 20],
+          postType: PostType.textOnly,
+        );
+
+        expect(result, isTrue);
+        expect(capturedDto?.postType, PostCreateReqDtoPostTypeEnum.TEXT_ONLY);
+        expect(capturedDto?.categoryId, const [10, 20]);
+        expect(capturedDto?.content, 'text-only content');
+      },
+    );
+
     test('infers TEXT_ONLY for create when media key list is empty', () async {
       PostCreateReqDto? capturedDto;
       final service = PostService(

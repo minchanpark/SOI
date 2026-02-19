@@ -73,16 +73,25 @@ class CommentService {
     CommentType? type,
   }) async {
     try {
+      final normalizedEmojiId = emojiId ?? 0;
+      final normalizedParentId = parentId ?? 0;
+      final normalizedReplyUserId = replyUserId ?? 0;
+      final normalizedText = text?.trim() ?? '';
+      final normalizedAudioKey = audioFileKey?.trim() ?? '';
+      final normalizedFileKey = fileKey?.trim() ?? '';
+      final normalizedWaveform = waveformData?.trim() ?? '';
+      final normalizedDuration = duration ?? 0;
+      final normalizedLocationX = locationX ?? 0.0;
+      final normalizedLocationY = locationY ?? 0.0;
       final commentTypeEnum = _toCommentTypeEnum(type);
 
       // waveformData 변환: "[0.0275,...]" → "0.0275,..."
-      String? processedWaveformData = waveformData;
-      if (waveformData != null && waveformData.isNotEmpty) {
+      var processedWaveformData = normalizedWaveform;
+      if (normalizedWaveform.isNotEmpty) {
         try {
           // JSON 배열 문자열을 파싱하여 콤마로 구분된 문자열로 변환
-          final parsed = jsonDecode(waveformData) as List;
+          final parsed = jsonDecode(normalizedWaveform) as List;
           processedWaveformData = parsed.join(',');
-          debugPrint('waveformData 변환: $waveformData → $processedWaveformData');
         } catch (e) {
           debugPrint('waveformData 변환 실패, 원본 사용: $e');
           // 변환 실패 시 원본 그대로 사용
@@ -92,24 +101,24 @@ class CommentService {
       final dto = CommentReqDto(
         postId: postId,
         userId: userId,
-        emojiId: emojiId,
-        parentId: parentId,
-        replyUserId: replyUserId,
-        text: text,
-        audioKey: audioFileKey,
-        fileKey: fileKey,
+        emojiId: normalizedEmojiId,
+        parentId: normalizedParentId,
+        replyUserId: normalizedReplyUserId,
+        text: normalizedText,
+        audioKey: normalizedAudioKey,
+        fileKey: normalizedFileKey,
         waveformData: processedWaveformData,
-        duration: duration,
-        locationX: locationX,
-        locationY: locationY,
+        duration: normalizedDuration,
+        locationX: normalizedLocationX,
+        locationY: normalizedLocationY,
         commentType: commentTypeEnum,
       );
 
       debugPrint('=== 댓글 생성 요청 ===');
       debugPrint('postId: $postId, userId: $userId');
       debugPrint('commentType: ${commentTypeEnum.value}');
-      debugPrint('audioFileKey: $audioFileKey');
-      debugPrint('text: $text');
+      debugPrint('audioFileKey: $normalizedAudioKey');
+      debugPrint('text: $normalizedText');
       debugPrint('waveformData: $processedWaveformData');
 
       // 자동 생성된 API 클라이언트 사용

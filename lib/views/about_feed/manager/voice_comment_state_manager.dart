@@ -14,8 +14,9 @@ import '../../../api/models/comment_creation_result.dart';
 import '../../../utils/position_converter.dart';
 import '../../common_widget/about_voice_comment/pending_api_voice_comment.dart';
 
-/// API 기반 음성/텍스트 댓글 상태 매니저
-/// 각 게시물별로 음성/텍스트 댓글의 활성화 상태, 저장 상태, 대기 중인 댓글 등을 관리
+/// 게시물별 음성/텍스트 댓글 상태를 관리하는 매니저 클래스
+/// 피드 화면에서 각 게시물에 대해 음성/텍스트 댓글의 활성화 상태, 저장 상태, 대기 중인 댓글 정보 등을 관리하여,
+/// UI와 상호작용할 수 있도록 합니다.
 ///
 /// Parameters:
 ///   - [voiceCommentActiveStates]: 게시물 ID별 음성/텍스트 댓글 활성화 상태 맵

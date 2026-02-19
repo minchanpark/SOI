@@ -260,8 +260,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               ),
             ),
             actions: [
-              // 다운로드 버튼 (모든 게시물에서 표시)
-              if (_posts.isNotEmpty)
+              // 다운로드 버튼 (미디어가 있는 게시물에서만 표시)
+              if (_posts.isNotEmpty && _posts[_currentIndex].hasMedia)
                 Padding(
                   padding: EdgeInsets.only(right: 23.w),
                   child: IconButton(
@@ -481,12 +481,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   /// - [postId]: 프로필 이미지가 드래그된 게시물 ID
   /// - [absolutePosition]: 드래그된 절대 위치
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
-    // 해당 post를 찾아서 savedAspectRatio 사용
-    final post = _posts.firstWhere((p) => p.id == postId, orElse: () => _posts[_currentIndex]);
-    final aspectRatio = post.savedAspectRatio;
-    final width = 354.w;
-    final height = (aspectRatio != null && aspectRatio > 0) ? width / aspectRatio : 500.h;
-    final imageSize = Size(width, height);
+    // 표시 프레임(354x500)과 동일한 좌표계를 사용해 위치를 변환합니다.
+    final imageSize = Size(354.w, 500.h);
     // 포인터 끝점 기준 좌표를 상대 위치로 변환
     final relativePosition = PositionConverter.toRelativePosition(
       absolutePosition,
