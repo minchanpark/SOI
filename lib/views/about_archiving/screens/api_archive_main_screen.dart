@@ -1,27 +1,26 @@
 import 'dart:async'; // Timer 사용을 위해 추가
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:soi/api/controller/category_controller.dart';
 import 'package:soi/api/controller/friend_controller.dart';
 import 'package:soi/api/controller/media_controller.dart';
+import 'package:soi/api/controller/notification_controller.dart';
 import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/api/controller/category_search_controller.dart';
 import 'package:soi/api/models/category.dart';
 import 'package:soi/api/models/friend.dart';
-import 'package:soi/api/models/selected_friend_model.dart';
+//import 'package:soi/api/models/selected_friend_model.dart';
 import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
 import '../../../theme/theme.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../utils/video_thumbnail_cache.dart';
-import '../../about_friends/friend_list_add_screen.dart';
-import '../widgets/overlapping_profiles_widget.dart';
+//import '../../about_friends/friend_list_add_screen.dart';
+//import '../widgets/overlapping_profiles_widget.dart';
 import 'archive_detail/all_archives_screen.dart';
 import 'archive_detail/my_archives_screen.dart';
 import 'archive_detail/shared_archives_screen.dart';
@@ -54,7 +53,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   UserController? _userController;
   MediaController? _mediaController;
 
-  // ✨ 프리페칭 관련
+  // 프리페칭 관련
   PostController? _postController;
   FriendController? _friendController;
   bool _hasPrefetchedPosts = false;
@@ -77,7 +76,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   String _originalText = '';
 
   // 선택된 친구들 상태 관리
-  List<SelectedFriendModel> _selectedFriends = [];
+  // List<SelectedFriendModel> _selectedFriends = [];
 
   // 프로필 이미지 URL
   String? _profileImageUrl;
@@ -135,7 +134,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     // MediaController를 먼저 준비해야 사용자 정보 변경 시 즉시 로딩 가능
     _mediaController ??= Provider.of<MediaController>(context, listen: false);
 
-    // ✨ 프리페칭용 컨트롤러 준비
+    // 프리페칭용 컨트롤러 준비
     _postController ??= Provider.of<PostController>(context, listen: false);
     _friendController ??= Provider.of<FriendController>(context, listen: false);
 
@@ -485,56 +484,35 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
           ),
           backgroundColor: AppTheme.lightTheme.colorScheme.surface,
           toolbarHeight: 70.h,
-          leading: Row(
-            children: [
-              SizedBox(width: 32.w),
-              // 프로필 이미지 - presigned URL 사용
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                child: Container(
-                  decoration: BoxDecoration(shape: BoxShape.circle),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/profile_screen');
-                    },
-                    child: SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: ClipOval(
-                        child:
-                            _profileImageUrl != null &&
-                                _profileImageUrl!.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: _profileImageUrl!,
-                                fit: BoxFit.cover,
-                                width: 34,
-                                height: 34,
-                                fadeInDuration: Duration.zero,
-                                fadeOutDuration: Duration.zero,
-                                memCacheWidth: (34 * 4).round(),
-                                maxWidthDiskCache: (34 * 4).round(),
-                                placeholder: (context, url) =>
-                                    _buildAvatarShimmer(),
-                                errorWidget: (context, url, error) =>
-                                    _buildAvatarFallback(),
-                              )
-                            : _buildAvatarFallback(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
           actions: [
             Padding(
               padding: EdgeInsets.only(right: 32.w),
-              child: IconButton(
-                onPressed: _showCategoryBottomSheet,
-                icon: Image.asset(
-                  "assets/create_category_icon.png",
-                  width: 30.w,
-                  height: 30.h,
+              child: Center(
+                child: Consumer<NotificationController>(
+                  builder: (context, _, child) {
+                    return IconButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/notifications'),
+                      icon: Container(
+                        width: 35,
+                        height: 35,
+                        padding: EdgeInsets.only(bottom: 3.h),
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0xff1c1c1c),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 2.h),
+                          child: Image.asset(
+                            "assets/notification.png",
+                            width: 25.sp,
+                            height: 25.sp,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -766,7 +744,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
   }
 
   // 카테고리 추가 bottom sheet 표시
-  void _showCategoryBottomSheet() {
+  /*void _showCategoryBottomSheet() {
     final screenWidth = MediaQuery.of(context).size.width;
 
     showModalBottomSheet(
@@ -1041,10 +1019,10 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
         });
       }
     });
-  }
+  }*/
 
-  // 카테고리 생성 처리 함수 (REST API 버전)
-  Future<void> _createNewCategory(
+  // 카테고리 생성 처리 함수
+  /*Future<void> _createNewCategory(
     List<SelectedFriendModel> selectedFriends,
   ) async {
     final categoryName = _categoryNameController.text.trim();
@@ -1126,13 +1104,13 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       debugPrint('[ArchiveMainScreen] 카테고리 생성 오류: $e');
       _showSnackBar(tr('archive.create_category_failed', context: context));
     }
-  }
+  }*/
 
-  void _showSnackBar(String message) {
+  /*void _showSnackBar(String message) {
     if (mounted) {
       SnackBarUtils.showSnackBar(context, message);
     }
-  }
+  }*/
 
   @override
   void dispose() {
@@ -1160,29 +1138,4 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
     // CachedNetworkImage가 자체적으로 캐시를 관리하므로 수동 삭제 불필요
     super.dispose();
   }
-}
-
-Widget _buildAvatarShimmer() {
-  return Shimmer.fromColors(
-    baseColor: Colors.grey.shade600,
-    highlightColor: Colors.grey.shade400,
-    child: Container(
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-      ),
-    ),
-  );
-}
-
-Widget _buildAvatarFallback() {
-  return Container(
-    width: 60,
-    height: 60,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle,
-      color: Color(0xFFd9d9d9),
-    ),
-    child: const Icon(Icons.person, color: Colors.white, size: 26),
-  );
 }

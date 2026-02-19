@@ -398,7 +398,7 @@ extension _PhotoEditorScreenUploadExtension on _PhotoEditorScreenState {
     _audioController.stopRealtimeAudio();
     _audioController.clearCurrentRecording();
 
-    HomePageNavigationBar.requestTab(2);
+    HomePageNavigationBar.requestTab(0);
 
     final navigator = Navigator.of(context);
     var foundHome = false;
@@ -413,7 +413,7 @@ extension _PhotoEditorScreenUploadExtension on _PhotoEditorScreenState {
         MaterialPageRoute(
           builder: (_) => HomePageNavigationBar(
             key: HomePageNavigationBar.rootKey,
-            currentPageIndex: 2,
+            currentPageIndex: 0,
           ),
           settings: const RouteSettings(name: '/home_navigation_screen'),
         ),

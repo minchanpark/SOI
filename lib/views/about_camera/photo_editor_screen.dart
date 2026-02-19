@@ -21,11 +21,11 @@ import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/services/media_service.dart';
 import '../home_navigator_screen.dart';
-import 'widgets/add_category_widget.dart';
-import 'widgets/audio_recorder_widget.dart';
-import 'widgets/caption_input_widget.dart';
-import 'widgets/category_list_widget.dart';
-import 'widgets/photo_display_widget.dart';
+import 'widgets/about_photo_editor_screen/add_category_widget.dart';
+import 'widgets/about_photo_editor_screen/audio_recorder_widget.dart';
+import 'widgets/about_photo_editor_screen/caption_input_widget.dart';
+import 'widgets/about_photo_editor_screen/category_list_widget.dart';
+import 'widgets/about_photo_editor_screen/photo_display_widget.dart';
 import 'models/photo_editor_upload_models.dart';
 import 'services/photo_editor_media_processing_service.dart';
 

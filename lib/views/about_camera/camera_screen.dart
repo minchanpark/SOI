@@ -8,11 +8,11 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import '../../api/services/camera_service.dart';
-import 'widgets/camera_app_bar.dart';
-import 'widgets/camera_capture_button.dart';
-import 'widgets/camera_preview_container.dart';
-import 'widgets/camera_zoom_controls.dart';
-import 'widgets/gallery_thumbnail.dart';
+import 'widgets/about_camera/camera_app_bar.dart';
+import 'widgets/about_camera/camera_capture_button.dart';
+import 'widgets/about_camera/camera_preview_container.dart';
+import 'widgets/about_camera/camera_zoom_controls.dart';
+import 'widgets/about_camera/gallery_thumbnail.dart';
 import '../../utils/app_route_observer.dart';
 import 'photo_editor_screen.dart';
 
@@ -988,6 +988,13 @@ class _CameraScreenState extends State<CameraScreen>
   Widget _buildTextInputPreview() {
     final previewWidth = _previewWidth;
     final previewHeight = _previewHeight;
+    final textTopPadding = 60.sp;
+    final inputTextStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 24.sp,
+      fontFamily: 'Pretendard Variable',
+      fontWeight: FontWeight.w200,
+    );
 
     return Center(
       child: ClipRRect(
@@ -1001,7 +1008,7 @@ class _CameraScreenState extends State<CameraScreen>
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   20.sp,
-                  _hasInputText ? 60.sp : 20.sp,
+                  textTopPadding,
                   20.sp,
                   20.sp,
                 ),
@@ -1013,22 +1020,14 @@ class _CameraScreenState extends State<CameraScreen>
                   maxLines: null,
                   minLines: null,
                   expands: true,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w400,
-                  ),
+                  style: inputTextStyle,
                   cursorColor: Colors.white,
                   onTapOutside: (_) => FocusScope.of(context).unfocus(),
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: tr('camera.text_input_hint', context: context),
-                    hintStyle: TextStyle(
+                    hintStyle: inputTextStyle.copyWith(
                       color: const Color(0xFFB9B9B9),
-                      fontSize: 16.sp,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ),
@@ -1079,11 +1078,7 @@ class _CameraScreenState extends State<CameraScreen>
 
     return Scaffold(
       backgroundColor: Color(0xff000000),
-      appBar: CameraAppBar(
-        onContactsTap: () => Navigator.pushNamed(context, '/contact_manager'),
-        onNotificationsTap: () =>
-            Navigator.pushNamed(context, '/notifications'),
-      ),
+      appBar: const CameraAppBar(),
       body: SafeArea(
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 180),

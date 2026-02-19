@@ -112,11 +112,11 @@ class ApiArchiveCardWidget extends StatelessWidget {
 
           // 고정 배지
           // TODO: 위치 조정 필요
-          _buildPinnedBadge(top: 5, left: 5),
+          //_buildPinnedBadge(top: 5.sp, left: 5.sp),
 
           // 신규 배지
           // TODO: 위치 조정 필요
-          _buildNewBadge(top: 6.43, left: 127),
+          _buildNewBadge(top: 16.sp, left: (140.39).sp),
 
           // 카테고리 제목: 왼쪽 위
           Padding(
@@ -278,7 +278,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
   }
 
   /// 고정 배지 위젯 빌드
-  Widget _buildPinnedBadge({double? top, double? left, double? right}) {
+  /*Widget _buildPinnedBadge({double? top, double? left, double? right}) {
     return Selector<CategoryController, bool>(
       selector: (_, controller) =>
           controller.getCategoryById(category.id)?.isPinned ??
@@ -303,7 +303,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
         );
       },
     );
-  }
+  }*/
 
   /// 신규 배지 위젯 빌드
   Widget _buildNewBadge({double? top, double? left, double? right}) {
@@ -321,8 +321,8 @@ class ApiArchiveCardWidget extends StatelessWidget {
           right: right,
           child: Image.asset(
             'assets/new_icon.png',
-            width: 13.87,
-            height: 13.87,
+            width: 15.sp,
+            height: 15.sp,
           ),
         );
       },

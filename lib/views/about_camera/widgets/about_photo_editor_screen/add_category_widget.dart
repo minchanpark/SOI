@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:soi/api/models/selected_friend_model.dart';
-import '../../../utils/snackbar_utils.dart';
-import '../../about_archiving/widgets/overlapping_profiles_widget.dart';
-import '../../about_friends/friend_list_add_screen.dart';
+import '../../../../utils/snackbar_utils.dart';
+import '../../../about_archiving/widgets/overlapping_profiles_widget.dart';
+import '../../../about_friends/friend_list_add_screen.dart';
 
 // 카테고리 추가 UI 위젯
 // 새로운 카테고리를 생성하는 인터페이스를 제공합니다.

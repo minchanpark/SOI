@@ -6,14 +6,15 @@ import 'package:soi/views/about_feed/feed_home.dart';
 import '../theme/theme.dart';
 import 'about_archiving/screens/api_archive_main_screen.dart';
 import 'about_camera/camera_screen.dart';
-import 'package:antdesign_icons/antdesign_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'about_friends/friend_management_screen.dart';
+import 'about_profile/profile_screen.dart';
 import '../api/services/camera_service.dart';
 
 class HomePageNavigationBar extends StatefulWidget {
   final int currentPageIndex;
 
-  /// 전역에서 홈 탭(Feed/Camera/Archive)을 바꾸기 위한 키입니다.
+  /// 전역에서 홈 탭(Archive/Feed/Camera/Friend/Profile)을 바꾸기 위한 키입니다.
   ///
   /// (배포버전 프리즈 방지) `pushAndRemoveUntil`로 홈을 "새로" 만드는 대신,
   /// 기존 홈을 유지한 채 탭만 바꾸도록 유도합니다.
@@ -36,6 +37,8 @@ class HomePageNavigationBar extends StatefulWidget {
 
 class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
   late int _currentPageIndex;
+  static const _inactiveColor = Color(0xff535252);
+  static const _activeColor = Color(0xffffffff);
 
   void _setCurrentPageIndex(int index) {
     if (!mounted) return;
@@ -68,7 +71,7 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
             backgroundColor: AppTheme.lightTheme.colorScheme.surface,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             onDestinationSelected: (int index) {
-              if (index == 1) {
+              if (index == 2) {
                 unawaited(CameraService.instance.activateSession());
               }
 
@@ -79,57 +82,66 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
             selectedIndex: _currentPageIndex,
             destinations: <Widget>[
               NavigationDestination(
-                selectedIcon: Icon(
-                  AntIcons.homeFilled,
-                  size: 31.sp,
-                  color: Color(0xffffffff),
+                icon: _buildNavSvgIcon(
+                  'assets/home_navi.svg',
+                  _inactiveColor,
+                  width: 26.sp,
+                  height: 23.sp,
                 ),
-                icon: Icon(
-                  AntIcons.homeFilled,
-                  size: 31.sp,
-                  color: Color(0xff535252),
-                ),
-                label: '',
-              ),
-              NavigationDestination(
-                icon: SvgPicture.asset(
-                  'assets/camera_icon.svg',
-                  width: 31.sp,
-                  height: 31.sp,
-                  colorFilter: ColorFilter.mode(
-                    Color(0xff535252),
-                    BlendMode.srcIn,
-                  ),
-                ),
-                selectedIcon: SvgPicture.asset(
-                  'assets/camera_icon.svg',
-                  width: 31.sp,
-                  height: 31.sp,
-                  colorFilter: ColorFilter.mode(
-                    Color(0xffffffff),
-                    BlendMode.srcIn,
-                  ),
+                selectedIcon: _buildNavSvgIcon(
+                  'assets/home_navi.svg',
+                  _activeColor,
+                  width: 26.sp,
+                  height: 23.sp,
                 ),
                 label: '',
               ),
               NavigationDestination(
-                icon: SvgPicture.asset(
-                  'assets/archive_icon.svg',
-                  width: 28.sp,
-                  height: 25.sp,
-                  colorFilter: ColorFilter.mode(
-                    Color(0xff535252),
-                    BlendMode.srcIn,
-                  ),
+                icon: _buildNavSvgIcon(
+                  'assets/update_navi.svg',
+                  _inactiveColor,
                 ),
-                selectedIcon: SvgPicture.asset(
-                  'assets/archive_icon.svg',
+                selectedIcon: _buildNavSvgIcon(
+                  'assets/update_navi.svg',
+                  _activeColor,
+                ),
+                label: '',
+              ),
+              NavigationDestination(
+                icon: _buildNavSvgIcon('assets/add_navi.svg', _inactiveColor),
+                selectedIcon: _buildNavSvgIcon(
+                  'assets/add_navi.svg',
+                  _activeColor,
+                ),
+                label: '',
+              ),
+              NavigationDestination(
+                icon: _buildNavSvgIcon(
+                  'assets/friend_navi.svg',
+                  _inactiveColor,
+                  width: 29.sp,
+                  height: 22.sp,
+                ),
+                selectedIcon: _buildNavSvgIcon(
+                  'assets/friend_navi.svg',
+                  _activeColor,
+                  width: 29.sp,
+                  height: 22.sp,
+                ),
+                label: '',
+              ),
+              NavigationDestination(
+                icon: _buildNavSvgIcon(
+                  'assets/profile_navi.svg',
+                  _inactiveColor,
                   width: 28.sp,
-                  height: 25.sp,
-                  colorFilter: ColorFilter.mode(
-                    Color(0xffffffff),
-                    BlendMode.srcIn,
-                  ),
+                  height: 28.sp,
+                ),
+                selectedIcon: _buildNavSvgIcon(
+                  'assets/profile_navi.svg',
+                  _activeColor,
+                  width: 28.sp,
+                  height: 28.sp,
                 ),
                 label: '',
               ),
@@ -140,14 +152,27 @@ class _HomePageNavigationBarState extends State<HomePageNavigationBar> {
       body: IndexedStack(
         index: _currentPageIndex,
         children: [
-          _buildPage(0, const FeedHomeScreen()),
-          _buildPage(
-            1,
-            CameraScreen(isActive: _currentPageIndex == 1),
-          ),
-          _buildPage(2, const APIArchiveMainScreen()),
+          _buildPage(0, const APIArchiveMainScreen()),
+          _buildPage(1, const FeedHomeScreen()),
+          _buildPage(2, CameraScreen(isActive: _currentPageIndex == 2)),
+          _buildPage(3, const FriendManagementScreen()),
+          _buildPage(4, const ProfileScreen()),
         ],
       ),
+    );
+  }
+
+  Widget _buildNavSvgIcon(
+    String assetPath,
+    Color color, {
+    double? width,
+    double? height,
+  }) {
+    return SvgPicture.asset(
+      assetPath,
+      width: width ?? 25.sp,
+      height: height ?? 25.sp,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
     );
   }
 

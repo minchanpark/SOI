@@ -309,6 +309,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         centerTitle: true,
+        leadingWidth: 90.w,
         title: Column(
           children: [
             Text(
@@ -320,11 +321,11 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            // SizedBox(height: 30.h),
+            SizedBox(height: 30.h),
           ],
         ),
         backgroundColor: Colors.black,
-        // toolbarHeight: 70.h,
+        toolbarHeight: 70.h,
       ),
       body: _buildBody(),
     );

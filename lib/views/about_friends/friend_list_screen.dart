@@ -663,7 +663,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
                         width: 294.w,
                         height: 38.h,
                         alignment: Alignment.center,
-                      child: const Text(
+                        child: const Text(
                           'common.cancel',
                           style: TextStyle(
                             color: Color(0xFFcbcbcb),
@@ -788,10 +788,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
             friendController.errorMessage ??
             tr('friends.delete_failed', context: context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -844,10 +841,7 @@ class _FriendListScreenState extends State<FriendListScreen> {
             friendController.errorMessage ??
             tr('friends.block_failed', context: context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     } catch (e) {

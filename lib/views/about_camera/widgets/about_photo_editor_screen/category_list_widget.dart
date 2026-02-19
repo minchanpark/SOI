@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../api/controller/category_controller.dart' as api_category;
+import '../../../../api/controller/category_controller.dart' as api_category;
 import 'category_item_widget.dart';
 
 /// 카테고리 목록을 표시하는 위젯

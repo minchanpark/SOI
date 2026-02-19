@@ -259,15 +259,15 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
             Text(
               tr('friends.add_by_id.title', context: context),
               style: TextStyle(
-                color: const Color(0xFFD9D9D9),
-                fontSize: 20,
+                color: const Color(0xFFcccccc),
+                fontSize: 20.sp,
                 fontFamily: GoogleFonts.inter().fontFamily,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ],
         ),
-        iconTheme: const IconThemeData(color: Color(0xffd9d9d9)),
+        iconTheme: const IconThemeData(color: Color(0xffcccccc)),
       ),
       body: SafeArea(
         child: Column(
@@ -282,7 +282,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
 
   Widget _buildSearchBar(double scale) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
+      padding: EdgeInsets.fromLTRB(16.sp, 8.sp, 16.sp, 4.sp),
       child: Container(
         height: 44,
         decoration: BoxDecoration(
@@ -290,9 +290,15 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
           borderRadius: BorderRadius.circular(8 * scale),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             SizedBox(width: 12),
-            Icon(Icons.search, color: const Color(0xffd9d9d9), size: 20),
+            SizedBox(
+              width: 19.28,
+              height: 19.22,
+              child: Icon(Icons.search, color: const Color(0xffcccccc)),
+            ),
             SizedBox(width: 8),
             Expanded(
               child: TextField(
@@ -301,7 +307,10 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                 style: TextStyle(color: const Color(0xfff9f9f9), fontSize: 15),
                 cursorColor: const Color(0xfff9f9f9),
                 decoration: InputDecoration(
-                  hintText: tr('friends.add_by_id.search_hint', context: context),
+                  hintText: tr(
+                    'friends.add_by_id.search_hint',
+                    context: context,
+                  ),
                   hintStyle: TextStyle(
                     color: const Color(0xFFD9D9D9),
                     fontSize: 18.02,
