@@ -36,6 +36,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   UserController? _userController;
   VoidCallback? _userControllerListener;
   String? _lastProfileImageKey;
+  final Set<int> _deletingPostIds = <int>{};
 
   @override
   void initState() {
@@ -87,6 +88,16 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // IndexedStack 전환 시 TickerMode 변경을 의존성으로 추적해
+    // 숨김 탭에서 누적된 posts-changed 갱신을 재개합니다.
+    TickerMode.of(context);
+    _feedDataManager ??= Provider.of<FeedDataManager>(context, listen: false);
+    _feedDataManager?.refreshIfPendingVisible();
+  }
+
   /// 초기 데이터 로드
   Future<void> _loadInitialData() async {
     if (_userController == null) return;
@@ -114,6 +125,9 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   /// - [index]: 삭제할 게시물의 인덱스
   /// - [item]: 삭제할 게시물 아이템
   Future<void> _deletePost(int index, FeedPostItem item) async {
+    final postId = item.post.id;
+    if (_deletingPostIds.contains(postId)) return;
+    _deletingPostIds.add(postId);
     try {
       final postController = Provider.of<PostController>(
         context,
@@ -125,7 +139,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
       );
       final userId = _userController?.currentUser?.id;
       final success = await postController.setPostStatus(
-        postId: item.post.id,
+        postId: postId,
         postStatus: PostStatus.deleted,
       );
       if (!mounted) return;
@@ -160,6 +174,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     } catch (e) {
       if (!mounted) return;
       _showSnackBar('사진 삭제 중 오류가 발생했습니다.', isError: true);
+    } finally {
+      _deletingPostIds.remove(postId);
     }
   }
 

@@ -213,7 +213,12 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
             for (final post in videoPosts) {
               final url = post.postFileUrl;
               if (url == null || url.isEmpty) continue;
-              final cacheKey = post.postFileKey ?? url;
+
+              // 안정적인 캐시 키 생성 (postFileKey가 유효하면 사용, 그렇지 않으면 URL 기반 키)
+              final cacheKey = VideoThumbnailCache.buildStableCacheKey(
+                fileKey: post.postFileKey,
+                videoUrl: url,
+              );
               if (VideoThumbnailCache.getFromMemory(cacheKey) != null) continue;
               VideoThumbnailCache.getThumbnail(
                 videoUrl: url,

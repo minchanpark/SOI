@@ -41,6 +41,8 @@ class FeedDataManager extends ChangeNotifier {
   BuildContext? _context;
   VoidCallback? _postsChangedListener; // 게시물 변경 감지 리스너
   int? _lastUserId; // 마지막으로 로드한 사용자의 ID
+  bool _pendingPostRefresh =
+      false; // 게시물 변경 감지 후 탭이 보이지 않는 상태라면 새로고침을 지연시키는 플래그
 
   // ======== 조회(Getter) ===========
   // 포함된 메소드들
@@ -119,6 +121,14 @@ class FeedDataManager extends ChangeNotifier {
 
     _postsChangedListener = () {
       if (_context != null && _context!.mounted) {
+        final isVisible = TickerMode.of(_context!);
+        if (!isVisible) {
+          _pendingPostRefresh = true; // 탭이 보이지 않는 상태라면 새로고침을 지연시킵니다.
+          debugPrint('[FeedDataManager] posts-changed 지연(탭 비가시)');
+          return;
+        }
+
+        _pendingPostRefresh = false;
         debugPrint('[FeedDataManager] 게시물 변경 감지, 피드 새로고침');
         // 게시물이 변경된 경우에는 서버에서 다시 받아오도록 강제 새로고침합니다.
         unawaited(loadUserCategoriesAndPhotos(_context!, forceRefresh: true));
@@ -135,6 +145,18 @@ class FeedDataManager extends ChangeNotifier {
     _postsChangedListener = null;
     _postController = null;
     _context = null;
+    _pendingPostRefresh = false;
+  }
+
+  /// 탭이 보이지 않는 상태에서 게시물 변경이 감지된 경우,
+  /// 탭이 다시 보이는 시점에 새로고침을 수행하는 메소드입니다.
+  void refreshIfPendingVisible() {
+    if (!_pendingPostRefresh) return;
+    if (_context == null || !_context!.mounted) return;
+    if (!TickerMode.of(_context!)) return;
+
+    _pendingPostRefresh = false; // 새로고침을 수행하므로 플래그를 초기화합니다.
+    unawaited(loadUserCategoriesAndPhotos(_context!, forceRefresh: true));
   }
 
   // ======== 피드 로딩(캐시/네트워크) ===========
@@ -396,6 +418,7 @@ class FeedDataManager extends ChangeNotifier {
     _isLoading = false;
     _isLoadingMore = false;
     _lastUserId = null;
+    _pendingPostRefresh = false;
     if (notify) {
       _notifyStateChanged();
     }

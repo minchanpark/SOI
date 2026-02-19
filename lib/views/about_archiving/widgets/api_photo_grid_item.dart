@@ -72,6 +72,7 @@ class ApiPhotoGridItem extends StatefulWidget {
 class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   static const _kForwardTransitionDuration = Duration(milliseconds: 260);
   static const _kReverseTransitionDuration = Duration(milliseconds: 220);
+  bool _isNavigatingToDetail = false; // 상세 화면으로 이동 중인지 여부 (중복 방지)
 
   // 오디오 관련 상태
   bool _hasAudio = false;
@@ -150,7 +151,11 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     final url = widget.postUrl;
     if (url.isEmpty) return;
 
-    final cacheKey = widget.post.postFileKey ?? url;
+    // 캐시 키 생성
+    final cacheKey = VideoThumbnailCache.buildStableCacheKey(
+      fileKey: widget.post.postFileKey,
+      videoUrl: url,
+    );
 
     // 동기적 메모리 캐시 확인 (즉시 반영)
     if (!forceReload) {
@@ -325,6 +330,34 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     );
   }
 
+  /// 상세 화면으로 이동하는 함수
+  /// 중복 탭 방지 위해 이동 중에는 추가 탭 무시
+  ///
+  /// Parameters:
+  /// - 없음
+  ///
+  /// Returns: `Future<void>` (상세 화면에서 삭제된 게시물 ID 리스트를 받아 상위 콜백으로 전달)
+  Future<void> _openDetailScreen() async {
+    if (_isNavigatingToDetail) return;
+    _isNavigatingToDetail = true;
+    final onPostsDeleted = widget.onPostsDeleted;
+    final detailRoute = _buildDetailRoute(context);
+
+    try {
+      final deletedPostIds = await Navigator.push<List<int>>(
+        context,
+        detailRoute,
+      );
+      if (deletedPostIds == null || deletedPostIds.isEmpty) return;
+      // 상세 pop 역방향 Hero가 안정화된 뒤 목록을 갱신합니다.
+      await Future<void>.delayed(_kReverseTransitionDuration);
+      if (!mounted) return;
+      onPostsDeleted?.call(deletedPostIds);
+    } finally {
+      _isNavigatingToDetail = false;
+    }
+  }
+
   Widget _buildHeroMediaCard() {
     final mediaContent = _isTextOnlyPost
         ? _buildTextOnlyCard()
@@ -383,15 +416,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // API 버전의 PhotoDetailScreen으로 이동
-        Navigator.push<List<int>>(context, _buildDetailRoute(context)).then((
-          deletedPostIds,
-        ) {
-          if (deletedPostIds == null || deletedPostIds.isEmpty) return;
-          widget.onPostsDeleted?.call(deletedPostIds);
-        });
-      },
+      onTap: _openDetailScreen,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [

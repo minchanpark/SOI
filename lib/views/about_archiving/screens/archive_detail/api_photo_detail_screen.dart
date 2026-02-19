@@ -59,6 +59,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   final Set<int> _deletedPostIds =
       <int>{}; // 삭제된 게시물 ID 추적 --> 상위 위젯에 전달하기 위해 사용됩니다.
+  final Set<int> _deletingPostIds = <int>{};
   bool _allowPopWithDeletionResult = false;
 
   // 사용자 프로필 관련
@@ -235,11 +236,19 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final allowSystemGesturePopWithDeletion =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    final shouldBlockPopForDeletionResult =
+        _deletedPostIds.isNotEmpty &&
+        !_allowPopWithDeletionResult &&
+        !allowSystemGesturePopWithDeletion;
+
     return ChangeNotifierProvider<AudioController>.value(
       value: _audioController,
       child: PopScope(
-        canPop: _deletedPostIds.isEmpty || _allowPopWithDeletionResult,
-        onPopInvokedWithResult: (didPop, _) {
+        canPop: !shouldBlockPopForDeletionResult,
+        onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
           if (_deletedPostIds.isEmpty) return;
           _popWithDeletionResult();
@@ -854,6 +863,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
   // 게시물 삭제 처리
   Future<void> _deletePost(Post post) async {
+    if (_deletingPostIds.contains(post.id)) return;
+    _deletingPostIds.add(post.id);
     try {
       final postController = Provider.of<PostController>(
         context,
@@ -890,6 +901,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         _showSnackBar(tr('archive.delete_error', context: context));
       }
     } catch (e) {
+      if (!mounted) return;
       _showSnackBar(
         tr(
           'archive.delete_error_with_reason',
@@ -898,6 +910,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         ),
       );
       debugPrint('사진 삭제 실패: $e');
+    } finally {
+      _deletingPostIds.remove(post.id);
     }
   }
 
@@ -910,8 +924,37 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
   }
 
+  /// 게시물 삭제 후, 해당 게시물과 관련된 상태를 정리하는 함수
+  ///
+  /// Parameters:
+  /// - [postId]: 삭제된 게시물 ID
+  /// - [nickName]: 삭제된 게시물 작성자의 닉네임 (사용자 캐시 정리를 위해 필요)
+  void _clearPostScopedState(int postId, {required String nickName}) {
+    _postComments.remove(postId);
+    _selectedEmojisByPostId.remove(postId);
+    _voiceCommentActiveStates.remove(postId);
+    _voiceCommentSavedStates.remove(postId);
+    _pendingCommentDrafts.remove(postId);
+    _pendingCommentMarkers.remove(postId);
+    _pendingTextComments.remove(postId);
+    _resolvedAudioUrls.remove(postId);
+    _autoPlacementIndices.remove(postId);
+
+    final hasOtherPostsByNickname = _posts.any(
+      (existingPost) =>
+          existingPost.id != postId && existingPost.nickName == nickName,
+    );
+    if (!hasOtherPostsByNickname) {
+      _userProfileImages.remove(nickName);
+      _profileLoadingStates.remove(nickName);
+      _userNames.remove(nickName);
+    }
+  }
+
   // 삭제 후 상태 업데이트 처리
   void _handleSuccessfulDeletion(Post post) {
+    _clearPostScopedState(post.id, nickName: post.nickName);
+
     if (_posts.length <= 1) {
       if (_deletedPostIds.isEmpty) {
         Navigator.of(context).pop();

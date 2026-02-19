@@ -17,6 +17,7 @@ import '../../../../api/models/friend.dart';
 import '../../../../api/models/post.dart';
 import '../../../../api/models/user.dart';
 import '../../../../theme/theme.dart';
+import '../../../../utils/app_route_observer.dart';
 import '../../../../utils/video_thumbnail_cache.dart';
 import 'widgets/category_photos_header+body/api_category_header_image_prefetch.dart';
 import 'widgets/category_photos_header+body/api_category_photos_body_slivers.dart';
@@ -58,13 +59,14 @@ class ApiCategoryPhotosScreen extends StatefulWidget {
       _ApiCategoryPhotosScreenState();
 }
 
-class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
+class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen>
+    with RouteAware {
   static const Duration _cacheTtl = Duration(minutes: 30); // 캐시 만료 시간
   static const int _kMaxCategoryPostsPages = 50; // 페이지 무한 조회 방지 안전 가드
   static final Map<String, _CategoryPostsCacheEntry> _categoryPostsCache =
       {}; // 카테고리별 포스트 캐시를 관리하는 맵
   static final Map<int, CategoryHeaderImagePrefetch> _headerImageMemoryCache =
-      {};
+      {}; // 카테고리 ID별 헤더 이미지 프리페치 페이로드를 메모리에 캐싱하는 맵
 
   bool _isLoading = true; // 로딩 상태
   String? _errorMessageKey; // 에러 메시지 키
@@ -87,8 +89,22 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   int _nextPage = 1; // 다음에 로드할 페이지 번호
   final Set<int> _seenPostIds = <int>{};
   Set<String> _blockedIds = <String>{};
+  bool _isRouteVisible = true; // 현재 라우트가 사용자에게 보이는 상태인지 여부
+  bool _needsRefreshOnVisible =
+      false; // 보이지 않는 상태에서 변경 감지 시, 복귀 시 1회 새로고침이 필요한지 여부
+  final Set<int> _pendingDeletedPostIdsFromDetail =
+      <int>{}; // 상세에서 전달된 삭제 결과를 안전 시점에 반영하기 위한 임시 버퍼
+  Timer? _deferredVisibleRefreshTimer;
+  bool _isRouteObserverSubscribed = false; // RouteObserver 구독 상태
+  ModalRoute<void>? _subscribedRoute; // 현재 구독 중인 라우트
 
   Category get _currentCategory => _category ?? widget.category;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _subscribeRouteObserverIfNeeded(); // 라우트 옵저버 구독
+  }
 
   @override
   void initState() {
@@ -126,6 +142,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   @override
   void dispose() {
     _autoRefreshTimer?.cancel();
+    _deferredVisibleRefreshTimer?.cancel();
+    if (_isRouteObserverSubscribed) {
+      appRouteObserver.unsubscribe(this);
+      _isRouteObserverSubscribed = false;
+    }
 
     // 포스트 변경 리스너 제거
     if (_postsChangedListener != null && postController != null) {
@@ -133,6 +154,63 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       postController!.removePostsChangedListener(_postsChangedListener!);
     }
     super.dispose();
+  }
+
+  /// 라우트 옵저버 구독
+  /// 현재 라우트에 구독되어 있지 않다면 구독을 시작합니다.
+  /// 이미 구독 중인 경우에는 아무 작업도 수행하지 않습니다.
+  void _subscribeRouteObserverIfNeeded() {
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+
+    final modalRoute = route as ModalRoute<void>;
+
+    if (_isRouteObserverSubscribed && _subscribedRoute == modalRoute) {
+      return;
+    }
+
+    if (_isRouteObserverSubscribed) {
+      appRouteObserver.unsubscribe(this);
+      _isRouteObserverSubscribed = false;
+    }
+
+    _subscribedRoute = modalRoute;
+    appRouteObserver.subscribe(this, modalRoute);
+    _isRouteObserverSubscribed = true;
+  }
+
+  @override
+  void didPush() {
+    _isRouteVisible = true;
+  }
+
+  @override
+  void didPushNext() {
+    _isRouteVisible = false;
+  }
+
+  @override
+  void didPop() {
+    _isRouteVisible = false;
+  }
+
+  @override
+  void didPopNext() {
+    _isRouteVisible = true;
+    _applyPendingDeletedPostsFromDetail();
+    if (!_needsRefreshOnVisible) return;
+
+    // 상세 -> 목록 복귀 직후 Hero/레이아웃 안정화를 위해 약간 지연 후 새로고침합니다.
+    _deferredVisibleRefreshTimer?.cancel();
+    _deferredVisibleRefreshTimer = Timer(const Duration(milliseconds: 260), () {
+      if (!mounted || !_isRouteVisible || !_needsRefreshOnVisible) return;
+      if (_pendingDeletedPostIdsFromDetail.isNotEmpty) {
+        _applyPendingDeletedPostsFromDetail();
+      }
+      if (!_needsRefreshOnVisible) return;
+      _needsRefreshOnVisible = false;
+      unawaited(_loadPosts(forceRefresh: true));
+    });
   }
 
   CategoryHeaderImagePrefetch? _resolveInitialHeaderImagePrefetch() {
@@ -314,7 +392,59 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
     _startAutoRefreshTimer();
   }
 
+  /// 상세 화면에서 포스트가 삭제된 경우, 해당 포스트를 목록에서 제거하는 메서드
+  /// 상세 화면에서 삭제된 포스트의 ID 리스트를 받아,
+  /// 현재 화면에 표시된 포스트 목록에서 해당 ID에 해당하는 포스트를 제거합니다.
+  ///
+  /// Parameters:
+  /// - [deletedPostIds]: 상세 화면에서 삭제된 포스트의 ID 리스트로,
+  ///                     이 ID들을 기준으로 현재 화면에 표시된 포스트 목록에서 삭제된 포스트를 제거합니다.
+  void _onPostsDeletedFromDetail(List<int> deletedPostIds) {
+    if (!mounted || deletedPostIds.isEmpty) return;
+    _pendingDeletedPostIdsFromDetail.addAll(deletedPostIds);
+
+    // 상세에서 명시적으로 전달된 삭제 결과는 로컬 반영을 신뢰하고
+    // 복귀 직후 강제 리로드를 건너뜁니다.
+    _needsRefreshOnVisible = false;
+    _deferredVisibleRefreshTimer?.cancel();
+
+    if (!_isRouteVisible) return;
+    _applyPendingDeletedPostsFromDetail();
+  }
+
+  void _applyPendingDeletedPostsFromDetail() {
+    if (!mounted || _pendingDeletedPostIdsFromDetail.isEmpty) return;
+    final deletedIdSet = _pendingDeletedPostIdsFromDetail.toSet();
+    _pendingDeletedPostIdsFromDetail.clear();
+
+    final updatedPosts = _posts
+        .where((post) => !deletedIdSet.contains(post.id))
+        .toList(growable: false);
+
+    if (updatedPosts.length == _posts.length) return;
+
+    setState(() {
+      _posts = updatedPosts;
+      _isLoading = false;
+      _errorMessageKey = null;
+    });
+
+    _seenPostIds
+      ..clear()
+      ..addAll(updatedPosts.map((post) => post.id));
+
+    final currentUser = userController?.currentUser;
+    if (currentUser != null) {
+      final cacheKey = _buildCacheKey(
+        userId: currentUser.id,
+        categoryId: _currentCategory.id,
+      );
+      _syncCategoryPostsCache(cacheKey);
+    }
+  }
+
   /// 백그라운드에서 남은 페이지를 로드하는 메서드
+  ///
   /// Parameters:
   /// - [generation]: 현재 페이징 세션을 식별하는 고유 번호로, 새 로드가 시작될 때마다 증가합니다.
   ///                 백그라운드 작업이 오래 걸리는 경우, 사용자가 새로고침을 해서 새로운 로드가 시작될 수 있기 때문에,
@@ -454,8 +584,8 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
 
     if (videoPosts.isEmpty) return;
 
-    // 처음 10개 비디오만 프리페칭 (초기 뷰포트 + 약간의 여유)
-    final videosToFetch = videoPosts.take(10).toList();
+    // 초반 메모리 버스트를 줄이기 위해 상한을 낮춰 프리페칭합니다.
+    final videosToFetch = videoPosts.take(4).toList();
 
     if (foundation.kDebugMode) {
       debugPrint('[VideoThumbnail] ${videosToFetch.length}개 비디오 썸네일 프리페칭 시작');
@@ -465,7 +595,11 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
       final url = post.postFileUrl;
       if (url == null || url.isEmpty) continue;
 
-      final cacheKey = post.postFileKey ?? url;
+      // 캐시 키 생성
+      final cacheKey = VideoThumbnailCache.buildStableCacheKey(
+        fileKey: post.postFileKey,
+        videoUrl: url,
+      );
 
       // 이미 메모리 캐시에 있으면 스킵
       if (VideoThumbnailCache.getFromMemory(cacheKey) != null) {
@@ -509,7 +643,12 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         _buildCacheKey(userId: currentUser.id, categoryId: _currentCategory.id),
       );
 
-      // 포스트 변경 시 강제 새로고침
+      // 비가시 상태에서는 즉시 리로드를 미루고 복귀 시 1회 갱신합니다.
+      if (!_isRouteVisible) {
+        _needsRefreshOnVisible = true;
+        return;
+      }
+
       unawaited(_loadPosts(forceRefresh: true));
     };
 
@@ -758,7 +897,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
         categoryId: _currentCategory.id,
         padding: _gridPadding,
         gridDelegate: _buildPhotoGridDelegate(),
-        onPostsDeleted: (_) => _onRefresh(),
+        onPostsDeleted: _onPostsDeletedFromDetail,
       ),
     ];
   }

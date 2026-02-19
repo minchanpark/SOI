@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../about_archiving/widgets/archive_card_widget/animated_menu_overlay.dart';
@@ -23,6 +25,7 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
   OverlayEntry? _overlayEntry;
   final GlobalKey _buttonKey = GlobalKey();
   bool _isMenuOpen = false;
+  bool _isDeleteActionInFlight = false;
 
   @override
   void initState() {
@@ -128,7 +131,9 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
           borderRadius: BorderRadius.circular(8.r),
         ),
         child: GestureDetector(
-          onTap: () => _handleDeleteAction(),
+          onTap: () {
+            unawaited(_handleDeleteAction());
+          },
           child: Container(
             padding: EdgeInsets.only(left: (13.96).w),
             child: Row(
@@ -158,11 +163,16 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
   }
 
   /// 삭제 액션 처리
-  void _handleDeleteAction() {
-    _closeMenu();
-    _showDeleteConfirmation(() {
-      widget.onDeletePressed?.call();
-    });
+  Future<void> _handleDeleteAction() async {
+    if (_isDeleteActionInFlight) return;
+    _isDeleteActionInFlight = true;
+
+    try {
+      await _closeMenu();
+      await _showDeleteConfirmation(widget.onDeletePressed);
+    } finally {
+      _isDeleteActionInFlight = false;
+    }
   }
 
   /// 삭제 확인 바텀시트 표시
@@ -212,7 +222,6 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(sheetContext).pop(true);
-                    onDeletePressed?.call();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xfff5f5f5),
@@ -263,7 +272,8 @@ class _MoreMenuButtonState extends State<MoreMenuButton>
     );
 
     if (confirmed == true) {
-      widget.onDeletePressed?.call();
+      if (!mounted) return;
+      onDeletePressed?.call();
     }
   }
 }
