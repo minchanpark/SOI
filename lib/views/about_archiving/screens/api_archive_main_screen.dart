@@ -339,7 +339,7 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
       case CategoryFilter.private_:
         return controller.privateCategories;
       case CategoryFilter.all:
-        return controller.categories;
+        return controller.allCategories;
     }
   }
 
@@ -453,6 +453,8 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screens = _screens;
+
     return GestureDetector(
       // opaque: 빈 영역에서도 탭 이벤트를 감지
       behavior: HitTestBehavior.opaque,
@@ -646,7 +648,15 @@ class _APIArchiveMainScreenState extends State<APIArchiveMainScreen> {
                   });
                   _applySearch();
                 },
-                children: _screens,
+                children: List<Widget>.generate(screens.length, (index) {
+                  return HeroMode(
+                    enabled: _selectedIndex == index,
+                    child: KeyedSubtree(
+                      key: ValueKey('archive_tab_$index'),
+                      child: screens[index],
+                    ),
+                  );
+                }),
               ),
             ),
 

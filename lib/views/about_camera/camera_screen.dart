@@ -1049,15 +1049,31 @@ class _CameraScreenState extends State<CameraScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildCancelButton(),
-                      TextButton(
-                        onPressed: _openTextEditor,
-                        child: Text(
-                          tr('common.confirm', context: context),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15.sp,
-                            fontFamily: 'Pretendard',
-                            fontWeight: FontWeight.w600,
+                      Container(
+                        width: 56.sp,
+                        height: 29.sp,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9F9F9),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: TextButton(
+                          onPressed: _openTextEditor,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            tr('common.confirm', context: context),
+                            style: TextStyle(
+                              color: const Color(0xFF111111),
+                              fontSize: 15.sp,
+                              fontFamily: 'Pretendard',
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
