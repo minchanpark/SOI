@@ -12,6 +12,24 @@ import '../../../api/controller/media_controller.dart';
 import '../../../utils/video_thumbnail_cache.dart';
 import 'wave_form_widget/custom_waveform_widget.dart';
 
+Widget _heroFlightShuttleBuilder(
+  BuildContext flightContext,
+  Animation<double> animation,
+  HeroFlightDirection flightDirection,
+  BuildContext fromHeroContext,
+  BuildContext toHeroContext,
+) {
+  final toHero = (toHeroContext.widget as Hero).child;
+  final fromHero = (fromHeroContext.widget as Hero).child;
+  final shuttleChild = flightDirection == HeroFlightDirection.push
+      ? toHero
+      : fromHero;
+  return Material(
+    type: MaterialType.transparency,
+    child: ClipRect(child: shuttleChild),
+  );
+}
+
 /// 카테고리 내에서 사진 그리드 아이템을 표시하는 위젯
 ///
 /// Parameters:
@@ -52,6 +70,9 @@ class ApiPhotoGridItem extends StatefulWidget {
 }
 
 class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
+  static const _kForwardTransitionDuration = Duration(milliseconds: 260);
+  static const _kReverseTransitionDuration = Duration(milliseconds: 220);
+
   // 오디오 관련 상태
   bool _hasAudio = false;
   List<double>? _waveformData;
@@ -272,22 +293,101 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     }
   }
 
+  String get _heroTag => 'archive_photo_${widget.categoryId}_${widget.post.id}';
+
+  Route<List<int>> _buildDetailRoute(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    final useGestureBackRoute =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+
+    if (useGestureBackRoute) {
+      return MaterialPageRoute<List<int>>(
+        builder: (_) => ApiPhotoDetailScreen(
+          allPosts: widget.allPosts,
+          initialIndex: widget.currentIndex,
+          categoryName: widget.categoryName,
+          categoryId: widget.categoryId,
+        ),
+      );
+    }
+
+    return PageRouteBuilder<List<int>>(
+      transitionDuration: _kForwardTransitionDuration,
+      reverseTransitionDuration: _kReverseTransitionDuration,
+      pageBuilder: (_, animation, __) => ApiPhotoDetailScreen(
+        allPosts: widget.allPosts,
+        initialIndex: widget.currentIndex,
+        categoryName: widget.categoryName,
+        categoryId: widget.categoryId,
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+          child,
+    );
+  }
+
+  Widget _buildHeroMediaCard() {
+    final mediaContent = _isTextOnlyPost
+        ? _buildTextOnlyCard()
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: widget.post.isVideo
+                ? _buildVideoThumbnail()
+                : (widget.postUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: widget.postUrl,
+                          // presigned URL이 바뀌어도 같은 파일이면 디스크 캐시 재사용
+                          cacheKey: widget.post.postFileKey,
+                          useOldImageOnUrlChange: true,
+                          fadeInDuration: Duration.zero,
+                          fadeOutDuration: Duration.zero,
+                          memCacheWidth: (170 * 2).round(),
+                          maxWidthDiskCache: (170 * 2).round(),
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey.shade800,
+                            highlightColor: Colors.grey.shade700,
+                            period: const Duration(milliseconds: 1500),
+                            child: Container(color: Colors.grey.shade800),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey.shade800,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.image,
+                              color: Colors.grey.shade600,
+                              size: 32.sp,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade800,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.image,
+                            color: Colors.grey.shade600,
+                            size: 32.sp,
+                          ),
+                        )),
+          );
+
+    return Hero(
+      tag: _heroTag,
+      createRectTween: (begin, end) =>
+          MaterialRectArcTween(begin: begin, end: end),
+      transitionOnUserGestures: true,
+      flightShuttleBuilder: _heroFlightShuttleBuilder,
+      child: SizedBox(width: 170.sp, height: 204.sp, child: mediaContent),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
         // API 버전의 PhotoDetailScreen으로 이동
-        Navigator.push<List<int>>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ApiPhotoDetailScreen(
-              allPosts: widget.allPosts,
-              initialIndex: widget.currentIndex,
-              categoryName: widget.categoryName,
-              categoryId: widget.categoryId,
-            ),
-          ),
-        ).then((deletedPostIds) {
+        Navigator.push<List<int>>(context, _buildDetailRoute(context)).then((
+          deletedPostIds,
+        ) {
           if (deletedPostIds == null || deletedPostIds.isEmpty) return;
           widget.onPostsDeleted?.call(deletedPostIds);
         });
@@ -296,53 +396,7 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
         alignment: Alignment.bottomCenter,
         children: [
           // 미디어(사진/비디오 썸네일)
-          SizedBox(
-            width: 170.sp,
-            height: 204.sp,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: _isTextOnlyPost
-                  ? _buildTextOnlyCard()
-                  : widget.post.isVideo
-                  ? _buildVideoThumbnail()
-                  : (widget.postUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: widget.postUrl,
-                            // presigned URL이 바뀌어도 같은 파일이면 디스크 캐시 재사용
-                            cacheKey: widget.post.postFileKey,
-                            useOldImageOnUrlChange: true,
-                            fadeInDuration: Duration.zero,
-                            fadeOutDuration: Duration.zero,
-                            memCacheWidth: (170 * 2).round(),
-                            maxWidthDiskCache: (170 * 2).round(),
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Shimmer.fromColors(
-                              baseColor: Colors.grey.shade800,
-                              highlightColor: Colors.grey.shade700,
-                              period: const Duration(milliseconds: 1500),
-                              child: Container(color: Colors.grey.shade800),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey.shade800,
-                              alignment: Alignment.center,
-                              child: Icon(
-                                Icons.image,
-                                color: Colors.grey.shade600,
-                                size: 32.sp,
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey.shade800,
-                            alignment: Alignment.center,
-                            child: Icon(
-                              Icons.image,
-                              color: Colors.grey.shade600,
-                              size: 32.sp,
-                            ),
-                          )),
-            ),
-          ),
+          _buildHeroMediaCard(),
 
           // 댓글 개수 (우측 하단)
           Positioned(
@@ -487,23 +541,40 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
     final text = widget.post.content?.trim() ?? '';
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xff1e1e1e),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Colors.white12, width: 0.8),
+        color: Colors.black,
+        border: Border.all(color: const Color(0xff2b2b2b), width: 2.0),
+        borderRadius: BorderRadius.circular(20.0),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        maxLines: 7,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: const Color(0xfff8f8f8),
-          fontSize: 14.sp,
-          fontFamily: 'Pretendard Variable',
-          fontWeight: FontWeight.w500,
-          height: 1.4,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18.0),
+        child: Container(
+          color: const Color(0xff1e1e1e),
+          alignment: Alignment.center,
+          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: const Color(0xfff8f8f8),
+                        fontSize: 30.sp,
+                        fontFamily: 'Pretendard Variable',
+                        fontWeight: FontWeight.w500,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

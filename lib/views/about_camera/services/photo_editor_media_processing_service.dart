@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_compress/video_compress.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
+/// 업로드 관련 모델 정의
 String _encodeWaveformDataWorker(List<double> waveformData) {
   if (waveformData.isEmpty) return '';
 

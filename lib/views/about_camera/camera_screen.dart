@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -528,8 +529,15 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _clearTextInput() {
-    _resetTextInputState(requestFocus: true);
+  Widget _buildCancelButton() {
+    return IconButton(
+      onPressed: _resetTextInputState,
+      icon: SvgPicture.asset(
+        'assets/cancel.svg',
+        width: 30.08.sp,
+        height: 30.08.sp,
+      ),
+    );
   }
 
   void _resetTextInputState({bool requestFocus = false}) {
@@ -1040,10 +1048,7 @@ class _CameraScreenState extends State<CameraScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        onPressed: _clearTextInput,
-                        icon: const Icon(Icons.close, color: Colors.white),
-                      ),
+                      _buildCancelButton(),
                       TextButton(
                         onPressed: _openTextEditor,
                         child: Text(

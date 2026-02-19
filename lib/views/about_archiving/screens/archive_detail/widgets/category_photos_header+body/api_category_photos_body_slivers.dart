@@ -171,6 +171,7 @@ class ApiCategoryPhotosGridSliver extends StatelessWidget {
         delegate: SliverChildBuilderDelegate((context, index) {
           final post = posts[index];
           return ApiPhotoGridItem(
+            key: ValueKey('grid_${categoryId}_${post.id}'),
             post: post,
             postUrl: post.postFileUrl ?? '',
             allPosts: posts,

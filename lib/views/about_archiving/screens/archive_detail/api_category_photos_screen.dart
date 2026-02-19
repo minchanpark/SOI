@@ -44,11 +44,13 @@ import 'package:flutter/foundation.dart' as foundation show kDebugMode;
 class ApiCategoryPhotosScreen extends StatefulWidget {
   final Category category;
   final CategoryHeaderImagePrefetch? prefetchedHeaderImage;
+  final String? entryHeroTag;
 
   const ApiCategoryPhotosScreen({
     super.key,
     required this.category,
     this.prefetchedHeaderImage,
+    this.entryHeroTag,
   });
 
   @override
@@ -325,7 +327,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
   /// - [totalFetchedPosts]: 지금까지 API에서 받아온  포스트의 총 수로, 중복 제거 전의 수입니다.
   /// - [totalDedupedPosts]: 지금까지 중복 제거 후 최종적으로 화면에 표시된 포스트의 총 수입니다.
   ///
-  /// Returns: Future<void>로, 모든 페이지 로드가 완료되거나, 더 이상 로드할 페이지가 없거나, 또는 로드 작업이 무효화될 때 완료됩니다.
+  /// Returns: `Future<void>`로, 모든 페이지 로드가 완료되거나, 더 이상 로드할 페이지가 없거나, 또는 로드 작업이 무효화될 때 완료됩니다.
   Future<void> _loadRemainingPagesInBackground({
     required int generation,
     required int userId,
@@ -706,6 +708,7 @@ class _ApiCategoryPhotosScreenState extends State<ApiCategoryPhotosScreen> {
               category: _currentCategory,
               backgroundImageUrl: _headerImagePrefetch?.imageUrl,
               backgroundImageCacheKey: _headerImagePrefetch?.cacheKey,
+              heroTag: widget.entryHeroTag,
               collapsedHeight: collapsedHeight,
               expandedHeight: expandedHeight,
               onBackPressed: () => Navigator.of(context).maybePop(),

@@ -23,6 +23,24 @@ import '../about_voice_comment/api_voice_comment_list_sheet.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
 import 'tag_pointer.dart';
 
+Widget _heroFlightShuttleBuilder(
+  BuildContext flightContext,
+  Animation<double> animation,
+  HeroFlightDirection flightDirection,
+  BuildContext fromHeroContext,
+  BuildContext toHeroContext,
+) {
+  final toHero = (toHeroContext.widget as Hero).child;
+  final fromHero = (fromHeroContext.widget as Hero).child;
+  final shuttleChild = flightDirection == HeroFlightDirection.push
+      ? toHero
+      : fromHero;
+  return Material(
+    type: MaterialType.transparency,
+    child: ClipRect(child: shuttleChild),
+  );
+}
+
 /// API 사진/비디오 표시 위젯
 /// 게시물의 사진 또는 비디오를 표시하고, 댓글 아바타 및 캡션 오버레이를 관리합니다.
 ///
@@ -75,10 +93,14 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
 
-  /// 실제 이미지/비디오 표시 크기 (프레임 고정)
-  /// savedAspectRatio는 메타데이터로 유지하되, 피드 프레임 높이 계산에는 사용하지 않습니다.
+  // 실제 이미지/비디오 표시 크기 (프레임 고정)
+  // savedAspectRatio는 메타데이터로 유지하되, 피드 프레임 높이 계산에는 사용하지 않습니다.
   Size get _imageSize => Size(_imageWidth.w, _imageHeight.h);
 
+  // Hero 태그 생성 (카테고리 ID와 게시물 ID를 조합하여 고유한 태그 생성)
+  String get _heroTag => 'archive_photo_${widget.categoryId}_${widget.post.id}';
+
+  // 안전한 setState 호출 메서드
   void _safeSetState(VoidCallback fn) {
     if (!mounted) return;
     final phase = SchedulerBinding.instance.schedulerPhase;
@@ -555,8 +577,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   Widget _buildTextOnlyContent() {
     final text = widget.post.content?.trim() ?? '';
     return Container(
-      width: _imageSize.width,
-      height: _imageSize.height,
       decoration: BoxDecoration(
         color: Colors.black,
         border: Border.all(color: const Color(0xff2b2b2b), width: 2.0),
@@ -1129,6 +1149,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       if (success) {
         _removeCommentFromCache(targetId);
         await widget.onCommentsReloadRequested?.call(widget.post.id);
+        if (!mounted) return;
         _showSnackBar(tr('comments.delete_success', context: context));
         _dismissOverlay();
       } else {
@@ -1196,6 +1217,26 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         height: _imageSize.height,
         child: Builder(
           builder: (builderContext) {
+            final mediaBase = _buildMediaContent();
+            final mediaFrame = _isTextOnlyPost
+                ? mediaBase
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: mediaBase,
+                  );
+            final mediaWithHero = widget.isArchive
+                ? Hero(
+                    tag: _heroTag,
+                    createRectTween: (begin, end) => MaterialRectArcTween(
+                      begin: begin,
+                      end: end,
+                    ), // 아카이브에서는 둥근 모서리 유지하며 애니메이션
+                    transitionOnUserGestures: true, // 사용자 제스처 중에도 애니메이션 허용
+                    flightShuttleBuilder: _heroFlightShuttleBuilder,
+                    child: mediaFrame,
+                  )
+                : mediaFrame;
+
             return DragTarget<String>(
               onWillAcceptWithDetails: (details) => details.data.isNotEmpty,
               onAcceptWithDetails: (details) {
@@ -1218,10 +1259,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: _buildMediaContent(),
-                      ),
+                      mediaWithHero,
 
                       // 댓글 액션 오버레이
                       if (_showActionOverlay)

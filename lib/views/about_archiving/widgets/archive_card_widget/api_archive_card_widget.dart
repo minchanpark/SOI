@@ -32,6 +32,13 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 /// Returns:
 /// - [Widget]: 카테고리 카드 위젯
 class ApiArchiveCardWidget extends StatelessWidget {
+  static const Duration _kForwardTransitionDuration = Duration(
+    milliseconds: 260,
+  );
+  static const Duration _kReverseTransitionDuration = Duration(
+    milliseconds: 220,
+  );
+
   final api_category.Category category;
   final bool isEditMode;
   final bool isEditing;
@@ -54,6 +61,48 @@ class ApiArchiveCardWidget extends StatelessWidget {
     return _buildGridLayout(context);
   }
 
+  String _buildCategoryHeaderHeroTag(int categoryId) =>
+      'archive_category_header_$categoryId';
+
+  Route<void> _buildCategoryPhotosRoute({
+    required BuildContext context,
+    required api_category.Category category,
+    required CategoryHeaderImagePrefetch? prefetchedHeaderImage,
+    required String? entryHeroTag,
+  }) {
+    final platform = Theme.of(context).platform;
+    final useGestureBackRoute =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+
+    if (useGestureBackRoute) {
+      return MaterialPageRoute<void>(
+        builder: (_) => ApiCategoryPhotosScreen(
+          category: category,
+          prefetchedHeaderImage: prefetchedHeaderImage,
+          entryHeroTag: entryHeroTag,
+        ),
+      );
+    }
+
+    return PageRouteBuilder<void>(
+      transitionDuration: _kForwardTransitionDuration,
+      reverseTransitionDuration: _kReverseTransitionDuration,
+      pageBuilder: (_, animation, __) => ApiCategoryPhotosScreen(
+        category: category,
+        prefetchedHeaderImage: prefetchedHeaderImage,
+        entryHeroTag: entryHeroTag,
+      ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(opacity: curved, child: child);
+      },
+    );
+  }
+
   Widget _buildGridLayout(BuildContext context) {
     return InkWell(
       onTap: isEditMode
@@ -68,6 +117,11 @@ class ApiArchiveCardWidget extends StatelessWidget {
                   CategoryHeaderImagePrefetch.fromCategory(
                     latestCategory,
                   ); // 프리페칭 페이로드 생성
+              final hasHeaderImage =
+                  latestCategory.photoUrl?.isNotEmpty == true;
+              final entryHeroTag = hasHeaderImage
+                  ? _buildCategoryHeaderHeroTag(latestCategory.id)
+                  : null;
               if (headerImagePrefetch != null) {
                 // 프리페칭: 네비게이션 시작과 동시에 헤더 이미지 프리페칭
                 _prefetchCategoryHeaderImage(context, headerImagePrefetch);
@@ -93,11 +147,11 @@ class ApiArchiveCardWidget extends StatelessWidget {
               // 동시에 화면 이동
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => ApiCategoryPhotosScreen(
-                    category: latestCategory,
-                    prefetchedHeaderImage: headerImagePrefetch,
-                  ),
+                _buildCategoryPhotosRoute(
+                  context: context,
+                  category: latestCategory,
+                  prefetchedHeaderImage: headerImagePrefetch,
+                  entryHeroTag: entryHeroTag,
                 ),
               );
             },
@@ -213,7 +267,7 @@ class ApiArchiveCardWidget extends StatelessWidget {
       builder: (context, photoUrl, _) {
         final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
         if (hasPhoto) {
-          return ClipRRect(
+          final imageCard = ClipRRect(
             borderRadius: BorderRadius.circular(borderRadius),
             child: CachedNetworkImage(
               key: ValueKey('${category.id}_${photoUrl}_$layoutMode'),
@@ -261,6 +315,13 @@ class ApiArchiveCardWidget extends StatelessWidget {
                 ),
               ),
             ),
+          );
+          return Hero(
+            tag: _buildCategoryHeaderHeroTag(category.id),
+            createRectTween: (begin, end) =>
+                MaterialRectArcTween(begin: begin, end: end),
+            transitionOnUserGestures: true,
+            child: imageCard,
           );
         }
 

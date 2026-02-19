@@ -27,6 +27,7 @@ class ApiCategoryPhotosHeader extends StatelessWidget {
   final api.Category category;
   final String? backgroundImageUrl;
   final String? backgroundImageCacheKey;
+  final String? heroTag;
   final double collapsedHeight;
   final double expandedHeight;
   final VoidCallback onBackPressed;
@@ -38,6 +39,7 @@ class ApiCategoryPhotosHeader extends StatelessWidget {
     required this.category,
     this.backgroundImageUrl,
     this.backgroundImageCacheKey,
+    this.heroTag,
     required this.collapsedHeight,
     required this.expandedHeight,
     required this.onBackPressed,
@@ -53,6 +55,7 @@ class ApiCategoryPhotosHeader extends StatelessWidget {
         category: category,
         backgroundImageUrl: backgroundImageUrl,
         backgroundImageCacheKey: backgroundImageCacheKey,
+        heroTag: heroTag,
         collapsedHeight: collapsedHeight,
         expandedHeight: expandedHeight,
         onBackPressed: onBackPressed,
@@ -64,9 +67,12 @@ class ApiCategoryPhotosHeader extends StatelessWidget {
 }
 
 class _CategoryPhotosHeaderDelegate extends SliverPersistentHeaderDelegate {
+  static const double _kHeroEnabledMaxCollapse = 0.92;
+
   final api.Category category;
   final String? backgroundImageUrl;
   final String? backgroundImageCacheKey;
+  final String? heroTag;
   final double collapsedHeight;
   final double expandedHeight;
   final VoidCallback onBackPressed;
@@ -77,6 +83,7 @@ class _CategoryPhotosHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.category,
     required this.backgroundImageUrl,
     required this.backgroundImageCacheKey,
+    required this.heroTag,
     required this.collapsedHeight,
     required this.expandedHeight,
     required this.onBackPressed,
@@ -123,9 +130,40 @@ class _CategoryPhotosHeaderDelegate extends SliverPersistentHeaderDelegate {
     final topBarItemTop = toolbarCenterY - 20.h;
     final hasBackgroundImage =
         backgroundImageUrl != null && backgroundImageUrl!.isNotEmpty;
+    final heroEnabled = t < _kHeroEnabledMaxCollapse;
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final viewportWidth = MediaQuery.sizeOf(context).width;
     final decodeWidth = math.max(1, (viewportWidth * devicePixelRatio).round());
+    final headerBackground = hasBackgroundImage
+        ? CachedNetworkImage(
+            key: ValueKey(
+              'header_${category.id}_${backgroundImageCacheKey ?? backgroundImageUrl}',
+            ),
+            imageUrl: backgroundImageUrl!,
+            cacheKey: backgroundImageCacheKey,
+            useOldImageOnUrlChange: true,
+            fadeInDuration: Duration.zero,
+            fadeOutDuration: Duration.zero,
+            memCacheWidth: decodeWidth,
+            maxWidthDiskCache: decodeWidth,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: const Color(0xFF202020)),
+            errorWidget: (_, __, ___) =>
+                Container(color: const Color(0xFF202020)),
+          )
+        : Container(color: const Color(0xFF202020));
+    final backgroundWithHero = heroTag != null && hasBackgroundImage
+        ? HeroMode(
+            enabled: heroEnabled,
+            child: Hero(
+              tag: heroTag!,
+              createRectTween: (begin, end) =>
+                  MaterialRectArcTween(begin: begin, end: end),
+              transitionOnUserGestures: true,
+              child: headerBackground,
+            ),
+          )
+        : headerBackground;
 
     return RepaintBoundary(
       child: ClipRect(
@@ -135,25 +173,7 @@ class _CategoryPhotosHeaderDelegate extends SliverPersistentHeaderDelegate {
             Positioned.fill(
               child: Opacity(
                 opacity: backgroundOpacity,
-                child: hasBackgroundImage
-                    ? CachedNetworkImage(
-                        key: ValueKey(
-                          'header_${category.id}_${backgroundImageCacheKey ?? backgroundImageUrl}',
-                        ),
-                        imageUrl: backgroundImageUrl!,
-                        cacheKey: backgroundImageCacheKey,
-                        useOldImageOnUrlChange: true,
-                        fadeInDuration: Duration.zero,
-                        fadeOutDuration: Duration.zero,
-                        memCacheWidth: decodeWidth,
-                        maxWidthDiskCache: decodeWidth,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            Container(color: const Color(0xFF202020)),
-                        errorWidget: (_, __, ___) =>
-                            Container(color: const Color(0xFF202020)),
-                      )
-                    : Container(color: const Color(0xFF202020)),
+                child: backgroundWithHero,
               ),
             ),
             // 배경 이미지 위에 그라데이션 오버레이 추가 (밝은 부분을 어둡게 만들어 글자 가독성 향상)
@@ -279,6 +299,7 @@ class _CategoryPhotosHeaderDelegate extends SliverPersistentHeaderDelegate {
         oldDelegate.expandedHeight != expandedHeight ||
         oldDelegate.backgroundImageUrl != backgroundImageUrl ||
         oldDelegate.backgroundImageCacheKey != backgroundImageCacheKey ||
+        oldDelegate.heroTag != heroTag ||
         oldDelegate.category.name != category.name ||
         oldDelegate.category.totalUserCount != category.totalUserCount ||
         !listEquals(

@@ -134,27 +134,48 @@ extension _PhotoEditorScreenViewExtension on _PhotoEditorScreenState {
 
   /// 텍스트 전용 미리보기 위젯
   Widget _buildTextOnlyPreviewWidget() {
+    final textTopPadding = 60.sp;
+
     return Container(
       width: 354.w,
       height: 500.h,
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: const Color(0xff2b2b2b), width: 2.0),
       ),
-      child: SingleChildScrollView(
-        child: Text(
-          _textOnlyContent,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 17.sp,
-            fontFamily: 'Pretendard',
-            fontWeight: FontWeight.w500,
-            height: 1.45,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.sp, textTopPadding, 20.sp, 20.sp),
+              child: SingleChildScrollView(
+                child: Text(
+                  _textOnlyContent,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24.sp,
+                    fontFamily: 'Pretendard Variable',
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            top: 8.sp,
+            left: 8.sp,
+            child: IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: SvgPicture.asset(
+                'assets/cancel.svg',
+                width: 30.08.sp,
+                height: 30.08.sp,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

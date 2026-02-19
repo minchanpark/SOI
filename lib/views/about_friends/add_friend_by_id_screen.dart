@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -260,7 +261,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
               tr('friends.add_by_id.title', context: context),
               style: TextStyle(
                 color: const Color(0xFFcccccc),
-                fontSize: 20.sp,
+                fontSize: 20,
                 fontFamily: GoogleFonts.inter().fontFamily,
                 fontWeight: FontWeight.w700,
               ),
@@ -284,27 +285,33 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     return Padding(
       padding: EdgeInsets.fromLTRB(16.sp, 8.sp, 16.sp, 4.sp),
       child: Container(
-        height: 44,
+        height: 44.sp,
         decoration: BoxDecoration(
           color: const Color(0xff1c1c1c),
-          borderRadius: BorderRadius.circular(8 * scale),
+          borderRadius: BorderRadius.circular(8.sp),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(width: 12),
-            SizedBox(
-              width: 19.28,
-              height: 19.22,
-              child: Icon(Icons.search, color: const Color(0xffcccccc)),
+            SizedBox(width: 12.sp),
+            Padding(
+              padding: (Platform.isIOS)
+                  ? EdgeInsets.only(bottom: 4.sp)
+                  : EdgeInsets.zero,
+              child: SizedBox(
+                width: (19.28).sp,
+                height: (19.22).sp,
+                child: Icon(Icons.search, color: const Color(0xffcccccc)),
+              ),
             ),
-            SizedBox(width: 8),
+            SizedBox(width: 8.sp),
             Expanded(
               child: TextField(
                 controller: _textController,
                 focusNode: _focusNode,
-                style: TextStyle(color: const Color(0xfff9f9f9), fontSize: 15),
+                style: TextStyle(
+                  color: const Color(0xfff9f9f9),
+                  fontSize: 15.sp,
+                ),
                 cursorColor: const Color(0xfff9f9f9),
                 decoration: InputDecoration(
                   hintText: tr(
@@ -313,13 +320,12 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                   ),
                   hintStyle: TextStyle(
                     color: const Color(0xFFD9D9D9),
-                    fontSize: 18.02,
+                    fontSize: (18.02).sp,
                     fontFamily: 'Pretendard',
                     fontWeight: FontWeight.w400,
                   ),
                   border: InputBorder.none,
                   isDense: true,
-                  contentPadding: EdgeInsets.only(bottom: 2),
                 ),
                 textInputAction: TextInputAction.search,
                 onSubmitted: (v) => _performSearch(v.trim()),
