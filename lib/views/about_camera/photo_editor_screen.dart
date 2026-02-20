@@ -13,7 +13,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:video_compress/video_compress.dart';
-import 'package:soi/api/models/selected_friend_model.dart';
 import '../../api/controller/audio_controller.dart';
 import '../../api/controller/category_controller.dart' as api_category;
 import '../../api/controller/media_controller.dart' as api_media;
@@ -22,7 +21,8 @@ import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
 import '../../api/services/media_service.dart';
 import '../home_navigator_screen.dart';
-import 'widgets/about_photo_editor_screen/add_category_widget.dart';
+import 'add_category_screen.dart';
+import 'models/add_category_draft.dart';
 import 'widgets/about_photo_editor_screen/audio_recorder_widget.dart';
 import 'widgets/about_photo_editor_screen/caption_input_widget.dart';
 import 'widgets/about_photo_editor_screen/category_list_widget.dart';
@@ -83,7 +83,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   Map<String, String>? _errorMessageArgs;
   bool _useLocalImage = false;
   ImageProvider? _initialImageProvider;
-  bool _showAddCategoryUI = false;
   final List<int> _selectedCategoryIds = [];
   bool _categoriesLoaded = false;
   bool _shouldAutoOpenCategorySheet = true;
@@ -131,10 +130,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
   double get keyboardHeight => MediaQuery.of(context).viewInsets.bottom;
   bool get isKeyboardVisible => keyboardHeight > 0;
-  bool get shouldHideBottomSheet => isKeyboardVisible && !_showAddCategoryUI;
+  bool get shouldHideBottomSheet => isKeyboardVisible;
 
   final _draggableScrollController = DraggableScrollableController();
-  final _categoryNameController = TextEditingController();
   final TextEditingController _captionController = TextEditingController();
   late AudioController _audioController;
   late api_category.CategoryController _categoryController;
@@ -146,7 +144,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
       const PhotoEditorMediaProcessingService(); // 미디어 처리를 담당하는 서비스 클래스의 인스턴스를 생성합니다.
 
   final FocusNode _captionFocusNode = FocusNode();
-  final FocusNode _categoryFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -159,8 +156,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _primeImmediatePreview();
     _initializeScreen();
     _captionController.addListener(_handleCaptionChanged);
-    // 카테고리 이름 입력 포커스 리스너 추가
-    _categoryFocusNode.addListener(_onCategoryFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _captionFocusNode.unfocus();
@@ -190,38 +185,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     _handleAppStateChange(state);
-  }
-
-  // ========== 초기화 메서드들 ==========
-
-  // AddCategoryWidget 컨텐츠에 필요한 바텀시트 extent를 동적으로 계산
-  double _calculateAddCategorySheetExtent({bool withKeyboard = false}) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    // AddCategoryWidget 컨텐츠 높이 (헤더 48 + 구분선 1 + 패딩 20 + 친구버튼 35 + 텍스트필드 48 + 카운터 18 + 여유 30)
-    const contentHeight = 200.0;
-
-    // 키보드가 올라올 때는 키보드 높이도 고려
-    final keyboardHeight = withKeyboard ? (this.keyboardHeight + 200) : 0.0;
-
-    // 필요한 총 높이
-    final totalNeeded = contentHeight + keyboardHeight;
-
-    // 화면 비율로 변환 (최소 0.25, 최대 0.65)
-    final extent = (totalNeeded / screenHeight).clamp(0.25, 0.65);
-    return extent;
-  }
-
-  // 카테고리 이름 입력 포커스 변경 리스너
-  void _onCategoryFocusChange() {
-    if (!mounted || _isDisposing) return;
-
-    if (_categoryFocusNode.hasFocus && _showAddCategoryUI) {
-      // 키보드가 올라올 때 바텀시트 확장 (동적 계산)
-      _animateSheetTo(_calculateAddCategorySheetExtent(withKeyboard: true));
-    } else if (!_categoryFocusNode.hasFocus && _showAddCategoryUI) {
-      // 키보드가 내려갈 때 바텀시트 축소 (동적 계산)
-      _animateSheetTo(_calculateAddCategorySheetExtent(withKeyboard: false));
-    }
   }
 
   void _initializeScreen() {
@@ -481,6 +444,150 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     }
   }
 
+  Future<void> _openAddCategoryScreen() async {
+    final draft = await Navigator.push<AddCategoryDraft>(
+      context,
+      MaterialPageRoute(builder: (context) => const AddCategoryScreen()),
+    );
+
+    if (draft == null || !mounted || _isDisposing) return;
+    unawaited(_runAddCategoryInBackground(draft));
+  }
+
+  Future<void> _runAddCategoryInBackground(AddCategoryDraft draft) async {
+    if (_isDisposing) return;
+    _showErrorSnackBar(tr('common.please_wait', context: context));
+
+    try {
+      final isPublicCategory = draft.selectedFriends.isNotEmpty;
+      final receiverIds = <int>[];
+      if (isPublicCategory) {
+        receiverIds.add(draft.requesterId);
+        for (final friend in draft.selectedFriends) {
+          final parsedId = int.tryParse(friend.uid);
+          if (parsedId != null && !receiverIds.contains(parsedId)) {
+            receiverIds.add(parsedId);
+          }
+        }
+      }
+
+      final createCategoryFuture = _categoryController.createCategory(
+        requesterId: draft.requesterId,
+        name: draft.categoryName,
+        receiverIds: receiverIds,
+        isPublic: isPublicCategory,
+      );
+
+      final selectedCover = draft.selectedCoverImageFile;
+      final Future<_BackgroundCoverUploadResult> uploadFuture =
+          selectedCover == null
+          ? Future.value(const _BackgroundCoverUploadResult())
+          : _uploadCategoryCoverImageInBackground(
+                  imageFile: selectedCover,
+                  userId: draft.requesterId,
+                  refId: draft.requesterId,
+                )
+                .then((keys) => _BackgroundCoverUploadResult(keys: keys))
+                .catchError((_) => const _BackgroundCoverUploadResult());
+
+      final parallelResults = await Future.wait<dynamic>([
+        createCategoryFuture,
+        uploadFuture,
+      ]);
+
+      final createdCategoryId = parallelResults[0] as int?;
+      final uploadResult = parallelResults[1] as _BackgroundCoverUploadResult;
+
+      if (createdCategoryId == null) {
+        if (!mounted) return;
+        final message =
+            _categoryController.errorMessage ??
+            tr('camera.editor.category_create_failed_retry', context: context);
+        _showErrorSnackBar(message);
+        return;
+      }
+
+      var shouldWarnCoverUpdateFailure = false;
+
+      if (selectedCover != null) {
+        var profileImageKey = uploadResult.firstKey;
+
+        // create 결과(categoryId)가 필요하므로 updateCustomProfile은 병렬 처리할 수 없습니다.
+        // 업로드 결과가 비어 있으면 categoryId 기준으로 1회 재시도합니다.
+        if (profileImageKey == null) {
+          final retryKeys = await _uploadCategoryCoverImageInBackground(
+            imageFile: selectedCover,
+            userId: draft.requesterId,
+            refId: createdCategoryId,
+          );
+          if (retryKeys.isNotEmpty) {
+            profileImageKey = retryKeys.first;
+          }
+        }
+
+        if (profileImageKey != null) {
+          final profileUpdated = await _categoryController.updateCustomProfile(
+            categoryId: createdCategoryId,
+            userId: draft.requesterId,
+            profileImageKey: profileImageKey,
+          );
+          if (!profileUpdated) {
+            shouldWarnCoverUpdateFailure = true;
+          }
+        } else {
+          shouldWarnCoverUpdateFailure = true;
+        }
+      }
+
+      try {
+        await _categoryController.loadCategories(
+          draft.requesterId,
+          forceReload: true,
+          fetchAllPages: true,
+          maxPages: 2,
+        );
+        _categoriesLoaded = true;
+        if (mounted) setState(() {});
+      } catch (_) {
+        // 생성 자체는 성공했으므로 로드 실패는 종료를 막지 않습니다.
+      }
+
+      if (!mounted) return;
+
+      if (shouldWarnCoverUpdateFailure) {
+        final warningMessage =
+            _categoryController.errorMessage ??
+            tr('category.cover.update_failed', context: context);
+        _showErrorSnackBar(warningMessage);
+      } else {
+        _showErrorSnackBar(
+          tr('archive.create_category_success', context: context),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _showErrorSnackBar(
+        tr('camera.editor.category_create_error', context: context),
+      );
+    }
+  }
+
+  Future<List<String>> _uploadCategoryCoverImageInBackground({
+    required File imageFile,
+    required int userId,
+    required int refId,
+  }) async {
+    final multipart = await _mediaController.fileToMultipart(imageFile);
+    return _mediaController.uploadMedia(
+      files: [multipart],
+      types: [MediaType.image],
+      usageTypes: [MediaUsageType.categoryProfile],
+      userId: userId,
+      refId: refId,
+      usageCount: 1,
+    );
+  }
+
   // 바텀시트가 목표 위치보다 아래에 있을 때만 애니메이션 실행
   void _animateSheetToIfNeeded(double targetSize) {
     if (!mounted || _isDisposing) return;
@@ -640,12 +747,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
 
     _clearImageCache();
 
-    _categoryNameController.dispose();
     _captionController.removeListener(_handleCaptionChanged);
     _captionController.dispose();
     _captionFocusNode.dispose();
-    _categoryFocusNode.removeListener(_onCategoryFocusChange);
-    _categoryFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     if (_draggableScrollController.isAttached) {
       _draggableScrollController.jumpTo(0.0);
@@ -653,4 +757,12 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen>
     _draggableScrollController.dispose();
     super.dispose();
   }
+}
+
+class _BackgroundCoverUploadResult {
+  final List<String> keys;
+
+  const _BackgroundCoverUploadResult({this.keys = const []});
+
+  String? get firstKey => keys.isNotEmpty ? keys.first : null;
 }

@@ -48,88 +48,16 @@ extension _PhotoEditorScreenViewExtension on _PhotoEditorScreenState {
             // 캡션 입력 UI
             FocusScope(
               key: const ValueKey('caption_input'),
-              child: Focus(
-                onFocusChange: (isFocused) {
-                  if (_categoryFocusNode.hasFocus) {
-                    FocusScope.of(context).requestFocus(_categoryFocusNode);
-                  }
-                },
-                child: CaptionInputWidget(
-                  controller: _captionController,
-                  isCaptionEmpty: _isCaptionEmpty,
-                  onMicTap: _handleMicTap,
-                  isKeyboardVisible: !_categoryFocusNode.hasFocus,
-                  keyboardHeight: keyboardHeight,
-                  focusNode: _captionFocusNode,
-                ),
+              child: CaptionInputWidget(
+                controller: _captionController,
+                isCaptionEmpty: _isCaptionEmpty,
+                onMicTap: _handleMicTap,
+                isKeyboardVisible: isKeyboardVisible,
+                keyboardHeight: keyboardHeight,
+                focusNode: _captionFocusNode,
               ),
             ),
     );
-  }
-
-  Future<void> _createNewCategory(
-    List<SelectedFriendModel> selectedFriends,
-  ) async {
-    if (_categoryNameController.text.trim().isEmpty) {
-      _showErrorSnackBar(
-        tr('archive.create_category_name_required', context: context),
-      );
-      return;
-    }
-
-    try {
-      final user = _userController.currentUser;
-      if (user == null) {
-        _showErrorSnackBar(
-          tr('common.login_required_relogin', context: context),
-        );
-        return;
-      }
-
-      final isPublicCategory = selectedFriends.isNotEmpty;
-      final receiverIds = <int>[];
-      if (isPublicCategory) {
-        receiverIds.add(user.id);
-        for (final friend in selectedFriends) {
-          final parsedId = int.tryParse(friend.uid);
-          if (parsedId != null && !receiverIds.contains(parsedId)) {
-            receiverIds.add(parsedId);
-          }
-        }
-      }
-
-      final categoryId = await _categoryController.createCategory(
-        requesterId: user.id,
-        name: _categoryNameController.text.trim(),
-        receiverIds: receiverIds,
-        isPublic: isPublicCategory,
-      );
-
-      if (categoryId == null) {
-        _showErrorSnackBar(
-          tr('camera.editor.category_create_failed_retry', context: context),
-        );
-        return;
-      }
-
-      _categoriesLoaded = false;
-
-      await _categoryController.loadCategories(
-        user.id,
-        forceReload: true,
-        fetchAllPages: true,
-        maxPages: 2,
-      );
-
-      _safeSetState(() {
-        _showAddCategoryUI = false;
-        _categoryNameController.clear();
-      });
-    } catch (_) {
-      _showErrorSnackBar(
-        tr('camera.editor.category_create_error', context: context),
-      );
-    }
   }
 
   /// 텍스트 전용 미리보기 위젯
@@ -299,7 +227,7 @@ extension _PhotoEditorScreenViewExtension on _PhotoEditorScreenState {
                   return LayoutBuilder(
                     builder: (context, constraints) {
                       final maxHeight = constraints.maxHeight;
-                      final handleHeight = _showAddCategoryUI ? 12.h : 25.h;
+                      final handleHeight = 25.h;
                       final spacing = maxHeight > handleHeight ? 4.h : 0.0;
                       final contentHeight = math.max(
                         0.0,
@@ -318,89 +246,35 @@ extension _PhotoEditorScreenViewExtension on _PhotoEditorScreenState {
                             children: [
                               SizedBox(
                                 height: handleHeight,
-                                child: _showAddCategoryUI
-                                    ? const SizedBox()
-                                    : Center(
-                                        child: Container(
-                                          height: 3.h,
-                                          width: 56.w,
-                                          margin: EdgeInsets.symmetric(
-                                            vertical: 11.h,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xffcdcdcd),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                child: Center(
+                                  child: Container(
+                                    height: 3.h,
+                                    width: 56.w,
+                                    margin: EdgeInsets.symmetric(
+                                      vertical: 11.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xffcdcdcd),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
                               ),
                               SizedBox(height: spacing),
                               SizedBox(
                                 height: contentHeight,
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: _showAddCategoryUI
-                                      ? ClipRect(
-                                          child: LayoutBuilder(
-                                            builder: (context, addConstraints) {
-                                              return ConstrainedBox(
-                                                constraints: BoxConstraints(
-                                                  maxHeight:
-                                                      addConstraints.maxHeight,
-                                                  maxWidth:
-                                                      addConstraints.maxWidth,
-                                                ),
-                                                child: AddCategoryWidget(
-                                                  textController:
-                                                      _categoryNameController,
-                                                  scrollController:
-                                                      scrollController,
-                                                  focusNode: _categoryFocusNode,
-                                                  onBackPressed: () {
-                                                    _safeSetState(() {
-                                                      _showAddCategoryUI =
-                                                          false;
-                                                      _categoryNameController
-                                                          .clear();
-                                                    });
-                                                    _animateSheetTo(
-                                                      _PhotoEditorScreenState
-                                                          ._kLockedSheetExtent,
-                                                    );
-                                                  },
-                                                  onSavePressed:
-                                                      (selectedFriends) =>
-                                                          _createNewCategory(
-                                                            selectedFriends,
-                                                          ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        )
-                                      : CategoryListWidget(
-                                          scrollController: scrollController,
-                                          selectedCategoryIds:
-                                              _selectedCategoryIds,
-                                          onCategorySelected:
-                                              _handleCategorySelection,
-                                          onConfirmSelection: () {
-                                            if (_selectedCategoryIds
-                                                .isNotEmpty) {
-                                              _uploadThenNavigate(
-                                                _selectedCategoryIds,
-                                              );
-                                            }
-                                          },
-                                          addCategoryPressed: () {
-                                            _safeSetState(
-                                              () => _showAddCategoryUI = true,
-                                            );
-                                            _animateSheetTo((0.3).sp);
-                                          },
-                                        ),
+                                child: CategoryListWidget(
+                                  scrollController: scrollController,
+                                  selectedCategoryIds: _selectedCategoryIds,
+                                  onCategorySelected: _handleCategorySelection,
+                                  onConfirmSelection: () {
+                                    if (_selectedCategoryIds.isNotEmpty) {
+                                      _uploadThenNavigate(_selectedCategoryIds);
+                                    }
+                                  },
+                                  addCategoryPressed: () {
+                                    unawaited(_openAddCategoryScreen());
+                                  },
                                 ),
                               ),
                             ],
