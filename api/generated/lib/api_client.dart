@@ -216,6 +216,8 @@ class ApiClient {
           return ApiResponseDtoReportResponseDto.fromJson(value);
         case 'ApiResponseDtoSliceCommentRespDto':
           return ApiResponseDtoSliceCommentRespDto.fromJson(value);
+        case 'ApiResponseDtoSlicePostRespDto':
+          return ApiResponseDtoSlicePostRespDto.fromJson(value);
         case 'ApiResponseDtoUserRespDto':
           return ApiResponseDtoUserRespDto.fromJson(value);
         case 'AuthCheckReqDto':
@@ -268,6 +270,8 @@ class ApiClient {
           return ReportUpdateReqDto.fromJson(value);
         case 'SliceCommentRespDto':
           return SliceCommentRespDto.fromJson(value);
+        case 'SlicePostRespDto':
+          return SlicePostRespDto.fromJson(value);
         case 'SortObject':
           return SortObject.fromJson(value);
         case 'SortOptionDto':

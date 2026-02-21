@@ -277,6 +277,74 @@ class PostAPIApi {
     return null;
   }
 
+  /// 유저 id로 게시물 조회
+  ///
+  /// 유저 id와 type으로 게시물을 조회합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] postType (required):
+  ///
+  /// * [int] page (required):
+  Future<Response> findMediaByUserIdWithHttpInfo(int userId, String postType, int page,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/post/find/by-user-id';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'postType', postType));
+      queryParams.addAll(_queryParams('', 'page', page));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 유저 id로 게시물 조회
+  ///
+  /// 유저 id와 type으로 게시물을 조회합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [String] postType (required):
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoSlicePostRespDto?> findMediaByUserId(int userId, String postType, int page,) async {
+    final response = await findMediaByUserIdWithHttpInfo(userId, postType, page,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoSlicePostRespDto',) as ApiResponseDtoSlicePostRespDto;
+    
+    }
+    return null;
+  }
+
   /// 게시물 상태변경
   ///
   /// 게시물 상태를 변경합니다. ACTIVE : 활성화 SOFTDELETE : 삭제(휴지통) INACTIVE : 비활성화

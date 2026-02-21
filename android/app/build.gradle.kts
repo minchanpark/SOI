@@ -22,7 +22,7 @@ val targetSdkApi = 36
 android {
     namespace = "com.newdawn.soi"
     compileSdk = compileSdkApi
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -57,6 +57,12 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     buildTypes {
         release {
             // If no keystore, keep debug signing so `flutter run --release` still works.
@@ -75,7 +81,7 @@ flutter {
 }
 
 dependencies {
-    val cameraXVersion = "1.3.4"
+    val cameraXVersion = "1.5.3"
     implementation("androidx.camera:camera-core:$cameraXVersion")
     implementation("androidx.camera:camera-camera2:$cameraXVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraXVersion")

@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**delete2**](PostAPIApi.md#delete2) | **DELETE** /post/delete | 게시물 삭제
 [**findAllByUserId**](PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
 [**findByCategoryId**](PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
+[**findMediaByUserId**](PostAPIApi.md#findmediabyuserid) | **GET** /post/find/by-user-id | 유저 id로 게시물 조회
 [**setPost**](PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
 [**showDetail**](PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
 [**update3**](PostAPIApi.md#update3) | **PATCH** /post/update | 게시물 수정
@@ -188,6 +189,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ApiResponseDtoListPostRespDto**](ApiResponseDtoListPostRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **findMediaByUserId**
+> ApiResponseDtoSlicePostRespDto findMediaByUserId(userId, postType, page)
+
+유저 id로 게시물 조회
+
+유저 id와 type으로 게시물을 조회합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = PostAPIApi();
+final userId = 789; // int | 
+final postType = postType_example; // String | 
+final page = 56; // int | 
+
+try {
+    final result = api_instance.findMediaByUserId(userId, postType, page);
+    print(result);
+} catch (e) {
+    print('Exception when calling PostAPIApi->findMediaByUserId: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **int**|  | 
+ **postType** | **String**|  | 
+ **page** | **int**|  | 
+
+### Return type
+
+[**ApiResponseDtoSlicePostRespDto**](ApiResponseDtoSlicePostRespDto.md)
 
 ### Authorization
 

@@ -130,6 +130,69 @@ class CommentAPIApi {
     return null;
   }
 
+  /// 사용자가 작성한 댓글 조회
+  ///
+  /// 사용자가 작성한 모든 댓글을 조회합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [int] page (required):
+  Future<Response> getAllCommentByUserIdWithHttpInfo(int userId, int page,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/comment/get/by-user-id';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'page', page));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 사용자가 작성한 댓글 조회
+  ///
+  /// 사용자가 작성한 모든 댓글을 조회합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] userId (required):
+  ///
+  /// * [int] page (required):
+  Future<ApiResponseDtoSliceCommentRespDto?> getAllCommentByUserId(int userId, int page,) async {
+    final response = await getAllCommentByUserIdWithHttpInfo(userId, page,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoSliceCommentRespDto',) as ApiResponseDtoSliceCommentRespDto;
+    
+    }
+    return null;
+  }
+
   /// 대댓글 조회
   ///
   /// 댓글에 달린 대댓글을 조회합니다.

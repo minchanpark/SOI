@@ -73,6 +73,7 @@ Class | Method | HTTP request | Description
 *CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가(초대)
 *CommentAPIApi* | [**create3**](doc//CommentAPIApi.md#create3) | **POST** /comment/create | 댓글 추가
 *CommentAPIApi* | [**deleteComment**](doc//CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
+*CommentAPIApi* | [**getAllCommentByUserId**](doc//CommentAPIApi.md#getallcommentbyuserid) | **GET** /comment/get/by-user-id | 사용자가 작성한 댓글 조회
 *CommentAPIApi* | [**getChildComment**](doc//CommentAPIApi.md#getchildcomment) | **GET** /comment/get-child | 대댓글 조회
 *CommentAPIApi* | [**getParentComment**](doc//CommentAPIApi.md#getparentcomment) | **GET** /comment/get-parent | 원댓글 조회
 *FriendAPIApi* | [**blockFriend**](doc//FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
@@ -89,6 +90,7 @@ Class | Method | HTTP request | Description
 *PostAPIApi* | [**delete2**](doc//PostAPIApi.md#delete2) | **DELETE** /post/delete | 게시물 삭제
 *PostAPIApi* | [**findAllByUserId**](doc//PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
 *PostAPIApi* | [**findByCategoryId**](doc//PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
+*PostAPIApi* | [**findMediaByUserId**](doc//PostAPIApi.md#findmediabyuserid) | **GET** /post/find/by-user-id | 유저 id로 게시물 조회
 *PostAPIApi* | [**setPost**](doc//PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
 *PostAPIApi* | [**showDetail**](doc//PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
 *PostAPIApi* | [**update3**](doc//PostAPIApi.md#update3) | **PATCH** /post/update | 게시물 수정
@@ -129,6 +131,7 @@ Class | Method | HTTP request | Description
  - [ApiResponseDtoPostRespDto](doc//ApiResponseDtoPostRespDto.md)
  - [ApiResponseDtoReportResponseDto](doc//ApiResponseDtoReportResponseDto.md)
  - [ApiResponseDtoSliceCommentRespDto](doc//ApiResponseDtoSliceCommentRespDto.md)
+ - [ApiResponseDtoSlicePostRespDto](doc//ApiResponseDtoSlicePostRespDto.md)
  - [ApiResponseDtoUserRespDto](doc//ApiResponseDtoUserRespDto.md)
  - [AuthCheckReqDto](doc//AuthCheckReqDto.md)
  - [CategoryCreateReqDto](doc//CategoryCreateReqDto.md)
@@ -155,6 +158,7 @@ Class | Method | HTTP request | Description
  - [ReportSearchRequestDto](doc//ReportSearchRequestDto.md)
  - [ReportUpdateReqDto](doc//ReportUpdateReqDto.md)
  - [SliceCommentRespDto](doc//SliceCommentRespDto.md)
+ - [SlicePostRespDto](doc//SlicePostRespDto.md)
  - [SortObject](doc//SortObject.md)
  - [SortOptionDto](doc//SortOptionDto.md)
  - [UserCreateReqDto](doc//UserCreateReqDto.md)

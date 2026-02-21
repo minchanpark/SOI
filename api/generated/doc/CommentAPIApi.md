@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create3**](CommentAPIApi.md#create3) | **POST** /comment/create | 댓글 추가
 [**deleteComment**](CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
+[**getAllCommentByUserId**](CommentAPIApi.md#getallcommentbyuserid) | **GET** /comment/get/by-user-id | 사용자가 작성한 댓글 조회
 [**getChildComment**](CommentAPIApi.md#getchildcomment) | **GET** /comment/get-child | 대댓글 조회
 [**getParentComment**](CommentAPIApi.md#getparentcomment) | **GET** /comment/get-parent | 원댓글 조회
 
@@ -89,6 +90,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ApiResponseDtoListObject**](ApiResponseDtoListObject.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAllCommentByUserId**
+> ApiResponseDtoSliceCommentRespDto getAllCommentByUserId(userId, page)
+
+사용자가 작성한 댓글 조회
+
+사용자가 작성한 모든 댓글을 조회합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = CommentAPIApi();
+final userId = 789; // int | 
+final page = 56; // int | 
+
+try {
+    final result = api_instance.getAllCommentByUserId(userId, page);
+    print(result);
+} catch (e) {
+    print('Exception when calling CommentAPIApi->getAllCommentByUserId: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **int**|  | 
+ **page** | **int**|  | 
+
+### Return type
+
+[**ApiResponseDtoSliceCommentRespDto**](ApiResponseDtoSliceCommentRespDto.md)
 
 ### Authorization
 
