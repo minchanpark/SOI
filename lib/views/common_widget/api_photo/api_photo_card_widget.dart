@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
 import '../../../api/models/post.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/audio_controller.dart';
 import 'api_photo_display_widget.dart';
 import 'api_user_info_widget.dart';
-import '../about_voice_comment/api_voice_recording_widget.dart';
+import '../about_comment_version_2/comment_composer_v2_widget.dart';
 import '../about_voice_comment/api_voice_comment_list_sheet.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
 import '../report/report_bottom_sheet.dart';
@@ -33,20 +34,16 @@ class ApiPhotoCardWidget extends StatefulWidget {
 
   // 상태 관리 관련
   final Map<int, List<Comment>> postComments;
-  final Map<int, bool> voiceCommentActiveStates;
-  final Map<int, bool> voiceCommentSavedStates;
-  final Map<int, bool>? pendingTextComments;
+  final Map<int, PendingApiCommentDraft> pendingCommentDrafts;
   final Map<int, PendingApiCommentMarker> pendingVoiceComments;
 
   // 콜백 함수들
   final Function(Post) onToggleAudio;
-  final Function(int) onToggleVoiceComment;
-  final Function(int, String?, List<double>?, int?) onVoiceCommentCompleted;
   final Function(int, String) onTextCommentCompleted;
-  final Function(int) onVoiceCommentDeleted;
   final Function(int, Offset) onProfileImageDragged;
-  final Future<void> Function(int) onSaveRequested;
-  final Function(int) onSaveCompleted;
+  final void Function(int, double) onCommentSaveProgress;
+  final void Function(int, Comment) onCommentSaveSuccess;
+  final void Function(int, Object) onCommentSaveFailure;
   final VoidCallback onDeletePressed;
   final Future<void> Function(int postId)? onCommentsReloadRequested;
 
@@ -64,18 +61,14 @@ class ApiPhotoCardWidget extends StatefulWidget {
     this.onEmojiSelected,
     this.onReportSubmitted,
     required this.postComments,
-    required this.voiceCommentActiveStates,
-    required this.voiceCommentSavedStates,
-    this.pendingTextComments,
+    required this.pendingCommentDrafts,
     this.pendingVoiceComments = const {},
     required this.onToggleAudio,
-    required this.onToggleVoiceComment,
-    required this.onVoiceCommentCompleted,
     required this.onTextCommentCompleted,
-    required this.onVoiceCommentDeleted,
     required this.onProfileImageDragged,
-    required this.onSaveRequested,
-    required this.onSaveCompleted,
+    required this.onCommentSaveProgress,
+    required this.onCommentSaveSuccess,
+    required this.onCommentSaveFailure,
     required this.onDeletePressed,
     this.onCommentsReloadRequested,
   });
@@ -87,12 +80,15 @@ class ApiPhotoCardWidget extends StatefulWidget {
 class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
   bool _isTextFieldFocused = false;
 
-  void _handleTextCommentCreated(String text) async {
+  Future<void> _handleTextCommentCreated(String text) async {
     debugPrint(
       '[ApiPhotoCard] 텍스트 댓글 생성: postId=${widget.post.id}, text=$text',
     );
     await widget.onTextCommentCompleted(widget.post.id, text);
-    widget.onToggleVoiceComment(widget.post.id);
+  }
+
+  Offset? _resolveDropRelativePosition(int postId) {
+    return widget.pendingVoiceComments[postId]?.relativePosition;
   }
 
   @override
@@ -173,25 +169,20 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
           left: 0,
           right: 0,
           bottom: bottomPadding,
-          // 텍스트/음성 댓글 입력 모드 전환되는 위젯
-          child: ApiVoiceRecordingWidget(
-            post: widget.post,
-            voiceCommentActiveStates: widget.voiceCommentActiveStates,
-            voiceCommentSavedStates: widget.voiceCommentSavedStates,
-            postComments: widget.postComments,
-            onToggleVoiceComment: widget.onToggleVoiceComment,
-            onVoiceCommentCompleted: widget.onVoiceCommentCompleted,
-            onVoiceCommentDeleted: widget.onVoiceCommentDeleted,
-            onProfileImageDragged: widget.onProfileImageDragged,
-            onSaveRequested: widget.onSaveRequested,
-            onSaveCompleted: widget.onSaveCompleted,
-            pendingTextComments: widget.pendingTextComments,
+          child: CommentComposerV2Widget(
+            postId: widget.post.id,
+            pendingCommentDrafts: widget.pendingCommentDrafts,
+            onTextCommentCompleted: (postId, text) =>
+                _handleTextCommentCreated(text),
+            resolveDropRelativePosition: _resolveDropRelativePosition,
+            onCommentSaveProgress: widget.onCommentSaveProgress,
+            onCommentSaveSuccess: widget.onCommentSaveSuccess,
+            onCommentSaveFailure: widget.onCommentSaveFailure,
             onTextFieldFocusChanged: (isFocused) {
               setState(() {
                 _isTextFieldFocused = isFocused;
               });
             },
-            onTextCommentCreated: _handleTextCommentCreated,
           ),
         ),
       ],

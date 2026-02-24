@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -14,7 +13,6 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
-import '../../../../api/models/comment_creation_result.dart';
 import '../../../../api/controller/user_controller.dart';
 import '../../../../api/controller/comment_controller.dart';
 import '../../../../api/controller/category_controller.dart' as api_category;
@@ -75,30 +73,12 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   // 상태 맵 (Firebase 버전과 동일한 구조)
   final Map<int, List<Comment>> _postComments = {};
   final Map<int, String?> _selectedEmojisByPostId = {}; // postId별 내가 선택한 이모지
-  final Map<int, bool> _voiceCommentActiveStates = {};
-  final Map<int, bool> _voiceCommentSavedStates = {};
   final Map<String, String> _userProfileImages = {};
   final Map<String, bool> _profileLoadingStates = {};
   final Map<String, String> _userNames = {};
   final Map<int, PendingApiCommentDraft> _pendingCommentDrafts = {};
   final Map<int, PendingApiCommentMarker> _pendingCommentMarkers = {};
-  final Map<int, bool> _pendingTextComments = {};
   final Map<int, String> _resolvedAudioUrls = {};
-
-  static const List<Offset> _autoPlacementPattern = [
-    Offset(0.5, 0.5),
-    Offset(0.62, 0.5),
-    Offset(0.38, 0.5),
-    Offset(0.5, 0.62),
-    Offset(0.5, 0.38),
-    Offset(0.62, 0.62),
-    Offset(0.38, 0.62),
-    Offset(0.62, 0.38),
-    Offset(0.38, 0.38),
-  ];
-
-  final Map<int, int> _autoPlacementIndices = {};
-  static const int _kMaxWaveformSamples = 30;
 
   String? _emojiFromId(int? emojiId) {
     switch (emojiId) {
@@ -319,42 +299,18 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
                     _selectedEmojisByPostId[post.id], // postId별 선택값 표시
                 onEmojiSelected: (emoji) => _setSelectedEmoji(post.id, emoji),
                 postComments: _postComments,
-
-                voiceCommentActiveStates: _voiceCommentActiveStates,
-                voiceCommentSavedStates: _voiceCommentSavedStates,
-                pendingTextComments: _pendingTextComments,
+                pendingCommentDrafts: _pendingCommentDrafts,
                 pendingVoiceComments: _pendingCommentMarkers,
                 onToggleAudio: _toggleAudio,
-                onToggleVoiceComment: _toggleVoiceComment,
-                onVoiceCommentCompleted:
-                    (postId, audioPath, waveformData, duration) {
-                      if (audioPath != null &&
-                          waveformData != null &&
-                          duration != null) {
-                        _onVoiceCommentRecordingFinished(
-                          postId,
-                          audioPath,
-                          waveformData,
-                          duration,
-                        );
-                      }
-                    },
                 onTextCommentCompleted: (postId, text) async {
                   await _onTextCommentCreated(postId, text);
-                },
-                onVoiceCommentDeleted: (postId) {
-                  setState(() {
-                    _voiceCommentActiveStates[postId] = false;
-                    _pendingCommentDrafts.remove(postId);
-                    _pendingCommentMarkers.remove(postId);
-                    _pendingTextComments.remove(postId);
-                  });
                 },
                 onProfileImageDragged: (postId, absolutePosition) {
                   _onProfileImageDragged(postId, absolutePosition);
                 },
-                onSaveRequested: _onSaveRequested,
-                onSaveCompleted: _onSaveCompleted,
+                onCommentSaveProgress: _onCommentSaveProgress,
+                onCommentSaveSuccess: _onCommentSaveSuccess,
+                onCommentSaveFailure: _onCommentSaveFailure,
                 onDeletePressed: () => _deletePost(post),
                 onCommentsReloadRequested: _loadCommentsForPost,
                 onReportSubmitted: _saveReportToFirebase,
@@ -459,28 +415,6 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
           _selectedEmojisByPostId[postId] = selected;
         }
       }
-
-      if (comments.isNotEmpty) {
-        _voiceCommentSavedStates[postId] = true;
-      } else {
-        _voiceCommentSavedStates[postId] = false;
-      }
-    });
-  }
-
-  /// 댓글 캐시에 새 댓글 추가
-  ///
-  /// Parameters:
-  ///   - [postId]: 댓글이 추가될 게시물 ID
-  ///   - [comment]: 추가할 댓글 객체
-  void _addCommentToCache(int postId, Comment comment) {
-    if (!mounted) return;
-    setState(() {
-      final updatedList = List<Comment>.from(
-        _postComments[postId] ?? const <Comment>[],
-      )..add(comment);
-      _postComments[postId] = updatedList;
-      _voiceCommentSavedStates[postId] = true;
     });
   }
 
@@ -534,17 +468,6 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
-  /// 음성 댓글 토글 처리
-  ///
-  /// Parameters:
-  ///   - [postId]: 음성 댓글 토글할 게시물 ID
-  void _toggleVoiceComment(int postId) {
-    setState(() {
-      _voiceCommentActiveStates[postId] =
-          !(_voiceCommentActiveStates[postId] ?? false);
-    });
-  }
-
   /// 텍스트 댓글 생성 처리
   ///
   /// Parameters:
@@ -570,197 +493,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       );
 
       if (mounted) {
-        setState(() {
-          // 댓글이 pending 상태임을 표시
-          _pendingTextComments[postId] = true;
-
-          // 음성 댓글 위젯 비활성화
-          _voiceCommentSavedStates[postId] = false;
-        });
+        setState(() {});
       }
     } catch (e) {
       debugPrint('텍스트 댓글 임시 저장 실패: $e');
-    }
-  }
-
-  /// 음성 댓글 녹음 완료 처리
-  ///
-  /// Parameters:
-  ///   - [postId]: 댓글이 생성될 게시물 ID
-  ///   - [audioPath]: 녹음된 오디오 파일 경로
-  ///   - [waveformData]: 녹음된 오디오의 파형 데이터
-  ///   - [duration]: 녹음된 오디오의 길이 (밀리초)
-  Future<void> _onVoiceCommentRecordingFinished(
-    int postId,
-    String audioPath,
-    List<double> waveformData,
-    int duration,
-  ) async {
-    try {
-      final userId = _userController?.currentUser?.id;
-      if (userId == null) return;
-
-      final currentUserProfileImageUrl =
-          _userController?.currentUser?.profileImageUrlKey;
-
-      _pendingCommentDrafts[postId] = (
-        isTextComment: false,
-        text: null,
-        audioPath: audioPath,
-        waveformData: waveformData,
-        duration: duration,
-        recorderUserId: userId,
-        profileImageUrlKey: currentUserProfileImageUrl,
-      );
-
-      if (mounted) {
-        setState(() {
-          _voiceCommentSavedStates[postId] = false;
-          _voiceCommentActiveStates[postId] = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('음성 댓글 임시 저장 준비 실패: $e');
-    }
-  }
-
-  Future<void> _onSaveRequested(int postId) async {
-    final draft = _pendingCommentDrafts[postId];
-    if (draft == null) {
-      throw StateError('임시 댓글이 없습니다. postId: $postId');
-    }
-
-    final userId = _userController?.currentUser?.id;
-    if (userId == null) {
-      throw StateError('로그인된 사용자를 찾을 수 없습니다.');
-    }
-
-    // 위치가 지정되지 않은 경우 자동 위치 할당 (fallback)
-    final finalPosition =
-        _pendingCommentMarkers[postId]?.relativePosition ??
-        _generateAutoProfilePosition(postId);
-
-    // 저장 중에도 UI 마커가 유지되도록 최종 위치를 마커에 기록
-    _pendingCommentMarkers[postId] = (
-      relativePosition: finalPosition,
-      profileImageUrlKey: draft.profileImageUrlKey,
-      progress: 0.0,
-    );
-
-    // UI 먼저 업데이트 (낙관적 업데이트)
-    setState(() {
-      _voiceCommentSavedStates[postId] = true;
-      _pendingTextComments.remove(postId);
-      _voiceCommentActiveStates[postId] = false;
-    });
-
-    // 백그라운드에서 API 호출하여 댓글 저장
-    unawaited(_saveCommentToServer(postId, userId, draft, finalPosition));
-  }
-
-  /// 백그라운드에서 댓글을 서버에 저장
-  Future<void> _saveCommentToServer(
-    int postId,
-    int userId,
-    PendingApiCommentDraft pending,
-    Offset relativePosition,
-  ) async {
-    try {
-      _updatePendingProgress(postId, 0.05);
-      final commentController = Provider.of<CommentController>(
-        context,
-        listen: false,
-      );
-
-      CommentCreationResult creationResult =
-          const CommentCreationResult.failure();
-
-      // 텍스트 댓글 저장 부분
-      if (pending.isTextComment && pending.text != null) {
-        // 텍스트 댓글 저장
-        _updatePendingProgress(postId, 0.4);
-        creationResult = await commentController.createTextComment(
-          postId: postId,
-          userId: userId,
-          text: pending.text!,
-          locationX: relativePosition.dx,
-          locationY: relativePosition.dy,
-        );
-        _updatePendingProgress(postId, 0.85);
-      }
-      // 음성 댓글 저장 부분
-      else if (pending.audioPath != null) {
-        // 음성 댓글 저장
-        final mediaController = Provider.of<MediaController>(
-          context,
-          listen: false,
-        );
-
-        _updatePendingProgress(postId, 0.15);
-        final audioFile = File(pending.audioPath!);
-        _updatePendingProgress(postId, 0.25);
-        final multipartFile = await mediaController.fileToMultipart(audioFile);
-        final audioKey = await mediaController.uploadCommentAudio(
-          file: multipartFile,
-          userId: userId,
-          postId: postId,
-        );
-
-        if (audioKey == null) {
-          debugPrint('오디오 업로드 실패: audioKey is null');
-          _showSnackBar(
-            tr('audio.upload_failed', context: context),
-            backgroundColor: Colors.red,
-          );
-          return;
-        }
-
-        // 댓글 생성
-        _updatePendingProgress(postId, 0.75);
-        final waveformJson = _encodeWaveformForRequest(pending.waveformData);
-
-        // 오디오 댓글 생성
-        _updatePendingProgress(postId, 0.85);
-        creationResult = await commentController.createAudioComment(
-          postId: postId,
-          userId: userId,
-          audioFileKey: audioKey,
-          waveformData: waveformJson!,
-          duration: pending.duration!,
-          locationX: relativePosition.dx,
-          locationY: relativePosition.dy,
-        );
-        _updatePendingProgress(postId, 0.95);
-      }
-
-      if (creationResult.success) {
-        _updatePendingProgress(postId, 1.0);
-        if (creationResult.comment != null) {
-          _addCommentToCache(postId, creationResult.comment!);
-        } else {
-          await _loadCommentsForPost(postId);
-        }
-
-        if (mounted) {
-          setState(() {
-            _pendingCommentDrafts.remove(postId);
-            _pendingCommentMarkers.remove(postId);
-          });
-        }
-      } else {
-        _showSnackBar(
-          tr('comments.save_failed', context: context),
-          backgroundColor: Colors.red,
-        );
-      }
-    } catch (e) {
-      debugPrint('댓글 저장 실패: $e');
-      if (mounted) {
-        _showSnackBar(
-          tr('comments.save_error', context: context),
-          backgroundColor: Colors.red,
-        );
-      }
     }
   }
 
@@ -778,87 +514,36 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
   }
 
-  void _onSaveCompleted(int postId) {
+  void _onCommentSaveProgress(int postId, double progress) {
+    _updatePendingProgress(postId, progress);
+  }
+
+  void _onCommentSaveSuccess(int postId, Comment comment) {
+    if (!mounted) return;
     setState(() {
-      _voiceCommentActiveStates[postId] = false;
-      _pendingTextComments.remove(postId);
+      final updatedList = List<Comment>.from(
+        _postComments[postId] ?? const <Comment>[],
+      )..add(comment);
+      _postComments[postId] = updatedList;
+      _pendingCommentDrafts.remove(postId);
+      _pendingCommentMarkers.remove(postId);
     });
   }
 
-  Offset _generateAutoProfilePosition(int postId) {
-    final occupiedPositions = <Offset>[];
-
-    final comments = _postComments[postId] ?? const <Comment>[];
-    for (final comment in comments) {
-      if (comment.hasLocation) {
-        occupiedPositions.add(
-          Offset(comment.locationX ?? 0.5, comment.locationY ?? 0.5),
-        );
-      }
+  void _onCommentSaveFailure(int postId, Object error) {
+    debugPrint('댓글 저장 실패(postId: $postId): $error');
+    final marker = _pendingCommentMarkers[postId];
+    if (marker == null) {
+      return;
     }
-
-    final pending = _pendingCommentMarkers[postId];
-    if (pending != null) {
-      occupiedPositions.add(pending.relativePosition);
-    }
-
-    const maxAttempts = 30;
-    final patternLength = _autoPlacementPattern.length;
-    final startingIndex = _autoPlacementIndices[postId] ?? 0;
-
-    for (int attempt = 0; attempt < maxAttempts; attempt++) {
-      final rawIndex = startingIndex + attempt;
-      final baseOffset = _autoPlacementPattern[rawIndex % patternLength];
-      final loop = rawIndex ~/ patternLength;
-      final candidate = _applyJitter(baseOffset, loop, attempt);
-
-      if (!_isPositionTooClose(candidate, occupiedPositions)) {
-        _autoPlacementIndices[postId] = rawIndex + 1;
-        return candidate;
-      }
-    }
-
-    _autoPlacementIndices[postId] = startingIndex + 1;
-    return const Offset(0.5, 0.5);
-  }
-
-  Offset _applyJitter(Offset base, int loop, int attempt) {
-    if (loop <= 0) {
-      return _clampOffset(base);
-    }
-
-    final double step = (0.02 * loop).clamp(0.02, 0.08).toDouble();
-    final double dxDirection = (attempt % 2 == 0) ? 1 : -1;
-    final double dyDirection = ((attempt ~/ 2) % 2 == 0) ? 1 : -1;
-
-    final offsetWithJitter = Offset(
-      base.dx + (step * dxDirection),
-      base.dy + (step * dyDirection),
-    );
-
-    return _clampOffset(offsetWithJitter);
-  }
-
-  // 위치를 0.05 ~ 0.95 범위로 제한
-  Offset _clampOffset(Offset offset) {
-    const double min = 0.05;
-    const double max = 0.95;
-    return Offset(
-      offset.dx.clamp(min, max).toDouble(),
-      offset.dy.clamp(min, max).toDouble(),
-    );
-  }
-
-  // 기존 위치와 너무 가까운지 확인
-  bool _isPositionTooClose(Offset candidate, List<Offset> occupied) {
-    const double threshold = 0.04;
-    for (final existing in occupied) {
-      if ((candidate.dx - existing.dx).abs() < threshold &&
-          (candidate.dy - existing.dy).abs() < threshold) {
-        return true;
-      }
-    }
-    return false;
+    if (!mounted) return;
+    setState(() {
+      _pendingCommentMarkers[postId] = (
+        relativePosition: marker.relativePosition,
+        profileImageUrlKey: marker.profileImageUrlKey,
+        progress: null,
+      );
+    });
   }
 
   // 게시물 삭제 처리
@@ -932,13 +617,9 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   void _clearPostScopedState(int postId, {required String nickName}) {
     _postComments.remove(postId);
     _selectedEmojisByPostId.remove(postId);
-    _voiceCommentActiveStates.remove(postId);
-    _voiceCommentSavedStates.remove(postId);
     _pendingCommentDrafts.remove(postId);
     _pendingCommentMarkers.remove(postId);
-    _pendingTextComments.remove(postId);
     _resolvedAudioUrls.remove(postId);
-    _autoPlacementIndices.remove(postId);
 
     final hasOtherPostsByNickname = _posts.any(
       (existingPost) =>
@@ -1037,26 +718,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     }
   }
 
-  // 스낵바 틀 함수
-  String? _encodeWaveformForRequest(List<double>? waveformData) {
-    if (waveformData == null || waveformData.isEmpty) return null;
-    final sampled = _sampleWaveformData(waveformData, _kMaxWaveformSamples);
-    final rounded = sampled
-        .map((value) => double.parse(value.toStringAsFixed(4)))
-        .toList();
-    return jsonEncode(rounded);
-  }
-
-  List<double> _sampleWaveformData(List<double> source, int maxLength) {
-    if (source.length <= maxLength) return source;
-    final step = source.length / maxLength;
-    return List<double>.generate(
-      maxLength,
-      (index) => source[(index * step).floor()],
-    );
-  }
-
-  void _showSnackBar(String message, {Color? backgroundColor}) {
+  void _showSnackBar(String message) {
     if (!mounted) return;
     SnackBarUtils.showSnackBar(context, message);
   }

@@ -45,6 +45,8 @@ class VoiceCommentStateManager {
   Map<int, bool> get voiceCommentSavedStates => _voiceCommentSavedStates;
   Map<int, PendingApiCommentMarker> get pendingVoiceComments =>
       _pendingCommentMarkers;
+  Map<int, PendingApiCommentDraft> get pendingCommentDrafts =>
+      _pendingCommentDrafts;
   Map<int, List<Comment>> get postComments => _postComments;
   Map<int, bool> get pendingTextComments => _pendingTextComments;
   Map<int, String?> get selectedEmojisByPostId => _selectedEmojisByPostId;
@@ -241,6 +243,44 @@ class VoiceCommentStateManager {
     _notifyStateChanged();
   }
 
+  void updatePendingProgress(int postId, double progress) {
+    final marker = _pendingCommentMarkers[postId];
+    if (marker == null) return;
+    final clamped = progress.clamp(0.0, 1.0).toDouble();
+    _pendingCommentMarkers[postId] = (
+      relativePosition: marker.relativePosition,
+      profileImageUrlKey: marker.profileImageUrlKey,
+      progress: clamped,
+    );
+    _notifyStateChanged();
+  }
+
+  void handleCommentSaveSuccess(int postId, Comment comment) {
+    final existing = List<Comment>.from(_postComments[postId] ?? const []);
+    existing.add(comment);
+    _postComments[postId] = existing;
+
+    _voiceCommentSavedStates[postId] = true;
+    _voiceCommentActiveStates[postId] = false;
+    _pendingTextComments.remove(postId);
+    _pendingCommentDrafts.remove(postId);
+    _pendingCommentMarkers.remove(postId);
+    _notifyStateChanged();
+  }
+
+  void handleCommentSaveFailure(int postId) {
+    _voiceCommentSavedStates[postId] = false;
+    final marker = _pendingCommentMarkers[postId];
+    if (marker != null) {
+      _pendingCommentMarkers[postId] = (
+        relativePosition: marker.relativePosition,
+        profileImageUrlKey: marker.profileImageUrlKey,
+        progress: null,
+      );
+    }
+    _notifyStateChanged();
+  }
+
   /// 음성/텍스트 댓글을 서버에 저장하는 메서드
   Future<void> saveVoiceComment(int postId, BuildContext context) async {
     final draft = _pendingCommentDrafts[postId];
@@ -307,15 +347,7 @@ class VoiceCommentStateManager {
   }
 
   void _updatePendingProgress(int postId, double progress) {
-    final marker = _pendingCommentMarkers[postId];
-    if (marker == null) return;
-    final clamped = progress.clamp(0.0, 1.0).toDouble();
-    _pendingCommentMarkers[postId] = (
-      relativePosition: marker.relativePosition,
-      profileImageUrlKey: marker.profileImageUrlKey,
-      progress: clamped,
-    );
-    _notifyStateChanged();
+    updatePendingProgress(postId, progress);
   }
 
   /// 댓글을 서버에 저장하는 내부 메서드

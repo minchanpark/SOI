@@ -10,19 +10,14 @@ class FeedPageBuilder extends StatelessWidget {
   final bool isLoadingMore;
   final Map<int, List<Comment>> postComments;
   final Map<int, String?> selectedEmojisByPostId; // postId별 선택된 이모지(부모가 관리)
-  final Map<int, bool> voiceCommentActiveStates;
-  final Map<int, bool> voiceCommentSavedStates;
-  final Map<int, bool> pendingTextComments;
+  final Map<int, PendingApiCommentDraft> pendingCommentDrafts;
   final Map<int, PendingApiCommentMarker> pendingVoiceComments;
   final Function(FeedPostItem) onToggleAudio;
-  final Function(int) onToggleVoiceComment;
-  final Future<void> Function(int, String?, List<double>?, int?)
-  onVoiceCommentCompleted;
   final Future<void> Function(int, String) onTextCommentCompleted;
-  final Function(int) onVoiceCommentDeleted;
   final Function(int, Offset) onProfileImageDragged;
-  final Future<void> Function(int) onSaveRequested;
-  final Function(int) onSaveCompleted;
+  final void Function(int, double) onCommentSaveProgress;
+  final void Function(int, Comment) onCommentSaveSuccess;
+  final void Function(int, Object) onCommentSaveFailure;
   final Future<void> Function(int, FeedPostItem) onDeletePost;
   final Function(int) onPageChanged;
   final VoidCallback onStopAllAudio;
@@ -38,18 +33,14 @@ class FeedPageBuilder extends StatelessWidget {
     required this.isLoadingMore,
     required this.postComments,
     required this.selectedEmojisByPostId,
-    required this.voiceCommentActiveStates,
-    required this.voiceCommentSavedStates,
-    required this.pendingTextComments,
+    required this.pendingCommentDrafts,
     required this.pendingVoiceComments,
     required this.onToggleAudio,
-    required this.onToggleVoiceComment,
-    required this.onVoiceCommentCompleted,
     required this.onTextCommentCompleted,
-    required this.onVoiceCommentDeleted,
     required this.onProfileImageDragged,
-    required this.onSaveRequested,
-    required this.onSaveCompleted,
+    required this.onCommentSaveProgress,
+    required this.onCommentSaveSuccess,
+    required this.onCommentSaveFailure,
     required this.onDeletePost,
     required this.onPageChanged,
     required this.onStopAllAudio,
@@ -89,18 +80,14 @@ class FeedPageBuilder extends StatelessWidget {
           selectedEmoji: selectedEmojisByPostId[post.id],
           onEmojiSelected: (emoji) => onEmojiSelected(post.id, emoji),
           postComments: postComments,
-          voiceCommentActiveStates: voiceCommentActiveStates,
-          voiceCommentSavedStates: voiceCommentSavedStates,
-          pendingTextComments: pendingTextComments,
+          pendingCommentDrafts: pendingCommentDrafts,
           pendingVoiceComments: pendingVoiceComments,
           onToggleAudio: (p) => onToggleAudio(feedItem),
-          onToggleVoiceComment: onToggleVoiceComment,
-          onVoiceCommentCompleted: onVoiceCommentCompleted,
           onTextCommentCompleted: onTextCommentCompleted,
-          onVoiceCommentDeleted: onVoiceCommentDeleted,
           onProfileImageDragged: onProfileImageDragged,
-          onSaveRequested: onSaveRequested,
-          onSaveCompleted: onSaveCompleted,
+          onCommentSaveProgress: onCommentSaveProgress,
+          onCommentSaveSuccess: onCommentSaveSuccess,
+          onCommentSaveFailure: onCommentSaveFailure,
           onDeletePressed: () => onDeletePost(index, feedItem),
           onCommentsReloadRequested: onReloadComments,
         );

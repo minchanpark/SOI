@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// API 기반 텍스트 댓글 입력 위젯
+/// 음성 댓글과 텍스트 댓글 입력 UI를 통합한 위젯
+/// - 음성 댓글 토글 버튼과 텍스트 입력 필드, 전송 버튼을 포함
+/// - 텍스트 입력 시 댓글이 임시 저장되고, 음성 댓글 버튼 클릭 시 음성 댓글 UI로 전환
+/// - 댓글 입력 필드에 포커스가 생기거나 사라질 때 콜백을 통해 부모 위젯에 알림
+/// - 텍스트 댓글이 생성되면 콜백을 통해 부모 위젯에 전달
 ///
-/// Firebase 버전의 VoiceCommentTextWidget과 동일한 디자인을 유지하면서
-/// int 타입의 postId를 사용합니다.
+/// UI 디자인:
+/// - 배경: #161616, 테두리: #66D9D9D, 테두리 두께: 1.2, 모서리 반경: 21.5
+/// - 음성 댓글 버튼: 마이크 아이콘, 크기 36x36, 왼쪽 여백 11
+/// - 텍스트 입력 필드: 힌트 텍스트 "댓글 추가 ....", 폰트 크기 16, 폰트 패밀리 'Pretendard', 폰트 두께 200, 글자 간격 -1.14, 텍스트 색상 흰색
+/// - 전송 버튼: 보내기 아이콘, 크기 17x17, 오른쪽 여백 11, 텍스트 입력 중에는 로딩 인디케이터로 대체
 class ApiVoiceCommentTextWidget extends StatefulWidget {
   final int postId;
   final Function(int) onToggleVoiceComment;

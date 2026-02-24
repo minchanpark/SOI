@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../api/controller/category_controller.dart' as api_category;
 import '../../api/controller/post_controller.dart';
 import '../../api/controller/user_controller.dart';
+import '../../api/models/comment.dart';
 import '../../api/models/post.dart' show PostStatus;
 import 'manager/feed_audio_manager.dart';
 import 'manager/feed_data_manager.dart';
@@ -200,35 +201,6 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     await _feedAudioManager?.toggleAudio(item.post, context);
   }
 
-  /// 음성 댓글 활성화/비활성화 토글
-  void _toggleVoiceComment(int postId) {
-    _voiceCommentStateManager?.toggleVoiceComment(postId);
-  }
-
-  /// 음성 댓글을 완료 처리하는 메소드
-  ///
-  /// Parameters:
-  /// - [postId]: 댓글이 달린 게시물 ID
-  /// - [audioPath]: 녹음된 오디오 파일 경로
-  /// - [waveformData]: 오디오 파형 데이터
-  /// - [duration]: 오디오 길이(초)
-  Future<void> _onVoiceCommentCompleted(
-    int postId,
-    String? audioPath,
-    List<double>? waveformData,
-    int? duration,
-  ) async {
-    if (_userController == null) return;
-    // 음성 댓글이 완료되었음을 상태 매니저에 알림
-    await _voiceCommentStateManager?.onVoiceCommentCompleted(
-      postId,
-      audioPath,
-      waveformData,
-      duration,
-      _userController!,
-    );
-  }
-
   /// 텍스트 댓글 완료 처리
   ///
   /// Parameters:
@@ -243,21 +215,6 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     );
   }
 
-  /// 음성 댓글 삭제 처리
-  /// 서버에 접근하지 않고, 캐시를 지워서 UI에서 제거합니다.
-  void _onVoiceCommentDeleted(int postId) {
-    _voiceCommentStateManager?.onVoiceCommentDeleted(postId);
-  }
-
-  /// 음성 댓글 저장 완료 처리
-  /// 서버에 접근하지 않고, 상태만 업데이트합니다.
-  ///
-  /// Parameters:
-  /// - [postId]: 댓글이 달린 게시물 ID
-  void _onSaveCompleted(int postId) {
-    _voiceCommentStateManager?.onSaveCompleted(postId);
-  }
-
   /// 프로필 이미지 드래그 이벤트 처리
   ///
   /// Parameters:
@@ -265,6 +222,19 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
   /// - [absolutePosition]: 드래그된 프로필 이미지의 절대 위치
   void _onProfileImageDragged(int postId, Offset absolutePosition) {
     _voiceCommentStateManager?.onProfileImageDragged(postId, absolutePosition);
+  }
+
+  void _onCommentSaveProgress(int postId, double progress) {
+    _voiceCommentStateManager?.updatePendingProgress(postId, progress);
+  }
+
+  void _onCommentSaveSuccess(int postId, Comment comment) {
+    _voiceCommentStateManager?.handleCommentSaveSuccess(postId, comment);
+  }
+
+  void _onCommentSaveFailure(int postId, Object error) {
+    debugPrint('댓글 저장 실패(postId: $postId): $error');
+    _voiceCommentStateManager?.handleCommentSaveFailure(postId);
   }
 
   /// 모든 오디오 정지
@@ -403,21 +373,14 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         postComments: _voiceCommentStateManager!.postComments,
         selectedEmojisByPostId:
             _voiceCommentStateManager!.selectedEmojisByPostId,
-        voiceCommentActiveStates:
-            _voiceCommentStateManager!.voiceCommentActiveStates,
-        voiceCommentSavedStates:
-            _voiceCommentStateManager!.voiceCommentSavedStates,
-        pendingTextComments: _voiceCommentStateManager!.pendingTextComments,
+        pendingCommentDrafts: _voiceCommentStateManager!.pendingCommentDrafts,
         pendingVoiceComments: _voiceCommentStateManager!.pendingVoiceComments,
         onToggleAudio: _toggleAudio,
-        onToggleVoiceComment: _toggleVoiceComment,
-        onVoiceCommentCompleted: _onVoiceCommentCompleted,
         onTextCommentCompleted: _onTextCommentCompleted,
-        onVoiceCommentDeleted: _onVoiceCommentDeleted,
         onProfileImageDragged: _onProfileImageDragged,
-        onSaveRequested: (postId) =>
-            _voiceCommentStateManager!.saveVoiceComment(postId, context),
-        onSaveCompleted: _onSaveCompleted,
+        onCommentSaveProgress: _onCommentSaveProgress,
+        onCommentSaveSuccess: _onCommentSaveSuccess,
+        onCommentSaveFailure: _onCommentSaveFailure,
         onDeletePost: _deletePost,
         onPageChanged: (index) => _handlePageChanged(index),
         onStopAllAudio: _stopAllAudio,

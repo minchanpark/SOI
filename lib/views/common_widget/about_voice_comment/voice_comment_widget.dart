@@ -10,9 +10,6 @@ import '../../../api/controller/user_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
 import '../api_photo/tag_pointer.dart';
 
-/// 음성 댓글 전용 위젯
-/// 피드 화면에서 음성 댓글을 녹음하고 재생하는 기능을 제공합니다.
-///
 enum VoiceCommentState {
   idle, // 초기 상태 (녹음 버튼 표시)
   recording, // 녹음 중
@@ -21,6 +18,8 @@ enum VoiceCommentState {
   saved, // 저장 완료 (프로필 이미지 표시)
 }
 
+/// 음성 댓글 위젯
+/// - 음성 댓글 녹음, 재생, 삭제, 프로필 배치 등 모든 관련 UI와 로직을 포함하는 통합 위젯
 class VoiceCommentWidget extends StatefulWidget {
   final bool autoStart; // 자동 녹음 시작 여부
   final Function(String?, List<double>?, int?)?
