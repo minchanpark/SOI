@@ -142,7 +142,7 @@ class _CameraScreenState extends State<CameraScreen>
       }
       if (_isInitialized) {
         // 초기화되면 카메라 세션 재개
-        unawaited(_cameraService.resumeCamera());
+        unawaited(_resumeCameraIfPermitted());
       } else {
         // 아직 초기화되지 않은 경우 초기화 시작
         _cameraInitialization ??= _initializeCameraAsync();
@@ -196,9 +196,8 @@ class _CameraScreenState extends State<CameraScreen>
       if (Platform.isIOS) {
         await Future.delayed(const Duration(milliseconds: 150));
       }
-      // 앱 설정의 권한 상태만 확인하고, 리소스/세션 실패는 조용히 무시합니다.
-      final cameraStatus = await Permission.camera.status;
-      if (!cameraStatus.isGranted) {
+      final hasCameraPermission = await _ensureCameraPermission();
+      if (!hasCameraPermission) {
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -211,6 +210,15 @@ class _CameraScreenState extends State<CameraScreen>
       if (!alreadyActive) {
         // 세션만 우선 활성화하여 화면을 즉시 표시
         await _cameraService.activateSession();
+      }
+
+      if (!_cameraService.isSessionActive) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
       }
 
       if (!mounted) {
@@ -233,14 +241,8 @@ class _CameraScreenState extends State<CameraScreen>
         // 1차 재시도 (Photo Library가 준비될 때까지 대기)
         unawaited(
           Future.delayed(const Duration(milliseconds: 800), () {
-            if (mounted && _firstGalleryImage == null) {
+            if (mounted && _firstGalleryImage == null && !_isLoadingGallery) {
               debugPrint('[Gallery] iOS: Retry #1 (800ms)');
-              // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
-              if (_isLoadingGallery) {
-                setState(() {
-                  _isLoadingGallery = false;
-                });
-              }
               _loadFirstGalleryImage();
             }
           }),
@@ -249,14 +251,8 @@ class _CameraScreenState extends State<CameraScreen>
         // 2차 재시도
         unawaited(
           Future.delayed(const Duration(milliseconds: 2000), () {
-            if (mounted && _firstGalleryImage == null) {
+            if (mounted && _firstGalleryImage == null && !_isLoadingGallery) {
               debugPrint('[Gallery] iOS: Retry #2 (2000ms)');
-              // 로딩 중 플래그를 리셋하여 재시도 가능하게 함
-              if (_isLoadingGallery) {
-                setState(() {
-                  _isLoadingGallery = false;
-                });
-              }
               _loadFirstGalleryImage();
             }
           }),
@@ -457,7 +453,7 @@ class _CameraScreenState extends State<CameraScreen>
     // 앱이 다시 활성화될 때 카메라 세션 복구
     if (state == AppLifecycleState.resumed) {
       if (_isInitialized && widget.isActive && !isTextMode) {
-        _cameraService.resumeCamera();
+        unawaited(_resumeCameraIfPermitted());
 
         // 갤러리 미리보기 새로고침 (다른 앱에서 사진을 찍었을 수 있음)
         _loadFirstGalleryImage();
@@ -523,10 +519,28 @@ class _CameraScreenState extends State<CameraScreen>
     }
 
     if (_isInitialized) {
-      unawaited(_cameraService.resumeCamera());
+      unawaited(_resumeCameraIfPermitted());
     } else {
       _cameraInitialization ??= _initializeCameraAsync();
     }
+  }
+
+  Future<bool> _ensureCameraPermission() async {
+    var status = await Permission.camera.status;
+    if (status.isGranted) {
+      return true;
+    }
+
+    status = await Permission.camera.request();
+    return status.isGranted;
+  }
+
+  Future<void> _resumeCameraIfPermitted() async {
+    final hasPermission = await _ensureCameraPermission();
+    if (!hasPermission) {
+      return;
+    }
+    await _cameraService.resumeCamera();
   }
 
   Widget _buildCancelButton() {

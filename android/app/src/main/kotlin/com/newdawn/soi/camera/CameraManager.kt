@@ -1,6 +1,8 @@
 package com.newdawn.soi.camera
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
 import android.os.Environment
 import android.os.Handler
@@ -205,6 +207,14 @@ class CameraManager(
             pendingBind = true
             return false
         }
+        if (
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) !=
+                PackageManager.PERMISSION_GRANTED
+        ) {
+            isSessionActive = false
+            pendingBind = false
+            return false
+        }
         if (view.width == 0 || view.height == 0) {
             pendingBind = true
             return false
@@ -264,11 +274,17 @@ class CameraManager(
                 .addUseCase(videoCaptureUseCase)
                 .build()
 
-        provider.unbindAll()
-        camera = provider.bindToLifecycle(activity, selector, useCaseGroup)
-        isSessionActive = true
-        pendingBind = false
-        return true
+        return try {
+            provider.unbindAll()
+            camera = provider.bindToLifecycle(activity, selector, useCaseGroup)
+            isSessionActive = true
+            pendingBind = false
+            true
+        } catch (_: SecurityException) {
+            isSessionActive = false
+            pendingBind = false
+            false
+        }
     }
 
     private fun takePicture(result: MethodChannel.Result) {

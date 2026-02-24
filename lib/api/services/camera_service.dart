@@ -330,9 +330,15 @@ class CameraService {
 
       // 재활성화가 필요한 경우에만 실행
       if (needsReactivation) {
-        await _cameraChannel.invokeMethod('resumeCamera');
-        _isSessionActive = true;
-        unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
+        final bool? resumed = await _cameraChannel.invokeMethod<bool>(
+          'resumeCamera',
+        );
+        _isSessionActive = resumed == true;
+        if (_isSessionActive) {
+          unawaited(
+            optimizeCamera(),
+          ); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
+        }
       } else {
         _isSessionActive = true;
         unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
@@ -370,9 +376,10 @@ class CameraService {
       // 네이티브 세션 완전 종료 후 재시작
       await _cameraChannel.invokeMethod('pauseCamera');
       await Future.delayed(Duration(milliseconds: 100));
-      await _cameraChannel.invokeMethod('resumeCamera');
-
-      _isSessionActive = true;
+      final bool? resumed = await _cameraChannel.invokeMethod<bool>(
+        'resumeCamera',
+      );
+      _isSessionActive = resumed == true;
     } catch (e) {
       _isSessionActive = false;
     }
@@ -402,6 +409,7 @@ class CameraService {
 
     try {
       await _cameraChannel.invokeMethod('pauseCamera');
+      _isSessionActive = false;
     } on PlatformException catch (e) {
       if (debugTimings) {
         debugPrint('pauseCamera failed: ${e.code}');
@@ -411,9 +419,13 @@ class CameraService {
 
   Future<void> resumeCamera() async {
     try {
-      await _cameraChannel.invokeMethod('resumeCamera');
-      _isSessionActive = true;
-      unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
+      final bool? resumed = await _cameraChannel.invokeMethod<bool>(
+        'resumeCamera',
+      );
+      _isSessionActive = resumed == true;
+      if (_isSessionActive) {
+        unawaited(optimizeCamera()); // 카메라 최적화 함수를 비동기로 호출하여서 UI 스레드 차단 방지
+      }
     } on PlatformException {
       _isSessionActive = false;
     }
