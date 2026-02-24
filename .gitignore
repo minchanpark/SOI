@@ -47,6 +47,7 @@ app.*.map.json
 # Firebase configuration files (contains sensitive data)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+android/key.properties
 
 /lib/firebase_options.dart
 firebase_options.dart
@@ -81,3 +82,6 @@ amplifytools.xcconfig
 .secret-*
 **.sample
 #amplify-do-not-edit-end
+
+# Google Cloud Service Account credentials
+android/soi-sns-*.json

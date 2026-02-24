@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
-import '../../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../../firebase_logic/controllers/contact_controller.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../api/controller/contact_controller.dart';
+import '../../../../api/controller/user_controller.dart';
+import '../../../../utils/snackbar_utils.dart';
 
 class FriendAddAndSharePage extends StatefulWidget {
   final PageController? pageController;
@@ -20,6 +22,24 @@ class FriendAddAndSharePage extends StatefulWidget {
 }
 
 class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
+  static const String _inviteLink = 'https://soi-sns.web.app';
+
+  String _buildInviteLink(BuildContext context) {
+    final user = Provider.of<UserController>(
+      context,
+      listen: false,
+    ).currentUser;
+    if (user == null) return _inviteLink;
+    return Uri.parse(_inviteLink)
+        .replace(
+          queryParameters: {
+            'refUserId': user.id.toString(),
+            'refNickname': user.userId,
+          },
+        )
+        .toString();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,15 +65,45 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
     }
   }
 
+  Future<void> _shareInviteLink(BuildContext context) async {
+    try {
+      // iPad에서 공유 시트의 위치를 지정하기 위해 필요
+      final box = context.findRenderObject() as RenderBox?;
+      final sharePositionOrigin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+      final link = _buildInviteLink(context);
+
+      await SharePlus.instance.share(
+        ShareParams(
+          text: tr(
+            'register.share_text',
+            context: context,
+            namedArgs: {'link': link},
+          ),
+          subject: tr('register.share_subject', context: context),
+          sharePositionOrigin: sharePositionOrigin,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      SnackBarUtils.showSnackBar(
+        context,
+        tr(
+          'register.share_failed_with_reason',
+          context: context,
+          namedArgs: {'error': e.toString()},
+        ),
+      );
+      debugPrint("링크 공유 실패: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ContactController, AuthController>(
-      builder: (context, contactController, authController, _) {
+    return Consumer<ContactController>(
+      builder: (context, contactController, _) {
         final bool isContactLoading = contactController.isLoading;
-        final bool inviteLoading = authController.isInviteLinkLoading;
-        final String? inviteLink = authController.pendingInviteLink;
-        final bool canShareInvite =
-            !inviteLoading && inviteLink != null && inviteLink.isNotEmpty;
 
         return Stack(
           children: [
@@ -70,29 +120,15 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                 icon: Icon(Icons.arrow_back_ios, color: Colors.white),
               ),
             ),
-            Positioned(
-              top: 60.h,
-              right: 20.w,
-              child: TextButton(
-                onPressed: widget.onSkip,
-                child: Text(
-                  '건너뛰기 >',
-                  style: TextStyle(
-                    color: const Color(0xFFCBCBCB),
-                    fontSize: 16,
-                    fontFamily: GoogleFonts.inter().fontFamily,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+
             Align(
               alignment: Alignment.center,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    '공유 링크를 통해 친구를 추가해 보세요.',
+                    tr('register.friend_share_title', context: context),
                     style: TextStyle(
                       color: const Color(0xFFF8F8F8),
                       fontSize: 18,
@@ -143,14 +179,19 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                               height: 22.5.h,
                             ),
                           SizedBox(width: 11.5.w),
-                          Text(
-                            '연락처 동기화',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                tr('register.contact_sync', context: context),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16.sp,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -159,59 +200,52 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
                   ),
 
                   SizedBox(height: 27.h),
-                  ElevatedButton(
-                    onPressed: canShareInvite
-                        ? () => _shareInviteLink(authController)
-                        : null,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(
-                        Color(0xFF303030),
-                      ),
-                      padding: WidgetStateProperty.all(EdgeInsets.zero),
-                      shape: WidgetStateProperty.all(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(33.31),
+                  Builder(
+                    builder: (buttonContext) => ElevatedButton(
+                      onPressed: () => _shareInviteLink(buttonContext),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(
+                          Color(0xFF303030),
+                        ),
+                        padding: WidgetStateProperty.all(EdgeInsets.zero),
+                        shape: WidgetStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(33.31),
+                          ),
+                        ),
+                        overlayColor: WidgetStateProperty.all(
+                          Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
-                      overlayColor: WidgetStateProperty.all(
-                        Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: SizedBox(
-                      width: 185.w,
-                      height: 44,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (inviteLoading)
-                            SizedBox(
-                              width: 20.w,
-                              height: 20.h,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          else
+                      child: SizedBox(
+                        width: 185.w,
+                        height: 44,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
                             Image.asset(
                               'assets/icon_share.png',
                               width: 23.w,
                               height: 23.h,
                             ),
-                          SizedBox(width: 11.5.w),
-                          Text(
-                            '친구 링크 공유',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w600,
+                            SizedBox(width: 11.5.w),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  tr('register.share_link', context: context),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.sp,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -222,19 +256,5 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
         );
       },
     );
-  }
-
-  Future<void> _shareInviteLink(AuthController authController) async {
-    try {
-      await authController.sharePreparedInviteLink(
-        originContext: context,
-        message: 'SOI에서 함께 친구가 되어볼까요?',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('링크를 공유할 수 없습니다: $e')));
-    }
   }
 }

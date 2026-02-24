@@ -1,178 +1,332 @@
-/// 미디어 API 서비스
-/// APIApi를 래핑하여 Flutter에서 사용하기 쉽게 만든 서비스
-library;
-
-import 'dart:developer' as developer;
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:soi_api_client/api.dart' as api;
-import '../common/api_client.dart';
-import '../common/api_result.dart';
-import '../common/api_exception.dart';
+import 'package:soi_api_client/api.dart';
 
+import '../api_client.dart';
+import '../api_exception.dart';
+
+/// 미디어 타입
+///
+/// 업로드할 파일의 미디어 타입입니다.
+enum MediaType {
+  /// 이미지 파일
+  image('IMAGE'),
+
+  /// 오디오 파일
+  audio('AUDIO'),
+
+  /// 비디오 파일
+  video('VIDEO');
+
+  final String value;
+  const MediaType(this.value);
+}
+
+/// 미디어 사용 용도
+///
+/// 미디어 파일의 사용 용도입니다.
+/// 서버 API 스펙: USER_PROFILE, CATEGORY_PROFILE, POST
+enum MediaUsageType {
+  /// 사용자 프로필 이미지
+  userProfile('USER_PROFILE'),
+
+  /// 카테고리 프로필 이미지
+  categoryProfile('CATEGORY_PROFILE'),
+
+  /// 댓글 오디오를 넣을 때 사용
+  comment('COMMENT'),
+
+  /// 게시물 관련 미디어
+  post('POST');
+
+  final String value;
+  const MediaUsageType(this.value);
+}
+
+/// 미디어 관련 API 래퍼 서비스
+///
+/// 미디어 업로드, Presigned URL 발급 등 미디어 관련 기능을 제공합니다.
+/// Provider를 통해 주입받아 사용합니다.
+///
+/// 사용 예시:
+/// ```dart
+/// final mediaService = Provider.of<MediaService>(context, listen: false);
+///
+/// // Presigned URL 발급
+/// final urls = await mediaService.getPresignedUrls(['image1.jpg', 'audio1.mp3']);
+///
+/// // 이미지 업로드
+/// final keys = await mediaService.uploadImage(
+///   file: imageFile,
+///   userId: 1,
+///   refId: 1,
+/// );
+/// ```
 class MediaService {
-  late final api.APIApi _mediaApi;
+  final APIApi _mediaApi;
 
-  MediaService() {
-    _mediaApi = api.APIApi(SoiApiClient().client);
-  }
+  MediaService({APIApi? mediaApi})
+    : _mediaApi = mediaApi ?? SoiApiClient.instance.mediaApi;
 
-  /// S3 Presigned URL 요청 (다중 키 지원)
+  // ============================================
+  // Presigned URL
+  // ============================================
+
+  /// Presigned URL 발급
   ///
-  /// [s3Keys] DB에 저장된 S3 key 리스트
-  /// Returns: 1시간 유효한 접근 URL 리스트
-  Future<ApiResult<List<String>>> getPresignedUrls(List<String> s3Keys) async {
+  /// S3에 저장된 파일에 접근할 수 있는 1시간 유효한 URL을 발급받습니다.
+  ///
+  /// Parameters:
+  /// - [keys]: S3 파일 키 목록
+  ///
+  /// Returns: Presigned URL 목록 (List<String>)
+  ///
+  /// Throws:
+  /// - [BadRequestException]: 잘못된 키 형식
+  /// - [NotFoundException]: 파일을 찾을 수 없음
+  Future<List<String>> getPresignedUrls(List<String> keys) async {
     try {
-      developer.log(
-        'Presigned URL 요청: ${s3Keys.length}개',
-        name: 'MediaService',
-      );
+      final response = await _mediaApi.getPresignedUrl(keys);
 
-      final response = await _mediaApi.getPresignedUrl(s3Keys);
-
-      if (response?.data == null) {
-        return Failure(ApiException.serverError('Presigned URL 요청에 실패했습니다'));
+      if (response == null) {
+        return [];
       }
 
-      final urls = response!.data;
-      developer.log(
-        'Presigned URL 요청 성공: ${urls.length}개',
-        name: 'MediaService',
-      );
-      return Success(urls);
-    } on api.ApiException catch (e) {
-      developer.log('Presigned URL 요청 실패: ${e.message}', name: 'MediaService');
-      return Failure(ApiException.fromStatusCode(e.code, e.message));
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? 'URL 발급 실패');
+      }
+
+      return response.data;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
     } catch (e) {
-      developer.log('Presigned URL 요청 오류: $e', name: 'MediaService');
-      return Failure(ApiException.networkError());
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: 'URL 발급 실패: $e', originalException: e);
     }
   }
 
-  /// S3 Presigned URL 요청 (단일 키)
-  ///
-  /// [s3Key] DB에 저장된 S3 key
-  /// Returns: 1시간 유효한 접근 URL
-  Future<ApiResult<String>> getPresignedUrl(String s3Key) async {
-    final result = await getPresignedUrls([s3Key]);
-
-    return result.when(
-      success: (urls) {
-        if (urls.isEmpty) {
-          return Failure(ApiException.serverError('URL을 가져올 수 없습니다'));
-        }
-        return Success(urls.first);
-      },
-      failure: (exception) => Failure(exception),
-    );
+  /// 단일 파일 Presigned URL 발급 (편의 메서드)
+  Future<String?> getPresignedUrl(String key) async {
+    final urls = await getPresignedUrls([key]);
+    return urls.isNotEmpty ? urls.first : null;
   }
 
-  /// 미디어 파일 업로드 (단일 파일)
+  // ============================================
+  // 미디어 업로드
+  // ============================================
+
+  /// 미디어 파일 업로드
   ///
-  /// [file] 업로드할 파일
-  /// [types] 파일 타입 리스트
-  /// [id] 사용자 또는 엔티티 ID
-  /// Returns: 업로드된 파일의 S3 key 리스트
-  Future<ApiResult<List<String>>> uploadMedia({
-    required File file,
-    required List<String> types,
-    required int id,
+  /// 파일을 S3에 업로드합니다.
+  ///
+  /// Parameters:
+  /// - [files]: 업로드할 파일 목록 (MultipartFile)
+  /// - [types]: 각 파일의 미디어 타입 목록
+  /// - [usageTypes]: 각 파일의 사용 용도 목록
+  /// - [userId]: 업로드 사용자 ID
+  /// - [refId]: 참조 ID (게시물 ID 등)
+  ///
+  /// Returns: 업로드된 파일의 S3 키 목록 (List<String>)
+  Future<List<String>> uploadMedia({
+    required List<http.MultipartFile> files,
+    required List<MediaType> types,
+    required List<MediaUsageType> usageTypes,
+    required int userId,
+    required int refId,
+    required int usageCount,
   }) async {
     try {
-      developer.log('미디어 업로드: ${file.path}', name: 'MediaService');
+      final typeStrings = types.map((t) => t.value).toList();
+      final usageTypeStrings = usageTypes.map((t) => t.value).toList();
 
-      // File을 MultipartFile로 변환
-      final multipartFile = await http.MultipartFile.fromPath(
-        'files', // OpenAPI 스펙에서 요구하는 필드명
-        file.path,
-      );
-
-      // API는 List<MultipartFile>을 받으므로 리스트로 전달
-      final response = await _mediaApi.uploadMedia(types, id, [multipartFile]);
-
-      if (response?.data == null) {
-        return Failure(ApiException.serverError('미디어 업로드에 실패했습니다'));
-      }
-
-      final s3Keys = response!.data;
-      developer.log('미디어 업로드 성공: ${s3Keys.length}개', name: 'MediaService');
-      return Success(s3Keys);
-    } on api.ApiException catch (e) {
-      developer.log('미디어 업로드 실패: ${e.message}', name: 'MediaService');
-      return Failure(ApiException.fromStatusCode(e.code, e.message));
-    } catch (e) {
-      developer.log('미디어 업로드 오류: $e', name: 'MediaService');
-      return Failure(ApiException.networkError());
-    }
-  }
-
-  /// 단일 파일 업로드 헬퍼 (단일 S3 key 반환)
-  ///
-  /// [file] 업로드할 파일
-  /// [type] 파일 타입
-  /// [id] 사용자 또는 엔티티 ID
-  Future<ApiResult<String>> uploadSingleMedia({
-    required File file,
-    required String type,
-    required int id,
-  }) async {
-    final result = await uploadMedia(file: file, types: [type], id: id);
-
-    return result.when(
-      success: (keys) {
-        if (keys.isEmpty) {
-          return Failure(ApiException.serverError('업로드된 파일이 없습니다'));
-        }
-        return Success(keys.first);
-      },
-      failure: (exception) => Failure(exception),
-    );
-  }
-
-  /// 다중 파일 업로드 (한번에 업로드)
-  ///
-  /// [files] 업로드할 파일 리스트
-  /// [types] 각 파일의 타입 리스트
-  /// [id] 사용자 또는 엔티티 ID
-  /// Returns: 모든 파일의 S3 key 리스트
-  Future<ApiResult<List<String>>> uploadMultipleMedia({
-    required List<File> files,
-    required List<String> types,
-    required int id,
-  }) async {
-    try {
-      if (files.length != types.length) {
-        return Failure(ApiException.badRequest('파일과 타입의 개수가 일치하지 않습니다'));
-      }
-
-      developer.log('다중 미디어 업로드: ${files.length}개', name: 'MediaService');
-
-      // 모든 파일을 MultipartFile로 변환
-      final multipartFiles = <http.MultipartFile>[];
+      debugPrint('[MediaService] uploadMedia 호출:');
+      debugPrint('  - types: $typeStrings');
+      debugPrint('  - usageTypes: $usageTypeStrings');
+      debugPrint('  - userId: $userId');
+      debugPrint('  - refId: $refId');
+      debugPrint('  - files: ${files.length}개');
       for (final file in files) {
-        final multipartFile = await http.MultipartFile.fromPath(
-          'files', // OpenAPI 스펙에서 요구하는 필드명
-          file.path,
-        );
-        multipartFiles.add(multipartFile);
+        debugPrint('    - filename: ${file.filename}, length: ${file.length}');
       }
 
-      // 한번에 모든 파일 업로드
-      final response = await _mediaApi.uploadMedia(types, id, multipartFiles);
+      final response = await _mediaApi.uploadMedia(
+        typeStrings,
+        usageTypeStrings,
+        userId,
+        refId,
+        usageCount,
+        files,
+      );
 
-      if (response?.data == null) {
-        return Failure(ApiException.serverError('다중 미디어 업로드에 실패했습니다'));
+      if (response == null) {
+        throw const DataValidationException(message: '업로드 응답이 없습니다.');
       }
 
-      final s3Keys = response!.data;
-      developer.log('다중 미디어 업로드 성공: ${s3Keys.length}개', name: 'MediaService');
-      return Success(s3Keys);
-    } on api.ApiException catch (e) {
-      developer.log('다중 미디어 업로드 실패: ${e.message}', name: 'MediaService');
-      return Failure(ApiException.fromStatusCode(e.code, e.message));
+      if (response.success != true) {
+        throw SoiApiException(message: response.message ?? '업로드 실패');
+      }
+
+      return response.data;
+    } on ApiException catch (e) {
+      throw _handleApiException(e);
+    } on SocketException catch (e) {
+      throw NetworkException(originalException: e);
     } catch (e) {
-      developer.log('다중 미디어 업로드 오류: $e', name: 'MediaService');
-      return Failure(ApiException.networkError());
+      if (e is SoiApiException) rethrow;
+      throw SoiApiException(message: '파일 업로드 실패: $e', originalException: e);
+    }
+  }
+
+  /// 이미지 파일 업로드 (편의 메서드)
+  ///
+  /// 게시물용 이미지를 업로드합니다.
+  /*Future<String?> uploadPostImage({
+    required http.MultipartFile file,
+    required int userId,
+    required int refId,
+  }) async {
+    final keys = await uploadMedia(
+      files: [file],
+      types: [MediaType.image],
+      usageTypes: [MediaUsageType.post],
+      userId: userId,
+      refId: refId,
+    );
+    return keys.isNotEmpty ? keys.first : null;
+  }*/
+
+  /// 오디오 파일 업로드 (편의 메서드)
+  ///
+  /// 게시물용 음성메모를 업로드합니다.
+  /* Future<String?> uploadPostAudio({
+    required http.MultipartFile file,
+    required int userId,
+    required int refId,
+  }) async {
+    final keys = await uploadMedia(
+      files: [file],
+      types: [MediaType.audio],
+      usageTypes: [MediaUsageType.post],
+      userId: userId,
+      refId: refId,
+    );
+    return keys.isNotEmpty ? keys.first : null;
+  }*/
+
+  /// 프로필 이미지 업로드 (편의 메서드)
+  Future<String?> uploadProfileImage({
+    required http.MultipartFile file,
+    required int userId,
+  }) async {
+    final keys = await uploadMedia(
+      files: [file],
+      types: [MediaType.image],
+      usageTypes: [MediaUsageType.userProfile],
+      userId: userId,
+      refId: userId, // 프로필은 userId를 refId로 사용
+      usageCount: 1,
+    );
+    return keys.isNotEmpty ? keys.first : null;
+  }
+
+  /// 댓글 오디오 업로드 (편의 메서드)
+  ///
+  /// 음성 댓글을 업로드합니다.
+  Future<String?> uploadCommentAudio({
+    required http.MultipartFile file,
+    required int userId,
+    required int postId,
+  }) async {
+    final keys = await uploadMedia(
+      files: [file],
+      types: [MediaType.audio],
+      usageTypes: [MediaUsageType.post],
+      userId: userId,
+      refId: postId,
+      usageCount: 1,
+    );
+    return keys.isNotEmpty ? keys.first : null;
+  }
+
+  // ============================================
+  // 파일 -> MultipartFile 변환 헬퍼
+  // ============================================
+
+  /// File을 MultipartFile로 변환
+  ///
+  /// dart:io의 File을 http 패키지의 MultipartFile로 변환합니다.
+  ///
+  /// Parameters:
+  /// - [file]: 변환할 파일
+  /// - [fieldName]: 폼 필드 이름 (기본값: 'files')
+  static Future<http.MultipartFile> fileToMultipart(
+    File file, {
+    String fieldName = 'files',
+  }) async {
+    return http.MultipartFile.fromPath(fieldName, file.path);
+  }
+
+  /// 여러 File을 MultipartFile 목록으로 변환
+  static Future<List<http.MultipartFile>> filesToMultipart(
+    List<File> files, {
+    String fieldName = 'files',
+  }) async {
+    final multipartFiles = <http.MultipartFile>[];
+    for (final file in files) {
+      multipartFiles.add(await fileToMultipart(file, fieldName: fieldName));
+    }
+    return multipartFiles;
+  }
+
+  // ============================================
+  // 에러 핸들링 헬퍼
+  // ============================================
+
+  SoiApiException _handleApiException(ApiException e) {
+    debugPrint('🔴 API Error [${e.code}]: ${e.message}');
+
+    switch (e.code) {
+      case 400:
+        return BadRequestException(
+          message: e.message ?? '잘못된 요청입니다.',
+          originalException: e,
+        );
+      case 401:
+        return AuthException(
+          message: e.message ?? '인증이 필요합니다.',
+          originalException: e,
+        );
+      case 403:
+        return ForbiddenException(
+          message: e.message ?? '접근 권한이 없습니다.',
+          originalException: e,
+        );
+      case 404:
+        return NotFoundException(
+          message: e.message ?? '파일을 찾을 수 없습니다.',
+          originalException: e,
+        );
+      case 413:
+        return BadRequestException(
+          message: '파일 크기가 너무 큽니다.',
+          originalException: e,
+        );
+      case >= 500:
+        return ServerException(
+          statusCode: e.code,
+          message: e.message ?? '서버 오류가 발생했습니다.',
+          originalException: e,
+        );
+      default:
+        return SoiApiException(
+          statusCode: e.code,
+          message: e.message ?? '알 수 없는 오류가 발생했습니다.',
+          originalException: e,
+        );
     }
   }
 }

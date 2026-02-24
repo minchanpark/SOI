@@ -1,17 +1,19 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../firebase_logic/controllers/auth_controller.dart';
-import '../../firebase_logic/controllers/photo_controller.dart';
-import '../../firebase_logic/controllers/audio_controller.dart';
-import '../../firebase_logic/controllers/comment_audio_controller.dart';
-import '../../firebase_logic/models/photo_data_model.dart';
-import '../common_widget/abput_photo/photo_card_widget_common.dart';
+
+import '../../api/controller/category_controller.dart' as api_category;
+import '../../api/controller/post_controller.dart';
+import '../../api/controller/user_controller.dart';
+import '../../api/models/comment.dart';
+import '../../api/models/post.dart' show PostStatus;
+import 'manager/feed_audio_manager.dart';
 import 'manager/feed_data_manager.dart';
 import 'manager/voice_comment_state_manager.dart';
-import 'manager/profile_cache_manager.dart';
-import 'manager/feed_audio_manager.dart';
+import 'widgets/feed_page_builder.dart';
 
 class FeedHomeScreen extends StatefulWidget {
   const FeedHomeScreen({super.key});
@@ -21,296 +23,351 @@ class FeedHomeScreen extends StatefulWidget {
 }
 
 class _FeedHomeScreenState extends State<FeedHomeScreen> {
-  // 매니저 인스턴스들 - nullable로 변경하여 초기화 에러 방지
+  // FeedDataManager는 전역 Provider에서 가져와 캐시를 유지합니다.
+  // FeedDataManager를 Provider로 만들어서, 여러 화면에서 동일한 인스턴스를 사용하도록 합니다.
   FeedDataManager? _feedDataManager;
+
+  // 오디오 및 음성 댓글 매니저
   VoiceCommentStateManager? _voiceCommentStateManager;
-  ProfileCacheManager? _profileCacheManager;
+
+  // 오디오 매니저
   FeedAudioManager? _feedAudioManager;
 
-  // 컨트롤러 참조
-  AuthController? _authController;
-  CommentAudioController? _commentAudioController;
+  // 사용자 컨트롤러 및 프로필 이미지 키 추적
+  UserController? _userController;
+  VoidCallback? _userControllerListener;
+  String? _lastProfileImageKey;
+  final Set<int> _deletingPostIds = <int>{};
 
   @override
   void initState() {
     super.initState();
 
-    // 매니저 초기화
-    _feedDataManager = FeedDataManager();
     _voiceCommentStateManager = VoiceCommentStateManager();
-    _profileCacheManager = ProfileCacheManager();
+
+    // 오디오 매니저 초기화
     _feedAudioManager = FeedAudioManager();
 
-    // 상태 변경 콜백 설정
-    _feedDataManager?.setOnStateChanged(() {
-      if (mounted) setState(() {});
-    });
-    _voiceCommentStateManager?.setOnStateChanged(() {
-      if (mounted) setState(() {});
-    });
-    _profileCacheManager?.setOnStateChanged(() {
-      if (mounted) setState(() {});
-    });
-
-    // 사진 로드 완료 시 프로필/댓글 구독 콜백 설정
-    _feedDataManager?.setOnPhotosLoaded((newPhotos) {
-      final currentUserId = _authController?.getUserId ?? '';
-      for (Map<String, dynamic> photoData in newPhotos) {
-        final MediaDataModel photo = photoData['photo'] as MediaDataModel;
-        _profileCacheManager?.loadUserProfileForPhoto(photo.userID, context);
-        _voiceCommentStateManager?.subscribeToVoiceCommentsForPhoto(
-          photo.id,
-          currentUserId,
-        );
-      }
-    });
+    _voiceCommentStateManager?.setOnStateChanged(
+      () => mounted ? setState(() {}) : null,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authController = Provider.of<AuthController>(context, listen: false);
-      _authController!.addListener(_onAuthControllerChanged);
+      // FeedDataManager 인스턴스 가져오기
+      _feedDataManager = Provider.of<FeedDataManager>(context, listen: false);
 
-      // CommentAudioController 초기화
-      _commentAudioController = Provider.of<CommentAudioController>(
+      // _feedDataManager instance를 가지고 온 후에,
+      // 각 게시물에 대한 댓글을 로드하는 콜백 설정
+      _feedDataManager?.setOnPostsLoaded((items) {
+        if (!mounted) return;
+        for (final item in items) {
+          unawaited(
+            // 각 게시물에 대한 댓글 로드
+            _voiceCommentStateManager?.loadCommentsForPost(
+              item.post.id,
+              context,
+            ),
+          );
+        }
+      });
+
+      _userController = Provider.of<UserController>(context, listen: false);
+      _lastProfileImageKey = _userController?.currentUser?.profileImageUrlKey;
+      _userControllerListener ??= _handleUserProfileChanged;
+      _userController?.addListener(_userControllerListener!);
+
+      // PostController 구독 설정
+      final postController = Provider.of<PostController>(
         context,
         listen: false,
       );
 
-      // 초기 데이터 로드
+      // FeedDataManager에 PostController 구독 시작
+      _feedDataManager?.listenToPostController(postController, context);
+
       _loadInitialData();
     });
-  }
-
-  /// 초기 데이터 로드 및 프로필/댓글 구독
-  Future<void> _loadInitialData() async {
-    final currentUserId = _authController?.getUserId ?? '';
-    if (currentUserId.isNotEmpty) {
-      await _loadCurrentUserProfile(_authController!, currentUserId);
-    }
-
-    await _feedDataManager?.loadUserCategoriesAndPhotos(context);
-  }
-
-  /// 현재 사용자 프로필 로드
-  Future<void> _loadCurrentUserProfile(
-    AuthController authController,
-    String currentUserId,
-  ) async {
-    if (_profileCacheManager?.userProfileImages.containsKey(currentUserId) !=
-        true) {
-      try {
-        final currentUserProfileImage = await authController
-            .getUserProfileImageUrlWithCache(currentUserId);
-        _profileCacheManager?.userProfileImages[currentUserId] =
-            currentUserProfileImage;
-        _profileCacheManager?.setOnStateChanged(() {
-          if (mounted) setState(() {});
-        });
-      } catch (e) {
-        debugPrint('[ERROR] 현재 사용자 프로필 이미지 로드 실패: $e');
-      }
-    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _authController ??= Provider.of<AuthController>(context, listen: false);
-    _commentAudioController ??= Provider.of<CommentAudioController>(
-      context,
-      listen: false,
-    );
+    // IndexedStack 전환 시 TickerMode 변경을 의존성으로 추적해
+    // 숨김 탭에서 누적된 posts-changed 갱신을 재개합니다.
+    TickerMode.of(context);
+    _feedDataManager ??= Provider.of<FeedDataManager>(context, listen: false);
+    _feedDataManager?.refreshIfPendingVisible();
+  }
+
+  /// 초기 데이터 로드
+  Future<void> _loadInitialData() async {
+    if (_userController == null) return;
+    // 피드 진입마다 매번 강제 리로드하지 않고, 캐시가 있으면 재사용합니다.
+    await _feedDataManager?.loadUserCategoriesAndPhotos(context);
   }
 
   @override
   void dispose() {
-    _authController?.removeListener(_onAuthControllerChanged);
+    if (_userControllerListener != null) {
+      _userController?.removeListener(_userControllerListener!);
+    }
+    // FeedDataManager는 전역 Provider가 소유하므로 여기서 dispose 하면 캐시가 날아가거나
+    // "disposed object" 에러가 날 수 있습니다. 화면이 사라질 때는 리스너만 해제합니다.
+    _feedDataManager?.detachFromPostController();
 
-    // CommentAudioController 정리
-    _commentAudioController?.stopAllComments();
-
-    // 매니저들 정리
-    _feedDataManager?.dispose();
     _voiceCommentStateManager?.dispose();
-    _profileCacheManager?.dispose();
-
-    PaintingBinding.instance.imageCache.clear();
 
     super.dispose();
   }
 
-  /// AuthController 변경 감지 시 프로필 이미지 캐시 업데이트
-  void _onAuthControllerChanged() async {
-    final currentUser = _authController?.currentUser;
-    if (_authController != null && currentUser != null && mounted) {
-      // ProfileCacheManager를 통해 현재 사용자 프로필 로드
-      await _profileCacheManager?.loadCurrentUserProfile(
-        _authController!,
-        currentUser.uid,
-      );
-    }
-  }
-
-  /// 특정 사용자의 프로필 이미지 캐시 강제 리프레시
-  Future<void> refreshUserProfileImage(String userId) async {
-    final authController = Provider.of<AuthController>(context, listen: false);
+  /// 사진 게시물 삭제 처리
+  ///
+  /// Parameters:
+  /// - [index]: 삭제할 게시물의 인덱스
+  /// - [item]: 삭제할 게시물 아이템
+  Future<void> _deletePost(int index, FeedPostItem item) async {
+    final postId = item.post.id;
+    if (_deletingPostIds.contains(postId)) return;
+    _deletingPostIds.add(postId);
     try {
-      if (_profileCacheManager?.loadingStates != null) {
-        _profileCacheManager!.loadingStates[userId] = true;
-      }
-      _profileCacheManager?.setOnStateChanged(() {
-        if (mounted) setState(() {});
-      });
-      final profileImageUrl = await authController
-          .getUserProfileImageUrlWithCache(userId);
-      if (_profileCacheManager?.userProfileImages != null) {
-        _profileCacheManager!.userProfileImages[userId] = profileImageUrl;
-      }
-      if (_profileCacheManager?.loadingStates != null) {
-        _profileCacheManager!.loadingStates[userId] = false;
-      }
-      _profileCacheManager?.setOnStateChanged(() {
-        if (mounted) setState(() {});
-      });
-    } catch (e) {
-      if (_profileCacheManager?.loadingStates != null) {
-        _profileCacheManager!.loadingStates[userId] = false;
-      }
-      _profileCacheManager?.setOnStateChanged(() {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  /// 더 많은 사진 로드 (무한 스크롤링) - delegate
-  Future<void> _loadMorePhotos() async {
-    await _feedDataManager?.loadMorePhotos(context);
-
-    // 새로 로드된 사진들의 프로필 정보 및 음성 댓글 구독
-    final allPhotos = _feedDataManager?.allPhotos;
-    for (Map<String, dynamic> photoData in allPhotos!) {
-      final MediaDataModel photo = photoData['photo'] as MediaDataModel;
-      _loadUserProfileForPhoto(photo.userID);
-      _voiceCommentStateManager?.subscribeToVoiceCommentsForPhoto(
-        photo.id,
-        _authController?.getUserId ?? '',
+      final postController = Provider.of<PostController>(
+        context,
+        listen: false,
       );
+      final categoryController = Provider.of<api_category.CategoryController>(
+        context,
+        listen: false,
+      );
+      final userId = _userController?.currentUser?.id;
+      final success = await postController.setPostStatus(
+        postId: postId,
+        postStatus: PostStatus.deleted,
+      );
+      if (!mounted) return;
+      if (success) {
+        setState(() {
+          _feedDataManager?.removePhoto(
+            index,
+          ); // UI에서 즉시 제거 --> 서버에 접근하는 것이 아니라, UI단에서 제거하는 것.
+          _voiceCommentStateManager?.postComments.remove(
+            item.post.id,
+          ); // 댓글도 제거
+          _voiceCommentStateManager?.pendingVoiceComments.remove(
+            item.post.id,
+          ); // 대기 중인 댓글도 제거
+          _voiceCommentStateManager?.voiceCommentActiveStates.remove(
+            item.post.id,
+          ); // 댓글 활성 상태도 제거
+          _voiceCommentStateManager?.voiceCommentSavedStates.remove(
+            item.post.id,
+          ); // 댓글 저장 상태도 제거
+        });
+        if (userId != null) {
+          // 카테고리도 강제 새로고침 --> 댓글 수정을 반영하기 위함
+          unawaited(
+            categoryController.loadCategories(userId, forceReload: true),
+          );
+        }
+        _showSnackBar('사진이 삭제되었습니다.');
+      } else {
+        _showSnackBar('사진 삭제에 실패했습니다.', isError: true);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('사진 삭제 중 오류가 발생했습니다.', isError: true);
+    } finally {
+      _deletingPostIds.remove(postId);
     }
   }
 
-  /// 특정 사용자의 프로필 정보를 로드하는 메서드
-  Future<void> _loadUserProfileForPhoto(String userId) async {
-    // ProfileCacheManager를 통해 로드
-    await _profileCacheManager?.loadUserProfileForPhoto(userId, context);
-  }
-
-  /// 오디오 재생/일시정지 토글
-  Future<void> _toggleAudio(MediaDataModel photo) async {
-    await _feedAudioManager?.toggleAudio(photo, context);
-  }
-
-  /// 음성 댓글 토글 - delegate to manager
-  void _toggleVoiceComment(String photoId) {
-    debugPrint('🟠 [FeedHome] 음성 댓글 토글 시작: photoId=$photoId');
-    _voiceCommentStateManager?.toggleVoiceComment(photoId);
-    // 명시적으로 setState 호출하여 UI 업데이트 보장
-    if (mounted) {
-      setState(() {
-        debugPrint('🟠 [FeedHome] setState 호출 완료');
-      });
+  /// 페이지 변경 처리 (무한 스크롤)
+  void _handlePageChanged(int index) {
+    final totalPosts = _feedDataManager?.visiblePosts.length ?? 0;
+    if (totalPosts == 0) {
+      return;
+    }
+    // 수정: 현재 5개를 보여줄 때 4번째(인덱스 3)에서 다음 5개를 미리 로드합니다.
+    // (일반화: 끝에서 2번째에 도달하면 다음 청크를 요청)
+    if (index >= totalPosts - 2 &&
+        (_feedDataManager?.hasMoreData ?? false) &&
+        !(_feedDataManager?.isLoadingMore ?? false)) {
+      // 다음으로 가지고 올 게시물을 추가로 로드 --> 네트워크 요청이 아니라 UI 노출만 증가시킴
+      unawaited(_feedDataManager?.loadMorePhotos(context));
     }
   }
 
-  /// 음성 댓글 녹음 완료 콜백 (임시 저장) - delegate to manager
-  Future<void> _onVoiceCommentCompleted(
-    String photoId,
-    String? audioPath,
-    List<double>? waveformData,
-    int? duration,
+  /// 음성 재생 토글
+  Future<void> _toggleAudio(FeedPostItem item) async {
+    await _feedAudioManager?.toggleAudio(item.post, context);
+  }
+
+  /// 텍스트 댓글 완료 처리
+  ///
+  /// Parameters:
+  /// - [postId]: 댓글이 달린 게시물 ID
+  /// - [text]: 작성된 텍스트 댓글 내용
+  Future<void> _onTextCommentCompleted(int postId, String text) async {
+    if (_userController == null) return;
+    await _voiceCommentStateManager?.onTextCommentCompleted(
+      postId,
+      text,
+      _userController!,
+    );
+  }
+
+  Future<void> _onAudioCommentCompleted(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
   ) async {
-    final currentUserId = _authController?.getUserId;
-    final profileImageUrl = (currentUserId != null && currentUserId.isNotEmpty)
-        ? _profileCacheManager?.userProfileImages[currentUserId]
-        : null;
-
+    if (_userController == null) return;
     await _voiceCommentStateManager?.onVoiceCommentCompleted(
-      photoId,
+      postId,
       audioPath,
       waveformData,
-      duration,
-      recorderUserId: currentUserId,
-      profileImageUrl: profileImageUrl,
+      durationMs,
+      _userController!,
     );
   }
 
-  /// 텍스트 댓글 완료 콜백 (임시 저장) - delegate to manager
-  Future<void> _onTextCommentCompleted(String photoId, String text) async {
-    debugPrint('🟢 [FeedHome] 텍스트 댓글 완료: photoId=$photoId, text=$text');
-    final currentUserId = _authController?.getUserId;
-    final profileImageUrl = (currentUserId != null && currentUserId.isNotEmpty)
-        ? _profileCacheManager?.userProfileImages[currentUserId]
-        : null;
-
-    await _voiceCommentStateManager?.onTextCommentCompleted(
-      photoId,
-      text,
-      recorderUserId: currentUserId,
-      profileImageUrl: profileImageUrl,
+  Future<void> _onMediaCommentCompleted(
+    int postId,
+    String localFilePath,
+    bool isVideo,
+  ) async {
+    if (_userController == null) return;
+    await _voiceCommentStateManager?.onMediaCommentCompleted(
+      postId,
+      localFilePath,
+      isVideo,
+      _userController!,
     );
-    debugPrint('🟢 [FeedHome] StateManager.onTextCommentCompleted 완료');
   }
 
-  /// 실제 음성 댓글 저장 (파형 클릭 시 호출) - delegate to manager
-  Future<void> _saveVoiceComment(String photoId) async {
-    await _voiceCommentStateManager?.saveVoiceComment(photoId, context);
+  /// 프로필 이미지 드래그 이벤트 처리
+  ///
+  /// Parameters:
+  /// - [postId]: 댓글이 달린 게시물 ID
+  /// - [absolutePosition]: 드래그된 프로필 이미지의 절대 위치
+  void _onProfileImageDragged(int postId, Offset absolutePosition) {
+    _voiceCommentStateManager?.onProfileImageDragged(postId, absolutePosition);
   }
 
-  /// 음성 댓글 삭제 콜백 - delegate to manager
-  void _onVoiceCommentDeleted(String photoId) {
-    _voiceCommentStateManager?.onVoiceCommentDeleted(photoId);
+  void _onCommentSaveProgress(int postId, double progress) {
+    _voiceCommentStateManager?.updatePendingProgress(postId, progress);
   }
 
-  /// 음성 댓글 저장 완료 후 위젯 초기화 (추가 댓글을 위한) - delegate to manager
-  void _onSaveCompleted(String photoId) {
-    _voiceCommentStateManager?.onSaveCompleted(photoId);
+  void _onCommentSaveSuccess(int postId, Comment comment) {
+    _voiceCommentStateManager?.handleCommentSaveSuccess(postId, comment);
   }
 
-  /// 프로필 이미지 드래그 처리 - delegate to manager
-  void _onProfileImageDragged(String photoId, Offset absolutePosition) {
-    _voiceCommentStateManager?.onProfileImageDragged(photoId, absolutePosition);
+  void _onCommentSaveFailure(int postId, Object error) {
+    debugPrint('댓글 저장 실패(postId: $postId): $error');
+    _voiceCommentStateManager?.handleCommentSaveFailure(postId);
   }
 
+  /// 모든 오디오 정지
   void _stopAllAudio() {
-    // 1. 게시물 오디오 중지
-    final audioController = Provider.of<AudioController>(
-      context,
-      listen: false,
-    );
-    audioController.stopAudio();
+    _feedAudioManager?.stopAllAudio(context);
+  }
 
-    // 2. 음성 댓글 오디오 중지
-    final commentAudioController = Provider.of<CommentAudioController>(
-      context,
-      listen: false,
+  /// 프로필 이미지 변경 감지 및 피드 새로고침
+  void _handleUserProfileChanged() {
+    // 현재 프로필 이미지 키 가져오기
+    final newKey = _userController?.currentUser?.profileImageUrlKey;
+
+    // 프로필 이미지 키가 변경되지 않았으면 종료
+    if (newKey == _lastProfileImageKey) {
+      return;
+    }
+
+    // 프로필 이미지가 변경되었으므로, 마지막 키 업데이트
+    _lastProfileImageKey = newKey;
+
+    // 프로필 이미지가 변경되었으므로 피드 새로고침
+    _refreshFeedAfterProfileUpdate();
+  }
+
+  /// 피드 새로고침 및 댓글 재로딩
+  void _refreshFeedAfterProfileUpdate() {
+    final posts = _feedDataManager?.allPosts ?? const <FeedPostItem>[];
+    if (posts.isNotEmpty) {
+      _voiceCommentStateManager?.postComments.clear();
+    }
+
+    // 피드 데이터 새로고침
+    unawaited(
+      // 사용자 카테고리 및 사진 로드
+      _feedDataManager?.loadUserCategoriesAndPhotos(context).then((_) {
+        if (!mounted) return;
+        // 피드가 새로고침된 후, 각 게시물에 대한 댓글 재로딩
+        final refreshedPosts = _feedDataManager?.allPosts ?? [];
+        for (final item in refreshedPosts) {
+          // 각 게시물에 대한 댓글 로드
+          unawaited(
+            _voiceCommentStateManager?.loadCommentsForPost(
+              item.post.id,
+              context,
+            ),
+          );
+        }
+        if (mounted) {
+          setState(() {});
+        }
+      }),
     );
-    commentAudioController.stopAllComments();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(backgroundColor: Colors.black, body: _buildBody());
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        centerTitle: true,
+        leadingWidth: 90.w,
+        title: Column(
+          children: [
+            Text(
+              'SOI',
+              style: TextStyle(
+                color: const Color(0xfff9f9f9),
+                fontSize: 20.sp,
+                fontFamily: GoogleFonts.inter().fontFamily,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 30.h),
+          ],
+        ),
+        backgroundColor: Colors.black,
+        toolbarHeight: 70.h,
+      ),
+      body: _buildBody(),
+    );
   }
 
   Widget _buildBody() {
-    if (_feedDataManager!.isLoading) {
-      return Center(child: CircularProgressIndicator(color: Colors.white));
+    // Provider 구독(변경 시 자동 rebuild) - 캐시를 유지하면서도 UI는 최신 상태로 갱신됩니다.
+    final feedDataManager = Provider.of<FeedDataManager>(context);
+    _feedDataManager ??= feedDataManager;
+
+    if (feedDataManager.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     }
 
-    if (_feedDataManager!.allPhotos.isEmpty) {
+    if (feedDataManager.allPosts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.photo_camera_outlined, color: Colors.white54, size: 80),
+            const Icon(
+              Icons.photo_camera_outlined,
+              color: Colors.white54,
+              size: 80,
+            ),
             SizedBox(height: 16.h),
             Text(
               '아직 사진이 없어요',
@@ -321,7 +378,7 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
               ),
             ),
             SizedBox(height: 8.h),
-            Text(
+            const Text(
               '친구들과 카테고리를 만들고\n첫 번째 사진을 공유해보세요!',
               style: TextStyle(color: Colors.white70),
               textAlign: TextAlign.center,
@@ -332,131 +389,47 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => _feedDataManager!.loadUserCategoriesAndPhotos(context),
+      // 당겨서 새로고침은 서버에서 다시 가져오도록 강제 리프레시합니다.
+      onRefresh: () => feedDataManager.loadUserCategoriesAndPhotos(
+        context,
+        forceRefresh: true,
+      ),
       color: Colors.white,
       backgroundColor: Colors.black,
-      child: Stack(
-        children: [
-          PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: _feedDataManager!.allPhotos.length, // 로딩 인디케이터 공간 제거
-            onPageChanged: (index) {
-              // 스마트 미리 로딩: 5개 남았을 때 백그라운드에서 다음 10개 로드
-              final totalPhotos = _feedDataManager!.allPhotos.length;
+      child: FeedPageBuilder(
+        posts: feedDataManager.visiblePosts,
+        hasMoreData: feedDataManager.hasMoreData,
+        isLoadingMore: feedDataManager.isLoadingMore,
+        postComments: _voiceCommentStateManager!.postComments,
+        selectedEmojisByPostId:
+            _voiceCommentStateManager!.selectedEmojisByPostId,
+        pendingCommentDrafts: _voiceCommentStateManager!.pendingCommentDrafts,
+        pendingVoiceComments: _voiceCommentStateManager!.pendingVoiceComments,
+        onToggleAudio: _toggleAudio,
+        onTextCommentCompleted: _onTextCommentCompleted,
+        onAudioCommentCompleted: _onAudioCommentCompleted,
+        onMediaCommentCompleted: _onMediaCommentCompleted,
+        onProfileImageDragged: _onProfileImageDragged,
+        onCommentSaveProgress: _onCommentSaveProgress,
+        onCommentSaveSuccess: _onCommentSaveSuccess,
+        onCommentSaveFailure: _onCommentSaveFailure,
+        onDeletePost: _deletePost,
+        onPageChanged: (index) => _handlePageChanged(index),
+        onStopAllAudio: _stopAllAudio,
+        currentUserNickname: _userController?.currentUser?.userId,
+        onReloadComments: (postId) =>
+            _voiceCommentStateManager!.loadCommentsForPost(postId, context),
+        onEmojiSelected: (postId, emoji) =>
+            _voiceCommentStateManager!.setSelectedEmoji(postId, emoji),
+      ),
+    );
+  }
 
-              // 조건: 5개 이하 남았고, 더 로드할 데이터가 있고, 현재 로딩 중이 아닐 때
-              if (index >= totalPhotos - 5 &&
-                  _feedDataManager!.hasMoreData &&
-                  !_feedDataManager!.isLoadingMore) {
-                // 백그라운드에서 조용히 로드 (사용자가 눈치채지 못하게)
-                _loadMorePhotos();
-                debugPrint('🔄 백그라운드 미리 로딩 시작 - 인덱스: $index, 전체: $totalPhotos');
-              }
-
-              // 페이지 변경 시 모든 오디오 중지
-              _stopAllAudio();
-            },
-            itemBuilder: (context, index) {
-              // 안전한 범위 검사 (이제 로딩 인디케이터 없음)
-              if (index >= _feedDataManager!.allPhotos.length) {
-                return const SizedBox.shrink(); // 빈 위젯 반환
-              }
-
-              final photoData = _feedDataManager!.allPhotos[index];
-              final MediaDataModel photo = photoData['photo'] as MediaDataModel;
-              final String categoryName = photoData['categoryName'] as String;
-              final String categoryId = photoData['categoryId'] as String;
-              final currentUserId = _authController?.getUserId;
-              final isOwner =
-                  currentUserId != null && currentUserId == photo.userID;
-
-              return PhotoCardWidgetCommon(
-                photo: photo,
-                categoryName: categoryName,
-                categoryId: categoryId,
-                index: index,
-                isOwner: isOwner,
-                photoComments: _voiceCommentStateManager!.photoComments,
-                userProfileImages: _profileCacheManager!.userProfileImages,
-                profileLoadingStates: _profileCacheManager!.loadingStates,
-                userNames: _profileCacheManager!.userNames,
-                voiceCommentActiveStates:
-                    _voiceCommentStateManager!.voiceCommentActiveStates,
-                voiceCommentSavedStates:
-                    _voiceCommentStateManager!.voiceCommentSavedStates,
-                pendingTextComments: _voiceCommentStateManager!
-                    .pendingTextComments, // Pending 텍스트 댓글 상태 전달
-                pendingVoiceComments:
-                    _voiceCommentStateManager!.pendingVoiceComments,
-                onToggleAudio: _toggleAudio,
-                onToggleVoiceComment: _toggleVoiceComment,
-                onVoiceCommentCompleted: _onVoiceCommentCompleted,
-                onTextCommentCompleted: _onTextCommentCompleted, // 텍스트 댓글 콜백 추가
-                onVoiceCommentDeleted: _onVoiceCommentDeleted,
-                onProfileImageDragged: _onProfileImageDragged,
-                onSaveRequested: _saveVoiceComment,
-                onSaveCompleted: _onSaveCompleted,
-                onDeletePressed: () async {
-                  try {
-                    final photoController = Provider.of<PhotoController>(
-                      context,
-                      listen: false,
-                    );
-                    final authController = Provider.of<AuthController>(
-                      context,
-                      listen: false,
-                    );
-                    final userId = authController.getUserId;
-                    if (userId == null) return;
-
-                    final success = await photoController.deletePhoto(
-                      categoryId: categoryId,
-                      photoId: photo.id,
-                      userId: userId,
-                    );
-                    if (success && mounted) {
-                      // 로컬 상태에서 즉시 제거
-                      setState(() {
-                        _feedDataManager!.removePhoto(index);
-                      });
-
-                      // 백그라운드에서 전체 피드 새로고침으로 데이터 동기화 보장
-                      _feedDataManager!.loadUserCategoriesAndPhotos(context);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('사진이 삭제되었습니다.'),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    } else if (!success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('사진 삭제에 실패했습니다.'),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    throw Exception('사진 삭제 중 오류 발생: $e');
-                  }
-                },
-                onLikePressed: () {
-                  // TODO: 좋아요 토글 구현 (서비스/컨트롤러 추가 필요)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('좋아요 기능 준비 중입니다.'),
-                      duration: Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : const Color(0xFF5A5A5A),
       ),
     );
   }

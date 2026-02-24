@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 import '../common/custom_text_field.dart';
 import '../common/validation_message.dart';
@@ -10,6 +11,7 @@ class IdInputPage extends StatelessWidget {
   final Function(String) onChanged;
   final Function(String)? onSubmitted;
   final String? errorMessage;
+  final bool? isAvailable;
   final double screenHeight;
   final PageController? pageController;
 
@@ -19,6 +21,7 @@ class IdInputPage extends StatelessWidget {
     required this.onChanged,
     this.onSubmitted,
     this.errorMessage,
+    this.isAvailable,
     required this.screenHeight,
     required this.pageController,
   });
@@ -31,19 +34,6 @@ class IdInputPage extends StatelessWidget {
 
     return Stack(
       children: [
-        Positioned(
-          top: 60.h,
-          left: 20.w,
-          child: IconButton(
-            onPressed: () {
-              pageController?.previousPage(
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            },
-            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-        ),
         Align(
           alignment: Alignment.center,
           child: SingleChildScrollView(
@@ -55,11 +45,11 @@ class IdInputPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const PageTitle(title: '사용하실 아이디를 입력해주세요.'),
+                    PageTitle(title: tr('register.id_title', context: context)),
                     SizedBox(height: 24),
                     CustomTextField(
                       controller: controller,
-                      hintText: '아이디 입력',
+                      hintText: tr('register.id_hint', context: context),
                       keyboardType: TextInputType.text,
                       onChanged: onChanged,
                       onSubmitted: onSubmitted,
@@ -68,15 +58,29 @@ class IdInputPage extends StatelessWidget {
                     // 아이디 중복 체크 결과 메시지
                     (errorMessage != null)
                         ? ValidationMessage(
-                          message: errorMessage!,
-                          isSuccess: errorMessage == '사용 가능한 아이디입니다.',
-                        )
+                            message: errorMessage!,
+                            isSuccess: isAvailable == true,
+                          )
                         : SizedBox(height: 20),
                     SizedBox(height: 130.h),
                   ],
                 ),
               ),
             ),
+          ),
+        ),
+        // 뒤로 가기 버튼을 마지막에 배치하여 터치 이벤트가 차단되지 않도록 함
+        Positioned(
+          top: 60.h,
+          left: 20.w,
+          child: IconButton(
+            onPressed: () {
+              pageController?.previousPage(
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+            icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
       ],

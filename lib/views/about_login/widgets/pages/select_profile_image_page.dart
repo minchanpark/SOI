@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:easy_localization/easy_localization.dart';
+import '../../../../utils/snackbar_utils.dart';
 
+/// 프로필 이미지 선택 페이지
 class SelectProfileImagePage extends StatefulWidget {
   final ValueChanged<String?>? onImageSelected; // 이미지 경로 콜백 추가
   final PageController? pageController;
@@ -54,9 +56,10 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
     } catch (e) {
       debugPrint('이미지 선택 오류: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
+        SnackBarUtils.showSnackBar(
           context,
-        ).showSnackBar(const SnackBar(content: Text('이미지 선택 중 오류가 발생했습니다.')));
+          tr('register.profile_image_error', context: context),
+        );
       }
     } finally {
       if (mounted) {
@@ -95,29 +98,14 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
-        Positioned(
-          top: 60.h,
-          right: 20.w,
-          child: TextButton(
-            onPressed: widget.onSkip,
-            child: Text(
-              '건너뛰기 >',
-              style: TextStyle(
-                color: const Color(0xFFCBCBCB),
-                fontSize: 16,
-                fontFamily: GoogleFonts.inter().fontFamily,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+
         Align(
           alignment: Alignment.center,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '프로필 사진을 선택해주세요',
+                tr('register.profile_image_title', context: context),
                 style: TextStyle(
                   color: const Color(0xFFF8F8F8),
                   fontSize: 18,
@@ -139,36 +127,35 @@ class _SelectProfileImagePageState extends State<SelectProfileImagePage> {
                         color: Color(0xFFD9D9D9),
                       ),
                       child: ClipOval(
-                        child:
-                            _profileImagePath != null
-                                ? Image.file(
-                                  File(_profileImagePath!),
-                                  width: 96,
-                                  height: 96,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 96,
-                                      height: 96,
-                                      color: const Color(0xFFD9D9D9),
-                                      child: Icon(
-                                        Icons.person,
-                                        size: 48.sp,
-                                        color: Colors.white,
-                                      ),
-                                    );
-                                  },
-                                )
-                                : Container(
-                                  width: 96,
-                                  height: 96,
-                                  color: const Color(0xFFD9D9D9),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 48.sp,
-                                    color: Colors.white,
-                                  ),
+                        child: _profileImagePath != null
+                            ? Image.file(
+                                File(_profileImagePath!),
+                                width: 96,
+                                height: 96,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 96,
+                                    height: 96,
+                                    color: const Color(0xFFD9D9D9),
+                                    child: Icon(
+                                      Icons.person,
+                                      size: 48.sp,
+                                      color: Colors.white,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
+                                width: 96,
+                                height: 96,
+                                color: const Color(0xFFD9D9D9),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 48.sp,
+                                  color: Colors.white,
                                 ),
+                              ),
                       ),
                     ),
                   ),

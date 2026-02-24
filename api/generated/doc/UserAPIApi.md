@@ -15,12 +15,16 @@ Method | HTTP request | Description
 [**deleteUser**](UserAPIApi.md#deleteuser) | **DELETE** /user/delete | Id로 사용자 삭제
 [**findUser**](UserAPIApi.md#finduser) | **GET** /user/find-by-keyword | 키워드로 사용자 검색
 [**getAllUsers**](UserAPIApi.md#getallusers) | **GET** /user/get-all | 모든유저 조회
+[**getUser**](UserAPIApi.md#getuser) | **GET** /user/get | 특정유저 조회
 [**idCheck**](UserAPIApi.md#idcheck) | **GET** /user/id-check | 사용자 id 중복 체크
-[**login**](UserAPIApi.md#login) | **POST** /user/login | 사용자 로그인(전화번호로)
+[**loginByNickname**](UserAPIApi.md#loginbynickname) | **POST** /user/login/by-nickname | 사용자 로그인(전화번호로)
+[**loginByPhone**](UserAPIApi.md#loginbyphone) | **POST** /user/login/by-phone | 사용자 로그인(전화번호로)
+[**update1**](UserAPIApi.md#update1) | **PATCH** /user/update | 유저정보 업데이트
+[**updateProfile**](UserAPIApi.md#updateprofile) | **PATCH** /user/update-profile | 유저 프로필 업데이트
 
 
 # **authSMS**
-> bool authSMS(phone)
+> bool authSMS(phoneNum)
 
 전화번호 인증
 
@@ -31,10 +35,10 @@ Method | HTTP request | Description
 import 'package:soi_api_client/api.dart';
 
 final api_instance = UserAPIApi();
-final phone = phone_example; // String | 
+final phoneNum = phoneNum_example; // String | 
 
 try {
-    final result = api_instance.authSMS(phone);
+    final result = api_instance.authSMS(phoneNum);
     print(result);
 } catch (e) {
     print('Exception when calling UserAPIApi->authSMS: $e\n');
@@ -45,7 +49,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **phone** | **String**|  | 
+ **phoneNum** | **String**|  | 
 
 ### Return type
 
@@ -192,7 +196,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **findUser**
-> ApiResponseDtoListUserRespDto findUser(userId)
+> ApiResponseDtoListUserRespDto findUser(nickname)
 
 키워드로 사용자 검색
 
@@ -203,10 +207,10 @@ No authorization required
 import 'package:soi_api_client/api.dart';
 
 final api_instance = UserAPIApi();
-final userId = userId_example; // String | 
+final nickname = nickname_example; // String | 
 
 try {
-    final result = api_instance.findUser(userId);
+    final result = api_instance.findUser(nickname);
     print(result);
 } catch (e) {
     print('Exception when calling UserAPIApi->findUser: $e\n');
@@ -217,7 +221,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **userId** | **String**|  | 
+ **nickname** | **String**|  | 
 
 ### Return type
 
@@ -273,6 +277,49 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getUser**
+> ApiResponseDtoUserRespDto getUser(id)
+
+특정유저 조회
+
+유저의 id값(Long)으로 유저를 조회합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = UserAPIApi();
+final id = 789; // int | 
+
+try {
+    final result = api_instance.getUser(id);
+    print(result);
+} catch (e) {
+    print('Exception when calling UserAPIApi->getUser: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  | 
+
+### Return type
+
+[**ApiResponseDtoUserRespDto**](ApiResponseDtoUserRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **idCheck**
 > ApiResponseDtoBoolean idCheck(userId)
 
@@ -316,8 +363,8 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **login**
-> ApiResponseDtoUserRespDto login(phone)
+# **loginByNickname**
+> ApiResponseDtoUserRespDto loginByNickname(nickName)
 
 사용자 로그인(전화번호로)
 
@@ -328,13 +375,13 @@ No authorization required
 import 'package:soi_api_client/api.dart';
 
 final api_instance = UserAPIApi();
-final phone = phone_example; // String | 
+final nickName = nickName_example; // String | 
 
 try {
-    final result = api_instance.login(phone);
+    final result = api_instance.loginByNickname(nickName);
     print(result);
 } catch (e) {
-    print('Exception when calling UserAPIApi->login: $e\n');
+    print('Exception when calling UserAPIApi->loginByNickname: $e\n');
 }
 ```
 
@@ -342,7 +389,138 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **phone** | **String**|  | 
+ **nickName** | **String**|  | 
+
+### Return type
+
+[**ApiResponseDtoUserRespDto**](ApiResponseDtoUserRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **loginByPhone**
+> ApiResponseDtoUserRespDto loginByPhone(phoneNum)
+
+사용자 로그인(전화번호로)
+
+인증이 완료된 전화번호로 로그인을 합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = UserAPIApi();
+final phoneNum = phoneNum_example; // String | 
+
+try {
+    final result = api_instance.loginByPhone(phoneNum);
+    print(result);
+} catch (e) {
+    print('Exception when calling UserAPIApi->loginByPhone: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **phoneNum** | **String**|  | 
+
+### Return type
+
+[**ApiResponseDtoUserRespDto**](ApiResponseDtoUserRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **update1**
+> ApiResponseDtoUserRespDto update1(userUpdateReqDto)
+
+유저정보 업데이트
+
+새로운 데이터로 유저정보를 업데이트합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = UserAPIApi();
+final userUpdateReqDto = UserUpdateReqDto(); // UserUpdateReqDto | 
+
+try {
+    final result = api_instance.update1(userUpdateReqDto);
+    print(result);
+} catch (e) {
+    print('Exception when calling UserAPIApi->update1: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userUpdateReqDto** | [**UserUpdateReqDto**](UserUpdateReqDto.md)|  | 
+
+### Return type
+
+[**ApiResponseDtoUserRespDto**](ApiResponseDtoUserRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateProfile**
+> ApiResponseDtoUserRespDto updateProfile(userId, profileImageKey)
+
+유저 프로필 업데이트
+
+유저의 프로필을 업데이트 합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = UserAPIApi();
+final userId = 789; // int | 
+final profileImageKey = profileImageKey_example; // String | 
+
+try {
+    final result = api_instance.updateProfile(userId, profileImageKey);
+    print(result);
+} catch (e) {
+    print('Exception when calling UserAPIApi->updateProfile: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **int**|  | 
+ **profileImageKey** | **String**|  | [optional] 
 
 ### Return type
 

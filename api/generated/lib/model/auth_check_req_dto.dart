@@ -13,7 +13,7 @@ part of openapi.api;
 class AuthCheckReqDto {
   /// Returns a new [AuthCheckReqDto] instance.
   AuthCheckReqDto({
-    this.phoneNumber,
+    this.phoneNum,
     this.code,
   });
 
@@ -23,7 +23,7 @@ class AuthCheckReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? phoneNumber;
+  String? phoneNum;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -35,24 +35,24 @@ class AuthCheckReqDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is AuthCheckReqDto &&
-    other.phoneNumber == phoneNumber &&
+    other.phoneNum == phoneNum &&
     other.code == code;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (phoneNumber == null ? 0 : phoneNumber!.hashCode) +
+    (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (code == null ? 0 : code!.hashCode);
 
   @override
-  String toString() => 'AuthCheckReqDto[phoneNumber=$phoneNumber, code=$code]';
+  String toString() => 'AuthCheckReqDto[phoneNum=$phoneNum, code=$code]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.phoneNumber != null) {
-      json[r'phoneNumber'] = this.phoneNumber;
+    if (this.phoneNum != null) {
+      json[r'phoneNum'] = this.phoneNum;
     } else {
-      json[r'phoneNumber'] = null;
+      json[r'phoneNum'] = null;
     }
     if (this.code != null) {
       json[r'code'] = this.code;
@@ -81,7 +81,7 @@ class AuthCheckReqDto {
       }());
 
       return AuthCheckReqDto(
-        phoneNumber: mapValueOfType<String>(json, r'phoneNumber'),
+        phoneNum: mapValueOfType<String>(json, r'phoneNum'),
         code: mapValueOfType<String>(json, r'code'),
       );
     }

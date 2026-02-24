@@ -1,14 +1,16 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:soi/firebase_logic/controllers/category_search_controller.dart';
-
-import '../../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../../firebase_logic/controllers/category_controller.dart';
+import 'package:soi/views/about_archiving/models/archive_layout_model.dart';
+import '../../../../api/controller/category_controller.dart';
+import '../../../../api/controller/user_controller.dart';
+import '../../../../api/models/category.dart';
 import '../../../../theme/theme.dart';
-import '../../models/archive_layout_mode.dart';
-import '../../widgets/archive_card_widget/archive_card_widget.dart';
+import '../../widgets/archive_card_widget/api_archive_card_widget.dart';
+import '../../../../api/controller/category_search_controller.dart';
 
 // 전체 아카이브 화면
 // 모든 사용자의 아카이브 목록을 표시
@@ -33,387 +35,380 @@ class AllArchivesScreen extends StatefulWidget {
   State<AllArchivesScreen> createState() => _AllArchivesScreenState();
 }
 
+class _AllArchivesCategoryViewState {
+  final List<int> categoryIds;
+  final bool isInitialLoading;
+  final String? fatalErrorMessage;
+
+  const _AllArchivesCategoryViewState({
+    required this.categoryIds,
+    required this.isInitialLoading,
+    required this.fatalErrorMessage,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AllArchivesCategoryViewState &&
+          runtimeType == other.runtimeType &&
+          isInitialLoading == other.isInitialLoading &&
+          fatalErrorMessage == other.fatalErrorMessage &&
+          listEquals(categoryIds, other.categoryIds);
+
+  @override
+  int get hashCode => Object.hash(
+    isInitialLoading,
+    fatalErrorMessage,
+    Object.hashAll(categoryIds),
+  );
+}
+
 class _AllArchivesScreenState extends State<AllArchivesScreen>
     with AutomaticKeepAliveClientMixin {
-  String? nickName;
-  final Map<String, List<String>> _categoryProfileImages = {};
-  AuthController? _authController; // AuthController 참조 저장
-  CategoryController? _categoryController; // CategoryController 참조 저장
-  bool _isInitialLoad = true; // 초기 로딩 상태 추적
-  int _previousCategoryCount = 0; // 이전 카테고리 개수 저장
+  int? _userId;
+
+  // API 컨트롤러들
+  UserController? _userController;
+  CategoryController? _categoryController;
+
+  /// 초기 로드 상태
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
     super.initState();
-    // 이메일이나 닉네임을 미리 가져와요.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authController = Provider.of<AuthController>(context, listen: false);
-      final categoryController = Provider.of<CategoryController>(
-        context,
-        listen: false,
-      );
-
-      _authController!.getIdFromFirestore().then((value) {
-        if (mounted) {
-          setState(() {
-            nickName = value;
-          });
-          // 닉네임을 얻었을 때 카테고리 로드
-          categoryController.loadUserCategories(value);
-        }
-      });
-
-      // AuthController의 변경사항을 감지하여 프로필 이미지 캐시 업데이트
-      _authController!.addListener(_onAuthControllerChanged);
+      _loadData();
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // AuthController 참조를 안전하게 저장
-    _authController ??= Provider.of<AuthController>(context, listen: false);
-  }
-
-  @override
-  void dispose() {
-    // 저장된 참조를 사용하여 리스너 제거
-    _authController?.removeListener(_onAuthControllerChanged);
-    super.dispose();
-  }
-
-  /// AuthController 변경 감지 시 프로필 이미지 캐시 무효화
-  void _onAuthControllerChanged() {
-    if (mounted) {
-      setState(() {
-        _categoryProfileImages.clear(); // 모든 프로필 이미지 캐시 무효화
-      });
-    }
-  }
-
-  // 카테고리에 대한 프로필 이미지를 가져오는 함수
-  Future<void> _loadProfileImages(String categoryId, List<String> mates) async {
-    // 이미 로드된 경우에도 AuthController 변경에 의해 캐시가 무효화되면 다시 로드
-    if (_categoryProfileImages.containsKey(categoryId)) {
-      return;
-    }
-
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final categoryController = Provider.of<CategoryController>(
+    _userController ??= Provider.of<UserController>(context, listen: false);
+    _categoryController ??= Provider.of<CategoryController>(
       context,
       listen: false,
     );
+  }
 
-    try {
-      final profileImages = await categoryController.getCategoryProfileImages(
-        mates,
-        authController,
+  /// 데이터 로드
+  Future<void> _loadData() async {
+    // 현재 로그인한 사용자 ID 가져오기
+    final currentUser = _userController!.currentUser;
+    if (currentUser != null) {
+      if (mounted) {
+        setState(() {
+          _userId = currentUser.id;
+        });
+      }
+
+      /// 카테고리 초기 로드
+      await _categoryController!.loadCategories(
+        currentUser.id,
+        fetchAllPages: true,
+        maxPages: 2, // 처음 로드 시 최대 2페이지만 로드
       );
       if (mounted) {
         setState(() {
-          _categoryProfileImages[categoryId] = profileImages;
+          _isInitialLoad = false;
         });
       }
-    } catch (e) {
+    } else {
+      debugPrint('[AllArchivesScreen] 로그인된 사용자 없음');
       if (mounted) {
         setState(() {
-          _categoryProfileImages[categoryId] = [];
+          _isInitialLoad = false;
         });
       }
+    }
+  }
+
+  /// 새로고침
+  Future<void> _refresh() async {
+    if (_userId != null && _categoryController != null) {
+      await _categoryController!.loadCategories(
+        _userId!,
+        forceReload: true,
+        fetchAllPages: true,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    // 만약 닉네임을 아직 못 가져왔다면 로딩 중이에요.
-    if (nickName == null) {
+
+    // 초기 로딩 중
+    if (_isInitialLoad) {
       return Scaffold(
         backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 3.0,
-          ),
-        ),
+        body: _buildShimmerGrid(),
       );
     }
 
     return Scaffold(
       backgroundColor: AppTheme.lightTheme.colorScheme.surface,
-      body: Consumer2<CategorySearchController, CategoryController>(
-        builder: (context, searchController, categoryControllerParam, child) {
-          // categoryController를 저장하여 _buildGridView와 _buildListView에서 사용
-          _categoryController = categoryControllerParam;
 
-          // Stream 사용으로 실시간 업데이트
-          return StreamBuilder<List<dynamic>>(
-            stream: _categoryController!.streamUserCategories(nickName!),
-            builder: (context, snapshot) {
-              // 로딩 중일 때
-              if (snapshot.connectionState == ConnectionState.waiting ||
-                  !snapshot.hasData) {
-                // 이전에 카테고리가 있었으면 shimmer 표시
-                if (_previousCategoryCount > 0) {
-                  return _buildShimmerGrid(_previousCategoryCount);
-                }
-                // 처음 로딩이면 아무것도 표시하지 않음
-                return const SizedBox.shrink();
-              }
+      // 카테고리 목록
+      // Selector로 부분 갱신이 되도록 함.
+      body: Selector<CategoryController, _AllArchivesCategoryViewState>(
+        selector: (context, categoryController) {
+          final categoryIds = categoryController.allCategories
+              .map((c) => c.id)
+              .toList(growable: false);
 
-              // 에러가 있을 때
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.h),
-                    child: Text(
-                      '오류가 발생했습니다.',
+          // "목록이 비어있는 상태"에서만 로딩/에러 UI가 필요하므로 파생 상태로 구독한다.
+          final isInitialLoading =
+              categoryController.isLoading && categoryIds.isEmpty;
+          final fatalErrorMessage = categoryIds.isEmpty
+              ? categoryController.errorMessage
+              : null;
+
+          return _AllArchivesCategoryViewState(
+            categoryIds: categoryIds,
+            isInitialLoading: isInitialLoading,
+            fatalErrorMessage: fatalErrorMessage,
+          );
+        },
+        builder: (context, state, child) {
+          final searchController = context.watch<CategorySearchController>();
+          final isSearchActive =
+              searchController.searchQuery.isNotEmpty &&
+              searchController.activeFilter == CategoryFilter.all;
+          final displayCategoryIds = isSearchActive
+              ? searchController.filteredCategories
+                    .map((c) => c.id)
+                    .toList(growable: false)
+              : state.categoryIds;
+
+          // 로딩 중 (카테고리 목록이 비어있는 경우에만)
+          if (state.isInitialLoading) {
+            return _buildShimmerGrid();
+          }
+
+          // 에러가 있을 때 (카테고리 목록이 비어있는 경우에만)
+          if (state.fatalErrorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.h),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'common.error_occurred',
                       style: TextStyle(color: Colors.white, fontSize: 16.sp),
                       textAlign: TextAlign.center,
+                    ).tr(),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: _refresh,
+                      child: Text('common.retry').tr(),
                     ),
-                  ),
-                );
-              }
+                  ],
+                ),
+              ),
+            );
+          }
 
-              final categories = snapshot.data ?? [];
-
-              // 카테고리 개수 저장 (다음 로딩 시 사용)
-              if (categories.isNotEmpty &&
-                  _previousCategoryCount != categories.length) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _previousCategoryCount = categories.length;
-                    });
-                  }
-                });
-              }
-
-              // 모든 카테고리에 대해 프로필 이미지 로드 요청
-              for (var category in categories) {
-                final categoryId = category.id;
-                final mates = category.mates;
-                _loadProfileImages(categoryId, mates);
-              }
-
-              // 초기 로딩 완료 표시
-              if (_isInitialLoad) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {
-                      _isInitialLoad = false;
-                    });
-                  }
-                });
-              }
-
-              // 검색어가 있으면 카테고리 필터링
-              final displayCategories = searchController.searchQuery.isNotEmpty
-                  ? categories.where((category) {
-                      final userId = _authController?.getUserId;
-                      return userId != null
-                          ? searchController.matchesSearchQuery(
-                              category,
-                              searchController.searchQuery,
-                              currentUserId: userId,
-                            )
-                          : category.name.toLowerCase().contains(
-                              searchController.searchQuery.toLowerCase(),
-                            );
-                    }).toList()
-                  : categories;
-
-              // 필터링 후 결과가 없는 경우 체크
-              if (displayCategories.isEmpty) {
-                // 검색 중인데 결과가 없는 경우
-                if (searchController.searchQuery.isNotEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 40.h),
-                      child: Text(
-                        '검색 결과가 없습니다.',
-                        style: TextStyle(color: Colors.white, fontSize: 16.sp),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  );
-                }
-
-                // 원본 카테고리가 없는 경우
-                return Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40.h),
-                    child: Text(
-                      '등록된 카테고리가 없습니다.',
-                      style: TextStyle(color: Colors.white, fontSize: 16.sp),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              }
-
-              // FadeIn 애니메이션으로 부드럽게 표시
-              return AnimatedOpacity(
-                opacity: _isInitialLoad ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeIn,
-                child: widget.layoutMode == ArchiveLayoutMode.grid
-                    ? _buildGridView(searchController, displayCategories)
-                    : _buildListView(searchController, displayCategories),
+          // 카테고리가 없는 경우
+          if (displayCategoryIds.isEmpty) {
+            if (isSearchActive) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 40.h),
+                  child: Text(
+                    'archive.search_empty',
+                    style: TextStyle(color: Colors.white, fontSize: 16.sp),
+                    textAlign: TextAlign.center,
+                  ).tr(),
+                ),
               );
-            },
+            }
+
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.h),
+                child: Text(
+                  'archive.empty_categories',
+                  style: TextStyle(color: Colors.white, fontSize: 16.sp),
+                  textAlign: TextAlign.center,
+                ).tr(),
+              ),
+            );
+          }
+
+          // RefreshIndicator로 당겨서 새로고침 지원
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            color: Colors.white,
+            backgroundColor: const Color(0xFF1C1C1C),
+            child: widget.layoutMode == ArchiveLayoutMode.grid
+                ? _buildGridView(
+                    displayCategoryIds,
+                    searchController.searchQuery,
+                  )
+                : _buildListView(
+                    displayCategoryIds,
+                    searchController.searchQuery,
+                  ),
           );
         },
       ),
     );
   }
 
-  Widget _buildShimmerGrid(int itemCount) {
-    // 최소 2개, 최대 6개의 Shimmer 표시
-    final shimmerCount = itemCount == 0 ? 6 : itemCount.clamp(1, 6);
-
-    return SingleChildScrollView(
+  /// 그리드 뷰 빌드
+  Widget _buildGridView(List<int> categoryIds, String searchQuery) {
+    return GridView.builder(
+      key: ValueKey('grid_${categoryIds.length}_$searchQuery'),
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
       physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: EdgeInsets.only(left: 22.w, right: 20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: (168.w / 229.h),
-                mainAxisSpacing: 15.h,
-                crossAxisSpacing: 15.w,
-              ),
-              itemCount: shimmerCount,
-              itemBuilder: (context, index) {
-                return Shimmer.fromColors(
-                  baseColor: Colors.grey[800]!,
-                  highlightColor: Colors.grey[700]!,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
       ),
-    );
-  }
-
-  Widget _buildGridView(
-    CategorySearchController searchController,
-    List categories,
-  ) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Padding(
-        padding: EdgeInsets.only(left: 22.w, right: 20.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GridView.builder(
-              key: ValueKey(
-                'grid_${categories.length}_${searchController.searchQuery}',
-              ),
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: (168 / 229),
-                mainAxisSpacing: 15.sp,
-                crossAxisSpacing: 15.sp,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final categoryId = category.id;
-
-                // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
-                final userId = _authController?.getUserId;
-                final displayName =
-                    userId != null && _categoryController != null
-                    ? _categoryController!.getCategoryDisplayName(
-                        category,
-                        userId,
-                      )
-                    : category.name;
-
-                return ArchiveCardWidget(
-                  key: ValueKey('archive_card_$categoryId'),
-                  categoryId: categoryId,
-                  layoutMode: ArchiveLayoutMode.grid,
-                  isEditMode: widget.isEditMode,
-                  isEditing:
-                      widget.isEditMode &&
-                      widget.editingCategoryId == categoryId,
-                  editingController:
-                      widget.isEditMode &&
-                          widget.editingCategoryId == categoryId
-                      ? widget.editingController
-                      : null,
-                  onStartEdit: () {
-                    if (widget.onStartEdit != null) {
-                      widget.onStartEdit!(categoryId, displayName);
-                    }
-                  },
-                );
-              },
-            ),
-            SizedBox(height: 20.h),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListView(
-    CategorySearchController searchController,
-    List categories,
-  ) {
-    return ListView.separated(
-      key: ValueKey(
-        'list_${categories.length}_${searchController.searchQuery}',
-      ),
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
+      itemCount: categoryIds.length,
       itemBuilder: (context, index) {
-        final category = categories[index];
-        final categoryId = category.id;
+        final categoryId = categoryIds[index];
+        final categoryController = context.read<CategoryController>();
+        final category = categoryController.getCategoryById(categoryId);
+        if (category == null) return const SizedBox.shrink();
 
-        // 현재 사용자의 표시 이름 가져오기 (상위 categoryController 재사용)
-        final userId = _authController?.getUserId;
-        final displayName = userId != null && _categoryController != null
-            ? _categoryController!.getCategoryDisplayName(category, userId)
-            : category.name;
-
-        return ArchiveCardWidget(
-          key: ValueKey('archive_list_card_$categoryId'),
-          categoryId: categoryId,
-          layoutMode: ArchiveLayoutMode.list,
+        // 그리드 모드의 아카이브 카드 위젯
+        return ApiArchiveCardWidget(
+          key: ValueKey('archive_card_$categoryId'), // 고유 키 지정
+          category: category,
+          layoutMode: ArchiveLayoutMode.grid,
           isEditMode: widget.isEditMode,
           isEditing:
-              widget.isEditMode && widget.editingCategoryId == categoryId,
+              widget.isEditMode &&
+              widget.editingCategoryId == categoryId.toString(),
           editingController:
-              widget.isEditMode && widget.editingCategoryId == categoryId
+              widget.isEditMode &&
+                  widget.editingCategoryId == categoryId.toString()
               ? widget.editingController
               : null,
           onStartEdit: () {
             if (widget.onStartEdit != null) {
-              widget.onStartEdit!(categoryId, displayName);
+              final latest =
+                  categoryController.getCategoryById(categoryId) ?? category;
+              widget.onStartEdit!(categoryId.toString(), latest.name);
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildListView(List<int> categoryIds, String searchQuery) {
+    return ListView.separated(
+      key: ValueKey('list_${categoryIds.length}_$searchQuery'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(left: 22.w, right: 20.w, top: 8.h, bottom: 20.h),
+      itemBuilder: (context, index) {
+        final categoryId = categoryIds[index];
+        final categoryController = context.read<CategoryController>();
+        final category = categoryController.getCategoryById(categoryId);
+        if (category == null) return const SizedBox.shrink();
+
+        return ApiArchiveCardWidget(
+          key: ValueKey('archive_list_card_$categoryId'),
+          category: category,
+          layoutMode: ArchiveLayoutMode.list,
+          isEditMode: widget.isEditMode,
+          isEditing:
+              widget.isEditMode &&
+              widget.editingCategoryId == categoryId.toString(),
+          editingController:
+              widget.isEditMode &&
+                  widget.editingCategoryId == categoryId.toString()
+              ? widget.editingController
+              : null,
+          onStartEdit: () {
+            if (widget.onStartEdit != null) {
+              final latest =
+                  categoryController.getCategoryById(categoryId) ?? category;
+              widget.onStartEdit!(categoryId.toString(), latest.name);
             }
           },
         );
       },
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemCount: categories.length,
+      itemCount: categoryIds.length,
+    );
+  }
+
+  /// Shimmer 로딩 그리드
+  /// 로딩 중일떄, 일반 CircularProgressIndicator 대신 표시
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.only(left: 20.w, right: 22.w, bottom: 20.h),
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: (170 / 204),
+        mainAxisSpacing: 11.sp,
+        crossAxisSpacing: 11.sp,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: const Color(0xFF2A2A2A),
+          highlightColor: const Color(0xFF3A3A3A),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1C),
+              borderRadius: BorderRadius.circular(6.61),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 146.8.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6.61),
+                  ),
+                ),
+                SizedBox(height: 8.7.h),
+                Padding(
+                  padding: EdgeInsets.only(left: 14.w),
+                  child: Container(
+                    width: 80.w,
+                    height: 14.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.87.h),
+                Padding(
+                  padding: EdgeInsets.only(left: 14.w),
+                  child: Row(
+                    children: List.generate(
+                      3,
+                      (i) => Container(
+                        width: 24.w,
+                        height: 24.w,
+                        margin: EdgeInsets.only(right: 4.w),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

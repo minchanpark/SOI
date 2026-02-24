@@ -1,10 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'category_invitee_preview.dart';
 
+/// 카테고리 초대 친구 목록 시트
 class CategoryInviteFriendListSheet extends StatelessWidget {
   final List<CategoryInviteePreview> invitees;
   final ValueChanged<CategoryInviteePreview>? onInviteeTap;
@@ -43,14 +45,14 @@ class CategoryInviteFriendListSheet extends StatelessWidget {
             ),
             SizedBox(height: 16.h),
             Text(
-              '친구 확인',
+              'friends.invite_check_title',
               style: TextStyle(
                 color: const Color(0xFFF8F8F8),
                 fontSize: 19.78,
                 fontFamily: 'Pretendard',
                 fontWeight: FontWeight.w700,
               ),
-            ),
+            ).tr(),
             SizedBox(height: 10.h),
             Divider(
               color: const Color(0xFF464646).withValues(alpha: 0.7),
@@ -85,10 +87,9 @@ class CategoryInviteFriendListSheet extends StatelessWidget {
                         fontWeight: FontWeight.w300,
                       ),
                     ),
-                    onTap:
-                        onInviteeTap != null
-                            ? () => onInviteeTap!(invitee)
-                            : null,
+                    onTap: onInviteeTap != null
+                        ? () => onInviteeTap!(invitee)
+                        : null,
                   );
                 },
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -115,17 +116,16 @@ class _FriendAvatar extends StatelessWidget {
       height: 44,
       decoration: const BoxDecoration(shape: BoxShape.circle),
       child: ClipOval(
-        child:
-            imageUrl.isNotEmpty
-                ? CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  memCacheWidth: (44 * 4).round(),
-                  maxWidthDiskCache: (44 * 4).round(),
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => _shimmerPlaceholder(),
-                  errorWidget: (context, url, error) => _placeholder(),
-                )
-                : _placeholder(),
+        child: imageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                memCacheWidth: (44 * 4).round(),
+                maxWidthDiskCache: (44 * 4).round(),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => _shimmerPlaceholder(),
+                errorWidget: (context, url, error) => _placeholder(),
+              )
+            : _placeholder(),
       ),
     );
   }

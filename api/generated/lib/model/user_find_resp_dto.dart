@@ -15,8 +15,8 @@ class UserFindRespDto {
   UserFindRespDto({
     this.id,
     this.name,
-    this.userId,
-    this.profileImage,
+    this.nickname,
+    this.profileImageKey,
     this.active,
   });
 
@@ -42,7 +42,7 @@ class UserFindRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -50,7 +50,7 @@ class UserFindRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -64,8 +64,8 @@ class UserFindRespDto {
   bool operator ==(Object other) => identical(this, other) || other is UserFindRespDto &&
     other.id == id &&
     other.name == name &&
-    other.userId == userId &&
-    other.profileImage == profileImage &&
+    other.nickname == nickname &&
+    other.profileImageKey == profileImageKey &&
     other.active == active;
 
   @override
@@ -73,12 +73,12 @@ class UserFindRespDto {
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
     (active == null ? 0 : active!.hashCode);
 
   @override
-  String toString() => 'UserFindRespDto[id=$id, name=$name, userId=$userId, profileImage=$profileImage, active=$active]';
+  String toString() => 'UserFindRespDto[id=$id, name=$name, nickname=$nickname, profileImageKey=$profileImageKey, active=$active]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -92,15 +92,15 @@ class UserFindRespDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageKey != null) {
+      json[r'profileImageKey'] = this.profileImageKey;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageKey'] = null;
     }
     if (this.active != null) {
       json[r'active'] = this.active;
@@ -131,8 +131,8 @@ class UserFindRespDto {
       return UserFindRespDto(
         id: mapValueOfType<int>(json, r'id'),
         name: mapValueOfType<String>(json, r'name'),
-        userId: mapValueOfType<String>(json, r'userId'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),
         active: mapValueOfType<bool>(json, r'active'),
       );
     }

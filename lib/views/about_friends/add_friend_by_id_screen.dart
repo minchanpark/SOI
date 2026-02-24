@@ -1,18 +1,20 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 
-import '../../firebase_logic/models/user_search_model.dart';
-import '../../firebase_logic/controllers/user_matching_controller.dart';
-import '../../firebase_logic/controllers/friend_request_controller.dart';
+import '../../api/controller/friend_controller.dart';
+import '../../api/controller/media_controller.dart';
+import '../../api/controller/user_controller.dart';
+import '../../api/models/user.dart';
 
-/// ID로 친구를 검색/추가하는 전체 화면 플로우
-/// 기존 다이얼로그(AddByIdDialog)를 대체하며
-/// UserMatchingController / FriendRequestController 의 기존 비즈니스 로직을 재사용한다.
+/// ID로 친구 추가 화면
+/// 기존 다이얼로그(AddByIdDialog)를 대체하며, 독립된 화면으로 구현합니다.
 class AddFriendByIdScreen extends StatefulWidget {
   const AddFriendByIdScreen({super.key});
 
@@ -26,9 +28,14 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
   Timer? _debounce;
 
   bool _isSearching = false;
-  List<UserSearchModel> _results = [];
-  Map<String, String> _friendshipStatus = {};
-  final Set<String> _sending = {}; // 요청 버튼 로딩 대상
+  List<User> _results = [];
+
+  // userId -> status 이렇게 맵 형태로 묶는다.
+  Map<int, String> _friendshipStatus = {};
+  // userId -> presigned URL 캐시
+  final Map<int, String?> _profileUrlCache = {};
+  final Map<String, _CachedSearchResult> _searchCache = {};
+  final Set<int> _sending = {}; // 요청 버튼 로딩 대상
 
   @override
   void initState() {
@@ -51,7 +58,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     if (query.isEmpty) {
       setState(() {
         _results = [];
-        _friendshipStatus.clear();
+        _friendshipStatus = {};
         _isSearching = false;
       });
       return;
@@ -61,75 +68,178 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     });
   }
 
+  /// 실제 검색 수행
+  ///
+  /// Parameters:
+  ///   - [String] query: 검색어
   Future<void> _performSearch(String query) async {
-    final userMatchingController = Provider.of<UserMatchingController>(
+    final cached = _searchCache[query];
+    if (cached != null) {
+      setState(() {
+        _results = cached.results;
+        _friendshipStatus = cached.status;
+        _isSearching = false;
+      });
+      return;
+    }
+
+    // API 호출
+    final userController = Provider.of<UserController>(context, listen: false);
+    final friendController = Provider.of<FriendController>(
       context,
       listen: false,
     );
-    final friendRequestController = Provider.of<FriendRequestController>(
-      context,
-      listen: false,
-    );
+
+    // 현재 사용자 ID 가져오기
+    final currentUserId = userController.currentUser?.id;
+
+    // 현재 사용자 ID가 없으면 검색 중지
+    if (currentUserId == null) {
+      debugPrint('로그인된 사용자가 없습니다.');
+      setState(() => _isSearching = false);
+      return;
+    }
 
     setState(() => _isSearching = true);
     try {
-      // Controller의 기존 ID 검색 로직 재사용
-      final list = await userMatchingController.searchUserById(query) ?? [];
-      _results = list;
+      // UserController의 키워드 검색 사용
+      // list는 User 객체의 리스트를 받는다.
+      final list = await userController.findUsersByKeyword(query);
 
-      // 상태 일괄 조회 (비즈니스 로직 재사용)
-      if (list.isNotEmpty) {
-        final statusMap = await friendRequestController
-            .getBatchFriendshipStatus(list.map((e) => e.uid).toList());
-        _friendshipStatus = statusMap;
+      // 본인 제외
+      final filteredList = list.where((u) => u.id != currentUserId).toList();
+      _results = filteredList;
+
+      // 친구 관계 상태 조회
+      if (filteredList.isNotEmpty) {
+        final phoneNumbers = filteredList
+            .map((u) => u.phoneNumber)
+            .where((p) => p.isNotEmpty)
+            .toList();
+
+        if (phoneNumbers.isNotEmpty) {
+          // 친구 관계 확인 API 호출
+          final relations = await friendController.checkFriendRelations(
+            userId: currentUserId,
+            phoneNumbers: phoneNumbers,
+          );
+          debugPrint("친구 관계 조회 결과: $relations");
+
+          // 전화번호 -> 상태 매핑을 userId -> 상태로 변환
+          final phoneToStatus = <String, String>{};
+          for (final relation in relations) {
+            // FriendCheck 모델의 statusString 사용
+            phoneToStatus[relation.phoneNumber] = relation.statusString;
+          }
+          // userId -> 상태 매핑 생성
+          _friendshipStatus = {};
+
+          // filteredList를 순회하며 상태 매핑 채우기
+          for (final user in filteredList) {
+            final status = phoneToStatus[user.phoneNumber] ?? 'none';
+            _friendshipStatus[user.id] = status;
+          }
+          debugPrint("최종 친구 상태 매핑: $_friendshipStatus");
+        } else {
+          _friendshipStatus = {};
+        }
       } else {
-        _friendshipStatus.clear();
+        _friendshipStatus = {};
       }
+
+      _searchCache[query] = _CachedSearchResult(_results, _friendshipStatus);
+
+      // 프로필 이미지 presigned URL 미리 로드
+      _preloadProfileUrls(filteredList);
     } catch (e) {
-      // 실패 시 결과 비우기 (UI는 '없는 아이디' 메시지 그대로 활용)
+      debugPrint('검색 실패: $e');
       _results = [];
-      _friendshipStatus.clear();
+      _friendshipStatus = {};
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
   }
 
-  Future<void> _sendFriendRequest(UserSearchModel user) async {
-    final friendRequestController = Provider.of<FriendRequestController>(
+  /// 프로필 이미지 presigned URL 미리 로드
+  Future<void> _preloadProfileUrls(List<User> users) async {
+    final mediaController = Provider.of<MediaController>(
       context,
       listen: false,
     );
-    setState(() => _sending.add(user.uid));
+
+    for (final user in users) {
+      if (user.profileImageUrlKey?.isNotEmpty == true &&
+          !_profileUrlCache.containsKey(user.id)) {
+        try {
+          final url = await mediaController.getPresignedUrl(
+            user.profileImageUrlKey!,
+          );
+          if (mounted) {
+            setState(() {
+              _profileUrlCache[user.id] = url;
+            });
+          }
+        } catch (e) {
+          debugPrint('프로필 이미지 URL 로드 실패: $e');
+        }
+      }
+    }
+  }
+
+  Future<void> _sendFriendRequest(User user) async {
+    final userController = Provider.of<UserController>(context, listen: false);
+    final friendController = Provider.of<FriendController>(
+      context,
+      listen: false,
+    );
+    final currentUserId = userController.currentUser?.id;
+
+    if (currentUserId == null) {
+      debugPrint('로그인된 사용자가 없습니다.');
+      return;
+    }
+
+    setState(() => _sending.add(user.id));
     try {
-      final success = await friendRequestController.sendFriendRequest(
-        receiverUid: user.uid,
-        message: 'ID로 친구 요청을 보냅니다.',
+      final result = await friendController.addFriendByNickName(
+        requesterId: currentUserId,
+        receiverNickName: user.userId,
       );
-      if (success) {
+
+      if (result != null) {
         setState(() {
-          _friendshipStatus[user.uid] = 'sent';
+          _friendshipStatus[user.id] = 'pending';
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('친구 요청을 보냈습니다'),
-              backgroundColor: Color(0xFF5A5A5A),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(
+                tr(
+                  'friends.add_by_id.request_sent',
+                  context: context,
+                  namedArgs: {'name': user.name},
+                ),
+              ),
+              backgroundColor: const Color(0xFF5A5A5A),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('친구 요청 실패: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('친구 요청 실패'),
-            backgroundColor: Color(0xFF5A5A5A),
+          SnackBar(
+            content: Text(
+              tr('friends.add_by_id.request_failed', context: context),
+            ),
+            backgroundColor: const Color(0xFF5A5A5A),
           ),
         );
       }
     } finally {
-      if (mounted) setState(() => _sending.remove(user.uid));
+      if (mounted) setState(() => _sending.remove(user.id));
     }
   }
 
@@ -148,9 +258,9 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text(
-              'ID로 추가하기',
+              tr('friends.add_by_id.title', context: context),
               style: TextStyle(
-                color: const Color(0xFFD9D9D9),
+                color: const Color(0xFFcccccc),
                 fontSize: 20,
                 fontFamily: GoogleFonts.inter().fontFamily,
                 fontWeight: FontWeight.w700,
@@ -158,7 +268,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
             ),
           ],
         ),
-        iconTheme: const IconThemeData(color: Color(0xffd9d9d9)),
+        iconTheme: const IconThemeData(color: Color(0xffcccccc)),
       ),
       body: SafeArea(
         child: Column(
@@ -173,18 +283,27 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
 
   Widget _buildSearchBar(double scale) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
+      padding: EdgeInsets.fromLTRB(16.sp, 8.sp, 16.sp, 4.sp),
       child: Container(
-        height: 44.h,
+        height: 44.sp,
         decoration: BoxDecoration(
           color: const Color(0xff1c1c1c),
-          borderRadius: BorderRadius.circular(8 * scale),
+          borderRadius: BorderRadius.circular(8.sp),
         ),
         child: Row(
           children: [
-            SizedBox(width: 12.w),
-            Icon(Icons.search, color: const Color(0xffd9d9d9), size: 20.sp),
-            SizedBox(width: 8.w),
+            SizedBox(width: 12.sp),
+            Padding(
+              padding: (Platform.isIOS)
+                  ? EdgeInsets.only(bottom: 4.sp)
+                  : EdgeInsets.zero,
+              child: SizedBox(
+                width: (19.28).sp,
+                height: (19.22).sp,
+                child: Icon(Icons.search, color: const Color(0xffcccccc)),
+              ),
+            ),
+            SizedBox(width: 8.sp),
             Expanded(
               child: TextField(
                 controller: _textController,
@@ -195,16 +314,18 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                 ),
                 cursorColor: const Color(0xfff9f9f9),
                 decoration: InputDecoration(
-                  hintText: '친구 아이디 찾기',
+                  hintText: tr(
+                    'friends.add_by_id.search_hint',
+                    context: context,
+                  ),
                   hintStyle: TextStyle(
                     color: const Color(0xFFD9D9D9),
-                    fontSize: 18.02,
+                    fontSize: (18.02).sp,
                     fontFamily: 'Pretendard',
                     fontWeight: FontWeight.w400,
                   ),
                   border: InputBorder.none,
                   isDense: true,
-                  contentPadding: EdgeInsets.only(bottom: 2.h),
                 ),
                 textInputAction: TextInputAction.search,
                 onSubmitted: (v) => _performSearch(v.trim()),
@@ -222,7 +343,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
                   _textController.clear();
                   setState(() {
                     _results = [];
-                    _friendshipStatus.clear();
+                    _friendshipStatus = {};
                   });
                 },
               ),
@@ -252,7 +373,7 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
     if (_results.isEmpty) {
       return Center(
         child: Text(
-          '없는 아이디 입니다. 다시 입력해주세요',
+          tr('friends.add_by_id.not_found', context: context),
           style: TextStyle(color: const Color(0xff9a9a9a), fontSize: 14.sp),
         ),
       );
@@ -261,12 +382,14 @@ class _AddFriendByIdScreenState extends State<AddFriendByIdScreen> {
       padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
       itemBuilder: (context, index) {
         final user = _results[index];
-        final status = _friendshipStatus[user.uid] ?? 'none';
-        final isSending = _sending.contains(user.uid);
+        final status = _friendshipStatus[user.id] ?? 'none';
+        final isSending = _sending.contains(user.id);
+        final profileUrl = _profileUrlCache[user.id];
         return _UserResultTile(
           user: user,
           status: status,
           isSending: isSending,
+          profileUrl: profileUrl,
           onAdd: () => _sendFriendRequest(user),
         );
       },
@@ -282,12 +405,14 @@ class _UserResultTile extends StatelessWidget {
     required this.status,
     required this.isSending,
     required this.onAdd,
+    this.profileUrl,
   });
 
-  final UserSearchModel user;
-  final String status; // 'none' | 'sent' | 'received' | 'friends'
+  final User user;
+  final String status; // 'none' | 'pending' | 'accepted' | 'blocked'
   final bool isSending;
   final VoidCallback onAdd;
+  final String? profileUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -317,25 +442,17 @@ class _UserResultTile extends StatelessWidget {
         shape: BoxShape.circle,
         color: Color(0xffd9d9d9),
       ),
-      /* child: Center(
-        child: Text(
-          user.name.isNotEmpty ? user.name.characters.first : 'U',
-          style: TextStyle(
-            color: const Color(0xfff9f9f9),
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),*/
       child: Icon(Icons.person, size: 26, color: Colors.white),
     );
-    if (user.profileImageUrl == null || user.profileImageUrl!.isEmpty) {
+
+    // presigned URL 사용
+    if (profileUrl == null || profileUrl!.isEmpty) {
       return placeholder;
     }
 
     return ClipOval(
       child: CachedNetworkImage(
-        imageUrl: user.profileImageUrl!,
+        imageUrl: profileUrl!,
         width: 44.w,
         height: 44.w,
         memCacheWidth: (44 * 2).round(),
@@ -353,7 +470,7 @@ class _UserResultTile extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          user.name.isNotEmpty ? user.name : user.id,
+          user.name.isNotEmpty ? user.name : user.userId,
           style: TextStyle(
             color: const Color(0xfff9f9f9),
             fontSize: 15.sp,
@@ -365,7 +482,7 @@ class _UserResultTile extends StatelessWidget {
         ),
         SizedBox(height: 4.h),
         Text(
-          user.id,
+          user.userId,
           style: TextStyle(
             color: const Color(0xff9a9a9a),
             fontSize: 12.sp,
@@ -382,20 +499,20 @@ class _UserResultTile extends StatelessWidget {
     String label;
     bool enabled = false;
     switch (status) {
-      case 'friends':
-        label = '친구';
+      case 'accepted':
+        label = tr('friends.add_by_id.status_friend', context: context);
         enabled = false;
         break;
-      case 'sent':
-        label = '요청됨';
+      case 'pending':
+        label = tr('friends.add_by_id.status_pending', context: context);
         enabled = false;
         break;
-      case 'received':
-        label = '수락 대기'; // 별도 수락 플로우는 기존 화면에서 처리
+      case 'blocked':
+        label = tr('friends.add_by_id.status_blocked', context: context);
         enabled = false;
         break;
       default:
-        label = '친구 추가';
+        label = tr('friends.add_by_id.status_add', context: context);
         enabled = true;
     }
 
@@ -441,4 +558,12 @@ class _UserResultTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 메모이제이션된 검색 결과 구조체
+class _CachedSearchResult {
+  _CachedSearchResult(this.results, this.status);
+
+  final List<User> results;
+  final Map<int, String> status;
 }

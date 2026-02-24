@@ -14,10 +14,10 @@ class UserCreateReqDto {
   /// Returns a new [UserCreateReqDto] instance.
   UserCreateReqDto({
     this.name,
-    this.userId,
-    this.phone,
+    this.nickname,
+    this.phoneNum,
     this.birthDate,
-    this.profileImage,
+    this.profileImageKey,
     this.serviceAgreed,
     this.privacyPolicyAgreed,
     this.marketingAgreed,
@@ -37,7 +37,7 @@ class UserCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -45,7 +45,7 @@ class UserCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? phone;
+  String? phoneNum;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -61,7 +61,7 @@ class UserCreateReqDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? profileImage;
+  String? profileImageKey;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -90,10 +90,10 @@ class UserCreateReqDto {
   @override
   bool operator ==(Object other) => identical(this, other) || other is UserCreateReqDto &&
     other.name == name &&
-    other.userId == userId &&
-    other.phone == phone &&
+    other.nickname == nickname &&
+    other.phoneNum == phoneNum &&
     other.birthDate == birthDate &&
-    other.profileImage == profileImage &&
+    other.profileImageKey == profileImageKey &&
     other.serviceAgreed == serviceAgreed &&
     other.privacyPolicyAgreed == privacyPolicyAgreed &&
     other.marketingAgreed == marketingAgreed;
@@ -102,16 +102,16 @@ class UserCreateReqDto {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (name == null ? 0 : name!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode) +
-    (phone == null ? 0 : phone!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (phoneNum == null ? 0 : phoneNum!.hashCode) +
     (birthDate == null ? 0 : birthDate!.hashCode) +
-    (profileImage == null ? 0 : profileImage!.hashCode) +
+    (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
     (serviceAgreed == null ? 0 : serviceAgreed!.hashCode) +
     (privacyPolicyAgreed == null ? 0 : privacyPolicyAgreed!.hashCode) +
     (marketingAgreed == null ? 0 : marketingAgreed!.hashCode);
 
   @override
-  String toString() => 'UserCreateReqDto[name=$name, userId=$userId, phone=$phone, birthDate=$birthDate, profileImage=$profileImage, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
+  String toString() => 'UserCreateReqDto[name=$name, nickname=$nickname, phoneNum=$phoneNum, birthDate=$birthDate, profileImageKey=$profileImageKey, serviceAgreed=$serviceAgreed, privacyPolicyAgreed=$privacyPolicyAgreed, marketingAgreed=$marketingAgreed]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -120,25 +120,25 @@ class UserCreateReqDto {
     } else {
       json[r'name'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
     }
-    if (this.phone != null) {
-      json[r'phone'] = this.phone;
+    if (this.phoneNum != null) {
+      json[r'phoneNum'] = this.phoneNum;
     } else {
-      json[r'phone'] = null;
+      json[r'phoneNum'] = null;
     }
     if (this.birthDate != null) {
-      json[r'birth_date'] = this.birthDate;
+      json[r'birthDate'] = this.birthDate;
     } else {
-      json[r'birth_date'] = null;
+      json[r'birthDate'] = null;
     }
-    if (this.profileImage != null) {
-      json[r'profileImage'] = this.profileImage;
+    if (this.profileImageKey != null) {
+      json[r'profileImageKey'] = this.profileImageKey;
     } else {
-      json[r'profileImage'] = null;
+      json[r'profileImageKey'] = null;
     }
     if (this.serviceAgreed != null) {
       json[r'serviceAgreed'] = this.serviceAgreed;
@@ -178,10 +178,10 @@ class UserCreateReqDto {
 
       return UserCreateReqDto(
         name: mapValueOfType<String>(json, r'name'),
-        userId: mapValueOfType<String>(json, r'userId'),
-        phone: mapValueOfType<String>(json, r'phone'),
-        birthDate: mapValueOfType<String>(json, r'birth_date'),
-        profileImage: mapValueOfType<String>(json, r'profileImage'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        phoneNum: mapValueOfType<String>(json, r'phoneNum'),
+        birthDate: mapValueOfType<String>(json, r'birthDate'),
+        profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),
         serviceAgreed: mapValueOfType<bool>(json, r'serviceAgreed'),
         privacyPolicyAgreed: mapValueOfType<bool>(json, r'privacyPolicyAgreed'),
         marketingAgreed: mapValueOfType<bool>(json, r'marketingAgreed'),

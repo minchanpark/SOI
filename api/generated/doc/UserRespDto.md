@@ -9,7 +9,11 @@ import 'package:soi_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **int** |  | [optional] 
-**userId** | **String** |  | [optional] 
+**nickname** | **String** |  | [optional] 
+**name** | **String** |  | [optional] 
+**profileImageKey** | **String** |  | [optional] 
+**birthDate** | **String** |  | [optional] 
+**phoneNum** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

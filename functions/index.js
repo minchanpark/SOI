@@ -347,6 +347,11 @@ exports.app = onRequest(async (req, res) => {
       const socialImg = query.social_img || "https://soi-sns.web.app/SOI_logo.png";
       const lang = query.lang || "ko";
       const platform = query.type || "default";
+      const refNickname = query.refNickname || query.inviter || "";
+      const deepLinkParams = new URLSearchParams({
+        refUserId: userId,
+        ...(refNickname ? {refNickname} : {}),
+      }).toString();
 
       // Generate invite page HTML with meta tags for rich preview
       const inviteHTML = `
@@ -437,7 +442,7 @@ exports.app = onRequest(async (req, res) => {
             <h1>${socialTitle}</h1>
             <p>${socialDesc}</p>
             
-            <a href="soi://invite/${userId}" class="download-button" onclick="setTimeout(() => window.location.href='https://apps.apple.com/app/soi', 2000)">
+            <a href="soi://invite?${deepLinkParams}" class="download-button" onclick="setTimeout(() => window.location.href='https://apps.apple.com/app/soi', 2000)">
               Open SOI App
             </a>
             

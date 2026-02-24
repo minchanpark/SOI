@@ -15,7 +15,6 @@ class CategoryCreateReqDto {
   CategoryCreateReqDto({
     this.requesterId,
     this.name,
-    this.categoryPhotoKey,
     this.receiverIds = const [],
     this.isPublic,
   });
@@ -36,14 +35,6 @@ class CategoryCreateReqDto {
   ///
   String? name;
 
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  String? categoryPhotoKey;
-
   List<int> receiverIds;
 
   ///
@@ -58,7 +49,6 @@ class CategoryCreateReqDto {
   bool operator ==(Object other) => identical(this, other) || other is CategoryCreateReqDto &&
     other.requesterId == requesterId &&
     other.name == name &&
-    other.categoryPhotoKey == categoryPhotoKey &&
     _deepEquality.equals(other.receiverIds, receiverIds) &&
     other.isPublic == isPublic;
 
@@ -67,12 +57,11 @@ class CategoryCreateReqDto {
     // ignore: unnecessary_parenthesis
     (requesterId == null ? 0 : requesterId!.hashCode) +
     (name == null ? 0 : name!.hashCode) +
-    (categoryPhotoKey == null ? 0 : categoryPhotoKey!.hashCode) +
     (receiverIds.hashCode) +
     (isPublic == null ? 0 : isPublic!.hashCode);
 
   @override
-  String toString() => 'CategoryCreateReqDto[requesterId=$requesterId, name=$name, categoryPhotoKey=$categoryPhotoKey, receiverIds=$receiverIds, isPublic=$isPublic]';
+  String toString() => 'CategoryCreateReqDto[requesterId=$requesterId, name=$name, receiverIds=$receiverIds, isPublic=$isPublic]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -85,11 +74,6 @@ class CategoryCreateReqDto {
       json[r'name'] = this.name;
     } else {
       json[r'name'] = null;
-    }
-    if (this.categoryPhotoKey != null) {
-      json[r'categoryPhotoKey'] = this.categoryPhotoKey;
-    } else {
-      json[r'categoryPhotoKey'] = null;
     }
       json[r'receiverIds'] = this.receiverIds;
     if (this.isPublic != null) {
@@ -121,7 +105,6 @@ class CategoryCreateReqDto {
       return CategoryCreateReqDto(
         requesterId: mapValueOfType<int>(json, r'requesterId'),
         name: mapValueOfType<String>(json, r'name'),
-        categoryPhotoKey: mapValueOfType<String>(json, r'categoryPhotoKey'),
         receiverIds: json[r'receiverIds'] is Iterable
             ? (json[r'receiverIds'] as Iterable).cast<int>().toList(growable: false)
             : const [],

@@ -10,6 +10,7 @@
 
 part of openapi.api;
 
+
 class APIApi {
   APIApi([ApiClient? apiClient]) : apiClient = apiClient ?? defaultApiClient;
 
@@ -24,9 +25,7 @@ class APIApi {
   /// Parameters:
   ///
   /// * [List<String>] key (required):
-  Future<Response> getPresignedUrlWithHttpInfo(
-    List<String> key,
-  ) async {
+  Future<Response> getPresignedUrlWithHttpInfo(List<String> key,) async {
     // ignore: prefer_const_declarations
     final path = r'/media/get-url';
 
@@ -37,9 +36,10 @@ class APIApi {
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
 
-    queryParams.addAll(_queryParams('multi', 'key', key));
+      queryParams.addAll(_queryParams('multi', 'key', key));
 
     const contentTypes = <String>[];
+
 
     return apiClient.invokeAPI(
       path,
@@ -59,24 +59,17 @@ class APIApi {
   /// Parameters:
   ///
   /// * [List<String>] key (required):
-  Future<ApiResponseDtoListString?> getPresignedUrl(
-    List<String> key,
-  ) async {
-    final response = await getPresignedUrlWithHttpInfo(
-      key,
-    );
+  Future<ApiResponseDtoListString?> getPresignedUrl(List<String> key,) async {
+    final response = await getPresignedUrlWithHttpInfo(key,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
     // When a remote server returns no body with a status of 204, we shall not decode it.
     // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
     // FormatException when trying to decode an empty string.
-    if (response.body.isNotEmpty &&
-        response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(
-        await _decodeBodyBytes(response),
-        'ApiResponseDtoListString',
-      ) as ApiResponseDtoListString;
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListString',) as ApiResponseDtoListString;
+    
     }
     return null;
   }
@@ -89,16 +82,18 @@ class APIApi {
   ///
   /// Parameters:
   ///
-  /// * [List<String>] tpes (required):
+  /// * [List<String>] types (required):
+  ///
+  /// * [List<String>] usageTypes (required):
   ///
   /// * [int] userId (required):
   ///
+  /// * [int] refId (required):
+  ///
+  /// * [int] usageCount (required):
+  ///
   /// * [List<MultipartFile>] files (required):
-  Future<Response> uploadMediaWithHttpInfo(
-    List<String> tpes,
-    int userId,
-    List<MultipartFile> files,
-  ) async {
+  Future<Response> uploadMediaWithHttpInfo(List<String> types, List<String> usageTypes, int userId, int refId, int usageCount, List<MultipartFile> files,) async {
     // ignore: prefer_const_declarations
     final path = r'/media/upload';
 
@@ -109,8 +104,11 @@ class APIApi {
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
 
-    queryParams.addAll(_queryParams('multi', 'tpes', tpes));
-    queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('multi', 'types', types));
+      queryParams.addAll(_queryParams('multi', 'usageTypes', usageTypes));
+      queryParams.addAll(_queryParams('', 'userId', userId));
+      queryParams.addAll(_queryParams('', 'refId', refId));
+      queryParams.addAll(_queryParams('', 'usageCount', usageCount));
 
     const contentTypes = <String>['multipart/form-data'];
 
@@ -141,33 +139,28 @@ class APIApi {
   ///
   /// Parameters:
   ///
-  /// * [List<String>] tpes (required):
+  /// * [List<String>] types (required):
+  ///
+  /// * [List<String>] usageTypes (required):
   ///
   /// * [int] userId (required):
   ///
+  /// * [int] refId (required):
+  ///
+  /// * [int] usageCount (required):
+  ///
   /// * [List<MultipartFile>] files (required):
-  Future<ApiResponseDtoListString?> uploadMedia(
-    List<String> tpes,
-    int userId,
-    List<MultipartFile> files,
-  ) async {
-    final response = await uploadMediaWithHttpInfo(
-      tpes,
-      userId,
-      files,
-    );
+  Future<ApiResponseDtoListString?> uploadMedia(List<String> types, List<String> usageTypes, int userId, int refId, int usageCount, List<MultipartFile> files,) async {
+    final response = await uploadMediaWithHttpInfo(types, usageTypes, userId, refId, usageCount, files,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
     // When a remote server returns no body with a status of 204, we shall not decode it.
     // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
     // FormatException when trying to decode an empty string.
-    if (response.body.isNotEmpty &&
-        response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(
-        await _decodeBodyBytes(response),
-        'ApiResponseDtoListString',
-      ) as ApiResponseDtoListString;
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListString',) as ApiResponseDtoListString;
+    
     }
     return null;
   }

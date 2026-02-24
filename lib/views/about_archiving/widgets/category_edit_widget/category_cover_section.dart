@@ -1,15 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class CategoryCoverSection extends StatelessWidget {
-  final CategoryDataModel category;
+  final String? imageUrl;
+  final String? imageCacheKey;
   final VoidCallback onTap;
 
   const CategoryCoverSection({
     super.key,
-    required this.category,
+    required this.imageUrl,
+    this.imageCacheKey,
     required this.onTap,
   });
 
@@ -21,14 +23,14 @@ class CategoryCoverSection extends StatelessWidget {
         width: double.infinity,
         height: 173.h,
         decoration: BoxDecoration(
-          // 기존 색상을 유지하면서 이미지를 배경으로 추가
           color: const Color(0xFF5A5A5A),
           borderRadius: BorderRadius.circular(8),
-          image:
-              category.categoryPhotoUrl != null &&
-                  category.categoryPhotoUrl!.isNotEmpty
+          image: imageUrl != null && imageUrl!.isNotEmpty
               ? DecorationImage(
-                  image: CachedNetworkImageProvider(category.categoryPhotoUrl!),
+                  image: CachedNetworkImageProvider(
+                    imageUrl!,
+                    cacheKey: imageCacheKey,
+                  ),
                   fit: BoxFit.cover,
                 )
               : null,
@@ -49,14 +51,14 @@ class CategoryCoverSection extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '표지사진 수정',
+                      'category.cover.edit_button',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w400,
                         fontFamily: 'Pretendard Variable',
                       ),
-                    ),
+                    ).tr(),
                     SizedBox(width: 4.w),
                     Image.asset('assets/edit.png', width: 18.w, height: 18.h),
                   ],

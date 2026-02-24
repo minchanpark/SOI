@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_boxicons/flutter_boxicons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/controllers/contact_controller.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:soi/api/controller/contact_controller.dart';
 import '../add_friend_by_id_screen.dart';
 
 class FriendAddOptionsCard extends StatelessWidget {
@@ -49,7 +50,7 @@ class FriendAddOptionsCard extends StatelessWidget {
                 // 텍스트
                 Expanded(
                   child: Text(
-                    '연락처 동기화',
+                    tr('friends.options.contact_sync', context: context),
                     style: TextStyle(
                       color: const Color(0xfff9f9f9),
                       fontSize: 16.sp,
@@ -119,7 +120,7 @@ class FriendAddOptionsCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        'ID',
+                        tr('friends.options.id_label', context: context),
                         style: TextStyle(
                           color: const Color(0xfff9f9f9),
                           fontSize: 25.sp,
@@ -132,11 +133,11 @@ class FriendAddOptionsCard extends StatelessWidget {
 
                   // 텍스트 (수정됨)
                   Expanded(
-                    child: Text(
-                      'ID로 추가 하기',
-                      style: TextStyle(
-                        color: const Color(0xfff9f9f9),
-                        fontSize: 16.sp,
+                  child: Text(
+                    tr('friends.options.add_by_id', context: context),
+                    style: TextStyle(
+                      color: const Color(0xfff9f9f9),
+                      fontSize: 16.sp,
                         fontWeight: FontWeight.w400,
                       ),
                     ),

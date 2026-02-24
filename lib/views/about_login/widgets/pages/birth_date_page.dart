@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:easy_localization/easy_localization.dart';
 import '../common/page_title.dart';
 
 /// 생년월일 입력 페이지 위젯
@@ -10,6 +11,7 @@ class BirthDatePage extends StatelessWidget {
   final TextEditingController yearController;
   final PageController? pageController;
   final VoidCallback onChanged;
+  final VoidCallback onSkip;
 
   const BirthDatePage({
     super.key,
@@ -18,6 +20,7 @@ class BirthDatePage extends StatelessWidget {
     required this.yearController,
     required this.pageController,
     required this.onChanged,
+    required this.onSkip,
   });
 
   @override
@@ -41,6 +44,22 @@ class BirthDatePage extends StatelessWidget {
             icon: Icon(Icons.arrow_back_ios, color: Colors.white),
           ),
         ),
+        Positioned(
+          top: 60.h,
+          right: 20.w,
+          child: TextButton(
+            onPressed: onSkip,
+            child: Text(
+              tr('register.skip', context: context),
+              style: TextStyle(
+                color: const Color(0xFFF8F8F8),
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ),
+        ),
         Align(
           alignment: Alignment.center,
           child: Transform.translate(
@@ -48,7 +67,9 @@ class BirthDatePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const PageTitle(title: '생년월일을 입력해주세요.'),
+                PageTitle(
+                  title: tr('register.birth_title', context: context),
+                ),
                 SizedBox(height: 24.h),
                 Container(
                   width: 320.w,
@@ -85,6 +106,10 @@ class BirthDatePage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (v) {
+                            if (v.length == 2) {
+                              // 자동으로 다음 필드로 포커스 이동
+                              FocusScope.of(context).nextFocus();
+                            }
                             if (v.length <= 2) onChanged();
                           },
                           inputFormatters: [
@@ -124,6 +149,10 @@ class BirthDatePage extends StatelessWidget {
                             ),
                           ),
                           onChanged: (v) {
+                            if (v.length == 2) {
+                              // 자동으로 포커스 이동
+                              FocusScope.of(context).nextFocus();
+                            }
                             if (v.length <= 2) onChanged();
                           },
                           inputFormatters: [

@@ -1,209 +1,432 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../firebase_logic/controllers/auth_controller.dart';
-import '../../../firebase_logic/controllers/category_controller.dart';
-import '../../../firebase_logic/controllers/photo_controller.dart';
-import '../../../firebase_logic/models/photo_data_model.dart';
 
-class FeedDataManager {
-  // 데이터 관리
-  List<Map<String, dynamic>> _allPhotos = [];
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
-  bool _hasMoreData = true;
+import '../../../api/controller/category_controller.dart' as api_category;
+import '../../../api/controller/friend_controller.dart';
+import '../../../api/controller/post_controller.dart';
+import '../../../api/controller/user_controller.dart';
+import '../../../api/models/category.dart' as api_model;
+import '../../../api/models/friend.dart';
+import '../../../api/models/post.dart';
 
-  // Getters
-  List<Map<String, dynamic>> get allPhotos => _allPhotos;
-  bool get isLoading => _isLoading;
-  bool get isLoadingMore => _isLoadingMore;
-  bool get hasMoreData => _hasMoreData;
+class FeedPostItem {
+  final Post post;
+  final int categoryId;
+  final String categoryName;
 
-  // 콜백 함수들
-  VoidCallback? _onStateChanged;
-  Function(List<Map<String, dynamic>>)? _onPhotosLoaded;
+  const FeedPostItem({
+    required this.post,
+    required this.categoryId,
+    required this.categoryName,
+  });
+}
 
+class FeedDataManager extends ChangeNotifier {
+  List<FeedPostItem> _allPosts = []; // 전체 피드 게시물을 담는 리스트입니다.
+  bool _isLoading = true; // 피드 전체 로딩 상태
+  bool _isLoadingMore = false; // 추가 로딩 상태
+  bool _hasMoreData = false;
+
+  // "처음엔 5개만 보여주고, 스크롤 중간쯤에서 더 보여주기"용(네트워크가 아니라 UI 노출만 단계적으로)
+  static const int _pageSize = 5; // 한 번에 보여줄 게시물 수 --> 5개
+  int _visibleCount = 0; // 현재 노출된 게시물 수
+
+  VoidCallback? _onStateChanged; // 상태 변경 콜백 --> 상태가 변경되면 호출
+  Function(List<FeedPostItem>)?
+  _onPostsLoaded; // 피드 게시물 로드 완료 콜백 --> 게시물이 로드되면 호출
+
+  PostController? _postController; // 구독 중인 PostController
+  BuildContext? _context;
+  VoidCallback? _postsChangedListener; // 게시물 변경 감지 리스너
+  int? _lastUserId; // 마지막으로 로드한 사용자의 ID
+  bool _pendingPostRefresh =
+      false; // 게시물 변경 감지 후 탭이 보이지 않는 상태라면 새로고침을 지연시키는 플래그
+
+  // ======== 조회(Getter) ===========
+  // 포함된 메소드들
+  // - allPosts
+  // - isLoading
+  // - isLoadingMore
+  // - hasMoreData
+  // - visiblePosts
+
+  List<FeedPostItem> get allPosts => _allPosts; // 전체 피드 게시물 목록을 반환하는 getter
+  bool get isLoading => _isLoading; // 피드 전체 로딩 상태를 반환하는 getter
+  bool get isLoadingMore => _isLoadingMore; // 추가 로딩 상태를 반환하는 getter
+  bool get hasMoreData => _hasMoreData; // 더 보여줄 데이터가 있는지 여부를 반환하는 getter
+  List<FeedPostItem> get visiblePosts => _allPosts
+      .take(_visibleCount)
+      .toList(growable: false); // 현재 노출된 게시물 목록을 반환하는 getter
+
+  // ======== 콜백/상태 알림 ===========
+  // 포함된 메소드들
+  // - setOnStateChanged
+  // - setOnPostsLoaded
+  // - _notifyStateChanged
+  //
+  // 메소드의 흐름
+  // (외부 설정) setOnStateChanged -> (내부) _notifyStateChanged -> notifyListeners
+  // (외부 설정) setOnPostsLoaded -> (내부) loadUserCategoriesAndPhotos -> _onPostsLoaded?.call(...)
+
+  /// 콜백 설정 메소드
+  /// 상태 변경 시 호출할 콜백 함수를 설정합니다.
+  ///
+  /// Parameters:
+  /// - [callback]: 상태 변경 시 호출할 콜백 함수
   void setOnStateChanged(VoidCallback? callback) {
     _onStateChanged = callback;
   }
 
-  void setOnPhotosLoaded(Function(List<Map<String, dynamic>>)? callback) {
-    _onPhotosLoaded = callback;
+  /// 콜백 설정 메소드
+  /// 게시물 로드 완료 시 호출할 콜백 함수를 설정합니다.
+  ///
+  /// Parameters:
+  /// - [callback]: 게시물 로드 완료 시 호출할 콜백 함수
+  void setOnPostsLoaded(Function(List<FeedPostItem>)? callback) {
+    _onPostsLoaded = callback;
   }
 
   void _notifyStateChanged() {
     _onStateChanged?.call();
+    notifyListeners(); // 추가: Provider 구독 UI가 자동으로 rebuild 되도록
   }
 
-  /// 사용자가 속한 카테고리들과 해당 사진들을 모두 로드 (초기 로드)
-  Future<void> loadUserCategoriesAndPhotos(BuildContext context) async {
+  // ======== PostController 구독/해제 ===========
+  // 포함된 메소드들
+  // - listenToPostController
+  // - detachFromPostController
+  // - dispose
+  //
+  // 메소드의 흐름
+  // listenToPostController -> (게시물 변경 감지) -> loadUserCategoriesAndPhotos(forceRefresh: true)
+  // dispose -> detachFromPostController
+
+  /// PostController의 게시물 변경을 구독
+  void listenToPostController(
+    PostController postController,
+    BuildContext context,
+  ) {
+    // 이미 같은 PostController를 구독 중이면 중복 등록을 막습니다.
+    if (_postController == postController && _postsChangedListener != null) {
+      return;
+    }
+
+    // 다른 컨트롤러를 다시 구독해야 하면 기존 리스너부터 해제합니다.
+    detachFromPostController();
+
+    _postController = postController;
+    _context = context;
+
+    _postsChangedListener = () {
+      if (_context != null && _context!.mounted) {
+        final isVisible = TickerMode.of(_context!);
+        if (!isVisible) {
+          _pendingPostRefresh = true; // 탭이 보이지 않는 상태라면 새로고침을 지연시킵니다.
+          debugPrint('[FeedDataManager] posts-changed 지연(탭 비가시)');
+          return;
+        }
+
+        _pendingPostRefresh = false;
+        debugPrint('[FeedDataManager] 게시물 변경 감지, 피드 새로고침');
+        // 게시물이 변경된 경우에는 서버에서 다시 받아오도록 강제 새로고침합니다.
+        unawaited(loadUserCategoriesAndPhotos(_context!, forceRefresh: true));
+      }
+    };
+
+    _postController?.addPostsChangedListener(_postsChangedListener!);
+  }
+
+  // 전역 Provider로 쓰기 때문에, 화면 dispose 시에는 캐시를 지우지 않고 리스너만 해제합니다.
+  void detachFromPostController() {
+    if (_postsChangedListener == null || _postController == null) return;
+    _postController!.removePostsChangedListener(_postsChangedListener!);
+    _postsChangedListener = null;
+    _postController = null;
+    _context = null;
+    _pendingPostRefresh = false;
+  }
+
+  /// 탭이 보이지 않는 상태에서 게시물 변경이 감지된 경우,
+  /// 탭이 다시 보이는 시점에 새로고침을 수행하는 메소드입니다.
+  void refreshIfPendingVisible() {
+    if (!_pendingPostRefresh) return;
+    if (_context == null || !_context!.mounted) return;
+    if (!TickerMode.of(_context!)) return;
+
+    _pendingPostRefresh = false; // 새로고침을 수행하므로 플래그를 초기화합니다.
+    unawaited(loadUserCategoriesAndPhotos(_context!, forceRefresh: true));
+  }
+
+  // ======== 피드 로딩(캐시/네트워크) ===========
+  // 포함된 메소드들
+  // - loadUserCategoriesAndPhotos
+  //
+  // 메소드의 흐름
+  // loadUserCategoriesAndPhotos
+  //   -> (캐시 사용) visibleCount/hasMoreData 갱신 -> _notifyStateChanged
+  //   -> (서버 로드) loadCategories -> Future.wait(getPostsByCategory...) -> sort -> _notifyStateChanged -> _onPostsLoaded?.call(...)
+
+  /// 피드용 사용자 카테고리 및 게시물 로드 메소드
+  /// forceRefresh=false면 이미 캐싱된 목록을 그대로 재사용(피드 재방문 시 쉬머/로딩 최소화)
+  ///
+  /// Parameters:
+  /// - [context]: 빌드 컨텍스트
+  /// - [forceRefresh]: true면 서버에서 강제 새로고침
+  Future<void> loadUserCategoriesAndPhotos(
+    BuildContext context, {
+    bool forceRefresh = false,
+  }) async {
+    /// 피드를 로드하는 메소드입니다.
+    /// 사용자 카테고리별로 게시물을 불러와서 결합하고 정렬합니다.
+    ///
+    /// Parameters:
+    /// - [context]: 빌드 컨텍스트
+    /// - [forceRefresh]: true면 서버에서 강제 새로고침
+    final isInitialLoad = !_isLoadingMore; // 처음 로드하는 것인지의 여부를 체크합니다.
     try {
-      _isLoading = true;
-      _allPhotos.clear();
-      _hasMoreData = true;
-      _notifyStateChanged();
-
-      final authController = Provider.of<AuthController>(
+      final userController = Provider.of<UserController>(
         context,
         listen: false,
       );
-      final categoryController = Provider.of<CategoryController>(
-        context,
-        listen: false,
-      );
-      final photoController = Provider.of<PhotoController>(
-        context,
-        listen: false,
-      );
-
-      final currentUserId = authController.getUserId;
-
-      if (currentUserId == null || currentUserId.isEmpty) {
-        throw Exception('로그인된 사용자를 찾을 수 없습니다.');
+      if (userController.currentUser == null) {
+        await userController.tryAutoLogin();
+      }
+      final currentUser = userController.currentUser;
+      if (currentUser == null) {
+        throw Exception('로그인이 필요합니다.');
       }
 
-      // 사용자가 속한 카테고리들 가져오기
-      await categoryController.loadUserCategories(
-        currentUserId,
-        forceReload: true,
-      );
+      // 유저가 변경되면 캐시를 초기화하고 강제 새로고침합니다.
+      if (_lastUserId != null && _lastUserId != currentUser.id) {
+        reset(notify: false);
+        forceRefresh = true;
+      }
+      _lastUserId = currentUser.id;
 
-      final userCategories = categoryController.userCategories;
-
-      if (userCategories.isEmpty) {
+      if (!forceRefresh && _allPosts.isNotEmpty) {
         _isLoading = false;
-        _hasMoreData = false;
+
+        // 현재 로드된 게시물의 개수가 0개라면
+        if (_visibleCount == 0) {
+          // 처음 로드 시에는 5개만 보여주기
+          _visibleCount = _allPosts.length < _pageSize
+              ? _allPosts.length
+              : _pageSize;
+        }
+        _hasMoreData = _visibleCount < _allPosts.length;
         _notifyStateChanged();
         return;
       }
 
-      // PhotoController의 무한 스크롤 초기 로드 사용 (5개)
-      final categoryIds = userCategories.map((c) => c.id).toList();
-
-      await photoController.loadPhotosFromAllCategoriesInitial(categoryIds);
-
-      // PhotoController의 데이터를 UI용 형태로 변환
-      final List<Map<String, dynamic>> photoDataList = [];
-      for (MediaDataModel photo in photoController.photos) {
-        final category = userCategories.firstWhere(
-          (c) => c.id == photo.categoryId,
-          orElse: () => userCategories.first,
-        );
-        photoDataList.add({
-          'photo': photo,
-          'categoryName': category.name,
-          'categoryId': category.id,
-        });
+      if (isInitialLoad) {
+        _isLoading = true; // 처음 로드하는 경우라면, 로딩 상태를 설정합니다.
+        _hasMoreData = false; // 더 보여줄 데이터 없음으로 초기화
+        _notifyStateChanged();
       }
 
-      _allPhotos = photoDataList;
-      _hasMoreData = photoController.hasMore;
-      _isLoading = false;
-      _notifyStateChanged();
+      final categoryController = Provider.of<api_category.CategoryController>(
+        context,
+        listen: false,
+      );
+      final friendController = Provider.of<FriendController>(
+        context,
+        listen: false,
+      );
+      final postController = Provider.of<PostController>(
+        context,
+        listen: false,
+      );
 
-      // 새로 로드된 사진들에 대한 콜백 호출
-      _onPhotosLoaded?.call(photoDataList);
+      // 피드 캐싱/노출(5개씩)은 `loadUserCategoriesAndPhotos`와 `_visibleCount`에서 담당합니다.
+      // 사용자 카테고리 로드
+      final categories = await categoryController.loadCategories(
+        currentUser.id,
+        filter: api_model.CategoryFilter.all,
+        forceReload: forceRefresh,
+      );
+
+      if (categories.isEmpty) {
+        _allPosts = [];
+        _isLoading = false;
+        _notifyStateChanged();
+        return;
+      }
+
+      // 카테고리별 게시물을 "병렬"로 로드해서 결합합니다.
+      final combinedLists = await Future.wait(
+        categories.map((category) async {
+          try {
+            // 카테고리별 게시물 로드
+            final posts = await postController.getPostsByCategory(
+              categoryId: category.id,
+              userId: currentUser.id,
+            );
+
+            // 게시물과 카테고리 정보를 결합
+            return posts
+                .map(
+                  (post) => FeedPostItem(
+                    post: post,
+                    categoryId: category.id,
+                    categoryName: category.name,
+                  ),
+                )
+                .toList(growable: false);
+          } catch (e) {
+            debugPrint('[FeedDataManager] 카테고리 ${category.id} 로드 실패: $e');
+            return const <FeedPostItem>[];
+          }
+        }),
+      );
+
+      final List<FeedPostItem> combined = [
+        for (final items in combinedLists) ...items,
+      ];
+
+      // 차단 사용자 게시물 필터링
+      final blockedUsers = await friendController.getAllFriends(
+        userId: currentUser.id,
+        status: FriendStatus.blocked,
+      );
+      if (blockedUsers.isNotEmpty) {
+        final blockedIds = blockedUsers.map((user) => user.userId).toSet();
+        combined.removeWhere((item) => blockedIds.contains(item.post.nickName));
+      }
+
+      // 게시물 작성일 기준 내림차순 정렬
+      combined.sort((a, b) {
+        final aTime =
+            a.post.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime =
+            b.post.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+
+      _allPosts = combined;
+      if (isInitialLoad) {
+        _isLoading = false;
+      }
+
+      // 처음엔 5개만 보여주기 (데이터는 캐싱해두고 UI 노출만 단계적으로)
+      _visibleCount = _allPosts.length < _pageSize
+          ? _allPosts.length
+          : _pageSize;
+
+      // 더 보여줄 게시물이 남았는지 여부 업데이트
+      _hasMoreData = _visibleCount < _allPosts.length;
+
+      _notifyStateChanged(); // 상태 변경 알림
+      _onPostsLoaded?.call(combined); // 로드 완료 콜백 호출
     } catch (e) {
-      _isLoading = false;
+      debugPrint('[FeedDataManager] 피드 로드 실패: $e');
+      _allPosts = []; //
       _hasMoreData = false;
+      _visibleCount = 0;
+      if (isInitialLoad) {
+        _isLoading = false;
+      }
       _notifyStateChanged();
     }
   }
 
-  /// 더 많은 사진 로드 (무한 스크롤링)
+  // ======== 추가 노출(페이징: UI만) ===========
+  // 포함된 메소드들
+  // - loadMorePhotos
+  //
+  // 메소드의 흐름
+  // loadMorePhotos -> visibleCount 증가 -> hasMoreData 갱신 -> _notifyStateChanged
+
+  /// post를 추가로 로드하는 메소드입니다.
+  /// 현재 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
+  ///
+  /// Parameters:
+  /// - [context]: 빌드 컨텍스트
   Future<void> loadMorePhotos(BuildContext context) async {
-    if (_isLoadingMore || !_hasMoreData) return;
-
-    try {
-      _isLoadingMore = true;
-      _notifyStateChanged();
-
-      final authController = Provider.of<AuthController>(
-        context,
-        listen: false,
-      );
-      final categoryController = Provider.of<CategoryController>(
-        context,
-        listen: false,
-      );
-      final photoController = Provider.of<PhotoController>(
-        context,
-        listen: false,
-      );
-
-      final currentUserId = authController.getUserId;
-      if (currentUserId == null || currentUserId.isEmpty) {
-        _isLoadingMore = false;
-        _notifyStateChanged();
-        return;
-      }
-
-      // 사용자가 속한 카테고리들 가져오기
-      final userCategories = categoryController.userCategories;
-      if (userCategories.isEmpty) {
-        _isLoadingMore = false;
-        _hasMoreData = false;
-        _notifyStateChanged();
-        return;
-      }
-
-      // PhotoController의 무한 스크롤 추가 로드 사용 (10개)
-      final categoryIds = userCategories.map((c) => c.id).toList();
-
-      // 로드 전 현재 사진 개수 저장
-      final previousPhotoCount = photoController.photos.length;
-
-      await photoController.loadMorePhotos(categoryIds);
-
-      // 로드 후 새로 추가된 사진만 가져오기
-      final allPhotos = photoController.photos;
-      final newPhotos = allPhotos.sublist(previousPhotoCount);
-
-      // 새로 로드된 사진들을 UI용 형태로 변환
-      final List<Map<String, dynamic>> newPhotoDataList = [];
-      for (MediaDataModel photo in newPhotos) {
-        final category = userCategories.firstWhere(
-          (c) => c.id == photo.categoryId,
-          orElse: () => userCategories.first,
-        );
-        newPhotoDataList.add({
-          'photo': photo,
-          'categoryName': category.name,
-          'categoryId': category.id,
-        });
-      }
-
-      _allPhotos.addAll(newPhotoDataList);
-      _hasMoreData = photoController.hasMore;
-      _isLoadingMore = false;
-      _notifyStateChanged();
-
-      // 새로 로드된 사진들에 대한 콜백 호출
-      _onPhotosLoaded?.call(newPhotoDataList);
-    } catch (e) {
-      debugPrint('❌ 추가 사진 로드 실패: $e');
-      _isLoadingMore = false;
-      _notifyStateChanged();
-    }
+    if (_isLoadingMore) return;
+    if (!_hasMoreData) return;
+    _isLoadingMore = true;
+    _notifyStateChanged();
+    // 이미 로드된 목록에서 "더 보여주기"만 수행(새 네트워크 요청 없음)
+    final next = _visibleCount + _pageSize; // 다음으로 보여줄 게시물 수 --> 기존 포스트 개수 + 5개
+    _visibleCount = next > _allPosts.length
+        ? _allPosts.length
+        : next; // 최대 전체 게시물 수를 넘지 않도록 제한
+    _hasMoreData = _visibleCount < _allPosts.length; // 더 보여줄 게시물이 남았는지 여부 업데이트
+    _isLoadingMore = false; // 로딩 상태 해제
+    _notifyStateChanged(); // 상태 변경 알림
   }
 
-  /// 사진 삭제
-  void removePhoto(int index) {
-    if (index >= 0 && index < _allPhotos.length) {
-      _allPhotos.removeAt(index);
-      _notifyStateChanged();
-    }
-  }
+  // ======== 게시물 접근/삭제(로컬 캐시) ===========
+  // 포함된 메소드들
+  // - getPostData
+  // - removePhoto
+  //
+  // 메소드의 흐름
+  // getPostData -> _allPosts[index] 반환
+  // removePhoto -> _allPosts.removeAt -> _notifyStateChanged
 
-  /// 특정 사진 데이터 가져오기
-  Map<String, dynamic>? getPhotoData(int index) {
-    if (index >= 0 && index < _allPhotos.length) {
-      return _allPhotos[index];
+  /// 특정 인덱스의 피드 게시물 데이터를 반환합니다.
+  ///
+  /// Parameters:
+  /// - [index]: 조회할 게시물의 인덱스
+  FeedPostItem? getPostData(int index) {
+    if (index >= 0 && index < _allPosts.length) {
+      return _allPosts[index]; // 해당 인덱스의 게시물 데이터 반환
     }
     return null;
   }
 
-  /// 리소스 정리
+  /// 특정 인덱스의 피드 게시물을 제거합니다.
+  /// _allPosts에서 해당 인덱스의 게시물 데이터를 삭제하고 상태 변경을 알립니다.
+  ///
+  /// Parameters:
+  /// - [index]: 제거할 게시물의 인덱스
+  void removePhoto(int index) {
+    if (index >= 0 && index < _allPosts.length) {
+      _allPosts.removeAt(index); // 해당 인덱스의 게시물 데이터 제거
+      _notifyStateChanged(); // 상태 변경 알림
+    }
+  }
+
+  /// 닉네임 기준으로 피드에서 게시물 제거
+  void removePostsByNickname(String nickName) {
+    if (_allPosts.isEmpty) return;
+    final filtered = _allPosts
+        .where((item) => item.post.nickName != nickName)
+        .toList(growable: false);
+    if (filtered.length == _allPosts.length) return;
+
+    _allPosts = filtered;
+    if (_visibleCount > _allPosts.length) {
+      _visibleCount = _allPosts.length;
+    }
+    _hasMoreData = _visibleCount < _allPosts.length;
+    _notifyStateChanged();
+  }
+
+  /// 피드 캐시 및 상태 초기화
+  /// 피드의 상태를 초기화하고, 필요시 상태 변경 알림을 호출합니다.
+  ///
+  /// Parameters:
+  /// - [notify]: true면 상태 변경 알림 호출
+  void reset({bool notify = true}) {
+    _allPosts = [];
+    _visibleCount = 0;
+    _hasMoreData = false;
+    _isLoading = false;
+    _isLoadingMore = false;
+    _lastUserId = null;
+    _pendingPostRefresh = false;
+    if (notify) {
+      _notifyStateChanged();
+    }
+  }
+
+  @override
   void dispose() {
-    _allPhotos.clear();
+    detachFromPostController();
+    super.dispose();
   }
 }

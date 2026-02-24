@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **requesterId** | **int** |  | [optional] 
 **name** | **String** |  | [optional] 
-**categoryPhotoKey** | **String** |  | [optional] 
 **receiverIds** | **List<int>** |  | [optional] [default to const []]
 **isPublic** | **bool** |  | [optional] 
 

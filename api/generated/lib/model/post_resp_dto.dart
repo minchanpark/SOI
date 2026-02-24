@@ -1,0 +1,441 @@
+//
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+//
+// @dart=2.18
+
+// ignore_for_file: unused_element, unused_import
+// ignore_for_file: always_put_required_named_parameters_first
+// ignore_for_file: constant_identifier_names
+// ignore_for_file: lines_longer_than_80_chars
+
+part of openapi.api;
+
+class PostRespDto {
+  /// Returns a new [PostRespDto] instance.
+  PostRespDto({
+    this.id,
+    this.nickname,
+    this.content,
+    this.userProfileImageKey,
+    this.userProfileImageUrl,
+    this.postFileKey,
+    this.postFileUrl,
+    this.audioFileKey,
+    this.waveformData,
+    this.commentCount,
+    this.duration,
+    this.isActive,
+    this.createdAt,
+    this.savedAspectRatio,
+    this.isFromGallery,
+    this.postType,
+  });
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? id;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? nickname;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? content;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userProfileImageKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? userProfileImageUrl;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? postFileKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? postFileUrl;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? audioFileKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? waveformData;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? commentCount;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  int? duration;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? isActive;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  DateTime? createdAt;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  double? savedAspectRatio;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  bool? isFromGallery;
+
+  PostRespDtoPostTypeEnum? postType;
+
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is PostRespDto &&
+    other.id == id &&
+    other.nickname == nickname &&
+    other.content == content &&
+    other.userProfileImageKey == userProfileImageKey &&
+    other.userProfileImageUrl == userProfileImageUrl &&
+    other.postFileKey == postFileKey &&
+    other.postFileUrl == postFileUrl &&
+    other.audioFileKey == audioFileKey &&
+    other.waveformData == waveformData &&
+    other.commentCount == commentCount &&
+    other.duration == duration &&
+    other.isActive == isActive &&
+    other.createdAt == createdAt &&
+    other.savedAspectRatio == savedAspectRatio &&
+    other.isFromGallery == isFromGallery &&
+    other.postType == postType;
+
+  @override
+  int get hashCode =>
+    // ignore: unnecessary_parenthesis
+    (id == null ? 0 : id!.hashCode) +
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (content == null ? 0 : content!.hashCode) +
+    (userProfileImageKey == null ? 0 : userProfileImageKey!.hashCode) +
+    (userProfileImageUrl == null ? 0 : userProfileImageUrl!.hashCode) +
+    (postFileKey == null ? 0 : postFileKey!.hashCode) +
+    (postFileUrl == null ? 0 : postFileUrl!.hashCode) +
+    (audioFileKey == null ? 0 : audioFileKey!.hashCode) +
+    (waveformData == null ? 0 : waveformData!.hashCode) +
+    (commentCount == null ? 0 : commentCount!.hashCode) +
+    (duration == null ? 0 : duration!.hashCode) +
+    (isActive == null ? 0 : isActive!.hashCode) +
+    (createdAt == null ? 0 : createdAt!.hashCode) +
+    (savedAspectRatio == null ? 0 : savedAspectRatio!.hashCode) +
+    (isFromGallery == null ? 0 : isFromGallery!.hashCode) +
+    (postType == null ? 0 : postType!.hashCode);
+
+  @override
+  String toString() => 'PostRespDto[id=$id, nickname=$nickname, content=$content, userProfileImageKey=$userProfileImageKey, userProfileImageUrl=$userProfileImageUrl, postFileKey=$postFileKey, postFileUrl=$postFileUrl, audioFileKey=$audioFileKey, waveformData=$waveformData, commentCount=$commentCount, duration=$duration, isActive=$isActive, createdAt=$createdAt, savedAspectRatio=$savedAspectRatio, isFromGallery=$isFromGallery, postType=$postType]';
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    if (this.id != null) {
+      json[r'id'] = this.id;
+    } else {
+      json[r'id'] = null;
+    }
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
+    } else {
+      json[r'nickname'] = null;
+    }
+    if (this.content != null) {
+      json[r'content'] = this.content;
+    } else {
+      json[r'content'] = null;
+    }
+    if (this.userProfileImageKey != null) {
+      json[r'userProfileImageKey'] = this.userProfileImageKey;
+    } else {
+      json[r'userProfileImageKey'] = null;
+    }
+    if (this.userProfileImageUrl != null) {
+      json[r'userProfileImageUrl'] = this.userProfileImageUrl;
+    } else {
+      json[r'userProfileImageUrl'] = null;
+    }
+    if (this.postFileKey != null) {
+      json[r'postFileKey'] = this.postFileKey;
+    } else {
+      json[r'postFileKey'] = null;
+    }
+    if (this.postFileUrl != null) {
+      json[r'postFileUrl'] = this.postFileUrl;
+    } else {
+      json[r'postFileUrl'] = null;
+    }
+    if (this.audioFileKey != null) {
+      json[r'audioFileKey'] = this.audioFileKey;
+    } else {
+      json[r'audioFileKey'] = null;
+    }
+    if (this.waveformData != null) {
+      json[r'waveformData'] = this.waveformData;
+    } else {
+      json[r'waveformData'] = null;
+    }
+    if (this.commentCount != null) {
+      json[r'commentCount'] = this.commentCount;
+    } else {
+      json[r'commentCount'] = null;
+    }
+    if (this.duration != null) {
+      json[r'duration'] = this.duration;
+    } else {
+      json[r'duration'] = null;
+    }
+    if (this.isActive != null) {
+      json[r'is_active'] = this.isActive;
+    } else {
+      json[r'is_active'] = null;
+    }
+    if (this.createdAt != null) {
+      json[r'createdAt'] = this.createdAt!.toUtc().toIso8601String();
+    } else {
+      json[r'createdAt'] = null;
+    }
+    if (this.savedAspectRatio != null) {
+      json[r'savedAspectRatio'] = this.savedAspectRatio;
+    } else {
+      json[r'savedAspectRatio'] = null;
+    }
+    if (this.isFromGallery != null) {
+      json[r'isFromGallery'] = this.isFromGallery;
+    } else {
+      json[r'isFromGallery'] = null;
+    }
+    if (this.postType != null) {
+      json[r'postType'] = this.postType;
+    } else {
+      json[r'postType'] = null;
+    }
+    return json;
+  }
+
+  /// Returns a new [PostRespDto] instance and imports its values from
+  /// [value] if it's a [Map], null otherwise.
+  // ignore: prefer_constructors_over_static_methods
+  static PostRespDto? fromJson(dynamic value) {
+    if (value is Map) {
+      final json = value.cast<String, dynamic>();
+
+      // Ensure that the map contains the required keys.
+      // Note 1: the values aren't checked for validity beyond being non-null.
+      // Note 2: this code is stripped in release mode!
+      assert(() {
+        requiredKeys.forEach((key) {
+          assert(json.containsKey(key), 'Required key "PostRespDto[$key]" is missing from JSON.');
+          assert(json[key] != null, 'Required key "PostRespDto[$key]" has a null value in JSON.');
+        });
+        return true;
+      }());
+
+      return PostRespDto(
+        id: mapValueOfType<int>(json, r'id'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        content: mapValueOfType<String>(json, r'content'),
+        userProfileImageKey: mapValueOfType<String>(json, r'userProfileImageKey'),
+        userProfileImageUrl: mapValueOfType<String>(json, r'userProfileImageUrl'),
+        postFileKey: mapValueOfType<String>(json, r'postFileKey'),
+        postFileUrl: mapValueOfType<String>(json, r'postFileUrl'),
+        audioFileKey: mapValueOfType<String>(json, r'audioFileKey'),
+        waveformData: mapValueOfType<String>(json, r'waveformData'),
+        commentCount: mapValueOfType<int>(json, r'commentCount'),
+        duration: mapValueOfType<int>(json, r'duration'),
+        isActive: mapValueOfType<bool>(json, r'is_active'),
+        createdAt: mapDateTime(json, r'createdAt', r''),
+        savedAspectRatio: mapValueOfType<double>(json, r'savedAspectRatio'),
+        isFromGallery: mapValueOfType<bool>(json, r'isFromGallery'),
+        postType: PostRespDtoPostTypeEnum.fromJson(json[r'postType']),
+      );
+    }
+    return null;
+  }
+
+  static List<PostRespDto> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <PostRespDto>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = PostRespDto.fromJson(row);
+        if (value != null) {
+          result.add(value);
+        }
+      }
+    }
+    return result.toList(growable: growable);
+  }
+
+  static Map<String, PostRespDto> mapFromJson(dynamic json) {
+    final map = <String, PostRespDto>{};
+    if (json is Map && json.isNotEmpty) {
+      json = json.cast<String, dynamic>(); // ignore: parameter_assignments
+      for (final entry in json.entries) {
+        final value = PostRespDto.fromJson(entry.value);
+        if (value != null) {
+          map[entry.key] = value;
+        }
+      }
+    }
+    return map;
+  }
+
+  // maps a json object with a list of PostRespDto-objects as value to a dart map
+  static Map<String, List<PostRespDto>> mapListFromJson(dynamic json, {bool growable = false,}) {
+    final map = <String, List<PostRespDto>>{};
+    if (json is Map && json.isNotEmpty) {
+      // ignore: parameter_assignments
+      json = json.cast<String, dynamic>();
+      for (final entry in json.entries) {
+        map[entry.key] = PostRespDto.listFromJson(entry.value, growable: growable,);
+      }
+    }
+    return map;
+  }
+
+  /// The list of required keys that must be present in a JSON.
+  static const requiredKeys = <String>{
+  };
+}
+
+
+class PostRespDtoPostTypeEnum {
+  /// Instantiate a new enum with the provided [value].
+  const PostRespDtoPostTypeEnum._(this.value);
+
+  /// The underlying value of this enum member.
+  final String value;
+
+  @override
+  String toString() => value;
+
+  String toJson() => value;
+
+  static const TEXT_ONLY = PostRespDtoPostTypeEnum._(r'TEXT_ONLY');
+  static const MULTIMEDIA = PostRespDtoPostTypeEnum._(r'MULTIMEDIA');
+
+  /// List of all possible values in this [enum][PostRespDtoPostTypeEnum].
+  static const values = <PostRespDtoPostTypeEnum>[
+    TEXT_ONLY,
+    MULTIMEDIA,
+  ];
+
+  static PostRespDtoPostTypeEnum? fromJson(dynamic value) => PostRespDtoPostTypeEnumTypeTransformer().decode(value);
+
+  static List<PostRespDtoPostTypeEnum> listFromJson(dynamic json, {bool growable = false,}) {
+    final result = <PostRespDtoPostTypeEnum>[];
+    if (json is List && json.isNotEmpty) {
+      for (final row in json) {
+        final value = PostRespDtoPostTypeEnum.fromJson(row);
+        if (value != null) {
+          result.add(value);
+        }
+      }
+    }
+    return result.toList(growable: growable);
+  }
+}
+
+/// Transformation class that can [encode] an instance of [PostRespDtoPostTypeEnum] to String,
+/// and [decode] dynamic data back to [PostRespDtoPostTypeEnum].
+class PostRespDtoPostTypeEnumTypeTransformer {
+  factory PostRespDtoPostTypeEnumTypeTransformer() => _instance ??= const PostRespDtoPostTypeEnumTypeTransformer._();
+
+  const PostRespDtoPostTypeEnumTypeTransformer._();
+
+  String encode(PostRespDtoPostTypeEnum data) => data.value;
+
+  /// Decodes a [dynamic value][data] to a PostRespDtoPostTypeEnum.
+  ///
+  /// If [allowNull] is true and the [dynamic value][data] cannot be decoded successfully,
+  /// then null is returned. However, if [allowNull] is false and the [dynamic value][data]
+  /// cannot be decoded successfully, then an [UnimplementedError] is thrown.
+  ///
+  /// The [allowNull] is very handy when an API changes and a new enum value is added or removed,
+  /// and users are still using an old app with the old code.
+  PostRespDtoPostTypeEnum? decode(dynamic data, {bool allowNull = true}) {
+    if (data != null) {
+      switch (data) {
+        case r'TEXT_ONLY': return PostRespDtoPostTypeEnum.TEXT_ONLY;
+        case r'MULTIMEDIA': return PostRespDtoPostTypeEnum.MULTIMEDIA;
+        default:
+          if (!allowNull) {
+            throw ArgumentError('Unknown enum value to decode: $data');
+          }
+      }
+    }
+    return null;
+  }
+
+  /// Singleton [PostRespDtoPostTypeEnumTypeTransformer] instance.
+  static PostRespDtoPostTypeEnumTypeTransformer? _instance;
+}
+
+

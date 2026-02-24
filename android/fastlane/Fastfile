@@ -1,0 +1,175 @@
+# ./android/fastlane/Fastfile
+require 'dotenv/load'
+
+Dotenv.load(
+  File.expand_path('../.env', __dir__),
+  File.expand_path('../../.env', __dir__)
+)
+
+default_platform(:android)
+
+platform :android do
+  # --- pubspec.yaml version helpers ---
+
+  def read_pubspec_version(pubspec_path)
+    content = File.read(pubspec_path)
+    m = content.match(/^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)\s*$/)
+    UI.user_error!("pubspec.yaml에서 version 라인을 찾지 못했습니다: #{pubspec_path}") unless m
+    { name: m[1], build: m[2].to_i }
+  end
+
+  def write_pubspec_version(pubspec_path, version_name, build_number)
+    content = File.read(pubspec_path)
+    new_line = "version: #{version_name}+#{build_number}"
+    new_content = content.gsub(/^version:\s*[0-9]+\.[0-9]+\.[0-9]+\+\d+\s*$/, new_line)
+    UI.user_error!("pubspec.yaml version 라인 치환에 실패했습니다: #{pubspec_path}") if new_content == content
+    File.write(pubspec_path, new_content)
+  end
+
+  # Play Store 최신 versionCode와 pubspec build를 비교해서 next build를 결정하고 pubspec을 갱신
+  # 반환: { version_name: "1.0.1", build_number: 40, release_version: "1.0.1+40" }
+  def bump_pubspec_build_number!(package_name:, project_root:, track: "internal")
+    pubspec_path = File.join(project_root, "pubspec.yaml")
+    current = read_pubspec_version(pubspec_path)
+
+    latest_build = 0
+    begin
+      # Google Play에서 최신 versionCode 조회
+      latest_build = google_play_track_version_codes(
+        package_name: package_name,
+        track: track,
+        json_key: ENV["GOOGLE_PLAY_JSON_KEY_PATH"]
+      ).max.to_i
+    rescue => e
+      UI.message("Google Play versionCode 조회 실패(초기 배포일 수 있음): #{e.message}")
+      latest_build = 0
+    end
+
+    next_build = [latest_build, current[:build]].max + 1
+
+    UI.message("pubspec current: #{current[:name]}+#{current[:build]}")
+    UI.message("Google Play latest (#{track}): #{latest_build}")
+    UI.message("next build number: #{next_build}")
+
+    write_pubspec_version(pubspec_path, current[:name], next_build)
+
+    {
+      version_name: current[:name],
+      build_number: next_build,
+      release_version: "#{current[:name]}+#{next_build}"
+    }
+  end
+
+  def find_latest_aab(project_root)
+    aab = Dir.glob("#{project_root}/build/app/outputs/bundle/release/*.aab").max_by { |f| File.mtime(f) }
+    UI.user_error!("AAB 파일을 찾을 수 없습니다. 빌드가 성공했는지 확인해주세요.") unless aab
+    aab
+  end
+
+  # -------------------------
+  # Lane 1) Flutter 빌드 -> Play Store (Internal Track)
+  # -------------------------
+  desc "Flutter 앱을 빌드하고 Play Store Internal Track에 배포합니다. (pubspec build 자동 증가)"
+  lane :deploy_to_playstore do |options|
+    package_name = ENV["ANDROID_PACKAGE_NAME"] || "com.newdawn.soi"
+    project_root = File.expand_path("../..", __dir__)
+    track = options[:track] || "internal"
+
+    bumped = bump_pubspec_build_number!(package_name: package_name, project_root: project_root, track: track)
+    UI.message("Using version: #{bumped[:release_version]}")
+
+    Dir.chdir(project_root) do
+      sh "flutter pub get"
+      sh "flutter build appbundle --release"
+    end
+
+    aab_path = find_latest_aab(project_root)
+    UI.message("AAB: #{aab_path}")
+
+    supply(
+      aab: aab_path,
+      package_name: package_name,
+      track: track,
+      json_key: ENV["GOOGLE_PLAY_JSON_KEY_PATH"],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: "draft"
+    )
+
+    UI.success("Play Store (#{track}) 업로드 완료!")
+  end
+
+  # -------------------------
+  # Lane 2) Shorebird release -> Play Store
+  # -------------------------
+  desc "Shorebird로 빌드하고 Play Store에 업로드합니다. (pubspec build 자동 증가 + 버전 일치 보장)"
+  lane :upload_shorebird do |options|
+    package_name = ENV["ANDROID_PACKAGE_NAME"] || "com.newdawn.soi"
+    project_root = File.expand_path("../..", __dir__)
+    track = options[:track] || "internal"
+
+    bumped = bump_pubspec_build_number!(package_name: package_name, project_root: project_root, track: track)
+    UI.message("Using version: #{bumped[:release_version]}")
+
+    Dir.chdir(project_root) do
+      sh "flutter pub get"
+
+      UI.message("Shorebird로 Android 빌드 시작...")
+      begin
+        sh "shorebird release android"
+      rescue FastlaneCore::Interface::FastlaneShellError => e
+        # 동일 릴리즈가 이미 Shorebird에 있는 경우를 안전하게 한 번 더 처리
+        if e.message.include?("existing android release for version")
+          UI.message("Shorebird에 동일 릴리즈가 이미 존재하여 build를 한 번 더 올립니다.")
+          # pubspec build +1 후 재시도
+          current = read_pubspec_version(File.join(project_root, "pubspec.yaml"))
+          write_pubspec_version(File.join(project_root, "pubspec.yaml"), current[:name], current[:build] + 1)
+          UI.message("Retrying with version: #{current[:name]}+#{current[:build] + 1}")
+          sh "shorebird release android"
+        else
+          raise
+        end
+      end
+    end
+
+    UI.success("Shorebird 빌드 완료!")
+
+    aab_path = find_latest_aab(project_root)
+    UI.success("AAB 파일: #{aab_path}")
+
+    file_size_mb = File.size(aab_path) / (1024.0 * 1024.0)
+    UI.message("AAB 크기: #{file_size_mb.round(1)} MB")
+
+    UI.message("Play Store 업로드 시작...")
+
+    supply(
+      aab: aab_path,
+      package_name: package_name,
+      track: track,
+      json_key: ENV["GOOGLE_PLAY_JSON_KEY_PATH"],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: "draft"
+    )
+
+    UI.success("모든 작업 완료!")
+  end
+
+  # -------------------------
+  # Lane 3) Shorebird 패치 (코드푸시)
+  # -------------------------
+  desc "Shorebird 패치를 배포합니다 (기존 릴리즈에 코드푸시)"
+  lane :patch do
+    project_root = File.expand_path("../..", __dir__)
+
+    Dir.chdir(project_root) do
+      sh "flutter pub get"
+      UI.message("Shorebird Android 패치 시작...")
+      sh "shorebird patch --platforms=android"
+    end
+
+    UI.success("Android 패치 완료!")
+  end
+end

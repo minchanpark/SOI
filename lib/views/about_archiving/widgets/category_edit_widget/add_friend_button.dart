@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../firebase_logic/models/category_data_model.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class AddFriendButton extends StatelessWidget {
-  final CategoryDataModel category;
   final VoidCallback onPressed;
 
-  const AddFriendButton({
-    super.key,
-    required this.category,
-    required this.onPressed,
-  });
+  const AddFriendButton({super.key, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -38,13 +33,13 @@ class AddFriendButton extends StatelessWidget {
             ),
             SizedBox(width: 12.w),
             Text(
-              '친구 추가하기',
+              'category.members.add_friend_action',
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Pretendard Variable',
               ),
-            ),
+            ).tr(),
           ],
         ),
       ),

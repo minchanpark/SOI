@@ -21,13 +21,13 @@ void main() {
       // TODO
     });
 
-    // String userId
-    test('to test the property `userId`', () async {
+    // String nickname
+    test('to test the property `nickname`', () async {
       // TODO
     });
 
-    // String phone
-    test('to test the property `phone`', () async {
+    // String phoneNum
+    test('to test the property `phoneNum`', () async {
       // TODO
     });
 
@@ -36,8 +36,8 @@ void main() {
       // TODO
     });
 
-    // String profileImage
-    test('to test the property `profileImage`', () async {
+    // String profileImageKey
+    test('to test the property `profileImageKey`', () async {
       // TODO
     });
 

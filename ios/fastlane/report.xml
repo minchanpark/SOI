@@ -5,27 +5,42 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000359">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000358">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.001749">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.003871">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build ipa --release" time="328.317703">
+      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.912021">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: increment_build_number" time="1.153652">
+      <testcase classname="fastlane.lanes" name="3: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod --version" time="0.785588">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: pilot" time="411.867222">
+      <testcase classname="fastlane.lanes" name="4: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod install" time="23.442206">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="5: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter pub get" time="2.016366">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="6: shorebird release ios" time="355.843158">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="7: pilot" time="229.755281">
         
       </testcase>
     

@@ -1,14 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../firebase_logic/models/category_data_model.dart';
+import '../../../api/models/category.dart' as api;
 
 // 카테고리 관련 다이얼로그들을 관리합니다.
 // 팝업 메뉴에서 호출되는 다이얼로그들을 포함합니다.
 class ArchiveCategoryDialogs {
-  /// 🚪 카테고리 나가기 확인 바텀시트 (피그마 디자인)
+  /// 카테고리 나가기 확인 바텀시트 (피그마 디자인) - Firebase 버전
   static void showLeaveCategoryBottomSheet(
+    BuildContext context, {
+    required VoidCallback onConfirm,
+  }) {
+    _showLeaveCategoryBottomSheetInternal(context, onConfirm: onConfirm);
+  }
+
+  /// 카테고리 나가기 확인 바텀시트 - REST API 버전
+  static void showLeaveCategoryBottomSheetApi(
     BuildContext context,
-    CategoryDataModel category, {
+    api.Category category, {
+    required VoidCallback onConfirm,
+  }) {
+    _showLeaveCategoryBottomSheetInternal(context, onConfirm: onConfirm);
+  }
+
+  /// 내부 구현 - 공통 바텀시트 UI
+  static void _showLeaveCategoryBottomSheetInternal(
+    BuildContext context, {
     required VoidCallback onConfirm,
   }) {
     showModalBottomSheet(

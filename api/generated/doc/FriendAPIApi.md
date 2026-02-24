@@ -10,9 +10,11 @@ All URIs are relative to *https://newdawnsoi.site*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**blockFriend**](FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
-[**create**](FriendAPIApi.md#create) | **POST** /friend/create | 친구 추가
-[**deleteFriend**](FriendAPIApi.md#deletefriend) | **POST** /friend/get-all | 친구 삭제
+[**create2**](FriendAPIApi.md#create2) | **POST** /friend/create | 친구 추가
+[**createByNickName**](FriendAPIApi.md#createbynickname) | **POST** /friend/create/by-nickname | nickname으로 친구 추가
+[**deleteFriend**](FriendAPIApi.md#deletefriend) | **POST** /friend/delete | 친구 삭제
 [**getAllFriend**](FriendAPIApi.md#getallfriend) | **GET** /friend/get-all | 모든 친구 조회
+[**getAllFriend1**](FriendAPIApi.md#getallfriend1) | **GET** /friend/check-friend-relation | 연락처에 있는 친구들 관계확인
 [**unBlockFriend**](FriendAPIApi.md#unblockfriend) | **POST** /friend/unblock | 친구 차단 해제
 [**update**](FriendAPIApi.md#update) | **POST** /friend/update | 친구 상태 업데이트
 
@@ -60,25 +62,25 @@ No authorization required
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **create**
-> ApiResponseDtoFriendRespDto create(friendReqDto)
+# **create2**
+> ApiResponseDtoFriendRespDto create2(friendCreateReqDto)
 
 친구 추가
 
-사용자 id를 통해 친구추가를 합니다.
+사용자 전화번호를 통해 친구추가를 합니다.
 
 ### Example
 ```dart
 import 'package:soi_api_client/api.dart';
 
 final api_instance = FriendAPIApi();
-final friendReqDto = FriendReqDto(); // FriendReqDto | 
+final friendCreateReqDto = FriendCreateReqDto(); // FriendCreateReqDto | 
 
 try {
-    final result = api_instance.create(friendReqDto);
+    final result = api_instance.create2(friendCreateReqDto);
     print(result);
 } catch (e) {
-    print('Exception when calling FriendAPIApi->create: $e\n');
+    print('Exception when calling FriendAPIApi->create2: $e\n');
 }
 ```
 
@@ -86,7 +88,50 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **friendReqDto** | [**FriendReqDto**](FriendReqDto.md)|  | 
+ **friendCreateReqDto** | [**FriendCreateReqDto**](FriendCreateReqDto.md)|  | 
+
+### Return type
+
+[**ApiResponseDtoFriendRespDto**](ApiResponseDtoFriendRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createByNickName**
+> ApiResponseDtoFriendRespDto createByNickName(friendCreateByNickNameReqDto)
+
+nickname으로 친구 추가
+
+사용자 nickName을 통해 친구추가를 합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = FriendAPIApi();
+final friendCreateByNickNameReqDto = FriendCreateByNickNameReqDto(); // FriendCreateByNickNameReqDto | 
+
+try {
+    final result = api_instance.createByNickName(friendCreateByNickNameReqDto);
+    print(result);
+} catch (e) {
+    print('Exception when calling FriendAPIApi->createByNickName: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **friendCreateByNickNameReqDto** | [**FriendCreateByNickNameReqDto**](FriendCreateByNickNameReqDto.md)|  | 
 
 ### Return type
 
@@ -147,7 +192,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getAllFriend**
-> ApiResponseDtoListUserFindRespDto getAllFriend(id)
+> ApiResponseDtoListUserFindRespDto getAllFriend(id, friendStatus)
 
 모든 친구 조회
 
@@ -159,9 +204,10 @@ import 'package:soi_api_client/api.dart';
 
 final api_instance = FriendAPIApi();
 final id = 789; // int | 
+final friendStatus = friendStatus_example; // String | 
 
 try {
-    final result = api_instance.getAllFriend(id);
+    final result = api_instance.getAllFriend(id, friendStatus);
     print(result);
 } catch (e) {
     print('Exception when calling FriendAPIApi->getAllFriend: $e\n');
@@ -173,10 +219,56 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **id** | **int**|  | 
+ **friendStatus** | **String**|  | 
 
 ### Return type
 
 [**ApiResponseDtoListUserFindRespDto**](ApiResponseDtoListUserFindRespDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: */*
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAllFriend1**
+> ApiResponseDtoListFriendCheckRespDto getAllFriend1(id, friendPhoneNums)
+
+연락처에 있는 친구들 관계확인
+
+유저의 id와 연락처에 있는 친구들 전화번호를 List로 받아서 관계를 리턴합니다.
+
+### Example
+```dart
+import 'package:soi_api_client/api.dart';
+
+final api_instance = FriendAPIApi();
+final id = 789; // int | 
+final friendPhoneNums = []; // List<String> | 
+
+try {
+    final result = api_instance.getAllFriend1(id, friendPhoneNums);
+    print(result);
+} catch (e) {
+    print('Exception when calling FriendAPIApi->getAllFriend1: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **int**|  | 
+ **friendPhoneNums** | [**List<String>**](String.md)|  | [default to const []]
+
+### Return type
+
+[**ApiResponseDtoListFriendCheckRespDto**](ApiResponseDtoListFriendCheckRespDto.md)
 
 ### Authorization
 
@@ -237,7 +329,7 @@ No authorization required
 
 친구 상태 업데이트
 
-친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
 
 ### Example
 ```dart

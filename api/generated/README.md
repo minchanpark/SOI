@@ -62,44 +62,109 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *APIApi* | [**getPresignedUrl**](doc//APIApi.md#getpresignedurl) | **GET** /media/get-url | Presigned URL 요청
 *APIApi* | [**uploadMedia**](doc//APIApi.md#uploadmedia) | **POST** /media/upload | 미디어 업로드
-*CategoryAPIApi* | [**create1**](doc//CategoryAPIApi.md#create1) | **POST** /category/create | 카테고리 추가
-*CategoryAPIApi* | [**inviteReponse**](doc//CategoryAPIApi.md#invitereponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
-*CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가
+*CategoryAPIApi* | [**categoryAlert**](doc//CategoryAPIApi.md#categoryalert) | **POST** /category/set/alert | 카테고리 알림설정
+*CategoryAPIApi* | [**categoryPinned**](doc//CategoryAPIApi.md#categorypinned) | **POST** /category/set/pinned | 카테고리 고정
+*CategoryAPIApi* | [**create4**](doc//CategoryAPIApi.md#create4) | **POST** /category/create | 카테고리 추가
+*CategoryAPIApi* | [**customName**](doc//CategoryAPIApi.md#customname) | **POST** /category/set/name | 카테고리 이름수정
+*CategoryAPIApi* | [**customProfile**](doc//CategoryAPIApi.md#customprofile) | **POST** /category/set/profile | 카테고리 프로필 수정
+*CategoryAPIApi* | [**delete**](doc//CategoryAPIApi.md#delete) | **POST** /category/delete | 카테고리 나가기 (삭제)
+*CategoryAPIApi* | [**getCategories**](doc//CategoryAPIApi.md#getcategories) | **POST** /category/find | 유저가 속한 카테고리 리스트를 가져오는 API
+*CategoryAPIApi* | [**inviteResponse**](doc//CategoryAPIApi.md#inviteresponse) | **POST** /category/invite/response | 카테고리에 초대된 유저가 초대 승낙여부를 결정하는 API
+*CategoryAPIApi* | [**inviteUser**](doc//CategoryAPIApi.md#inviteuser) | **POST** /category/invite |  카테고리에 유저 추가(초대)
+*CommentAPIApi* | [**create3**](doc//CommentAPIApi.md#create3) | **POST** /comment/create | 댓글 추가
+*CommentAPIApi* | [**deleteComment**](doc//CommentAPIApi.md#deletecomment) | **DELETE** /comment/delete | 댓글 삭제
+*CommentAPIApi* | [**getAllCommentByUserId**](doc//CommentAPIApi.md#getallcommentbyuserid) | **GET** /comment/get/by-user-id | 사용자가 작성한 댓글 조회
+*CommentAPIApi* | [**getChildComment**](doc//CommentAPIApi.md#getchildcomment) | **GET** /comment/get-child | 대댓글 조회
+*CommentAPIApi* | [**getParentComment**](doc//CommentAPIApi.md#getparentcomment) | **GET** /comment/get-parent | 원댓글 조회
 *FriendAPIApi* | [**blockFriend**](doc//FriendAPIApi.md#blockfriend) | **POST** /friend/block | 친구 차단
-*FriendAPIApi* | [**create**](doc//FriendAPIApi.md#create) | **POST** /friend/create | 친구 추가
-*FriendAPIApi* | [**deleteFriend**](doc//FriendAPIApi.md#deletefriend) | **POST** /friend/get-all | 친구 삭제
+*FriendAPIApi* | [**create2**](doc//FriendAPIApi.md#create2) | **POST** /friend/create | 친구 추가
+*FriendAPIApi* | [**createByNickName**](doc//FriendAPIApi.md#createbynickname) | **POST** /friend/create/by-nickname | nickname으로 친구 추가
+*FriendAPIApi* | [**deleteFriend**](doc//FriendAPIApi.md#deletefriend) | **POST** /friend/delete | 친구 삭제
 *FriendAPIApi* | [**getAllFriend**](doc//FriendAPIApi.md#getallfriend) | **GET** /friend/get-all | 모든 친구 조회
+*FriendAPIApi* | [**getAllFriend1**](doc//FriendAPIApi.md#getallfriend1) | **GET** /friend/check-friend-relation | 연락처에 있는 친구들 관계확인
 *FriendAPIApi* | [**unBlockFriend**](doc//FriendAPIApi.md#unblockfriend) | **POST** /friend/unblock | 친구 차단 해제
 *FriendAPIApi* | [**update**](doc//FriendAPIApi.md#update) | **POST** /friend/update | 친구 상태 업데이트
+*NotificationAPIApi* | [**getAll**](doc//NotificationAPIApi.md#getall) | **POST** /notification/get-all | 알림 조회
+*NotificationAPIApi* | [**getFriend**](doc//NotificationAPIApi.md#getfriend) | **POST** /notification/get-friend | 친구관련 알림 조회
+*PostAPIApi* | [**create1**](doc//PostAPIApi.md#create1) | **POST** /post/create | 게시물 추가
+*PostAPIApi* | [**delete2**](doc//PostAPIApi.md#delete2) | **DELETE** /post/delete | 게시물 삭제
+*PostAPIApi* | [**findAllByUserId**](doc//PostAPIApi.md#findallbyuserid) | **GET** /post/find-all | 전체 게시물 조회
+*PostAPIApi* | [**findByCategoryId**](doc//PostAPIApi.md#findbycategoryid) | **GET** /post/find-by/category | 카테고리에 해당하는 게시물 조회
+*PostAPIApi* | [**findMediaByUserId**](doc//PostAPIApi.md#findmediabyuserid) | **GET** /post/find/by-user-id | 유저 id로 게시물 조회
+*PostAPIApi* | [**setPost**](doc//PostAPIApi.md#setpost) | **PATCH** /post/set-status | 게시물 상태변경
+*PostAPIApi* | [**showDetail**](doc//PostAPIApi.md#showdetail) | **GET** /post/detail | 단일 게시물 조회
+*PostAPIApi* | [**update3**](doc//PostAPIApi.md#update3) | **PATCH** /post/update | 게시물 수정
+*ReportControllerApi* | [**create**](doc//ReportControllerApi.md#create) | **POST** /report/create | 신고 추가
+*ReportControllerApi* | [**delete1**](doc//ReportControllerApi.md#delete1) | **DELETE** /report/delete | 신고 삭제
+*ReportControllerApi* | [**find**](doc//ReportControllerApi.md#find) | **POST** /report/find | 신고 내용 조회
+*ReportControllerApi* | [**update2**](doc//ReportControllerApi.md#update2) | **PATCH** /report/update | 신고 상태 업데이트
 *UserAPIApi* | [**authSMS**](doc//UserAPIApi.md#authsms) | **POST** /user/auth | 전화번호 인증
 *UserAPIApi* | [**checkAuthSMS**](doc//UserAPIApi.md#checkauthsms) | **POST** /user/auth/check | 전화번호 인증확인
 *UserAPIApi* | [**createUser**](doc//UserAPIApi.md#createuser) | **POST** /user/create | 사용자 생성
 *UserAPIApi* | [**deleteUser**](doc//UserAPIApi.md#deleteuser) | **DELETE** /user/delete | Id로 사용자 삭제
 *UserAPIApi* | [**findUser**](doc//UserAPIApi.md#finduser) | **GET** /user/find-by-keyword | 키워드로 사용자 검색
 *UserAPIApi* | [**getAllUsers**](doc//UserAPIApi.md#getallusers) | **GET** /user/get-all | 모든유저 조회
+*UserAPIApi* | [**getUser**](doc//UserAPIApi.md#getuser) | **GET** /user/get | 특정유저 조회
 *UserAPIApi* | [**idCheck**](doc//UserAPIApi.md#idcheck) | **GET** /user/id-check | 사용자 id 중복 체크
-*UserAPIApi* | [**login**](doc//UserAPIApi.md#login) | **POST** /user/login | 사용자 로그인(전화번호로)
+*UserAPIApi* | [**loginByNickname**](doc//UserAPIApi.md#loginbynickname) | **POST** /user/login/by-nickname | 사용자 로그인(전화번호로)
+*UserAPIApi* | [**loginByPhone**](doc//UserAPIApi.md#loginbyphone) | **POST** /user/login/by-phone | 사용자 로그인(전화번호로)
+*UserAPIApi* | [**update1**](doc//UserAPIApi.md#update1) | **PATCH** /user/update | 유저정보 업데이트
+*UserAPIApi* | [**updateProfile**](doc//UserAPIApi.md#updateprofile) | **PATCH** /user/update-profile | 유저 프로필 업데이트
 
 
 ## Documentation For Models
 
  - [ApiResponseDtoBoolean](doc//ApiResponseDtoBoolean.md)
  - [ApiResponseDtoFriendRespDto](doc//ApiResponseDtoFriendRespDto.md)
+ - [ApiResponseDtoListCategoryRespDto](doc//ApiResponseDtoListCategoryRespDto.md)
+ - [ApiResponseDtoListFriendCheckRespDto](doc//ApiResponseDtoListFriendCheckRespDto.md)
+ - [ApiResponseDtoListNotificationRespDto](doc//ApiResponseDtoListNotificationRespDto.md)
+ - [ApiResponseDtoListObject](doc//ApiResponseDtoListObject.md)
+ - [ApiResponseDtoListPostRespDto](doc//ApiResponseDtoListPostRespDto.md)
+ - [ApiResponseDtoListReportResponseDto](doc//ApiResponseDtoListReportResponseDto.md)
  - [ApiResponseDtoListString](doc//ApiResponseDtoListString.md)
  - [ApiResponseDtoListUserFindRespDto](doc//ApiResponseDtoListUserFindRespDto.md)
  - [ApiResponseDtoListUserRespDto](doc//ApiResponseDtoListUserRespDto.md)
  - [ApiResponseDtoLong](doc//ApiResponseDtoLong.md)
+ - [ApiResponseDtoNotificationGetAllRespDto](doc//ApiResponseDtoNotificationGetAllRespDto.md)
+ - [ApiResponseDtoObject](doc//ApiResponseDtoObject.md)
+ - [ApiResponseDtoPostRespDto](doc//ApiResponseDtoPostRespDto.md)
+ - [ApiResponseDtoReportResponseDto](doc//ApiResponseDtoReportResponseDto.md)
+ - [ApiResponseDtoSliceCommentRespDto](doc//ApiResponseDtoSliceCommentRespDto.md)
+ - [ApiResponseDtoSlicePostRespDto](doc//ApiResponseDtoSlicePostRespDto.md)
  - [ApiResponseDtoUserRespDto](doc//ApiResponseDtoUserRespDto.md)
  - [AuthCheckReqDto](doc//AuthCheckReqDto.md)
  - [CategoryCreateReqDto](doc//CategoryCreateReqDto.md)
  - [CategoryInviteReqDto](doc//CategoryInviteReqDto.md)
  - [CategoryInviteResponseReqDto](doc//CategoryInviteResponseReqDto.md)
+ - [CategoryRespDto](doc//CategoryRespDto.md)
+ - [CommentReqDto](doc//CommentReqDto.md)
+ - [CommentRespDto](doc//CommentRespDto.md)
+ - [FriendCheckRespDto](doc//FriendCheckRespDto.md)
+ - [FriendCreateByNickNameReqDto](doc//FriendCreateByNickNameReqDto.md)
+ - [FriendCreateReqDto](doc//FriendCreateReqDto.md)
  - [FriendReqDto](doc//FriendReqDto.md)
  - [FriendRespDto](doc//FriendRespDto.md)
  - [FriendUpdateRespDto](doc//FriendUpdateRespDto.md)
+ - [NotificationGetAllRespDto](doc//NotificationGetAllRespDto.md)
+ - [NotificationRespDto](doc//NotificationRespDto.md)
+ - [NotificationUserRespDto](doc//NotificationUserRespDto.md)
+ - [PageableObject](doc//PageableObject.md)
+ - [PostCreateReqDto](doc//PostCreateReqDto.md)
+ - [PostRespDto](doc//PostRespDto.md)
+ - [PostUpdateReqDto](doc//PostUpdateReqDto.md)
+ - [ReportCreateRequestDto](doc//ReportCreateRequestDto.md)
+ - [ReportResponseDto](doc//ReportResponseDto.md)
+ - [ReportSearchRequestDto](doc//ReportSearchRequestDto.md)
+ - [ReportUpdateReqDto](doc//ReportUpdateReqDto.md)
+ - [SliceCommentRespDto](doc//SliceCommentRespDto.md)
+ - [SlicePostRespDto](doc//SlicePostRespDto.md)
+ - [SortObject](doc//SortObject.md)
+ - [SortOptionDto](doc//SortOptionDto.md)
  - [UserCreateReqDto](doc//UserCreateReqDto.md)
  - [UserFindRespDto](doc//UserFindRespDto.md)
  - [UserRespDto](doc//UserRespDto.md)
+ - [UserUpdateReqDto](doc//UserUpdateReqDto.md)
 
 
 ## Documentation For Authorization

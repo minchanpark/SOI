@@ -1,59 +1,180 @@
 # ./ios/fastlane/Fastfile
 require 'dotenv/load'
 
-# .env 파일 로드 (iOS 폴더에서)
-Dotenv.load(File.expand_path('../.env', __dir__))
+Dotenv.load(
+  File.expand_path('../.env', __dir__),
+  File.expand_path('../../.env', __dir__)
+)
 
 default_platform(:ios)
 
 platform :ios do
-    # 배포 전 모든 작업이 이뤄지는 곳
   before_all do
-    # App Store Connect API Key로 인증 (가장 안전한 방법)
     app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"], # key 파일 내용을 직접 넣거나 key_filepath 사용
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
       is_key_content_base64: true
     )
   end
 
-  desc "Flutter 앱을 빌드하고 TestFlight에 배포합니다."
-  lane :deploy_to_testflight do
-    # 1. Flutter 빌드 (절대 경로 사용)
-    sh "cd .. && flutter build ipa --release"
-
-    # 2. IPA 파일 경로 확인 및 설정
-    # 빌드된 ipa 디렉토리에서 모든 .ipa 파일 찾기 (절대 경로 사용)
-    # fastlane은 ios 폴더에서 실행되므로, 프로젝트 루트는 한 단계 위로 올라가야 함
-    project_root = File.expand_path("../..", Dir.pwd)
-    ipa_files = Dir.glob("#{project_root}/build/ios/ipa/*.ipa")
-    
-    UI.message("현재 디렉토리: #{Dir.pwd}")
-    UI.message("프로젝트 루트: #{project_root}")
-    UI.message("검색 경로: #{project_root}/build/ios/ipa/*.ipa")
-    UI.message("찾은 IPA 파일들: #{ipa_files}")
-    
-    if ipa_files.empty?
-      UI.user_error!("IPA 파일을 찾을 수 없습니다. 빌드가 성공했는지 확인해주세요.")
+  def bundle_exec(command, gemfile: nil)
+    brew_bundle = "/opt/homebrew/opt/ruby/bin/bundle"
+    bundle_bin = File.exist?(brew_bundle) ? brew_bundle : "bundle"
+    if gemfile
+      sh "BUNDLE_GEMFILE=#{gemfile} #{bundle_bin} exec #{command}"
+    else
+      sh "#{bundle_bin} exec #{command}"
     end
-    
-    ipa_path = ipa_files.first
-    UI.message("IPA 파일을 찾았습니다: #{ipa_path}")
+  end
 
-    # 2. 빌드 번호 자동 증가 (TestFlight 업로드 전에)
-    increment_build_number(xcodeproj: "Runner.xcodeproj")
+  # --- pubspec.yaml version helpers ---
 
-    # 3. TestFlight 업로드
+  def read_pubspec_version(pubspec_path)
+    content = File.read(pubspec_path)
+    m = content.match(/^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)\s*$/)
+    UI.user_error!("pubspec.yaml에서 version 라인을 찾지 못했습니다: #{pubspec_path}") unless m
+    { name: m[1], build: m[2].to_i }
+  end
+
+  def write_pubspec_version(pubspec_path, version_name, build_number)
+    content = File.read(pubspec_path)
+    new_line = "version: #{version_name}+#{build_number}"
+    new_content = content.gsub(/^version:\s*[0-9]+\.[0-9]+\.[0-9]+\+\d+\s*$/, new_line)
+    UI.user_error!("pubspec.yaml version 라인 치환에 실패했습니다: #{pubspec_path}") if new_content == content
+    File.write(pubspec_path, new_content)
+  end
+
+  # TestFlight 최신 build와 pubspec build를 비교해서 next build를 결정하고 pubspec을 갱신
+  # 반환: { version_name: "1.0.1", build_number: 40, release_version: "1.0.1+40" }
+  def bump_pubspec_build_number!(app_identifier:, project_root:)
+    pubspec_path = File.join(project_root, "pubspec.yaml")
+    current = read_pubspec_version(pubspec_path)
+
+    latest_build = 0
+    begin
+      latest_build = latest_testflight_build_number(app_identifier: app_identifier).to_i
+    rescue => e
+      UI.message("latest_testflight_build_number 조회 실패(초기 배포일 수 있음): #{e.message}")
+      latest_build = 0
+    end
+
+    next_build = [latest_build, current[:build]].max + 1
+
+    UI.message("pubspec current: #{current[:name]}+#{current[:build]}")
+    UI.message("testflight latest: #{latest_build}")
+    UI.message("next build number: #{next_build}")
+
+    write_pubspec_version(pubspec_path, current[:name], next_build)
+
+    {
+      version_name: current[:name],
+      build_number: next_build,
+      release_version: "#{current[:name]}+#{next_build}"
+    }
+  end
+
+  def ensure_pods_installed!(project_root)
+    ios_gemfile = File.join(project_root, "ios", "Gemfile")
+    Dir.chdir(File.join(project_root, "ios")) do
+      bundle_exec "pod --version", gemfile: ios_gemfile
+      bundle_exec "pod install", gemfile: ios_gemfile
+    end
+  end
+
+  def find_latest_ipa(project_root)
+    ipa = Dir.glob("#{project_root}/build/ios/**/*.ipa").max_by { |f| File.mtime(f) }
+    UI.user_error!("IPA 파일을 찾을 수 없습니다. 빌드가 성공했는지 확인해주세요.") unless ipa
+    ipa
+  end
+
+  # -------------------------
+  # Lane 1) Flutter 빌드 -> TestFlight
+  # -------------------------
+  desc "Flutter 앱을 빌드하고 TestFlight에 배포합니다. (pubspec build 자동 증가)"
+  lane :deploy_to_testflight do
+    app_identifier = ENV["APP_IDENTIFIER"] || "com.newdawn.soi-project"
+    project_root = File.expand_path("../..", __dir__)
+    ios_gemfile = File.join(project_root, "ios", "Gemfile")
+
+    bumped = bump_pubspec_build_number!(app_identifier: app_identifier, project_root: project_root)
+    UI.message("✅ Using version: #{bumped[:release_version]}")
+
+    ensure_pods_installed!(project_root)
+
+    Dir.chdir(project_root) do
+      bundle_exec "flutter pub get", gemfile: ios_gemfile
+      # pubspec 버전을 그대로 사용 (오버라이드 X) -> iOS/ASC/shorebird와 일치 보장
+      bundle_exec "flutter build ipa --release", gemfile: ios_gemfile
+    end
+
+    ipa_path = find_latest_ipa(project_root)
+    UI.message("IPA: #{ipa_path}")
+
     pilot(
       ipa: ipa_path,
-      app_identifier: "com.newdawn.soi-project", # 앱 번들 ID
-      skip_waiting_for_build_processing: true, # 빌드 처리 대기 없이 바로 다음 단계로 진행
-      changelog: "이번 버전의 테스트 변경 사항입니다.", # What to Test 내용
-      groups: ["Internal Testers"], # 빌드를 추가할 테스트 그룹 (선택 사항)
-      
-      # 수출 규제 설정 (두 번째 옵션: Apple의 운영 체제 내 표준 암호화 사용)
-      uses_non_exempt_encryption: false # false = 표준 암호화만 사용 (추가 검토 불필요)
+      app_identifier: app_identifier,
+      skip_waiting_for_build_processing: true,
+      changelog: "이번 버전의 테스트 변경 사항입니다.",
+      distribute_external: false,
+      uses_non_exempt_encryption: false
     )
+  end
+
+  # -------------------------
+  # Lane 2) Shorebird release -> TestFlight
+  # -------------------------
+  desc "Shorebird로 빌드하고 App Store Connect(TestFlight)에 업로드합니다. (pubspec build 자동 증가 + 버전 일치 보장)"
+  lane :upload_shorebird do
+    app_identifier = ENV["APP_IDENTIFIER"] || "com.newdawn.soi-project"
+    project_root = File.expand_path("../..", __dir__)
+    ios_gemfile = File.join(project_root, "ios", "Gemfile")
+
+    bumped = bump_pubspec_build_number!(app_identifier: app_identifier, project_root: project_root)
+    UI.message("✅ Using version: #{bumped[:release_version]}")
+
+    ensure_pods_installed!(project_root)
+
+    Dir.chdir(project_root) do
+      bundle_exec "flutter pub get", gemfile: ios_gemfile
+
+      UI.message("🐦 Shorebird로 iOS 빌드 시작...")
+      begin
+        sh "shorebird release ios"
+      rescue FastlaneCore::Interface::FastlaneShellError => e
+        # 동일 릴리즈가 이미 Shorebird에 있는 경우를 안전하게 한 번 더 처리
+        if e.message.include?("existing ios release for version")
+          UI.message("⚠️ Shorebird에 동일 릴리즈가 이미 존재하여 build를 한 번 더 올립니다.")
+          # pubspec build +1 후 재시도
+          current = read_pubspec_version(File.join(project_root, "pubspec.yaml"))
+          write_pubspec_version(File.join(project_root, "pubspec.yaml"), current[:name], current[:build] + 1)
+          UI.message("🔁 Retrying with version: #{current[:name]}+#{current[:build] + 1}")
+          sh "shorebird release ios"
+        else
+          raise
+        end
+      end
+    end
+
+    UI.success("✅ Shorebird 빌드 완료!")
+
+    ipa_path = find_latest_ipa(project_root)
+    UI.success("✅ IPA 파일: #{ipa_path}")
+
+    file_size_mb = File.size(ipa_path) / (1024.0 * 1024.0)
+    UI.message("📦 IPA 크기: #{file_size_mb.round(1)} MB")
+
+    UI.message("🚀 App Store Connect 업로드 시작...")
+
+    pilot(
+      ipa: ipa_path,
+      app_identifier: app_identifier,
+      skip_waiting_for_build_processing: true,
+      changelog: "Shorebird로 배포된 버전입니다.",
+      distribute_external: false,
+      uses_non_exempt_encryption: false
+    )
+
+    UI.success("✅ 모든 작업 완료!")
   end
 end

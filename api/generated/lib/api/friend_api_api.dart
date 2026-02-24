@@ -74,19 +74,19 @@ class FriendAPIApi {
 
   /// 친구 추가
   ///
-  /// 사용자 id를 통해 친구추가를 합니다.
+  /// 사용자 전화번호를 통해 친구추가를 합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
   /// Parameters:
   ///
-  /// * [FriendReqDto] friendReqDto (required):
-  Future<Response> createWithHttpInfo(FriendReqDto friendReqDto,) async {
+  /// * [FriendCreateReqDto] friendCreateReqDto (required):
+  Future<Response> create2WithHttpInfo(FriendCreateReqDto friendCreateReqDto,) async {
     // ignore: prefer_const_declarations
     final path = r'/friend/create';
 
     // ignore: prefer_final_locals
-    Object? postBody = friendReqDto;
+    Object? postBody = friendCreateReqDto;
 
     final queryParams = <QueryParam>[];
     final headerParams = <String, String>{};
@@ -108,13 +108,69 @@ class FriendAPIApi {
 
   /// 친구 추가
   ///
-  /// 사용자 id를 통해 친구추가를 합니다.
+  /// 사용자 전화번호를 통해 친구추가를 합니다.
   ///
   /// Parameters:
   ///
-  /// * [FriendReqDto] friendReqDto (required):
-  Future<ApiResponseDtoFriendRespDto?> create(FriendReqDto friendReqDto,) async {
-    final response = await createWithHttpInfo(friendReqDto,);
+  /// * [FriendCreateReqDto] friendCreateReqDto (required):
+  Future<ApiResponseDtoFriendRespDto?> create2(FriendCreateReqDto friendCreateReqDto,) async {
+    final response = await create2WithHttpInfo(friendCreateReqDto,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoFriendRespDto',) as ApiResponseDtoFriendRespDto;
+    
+    }
+    return null;
+  }
+
+  /// nickname으로 친구 추가
+  ///
+  /// 사용자 nickName을 통해 친구추가를 합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [FriendCreateByNickNameReqDto] friendCreateByNickNameReqDto (required):
+  Future<Response> createByNickNameWithHttpInfo(FriendCreateByNickNameReqDto friendCreateByNickNameReqDto,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/friend/create/by-nickname';
+
+    // ignore: prefer_final_locals
+    Object? postBody = friendCreateByNickNameReqDto;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>['application/json'];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'POST',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// nickname으로 친구 추가
+  ///
+  /// 사용자 nickName을 통해 친구추가를 합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [FriendCreateByNickNameReqDto] friendCreateByNickNameReqDto (required):
+  Future<ApiResponseDtoFriendRespDto?> createByNickName(FriendCreateByNickNameReqDto friendCreateByNickNameReqDto,) async {
+    final response = await createByNickNameWithHttpInfo(friendCreateByNickNameReqDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -139,7 +195,7 @@ class FriendAPIApi {
   /// * [FriendReqDto] friendReqDto (required):
   Future<Response> deleteFriendWithHttpInfo(FriendReqDto friendReqDto,) async {
     // ignore: prefer_const_declarations
-    final path = r'/friend/get-all';
+    final path = r'/friend/delete';
 
     // ignore: prefer_final_locals
     Object? postBody = friendReqDto;
@@ -193,7 +249,9 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [int] id (required):
-  Future<Response> getAllFriendWithHttpInfo(int id,) async {
+  ///
+  /// * [String] friendStatus (required):
+  Future<Response> getAllFriendWithHttpInfo(int id, String friendStatus,) async {
     // ignore: prefer_const_declarations
     final path = r'/friend/get-all';
 
@@ -205,6 +263,7 @@ class FriendAPIApi {
     final formParams = <String, String>{};
 
       queryParams.addAll(_queryParams('', 'id', id));
+      queryParams.addAll(_queryParams('', 'friendStatus', friendStatus));
 
     const contentTypes = <String>[];
 
@@ -227,8 +286,10 @@ class FriendAPIApi {
   /// Parameters:
   ///
   /// * [int] id (required):
-  Future<ApiResponseDtoListUserFindRespDto?> getAllFriend(int id,) async {
-    final response = await getAllFriendWithHttpInfo(id,);
+  ///
+  /// * [String] friendStatus (required):
+  Future<ApiResponseDtoListUserFindRespDto?> getAllFriend(int id, String friendStatus,) async {
+    final response = await getAllFriendWithHttpInfo(id, friendStatus,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }
@@ -237,6 +298,69 @@ class FriendAPIApi {
     // FormatException when trying to decode an empty string.
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListUserFindRespDto',) as ApiResponseDtoListUserFindRespDto;
+    
+    }
+    return null;
+  }
+
+  /// 연락처에 있는 친구들 관계확인
+  ///
+  /// 유저의 id와 연락처에 있는 친구들 전화번호를 List로 받아서 관계를 리턴합니다.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [int] id (required):
+  ///
+  /// * [List<String>] friendPhoneNums (required):
+  Future<Response> getAllFriend1WithHttpInfo(int id, List<String> friendPhoneNums,) async {
+    // ignore: prefer_const_declarations
+    final path = r'/friend/check-friend-relation';
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+      queryParams.addAll(_queryParams('', 'id', id));
+      queryParams.addAll(_queryParams('multi', 'friendPhoneNums', friendPhoneNums));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      path,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+    );
+  }
+
+  /// 연락처에 있는 친구들 관계확인
+  ///
+  /// 유저의 id와 연락처에 있는 친구들 전화번호를 List로 받아서 관계를 리턴합니다.
+  ///
+  /// Parameters:
+  ///
+  /// * [int] id (required):
+  ///
+  /// * [List<String>] friendPhoneNums (required):
+  Future<ApiResponseDtoListFriendCheckRespDto?> getAllFriend1(int id, List<String> friendPhoneNums,) async {
+    final response = await getAllFriend1WithHttpInfo(id, friendPhoneNums,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ApiResponseDtoListFriendCheckRespDto',) as ApiResponseDtoListFriendCheckRespDto;
     
     }
     return null;
@@ -300,7 +424,7 @@ class FriendAPIApi {
 
   /// 친구 상태 업데이트
   ///
-  /// 친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+  /// 친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
   ///
   /// Note: This method returns the HTTP [Response].
   ///
@@ -334,7 +458,7 @@ class FriendAPIApi {
 
   /// 친구 상태 업데이트
   ///
-  /// 친구 관계 id, 상태 : ACCEPTED, BLOCKED, CANCELLED 를 받아 상태를 업데이트합니다.
+  /// 친구 관계 id, 상태 : ACCEPTED, CANCELLED 를 받아 상태를 업데이트합니다.
   ///
   /// Parameters:
   ///

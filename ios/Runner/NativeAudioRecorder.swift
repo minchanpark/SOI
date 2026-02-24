@@ -61,23 +61,44 @@ class NativeAudioRecorder: NSObject, AVAudioRecorderDelegate {
     /// - Parameter result: 중지된 파일의 경로(String?)를 Flutter로 전달하는 콜백입니다.
     func stopRecording(result: @escaping FlutterResult) {
         print("🎤 [Native] 녹음 중지 요청")
-        
+
+        // 녹음 중이 아니면 즉시 반환
+        guard let recorder = audioRecorder, recorder.isRecording else {
+            print("⚠️ [Native] 녹음 중이 아님 - 이미 중지됨")
+            let filePath = audioRecorder?.url.path
+            audioRecorder = nil
+            recordingStartTime = nil
+            result(filePath)
+            return
+        }
+
+        // 파일 경로를 미리 저장
+        let filePath = recorder.url.path
+
         // 녹음기를 중지합니다.
-        audioRecorder?.stop()
-        let filePath = audioRecorder?.url.path
-        
+        recorder.stop()
+        print("🎤 [Native] AVAudioRecorder.stop() 호출됨")
+
         // 리소스를 정리합니다.
         audioRecorder = nil
         recordingStartTime = nil
-        
-        // 오디오 세션을 비활성화하여 다른 앱이 오디오를 사용할 수 있도록 합니다.
+
+        // ✅ 동기적 대기 - 파일 finalization 시간 확보
+        // AVAudioRecorder가 파일을 완전히 기록하고 닫을 시간을 줍니다
+        Thread.sleep(forTimeInterval: 0.15)  // 150ms
+
+        // ✅ 오디오 세션 비활성화 (result 반환 전에 완료)
         do {
-            try AVAudioSession.sharedInstance().setActive(false)
+            // notifyOthersOnDeactivation 옵션으로 다른 앱에 알림
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ [Native] 오디오 세션 비활성화 성공")
         } catch {
-            print("⚠️ [Native] 오디오 세션 비활성화 실패: \(error.localizedDescription)")
+            // 오디오 세션 비활성화 실패는 치명적이지 않으므로 경고만 출력
+            print("⚠️ [Native] 오디오 세션 비활성화 실패 (무시 가능): \(error.localizedDescription)")
         }
-        
-        print("✅ [Native] 녹음 중지 완료. 파일: \(filePath ?? "경로 없음")")
+
+        // ✅ 모든 작업 완료 후 Flutter로 콜백 반환
+        print("✅ [Native] 녹음 중지 완료. 파일: \(filePath)")
         result(filePath)
     }
     
@@ -121,8 +142,21 @@ class NativeAudioRecorder: NSObject, AVAudioRecorderDelegate {
     private func setupAudioSession(result: @escaping FlutterResult) -> Bool {
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
-            try audioSession.setActive(true)
+            // ✅ 기존 세션이 활성화되어 있다면 먼저 비활성화
+            // Xcode 업데이트 후 세션 충돌 방지
+            if audioSession.isOtherAudioPlaying {
+                print("ℹ️ [Native] 다른 오디오가 재생 중 - 세션 설정 진행")
+            }
+            
+            // 카테고리 설정 - mixWithOthers 옵션 추가로 다른 오디오와 공존 가능
+            try audioSession.setCategory(
+                .playAndRecord,
+                mode: .default,
+                options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP, .mixWithOthers]
+            )
+            
+            // 세션 활성화 - notifyOthersOnDeactivation 옵션으로 상태 변경 알림
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             print("✅ [Native] 오디오 세션 활성화 성공")
             return true
         } catch {

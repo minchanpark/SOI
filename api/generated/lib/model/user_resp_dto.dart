@@ -14,7 +14,11 @@ class UserRespDto {
   /// Returns a new [UserRespDto] instance.
   UserRespDto({
     this.id,
-    this.userId,
+    this.nickname,
+    this.name,
+    this.profileImageKey,
+    this.birthDate,
+    this.phoneNum,
   });
 
   ///
@@ -31,21 +35,61 @@ class UserRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
-  String? userId;
+  String? nickname;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? name;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? profileImageKey;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? birthDate;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
+  String? phoneNum;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is UserRespDto &&
     other.id == id &&
-    other.userId == userId;
+    other.nickname == nickname &&
+    other.name == name &&
+    other.profileImageKey == profileImageKey &&
+    other.birthDate == birthDate &&
+    other.phoneNum == phoneNum;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id == null ? 0 : id!.hashCode) +
-    (userId == null ? 0 : userId!.hashCode);
+    (nickname == null ? 0 : nickname!.hashCode) +
+    (name == null ? 0 : name!.hashCode) +
+    (profileImageKey == null ? 0 : profileImageKey!.hashCode) +
+    (birthDate == null ? 0 : birthDate!.hashCode) +
+    (phoneNum == null ? 0 : phoneNum!.hashCode);
 
   @override
-  String toString() => 'UserRespDto[id=$id, userId=$userId]';
+  String toString() => 'UserRespDto[id=$id, nickname=$nickname, name=$name, profileImageKey=$profileImageKey, birthDate=$birthDate, phoneNum=$phoneNum]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -54,10 +98,30 @@ class UserRespDto {
     } else {
       json[r'id'] = null;
     }
-    if (this.userId != null) {
-      json[r'userId'] = this.userId;
+    if (this.nickname != null) {
+      json[r'nickname'] = this.nickname;
     } else {
-      json[r'userId'] = null;
+      json[r'nickname'] = null;
+    }
+    if (this.name != null) {
+      json[r'name'] = this.name;
+    } else {
+      json[r'name'] = null;
+    }
+    if (this.profileImageKey != null) {
+      json[r'profileImageKey'] = this.profileImageKey;
+    } else {
+      json[r'profileImageKey'] = null;
+    }
+    if (this.birthDate != null) {
+      json[r'birthDate'] = this.birthDate;
+    } else {
+      json[r'birthDate'] = null;
+    }
+    if (this.phoneNum != null) {
+      json[r'phoneNum'] = this.phoneNum;
+    } else {
+      json[r'phoneNum'] = null;
     }
     return json;
   }
@@ -82,7 +146,11 @@ class UserRespDto {
 
       return UserRespDto(
         id: mapValueOfType<int>(json, r'id'),
-        userId: mapValueOfType<String>(json, r'userId'),
+        nickname: mapValueOfType<String>(json, r'nickname'),
+        name: mapValueOfType<String>(json, r'name'),
+        profileImageKey: mapValueOfType<String>(json, r'profileImageKey'),
+        birthDate: mapValueOfType<String>(json, r'birthDate'),
+        phoneNum: mapValueOfType<String>(json, r'phoneNum'),
       );
     }
     return null;

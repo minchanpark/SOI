@@ -57,6 +57,37 @@ with open(file_path, 'w') as f:
 print("✅ Python patch applied successfully!")
 PYTHON_SCRIPT
 
+# ApiResponseDtoListObject의 Object.listFromJson 버그 수정
+echo "🔧 Fixing Object.listFromJson bug in ApiResponseDtoListObject..."
+
+OBJECT_FILE="generated/lib/model/api_response_dto_list_object.dart"
+
+if [ -f "$OBJECT_FILE" ]; then
+  # Python을 사용하여 패치
+  python3 << 'PYTHON_SCRIPT2'
+import re
+
+file_path = "generated/lib/model/api_response_dto_list_object.dart"
+
+with open(file_path, 'r') as f:
+    content = f.read()
+
+# Object.listFromJson(json[r'data']) 를 수정
+content = re.sub(
+    r"data: Object\.listFromJson\(json\[r'data'\]\)",
+    "data: json[r'data'] is List ? (json[r'data'] as List).cast<Object>() : const []",
+    content
+)
+
+with open(file_path, 'w') as f:
+    f.write(content)
+
+print("✅ ApiResponseDtoListObject patch applied!")
+PYTHON_SCRIPT2
+else
+  echo "⚠️  ApiResponseDtoListObject file not found, skipping..."
+fi
+
 echo "✅ Patch complete!"
 echo ""
 echo "📝 Changes made:"

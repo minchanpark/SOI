@@ -186,6 +186,18 @@ class ApiClient {
           return ApiResponseDtoBoolean.fromJson(value);
         case 'ApiResponseDtoFriendRespDto':
           return ApiResponseDtoFriendRespDto.fromJson(value);
+        case 'ApiResponseDtoListCategoryRespDto':
+          return ApiResponseDtoListCategoryRespDto.fromJson(value);
+        case 'ApiResponseDtoListFriendCheckRespDto':
+          return ApiResponseDtoListFriendCheckRespDto.fromJson(value);
+        case 'ApiResponseDtoListNotificationRespDto':
+          return ApiResponseDtoListNotificationRespDto.fromJson(value);
+        case 'ApiResponseDtoListObject':
+          return ApiResponseDtoListObject.fromJson(value);
+        case 'ApiResponseDtoListPostRespDto':
+          return ApiResponseDtoListPostRespDto.fromJson(value);
+        case 'ApiResponseDtoListReportResponseDto':
+          return ApiResponseDtoListReportResponseDto.fromJson(value);
         case 'ApiResponseDtoListString':
           return ApiResponseDtoListString.fromJson(value);
         case 'ApiResponseDtoListUserFindRespDto':
@@ -194,6 +206,18 @@ class ApiClient {
           return ApiResponseDtoListUserRespDto.fromJson(value);
         case 'ApiResponseDtoLong':
           return ApiResponseDtoLong.fromJson(value);
+        case 'ApiResponseDtoNotificationGetAllRespDto':
+          return ApiResponseDtoNotificationGetAllRespDto.fromJson(value);
+        case 'ApiResponseDtoObject':
+          return ApiResponseDtoObject.fromJson(value);
+        case 'ApiResponseDtoPostRespDto':
+          return ApiResponseDtoPostRespDto.fromJson(value);
+        case 'ApiResponseDtoReportResponseDto':
+          return ApiResponseDtoReportResponseDto.fromJson(value);
+        case 'ApiResponseDtoSliceCommentRespDto':
+          return ApiResponseDtoSliceCommentRespDto.fromJson(value);
+        case 'ApiResponseDtoSlicePostRespDto':
+          return ApiResponseDtoSlicePostRespDto.fromJson(value);
         case 'ApiResponseDtoUserRespDto':
           return ApiResponseDtoUserRespDto.fromJson(value);
         case 'AuthCheckReqDto':
@@ -204,18 +228,62 @@ class ApiClient {
           return CategoryInviteReqDto.fromJson(value);
         case 'CategoryInviteResponseReqDto':
           return CategoryInviteResponseReqDto.fromJson(value);
+        case 'CategoryRespDto':
+          return CategoryRespDto.fromJson(value);
+        case 'CommentReqDto':
+          return CommentReqDto.fromJson(value);
+        case 'CommentRespDto':
+          return CommentRespDto.fromJson(value);
+        case 'FriendCheckRespDto':
+          return FriendCheckRespDto.fromJson(value);
+        case 'FriendCreateByNickNameReqDto':
+          return FriendCreateByNickNameReqDto.fromJson(value);
+        case 'FriendCreateReqDto':
+          return FriendCreateReqDto.fromJson(value);
         case 'FriendReqDto':
           return FriendReqDto.fromJson(value);
         case 'FriendRespDto':
           return FriendRespDto.fromJson(value);
         case 'FriendUpdateRespDto':
           return FriendUpdateRespDto.fromJson(value);
+        case 'NotificationGetAllRespDto':
+          return NotificationGetAllRespDto.fromJson(value);
+        case 'NotificationRespDto':
+          return NotificationRespDto.fromJson(value);
+        case 'NotificationUserRespDto':
+          return NotificationUserRespDto.fromJson(value);
+        case 'PageableObject':
+          return PageableObject.fromJson(value);
+        case 'PostCreateReqDto':
+          return PostCreateReqDto.fromJson(value);
+        case 'PostRespDto':
+          return PostRespDto.fromJson(value);
+        case 'PostUpdateReqDto':
+          return PostUpdateReqDto.fromJson(value);
+        case 'ReportCreateRequestDto':
+          return ReportCreateRequestDto.fromJson(value);
+        case 'ReportResponseDto':
+          return ReportResponseDto.fromJson(value);
+        case 'ReportSearchRequestDto':
+          return ReportSearchRequestDto.fromJson(value);
+        case 'ReportUpdateReqDto':
+          return ReportUpdateReqDto.fromJson(value);
+        case 'SliceCommentRespDto':
+          return SliceCommentRespDto.fromJson(value);
+        case 'SlicePostRespDto':
+          return SlicePostRespDto.fromJson(value);
+        case 'SortObject':
+          return SortObject.fromJson(value);
+        case 'SortOptionDto':
+          return SortOptionDto.fromJson(value);
         case 'UserCreateReqDto':
           return UserCreateReqDto.fromJson(value);
         case 'UserFindRespDto':
           return UserFindRespDto.fromJson(value);
         case 'UserRespDto':
           return UserRespDto.fromJson(value);
+        case 'UserUpdateReqDto':
+          return UserUpdateReqDto.fromJson(value);
         default:
           dynamic match;
           if (value is List && (match = _regList.firstMatch(targetType)?.group(1)) != null) {

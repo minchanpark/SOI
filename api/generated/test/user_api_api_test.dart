@@ -21,8 +21,17 @@ void main() {
     //
     // 사용자가 입력한 전화번호로 인증을 발송합니다.
     //
-    //Future<bool> authSMS(String phone) async
+    //Future<bool> authSMS(String phoneNum) async
     test('test authSMS', () async {
+      // TODO
+    });
+
+    // 전화번호 인증확인
+    //
+    // 사용자 전화번호와 사용자가 입력한 인증코드를 보내서 인증확인을 진행합니다.
+    //
+    //Future<bool> checkAuthSMS(AuthCheckReqDto authCheckReqDto) async
+    test('test checkAuthSMS', () async {
       // TODO
     });
 
@@ -48,7 +57,7 @@ void main() {
     //
     // 키워드가 포함된 userId를 갖고있는 사용자를 전부 검색합니다.
     //
-    //Future<ApiResponseDtoListUserRespDto> findUser(String userId) async
+    //Future<ApiResponseDtoListUserRespDto> findUser(String nickname) async
     test('test findUser', () async {
       // TODO
     });
@@ -59,6 +68,15 @@ void main() {
     //
     //Future<ApiResponseDtoListUserFindRespDto> getAllUsers() async
     test('test getAllUsers', () async {
+      // TODO
+    });
+
+    // 특정유저 조회
+    //
+    // 유저의 id값(Long)으로 유저를 조회합니다.
+    //
+    //Future<ApiResponseDtoUserRespDto> getUser(int id) async
+    test('test getUser', () async {
       // TODO
     });
 
@@ -75,8 +93,35 @@ void main() {
     //
     // 인증이 완료된 전화번호로 로그인을 합니다.
     //
-    //Future<ApiResponseDtoUserRespDto> login(String phone) async
-    test('test login', () async {
+    //Future<ApiResponseDtoUserRespDto> loginByNickname(String nickName) async
+    test('test loginByNickname', () async {
+      // TODO
+    });
+
+    // 사용자 로그인(전화번호로)
+    //
+    // 인증이 완료된 전화번호로 로그인을 합니다.
+    //
+    //Future<ApiResponseDtoUserRespDto> loginByPhone(String phoneNum) async
+    test('test loginByPhone', () async {
+      // TODO
+    });
+
+    // 유저정보 업데이트
+    //
+    // 새로운 데이터로 유저정보를 업데이트합니다.
+    //
+    //Future<ApiResponseDtoUserRespDto> update1(UserUpdateReqDto userUpdateReqDto) async
+    test('test update1', () async {
+      // TODO
+    });
+
+    // 유저 프로필 업데이트
+    //
+    // 유저의 프로필을 업데이트 합니다. 기본 프로필로 변경하고싶으면 profileImageKey에 \"\" 을 넣으면 됩니다.
+    //
+    //Future<ApiResponseDtoUserRespDto> updateProfile(int userId, { String profileImageKey }) async
+    test('test updateProfile', () async {
       // TODO
     });
 

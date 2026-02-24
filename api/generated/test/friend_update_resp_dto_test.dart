@@ -26,6 +26,11 @@ void main() {
       // TODO
     });
 
+    // int notificationId
+    test('to test the property `notificationId`', () async {
+      // TODO
+    });
+
 
   });
 

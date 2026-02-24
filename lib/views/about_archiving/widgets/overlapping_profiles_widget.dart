@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../firebase_logic/models/selected_friend_model.dart';
+import 'package:soi/api/models/selected_friend_model.dart';
+import '../../../api/controller/media_controller.dart';
 
 /// 선택된 친구들의 프로필 이미지를 겹쳐서 표시하는 위젯
 /// 최대 4개의 프로필 이미지를 표시합니다.
@@ -102,12 +104,34 @@ class _ProfileAvatar extends StatelessWidget {
       return _buildDefault();
     }
 
+    final raw = imageUrl!;
+    final uri = Uri.tryParse(raw);
+    final isHttpUrl = uri != null && uri.hasScheme;
+
+    if (!isHttpUrl) {
+      // profileImageUrlKey 같은 S3 Key가 들어오는 케이스를 위해 presigned URL로 변환
+      return FutureBuilder<String?>(
+        future: context.read<MediaController>().getPresignedUrl(raw),
+        builder: (context, snapshot) {
+          final resolvedUrl = snapshot.data;
+          if (resolvedUrl == null || resolvedUrl.isEmpty) {
+            return _buildDefault();
+          }
+          return _buildNetworkAvatar(resolvedUrl);
+        },
+      );
+    }
+
+    return _buildNetworkAvatar(raw);
+  }
+
+  Widget _buildNetworkAvatar(String url) {
     return SizedBox(
       width: size,
       height: size,
       child: ClipOval(
         child: CachedNetworkImage(
-          imageUrl: imageUrl!,
+          imageUrl: url,
           fit: BoxFit.cover,
           memCacheWidth: (size * 5).round(),
           maxWidthDiskCache: (size * 5).round(),
@@ -120,13 +144,17 @@ class _ProfileAvatar extends StatelessWidget {
 
   Widget _buildDefault() {
     return Container(
-      width: 60,
-      height: 60,
+      width: size,
+      height: size,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         color: Color(0xFFd9d9d9),
       ),
-      child: const Icon(Icons.person, color: Colors.white, size: 26),
+      child: Icon(
+        Icons.person,
+        color: Colors.white,
+        size: (size * 0.45).clamp(14.0, 26.0),
+      ),
     );
   }
 

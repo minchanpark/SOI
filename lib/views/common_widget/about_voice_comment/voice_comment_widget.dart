@@ -4,12 +4,12 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../firebase_logic/controllers/audio_controller.dart';
+import '../../../api/controller/audio_controller.dart';
+import '../../../api/controller/media_controller.dart';
+import '../../../api/controller/user_controller.dart';
 import '../../about_archiving/widgets/wave_form_widget/custom_waveform_widget.dart';
+import '../api_photo/tag_pointer.dart';
 
-/// 음성 댓글 전용 위젯
-/// 피드 화면에서 음성 댓글을 녹음하고 재생하는 기능을 제공합니다.
-/// AudioRecorderWidget보다 단순하고 음성 댓글에 최적화되어 있습니다.
 enum VoiceCommentState {
   idle, // 초기 상태 (녹음 버튼 표시)
   recording, // 녹음 중
@@ -18,6 +18,8 @@ enum VoiceCommentState {
   saved, // 저장 완료 (프로필 이미지 표시)
 }
 
+/// 음성 댓글 위젯
+/// - 음성 댓글 녹음, 재생, 삭제, 프로필 배치 등 모든 관련 UI와 로직을 포함하는 통합 위젯
 class VoiceCommentWidget extends StatefulWidget {
   final bool autoStart; // 자동 녹음 시작 여부
   final Function(String?, List<double>?, int?)?
@@ -72,9 +74,13 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
   bool _isFinalizingPlacement = false; // 중복 저장 방지
   final GlobalKey _profileDraggableKey = GlobalKey();
+  static const double _defaultAvatarSize = 54.0;
+  static const double _placementAvatarSize = 27.0;
 
   /// 이전 녹음 상태 (애니메이션 제어용)
   VoiceCommentState? _lastState;
+  final Map<String, Future<String?>> _profileUrlFutures = {};
+  bool _isTextCommentPlacement = false; // 텍스트 댓글 배치 여부
 
   // ============================================================
   // 여러 가지 생명주기 관련 메서드
@@ -92,7 +98,9 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
     // Placing 모드로 시작해야 하는 경우 (텍스트 댓글용)
     if (widget.startInPlacingMode) {
+      _isTextCommentPlacement = true;
       _currentState = VoiceCommentState.placing;
+      _initializeControllers(); // 컨트롤러 초기화 (dispose에서 필요)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _currentState == VoiceCommentState.placing) {
           _holdParentScroll();
@@ -224,7 +232,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         _currentState = VoiceCommentState.recording;
       });
     } catch (e) {
-      debugPrint('❌ 녹음 시작 오류: $e');
+      debugPrint('녹음 시작 오류: $e');
       setState(() {
         _lastState = _currentState;
         _currentState = VoiceCommentState.idle;
@@ -266,7 +274,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         );
       }
     } catch (e) {
-      debugPrint('❌ 녹음 중지 오류: $e');
+      debugPrint('녹음 중지 오류: $e');
     }
   }
 
@@ -285,7 +293,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
 
       widget.onRecordingDeleted?.call();
     } catch (e) {
-      debugPrint('❌ 녹음 삭제 오류: $e');
+      debugPrint('녹음 삭제 오류: $e');
     }
   }
   // ============================================================
@@ -296,6 +304,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     _audioController = Provider.of<AudioController>(context, listen: false);
 
     _recorderController = RecorderController()
+      ..overrideAudioSession = false
       ..androidEncoder = AndroidEncoder.aac
       ..androidOutputFormat = AndroidOutputFormat.mpeg4
       ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
@@ -330,6 +339,14 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 파형 데이터를 추출하고 PlayerController를 준비
   Future<void> _stopAndPreparePlayback() async {
     try {
+      // 중복 정지 방지
+      if (!_audioController.isRecording) {
+        debugPrint('이미 녹음이 중지되었습니다');
+        return;
+      }
+
+      debugPrint('녹음 정지 및 재생 준비 시작...');
+
       // 파형 데이터 추출
       List<double> waveformData = List<double>.from(
         _recorderController.waveData,
@@ -338,8 +355,12 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         waveformData = waveformData.map((value) => value.abs()).toList();
       }
 
-      // 녹음 중지
-      await _recorderController.stop();
+      // 순차적으로 중지: 먼저 waveform controller
+      if (_recorderController.isRecording) {
+        await _recorderController.stop();
+      }
+
+      // 그 다음 native recorder (이제 동기적으로 처리됨)
       await _audioController.stopRecordingSimple();
 
       final filePath = _audioController.currentRecordingPath;
@@ -369,7 +390,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
         );
       }
     } catch (e) {
-      debugPrint('❌ 녹음 중지 오류: $e');
+      debugPrint('녹음 중지 오류: $e');
     }
   }
 
@@ -430,15 +451,45 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// 녹음 중 UI (AudioRecorderWidget과 동일)
   /// 실시간 파형, 녹음 시간, 중지 버튼을 표시
   Widget _buildRecordingUI(String duration) {
+    final borderRadius = BorderRadius.circular(21.5);
     return Container(
       width: 353, // 텍스트 필드와 동일한 너비
       height: 46, // 텍스트 필드와 동일한 높이
       decoration: BoxDecoration(
         color: const Color(0xffd9d9d9).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(21.5),
+        borderRadius: borderRadius,
         border: Border.all(
           color: const Color(0x66D9D9D9).withValues(alpha: 0.4),
           width: 1,
+        ),
+        // 3D: 떠있는 느낌(아래 그림자 + 위쪽 하이라이트)
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      // 3D: 상단 하이라이트/하단 음영 오버레이(기존 색 유지)
+      foregroundDecoration: BoxDecoration(
+        borderRadius: borderRadius,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.18),
+          ],
+          stops: const [0.0, 0.55, 1.0],
         ),
       ),
       child: Row(
@@ -495,7 +546,24 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       curve: Curves.easeInOut,
       width: 353,
       height: 46,
-      decoration: BoxDecoration(borderRadius: borderRadius),
+      // 3D: 바깥쪽 그림자로 태그처럼 떠 보이게
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.55),
+            offset: const Offset(0, 10),
+            blurRadius: 18,
+            spreadRadius: -8,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.06),
+            offset: const Offset(0, -2),
+            blurRadius: 6,
+            spreadRadius: -2,
+          ),
+        ],
+      ),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -515,6 +583,26 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
                       width: 1,
                     ),
                     borderRadius: borderRadius,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              // 3D: 상단 하이라이트/하단 음영 오버레이(기존 배경색은 그대로)
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: borderRadius,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.08),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.18),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
@@ -738,6 +826,11 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     }
 
     _releaseParentScroll();
+
+    if (_isTextCommentPlacement) {
+      return;
+    }
+
     setState(() {
       _lastState = _currentState;
       _currentState = VoiceCommentState.recorded;
@@ -752,6 +845,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
     setState(() {
       _lastState = _currentState;
       _currentState = VoiceCommentState.saved;
+      _isTextCommentPlacement = false;
     });
 
     // 상태 변경 후 컨트롤러들을 정리 (애니메이션 후에)
@@ -787,7 +881,7 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       _playerController?.dispose();
       _playerController = null;
     } catch (e) {
-      debugPrint('❌ 컨트롤러 정리 중 오류: $e');
+      debugPrint('컨트롤러 정리 중 오류: $e');
     }
   }
 
@@ -805,17 +899,21 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
       return child;
     }
 
-    final profileWidget = _buildProfileAvatar();
+    final profileWidget = _buildProfileAvatar(size: _placementAvatarSize);
+    final dragWidget = TagBubble(
+      contentSize: _placementAvatarSize,
+      child: profileWidget,
+    );
 
     return Draggable<String>(
       key: _profileDraggableKey,
       data: 'profile_image',
-      dragAnchorStrategy: pointerDragAnchorStrategy,
+      dragAnchorStrategy: _tagPointerDragAnchor,
       feedback: Transform.scale(
         scale: 1.2,
-        child: Opacity(opacity: 0.8, child: profileWidget),
+        child: Opacity(opacity: 0.8, child: dragWidget),
       ),
-      childWhenDragging: Opacity(opacity: 0.3, child: profileWidget),
+      childWhenDragging: Opacity(opacity: 0.3, child: dragWidget),
       onDragStarted: _beginPlacementFromWaveform,
       child: child,
     );
@@ -825,21 +923,30 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
   /// isPlacementMode에 따라 배치 완료/취소 로직 실행
   /// placing/saved 상태에서 사용
   Widget _buildProfileDraggable({required bool isPlacementMode}) {
-    final profileWidget = _buildProfileAvatar();
+    final avatarSize = isPlacementMode
+        ? _placementAvatarSize
+        : _defaultAvatarSize;
+    final profileWidget = _buildProfileAvatar(size: avatarSize);
+    final dragWidget = isPlacementMode
+        ? TagBubble(contentSize: avatarSize, child: profileWidget)
+        : profileWidget;
 
     if (widget.onProfileImageDragged == null) {
-      return profileWidget;
+      return dragWidget;
     }
 
     return Draggable<String>(
       key: isPlacementMode ? _profileDraggableKey : null,
       data: 'profile_image',
-      dragAnchorStrategy: pointerDragAnchorStrategy,
+      dragAnchorStrategy: isPlacementMode
+          ? _tagPointerDragAnchor
+          : pointerDragAnchorStrategy,
       feedback: Transform.scale(
         scale: 1.2,
-        child: Opacity(opacity: 0.8, child: profileWidget),
+        child: Opacity(opacity: 0.8, child: dragWidget),
       ),
-      childWhenDragging: Opacity(opacity: 0.3, child: profileWidget),
+      childWhenDragging: Opacity(opacity: 0.3, child: dragWidget),
+      onDragStarted: isPlacementMode ? _holdParentScroll : null,
       onDraggableCanceled: (velocity, offset) {
         if (!isPlacementMode) {
           return;
@@ -855,37 +962,115 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
           _finalizePlacement();
         }
       },
-      child: profileWidget,
+      child: dragWidget,
     );
+  }
+
+  Offset _tagPointerDragAnchor(
+    Draggable<Object> draggable,
+    BuildContext context,
+    Offset position,
+  ) {
+    return TagBubble.pointerTipOffset(contentSize: _placementAvatarSize);
   }
 
   /// 프로필 아바타 위젯 생성
   /// profileImageUrl이 있으면 CachedNetworkImage 사용, 없으면 기본 아이콘 표시
-  Widget _buildProfileAvatar() {
+  Widget _buildProfileAvatar({required double size}) {
+    return Consumer2<UserController, MediaController>(
+      builder: (context, userController, mediaController, _) {
+        final profileSource =
+            userController.currentUser?.profileImageUrlKey ??
+            widget.profileImageUrl;
+        final future = _getResolvedProfileImageUrl(
+          profileSource,
+          mediaController,
+        );
+        return FutureBuilder<String?>(
+          future: future,
+          builder: (context, snapshot) {
+            final resolvedUrl = snapshot.data ?? widget.profileImageUrl;
+            return _buildAvatarFromUrl(resolvedUrl, size: size);
+          },
+        );
+      },
+    );
+  }
+
+  Future<String?> _getResolvedProfileImageUrl(
+    String? profileKey,
+    MediaController mediaController,
+  ) {
+    if (profileKey == null || profileKey.isEmpty) {
+      return Future.value(null);
+    }
+
+    final uri = Uri.tryParse(profileKey);
+    if (uri != null && uri.hasScheme) {
+      return Future.value(profileKey);
+    }
+
+    final cachedFuture = _profileUrlFutures[profileKey];
+    if (cachedFuture != null) {
+      return cachedFuture;
+    }
+
+    final future = mediaController.getPresignedUrl(profileKey);
+    _profileUrlFutures[profileKey] = future;
+    return future;
+  }
+
+  Widget _buildAvatarFromUrl(String? imageUrl, {required double size}) {
+    // 3D: 프로필 태그가 떠 보이도록 원형 그림자 + 하이라이트
+    final avatar3dShadow = [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.55),
+        offset: const Offset(0, 10),
+        blurRadius: 18,
+        spreadRadius: -10,
+      ),
+      BoxShadow(
+        color: Colors.white.withValues(alpha: 0.06),
+        offset: const Offset(0, -2),
+        blurRadius: 6,
+        spreadRadius: -4,
+      ),
+    ];
+
     return Container(
-      width: 54,
-      height: 54,
-      decoration: const BoxDecoration(shape: BoxShape.circle),
-      child:
-          widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: avatar3dShadow,
+      ),
+      foregroundDecoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.06),
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.10),
+          ],
+          stops: const [0.0, 0.6, 1.0],
+        ),
+      ),
+      child: imageUrl != null && imageUrl.isNotEmpty
           ? ClipOval(
               child: CachedNetworkImage(
-                imageUrl: widget.profileImageUrl!,
-                width: 54,
-                height: 54,
-                memCacheWidth: (54 * 2).round(),
-                maxWidthDiskCache: (54 * 2).round(),
+                imageUrl: imageUrl,
+                width: size,
+                height: size,
+                memCacheWidth: (size * 2).round(),
+                maxWidthDiskCache: (size * 2).round(),
                 fit: BoxFit.cover,
                 placeholder: (context, url) {
                   return Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[700],
                       shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 14,
                     ),
                   );
                 },
@@ -906,8 +1091,8 @@ class _VoiceCommentWidgetState extends State<VoiceCommentWidget> {
             )
           : Container(
               decoration: BoxDecoration(
-                color: Colors.orange[700],
                 shape: BoxShape.circle,
+                color: Color(0xffd9d9d9),
               ),
               child: const Icon(Icons.person, color: Colors.white, size: 14),
             ),

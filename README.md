@@ -1,399 +1,532 @@
-# SOI 앱 프로젝트 전체 분석 보고서
+# SOI - 진정한 소통을 위한 폐쇄형 SNS
 
-## 📱 프로젝트 개요
-**SOI (Social Imaging)** - 친구들과 함께 사진과 음성을 공유하는 소셜 이미징 플랫폼
+<div align="center">
 
-- **프로젝트명**: SOI
-- **플랫폼**: Android, iOS, Web, macOS, Linux, Windows (Flutter 멀티플랫폼)
-- **언어**: Dart (Flutter), Swift (iOS 네이티브), Kotlin (Android 네이티브)
-- **백엔드**: Firebase (Auth, Firestore, Storage)
+**사진과 음성으로 감정을 전달하는 소셜 이미징 플랫폼**
+
+*"텍스트가 아닌, 목소리와 사진으로 나누는 진솔한 이야기"*
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.7.0+-02569B?style=flat&logo=flutter)](https://flutter.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-latest-FFCA28?style=flat&logo=firebase)](https://firebase.google.com)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-API-6DB33F?style=flat&logo=spring)](https://spring.io)
+
+</div>
 
 ---
 
-## 🏗️ 아키텍처 패턴
+## 📖 프로젝트 소개
+
+### 🎯 시작 계기
+
+현대 SNS는 '좋아요'와 짧은 텍스트로 소통이 단절되고 있습니다.  
+**SOI**는 **진정한 감정 전달**을 목표로, 사진과 음성을 결합한 폐쇄형 소셜 플랫폼입니다.
+
+### 💡 핵심 가치
+
+\`\`\`
+📸 사진으로 순간을 포착 + 🎤 음성으로 감정을 담다 = ❤️ 진정한 소통
+\`\`\`
+
+- **음성 + 사진**: 목소리로 전하는 진심 있는 이야기
+- **폐쇄형 공유**: 친한 친구들끼리만 공유하는 안전한 공간
+- **실시간 소통**: 음성 댓글로 주고받는 생생한 대화
+- **카테고리 기반**: 친구별, 주제별로 추억을 정리
+
+### 📱 주요 기능
+
+1. **📷 사진 + 음성 메모**: 카메라로 찍은 사진에 음성 녹음
+2. **🎙️ 음성 댓글 시스템**: 친구의 사진에 음성으로 댓글 남기기
+3. **📂 카테고리 관리**: 그룹별 사진 앨범 생성 및 공유
+4. **👥 친구 시스템**: 연락처 기반 친구 추가
+5. **📱 실시간 동기화**: Firebase 기반 실시간 데이터 업데이트
+
+---
+
+## 🌿 브랜치 전략
+
+이 프로젝트는 **2가지 버전**으로 개발되고 있습니다.
+
+### 📂 브랜치 구조
+
+\`\`\`
+├── main (원본 - 수정 전 상태)
+├── firebase-version (Firebase 중심 아키텍처)
+└── api-version (Spring Boot API 중심 아키텍처)
+\`\`\`
+
+### 🔥 firebase-version
+
+**Firebase 기반 회원가입 및 데이터 관리**
+
+\`\`\`
+기술 스택:
+├─ Flutter + Dart (Frontend)
+└─ Firebase (Backend)
+   ├─ Authentication (전화번호 인증)
+   ├─ Firestore (NoSQL 데이터베이스)
+   └─ Storage (이미지/음성 파일)
+\`\`\`
+
+**특징:**
+- 회원가입이 \`register_screen\`에서 즉시 수행
+- Firebase 중심의 빠른 프로토타이핑
+- 서버리스 아키텍처
+
+### 🌐 api-version
+
+**Spring Boot API 기반 회원가입 및 데이터 관리**
+
+\`\`\`
+기술 스택:
+├─ Flutter + Dart (Frontend)
+└─ Backend (하이브리드)
+   ├─ Spring Boot REST API (회원가입, 사용자 관리)
+   ├─ Firebase Firestore (실시간 데이터)
+   └─ Firebase Storage (파일 관리)
+\`\`\`
+
+**특징:**
+- 회원가입이 \`onboarding_main_screen\`에서 수행
+- 백엔드 API와 Firebase 하이브리드 구조
+- 확장 가능한 서버 아키텍처
+- 약관 동의 데이터 체계적 관리
+
+### 🔄 브랜치 작업 플로우
+
+#### 🔥 Firebase 버전으로 작업할 때
+
+\`\`\`bash
+# 1. Firebase 브랜치로 전환
+git checkout firebase-version
+
+# 2. (선택사항) 다른 곳에서 작업한 내용이 있다면 최신 내용 받아오기
+git pull origin firebase-version
+
+# 3. 코드 수정...
+
+# 4. 변경사항 저장
+git add .
+git commit -m "feat: Firebase 기능 추가"
+
+# 5. 원격 저장소에 올리기
+git push origin firebase-version
+\`\`\`
+
+#### 🌐 API 버전으로 작업할 때
+
+\`\`\`bash
+# 1. API 브랜치로 전환
+git checkout api-version
+
+# 2. (선택사항) 다른 곳에서 작업한 내용이 있다면 최신 내용 받아오기
+git pull origin api-version
+
+# 3. 코드 수정...
+
+# 4. 변경사항 저장
+git add .
+git commit -m "feat: API 기능 추가"
+
+# 5. 원격 저장소에 올리기
+git push origin api-version
+\`\`\`
+
+#### ⚠️ 주의사항
+
+**변경사항이 있는 상태에서 브랜치 전환 시**
+
+만약 파일을 수정했는데 커밋하지 않은 상태에서 브랜치를 전환하려고 하면:
+
+\`\`\`bash
+# 에러 발생 가능
+error: Your local changes to the following files would be overwritten by checkout
+\`\`\`
+
+**해결 방법 1: 변경사항 임시 저장**
+\`\`\`bash
+git stash              # 임시 저장
+git checkout [브랜치명]  # 브랜치 전환
+git stash pop          # 임시 저장한 것 복원
+\`\`\`
+
+**해결 방법 2: 커밋 후 전환**
+\`\`\`bash
+git add .
+git commit -m "WIP: 작업 중"
+git checkout [브랜치명]
+\`\`\`
+
+#### 🔄 다른 레포지토리에 동일한 브랜치 구조로 푸시하기
+```bash
+git add .
+git commit -m "message"
+git push newdawn firebase-version(newdawn의 firebase-version인 경우)
+git push newdawn api-version(newdawn의 firebase-version인 경우)
+git push origin firebase-version(minchan의 firebase-version인 경우)
+git push origin api-version(minchan의 firebase-version인 경우)
+```
+
+---
+
+## 🛠 기술 스택
+
+### Frontend
+
+| 기술 | 용도 | 버전 |
+|------|------|------|
+| **Flutter** | 크로스 플랫폼 UI 프레임워크 | 3.7.0+ |
+| **Dart** | 프로그래밍 언어 | Latest |
+| **Provider** | 상태 관리 (ChangeNotifier) | ^6.1.4 |
+
+### Backend
+
+#### Firebase (공통)
+
+| 서비스 | 용도 |
+|--------|------|
+| **Authentication** | 전화번호 기반 SMS 인증 |
+| **Firestore** | 실시간 NoSQL 데이터베이스 |
+| **Storage** | 이미지 및 음성 파일 저장 |
+
+#### Spring Boot API (api-version 전용)
+
+| 기술 | 용도 |
+|------|------|
+| **Spring Boot** | REST API 서버 |
+| **PostgreSQL / MySQL** | 관계형 데이터베이스 |
+| **JWT** | 인증 토큰 (예정) |
+
+### Native Platform
+
+| 플랫폼 | 언어 | 구현 내용 |
+|--------|------|-----------|
+| **iOS** | Swift | 커스텀 카메라 플러그인 |
+| **Android** | Kotlin | 플랫폼 채널 구현 |
+
+---
+
+## 🏗 아키텍처
 
 ### MVC + Provider 패턴
-```
+
+\`\`\`
 lib/
 ├── models/          # 데이터 모델 & 비즈니스 로직
 ├── views/           # UI 화면 (Pages & Widgets)
-├── controllers/     # 상태 관리 & View-Model 중간 계층
+│   ├── about_login/
+│   ├── about_onboarding/
+│   ├── camera/
+│   ├── category/
+│   └── home/
+├── controllers/     # 상태 관리 (ChangeNotifier)
+│   ├── auth_controller.dart
+│   ├── category_controller.dart
+│   ├── audio_controller.dart
+│   └── comment_audio_controller.dart
 ├── services/        # 외부 서비스 연동
+│   ├── user_service.dart (api-version)
+│   └── camera_service.dart
+├── api/             # API 통신 (api-version)
 └── theme/           # 앱 디자인 시스템
-```
+\`\`\`
 
-### 상태 관리: Provider + ChangeNotifier
-- **AuthController**: 사용자 인증 및 사용자 정보 관리
-- **CategoryController**: 카테고리 및 사진 관리
-- **AudioController**: 음성 녹음/재생 관리
-- **CommentController**: 음성 댓글 시스템
-- **ContactsController**: 연락처/친구 관리
+### 핵심 Controller
 
----
-
-## 🔧 기술 스택 상세
-
-### **Frontend (Flutter)**
-```yaml
-dependencies:
-  flutter: sdk
-  provider: ^6.1.4               # 상태 관리
-  firebase_core: ^3.13.0         # Firebase 기본
-  firebase_auth: ^5.6.0          # 전화번호 인증
-  cloud_firestore: ^5.6.9        # NoSQL 데이터베이스
-  firebase_storage: ^12.4.5      # 파일 저장소
-  
-  # UI/UX
-  google_fonts: ^6.2.1
-  solar_icons: ^0.0.5
-  fluentui_system_icons: ^1.1.273
-  
-  # 미디어 처리
-  image_picker: ^*                # 이미지 선택
-  flutter_image_compress: ^*      # 이미지 압축
-  flutter_sound: ^*               # 음성 녹음/재생
-  cached_network_image: ^3.4.1    # 이미지 캐싱
-  
-  # 시스템 연동
-  flutter_contacts: ^*            # 연락처 접근
-  permission_handler: ^12.0.0+1   # 권한 관리
-  
-  # 기타
-  fluttertoast: ^8.2.12          # 토스트 메시지
-  lottie: ^3.3.1                 # 애니메이션
-```
-
-### **Backend (Firebase)**
-- **Authentication**: 전화번호 기반 인증 + reCAPTCHA
-- **Firestore**: 실시간 NoSQL 데이터베이스
-- **Storage**: 이미지/음성 파일 저장
-- **Rules**: 인증 기반 보안 규칙
-
-### **Native Integration**
-- **iOS**: Swift로 카메라 플러그인 구현
-- **Android**: Kotlin으로 플랫폼 채널 구현
-- **Web**: HTML5 + reCAPTCHA 지원
+| Controller | 역할 |
+|------------|------|
+| \`AuthController\` | 사용자 인증, 로그인/로그아웃, 프로필 관리 |
+| \`CategoryController\` | 카테고리 및 사진 CRUD |
+| \`AudioController\` | 음성 녹음/재생 |
+| \`CommentAudioController\` | 음성 댓글 시스템 |
+| \`ContactController\` | 연락처 기반 친구 관리 |
 
 ---
 
-## 📊 데이터베이스 구조 (Firestore)
+## 📊 데이터베이스 구조
 
-### Collections
-```javascript
+### Firestore Collections
+
+\`\`\`javascript
 users/
   {userId}/
-    uid: String           // Firebase Auth UID
-    id: String           // 사용자 닉네임
-    name: String         // 실명
-    phone: String        // 전화번호
-    birth_date: String   // 생년월일
-    profile_image: String // 프로필 이미지 URL
+    uid: String              // Firebase Auth UID
+    id: String              // 사용자 닉네임
+    name: String            // 실명
+    phone: String           // 전화번호
+    birth_date: String      // 생년월일
+    profile_image: String   // 프로필 이미지 URL
     createdAt: Timestamp
-    lastLogin: Timestamp
     
-    friends/             // 서브컬렉션
-      {contactId}/
-        displayName: String
-        phoneNumber: String
-        emails: Array<String>
-        phoneNumbers: Array<String>
-        createdAt: Timestamp
-
 categories/
   {categoryId}/
     name: String              // 카테고리 이름
     userId: Array<String>     // 참여자 UID 배열
     mates: Array<String>      // 참여자 닉네임 배열
     photoCount: Number        // 사진 개수
-    createdAt: Timestamp
     
     photos/                   // 서브컬렉션
       {photoId}/
-        userId: String        // 업로더 UID
+        userId: String
         imageUrl: String      // 이미지 URL
         audioUrl: String      // 음성 메모 URL
-        createdAt: Timestamp
         
         comments/             // 서브컬렉션
-          {userNickname}/     // 댓글 작성자 닉네임이 문서 ID
-            userNickname: String
-            userId: String
+          {userNickname}/
             audioUrl: String  // 음성 댓글 URL
-            createdAt: Timestamp
-```
-
-### Storage 구조
-```
-profiles/{userId}/          // 프로필 이미지
-  profile_{userId}_{timestamp}.png
-  
-categories/photos/          // 카테고리 사진들
-  {categoryId}_{timestamp}.jpg
-  
-categories_comments_audio/  // 음성 댓글
-  {nickname}_comment_{timestamp}.aac
-  
-audio/                     // 일반 음성 파일
-  {timestamp}.aac
-```
+\`\`\`
 
 ---
 
-## 🎯 주요 기능 모듈
+## ⚡ 핵심 기능
 
-### 1. **인증 시스템** (`auth_model.dart`, `auth_controller.dart`)
-**특징:**
-- 전화번호 기반 인증 (국제 표준 +82 형식)
+### 1. 인증 시스템
+- 전화번호 기반 SMS 인증
 - 플랫폼별 구분 처리 (Web: reCAPTCHA, Native: SMS)
-- 기존 사용자 자동 연동 시스템
 
-**주요 메서드:**
-- `verifyPhoneNumber()`: 플랫폼별 전화번호 인증
-- `signInWithSmsCode()`: SMS 코드 확인
-- `createUserInFirestore()`: 사용자 정보 저장/업데이트
-- `findUserByPhone()`: 전화번호로 기존 사용자 검색
-
-### 2. **카메라 & 사진 관리** (`camera_screen.dart`, `photo_editor_screen.dart`)
-**특징:**
-- iOS/Android 네이티브 카메라 플러그인
-- 실시간 카메라 제어 (줌, 플래시, 밝기)
+### 2. 카메라 & 사진
+- iOS/Android 네이티브 카메라 통합
 - 이미지 압축 및 최적화
-- 드래그 가능한 카테고리 선택 UI
-
-**주요 기능:**
-- 실시간 카메라 미리보기
-- 사진 촬영 및 편집
 - 카테고리별 사진 분류
-- 음성 메모 첨부
 
-### 3. **음성 시스템** (`audio_controller.dart`, `comment_model.dart`)
-**특징:**
-- Flutter Sound 기반 녹음/재생
-- 사진별 음성 메모
-- 실시간 음성 댓글 시스템
-- 권한 관리 자동화
-
-**주요 기능:**
-- 음성 녹음/재생/정지
-- Firebase Storage 업로드
+### 3. 음성 시스템
+- 사진별 음성 메모 녹음
 - 실시간 음성 댓글
-- 음성 파일 압축
+- Firebase Storage 업로드
 
-### 4. **소셜 기능** (`category_model.dart`, `contact_model.dart`)
-**특징:**
+### 4. 소셜 기능
 - 연락처 기반 친구 시스템
 - 카테고리 기반 그룹 공유
 - 실시간 데이터 동기화
-- 다중 사용자 카테고리 지원
 
-**주요 기능:**
-- 친구 추가/관리
-- 카테고리 생성/공유
-- 실시간 댓글 시스템
-- 프로필 이미지 관리
-
-### 5. **아카이빙 시스템** (`archive_*.dart`)
-**특징:**
+### 5. 아카이빙
 - 3가지 아카이브 뷰 (전체/개인/공유)
-- 실시간 사진 스트리밍
-- 카테고리별 필터링
 - 그리드 기반 갤러리 UI
 
-**화면 구성:**
-- `AllArchivesScreen`: 모든 카테고리 보기
-- `PersonalArchivesScreen`: 개인 카테고리만
-- `SharedArchivesScreen`: 공유 카테고리만
-- `CategoryPhotosScreen`: 카테고리 상세 사진 보기
-
 ---
 
-## 🖥️ 화면 플로우
+## 📱 화면 구조
 
 ### 인증 플로우
-```
-StartScreen → LoginScreen ↔ RegisterScreen → AuthFinalScreen → HomeNavigatorScreen
-```
+\`\`\`
+StartScreen → LoginScreen ↔ RegisterScreen 
+→ AuthFinalScreen → OnboardingMainScreen → HomeNavigatorScreen
+\`\`\`
 
-### 메인 네비게이션 (하단 탭)
-```
+### 메인 네비게이션
+\`\`\`
 HomeScreen (카테고리 목록)
+├─ CategoryScreen (카테고리 상세)
+│
 CameraScreen (실시간 카메라)
+└─ PhotoEditorScreen (사진 편집 + 음성 녹음)
+│
 ArchiveMainScreen (아카이브 탭)
-```
-
-### 카테고리 관리 플로우
-```
-CategorySelectScreen → CategoryAddScreen
-CategoryScreen → CategoryScreenPhoto → PhotoDetailScreen
-```
-
-### 사진 촬영 플로우
-```
-CameraScreen → PhotoEditorScreen → CategorySelection → Upload
-```
+\`\`\`
 
 ---
 
-## 🔒 보안 및 권한
+## � Git 브랜치 관리 가이드
 
-### Firestore 보안 규칙
-```javascript
-// 개발 모드 (현재)
-match /{document=**} {
-  allow read, write: if request.auth != null;
-}
+### 📤 현재 레포지토리에 푸시하기
 
-// 프로덕션 권장 규칙
-match /users/{userId} {
-  allow read, write: if request.auth.uid == userId;
-}
-match /categories/{categoryId} {
-  allow read, write: if request.auth != null;
-}
+**기본적인 작업 후 원격 저장소에 푸시하는 방법**
+
+#### Firebase 버전 푸시
+
+```bash
+# 1. firebase-version 브랜치로 전환
+git checkout firebase-version
+
+# 2. 변경사항 확인
+git status
+
+# 3. 변경된 파일 스테이징
+git add .
+
+# 4. 커밋
+git commit -m "feat: 기능 추가 설명"
+
+# 5. 원격 저장소에 푸시
+git push origin firebase-version
 ```
 
-### 앱 권한
-- **카메라**: 사진 촬영
-- **마이크**: 음성 녹음
-- **연락처**: 친구 추가
-- **저장소**: 이미지 처리
-- **알림**: 푸시 알림 (iOS)
+#### API 버전 푸시
 
----
+```bash
+# 1. api-version 브랜치로 전환
+git checkout api-version
 
-## 🚀 플랫폼별 구현
+# 2. 변경사항 확인
+git status
 
-### iOS (`ios/Runner/`)
-- `AppDelegate.swift`: Firebase 초기화, 푸시 알림 설정
-- `SwiftCameraPlugin.swift`: 커스텀 카메라 플러그인
-- `SimpleCameraPlugin.swift`: 카메라 미리보기 구현
-- `CameraViewController.swift`: 카메라 제어 로직
+# 3. 변경된 파일 스테이징
+git add .
 
-### Android (`android/app/src/main/kotlin/`)
-- `FlutterSwiftCameraApplication.kt`: 멀티덱스 설정
-- `google-services.json`: Firebase 구성
+# 4. 커밋
+git commit -m "feat: 기능 추가 설명"
 
-### Web (`web/`)
-- `index.html`: reCAPTCHA 스크립트 포함
-- Firebase JS SDK 자동 로드
-
----
-
-## 📈 성능 최적화
-
-### 이미지 최적화
-- **압축**: `flutter_image_compress` 사용
-- **캐싱**: `cached_network_image`로 네트워크 이미지 캐싱
-- **지연 로딩**: `StreamBuilder`로 실시간 데이터 로딩
-
-### 메모리 관리
-- **Controller 해제**: `dispose()` 메서드 구현
-- **스트림 구독 해제**: 자동 메모리 정리
-- **이미지 압축**: 업로드 전 자동 압축
-
-### 네트워크 최적화
-- **실시간 동기화**: Firestore 실시간 리스너
-- **오프라인 지원**: Firestore 오프라인 캐시
-- **배치 업로드**: 대용량 파일 청크 업로드
-
----
-
-## 🐛 에러 처리 및 로깅
-
-### 전역 에러 처리 (`main.dart`)
-```dart
-FlutterError.onError = (FlutterErrorDetails details) {
-  FlutterError.presentError(details);
-  debugPrint('FlutterError: ${details.exception}');
-};
-
-PlatformDispatcher.instance.onError = (error, stack) {
-  debugPrint('PlatformDispatcher Error: $error');
-  return true;
-};
+# 5. 원격 저장소에 푸시
+git push origin api-version
 ```
 
-### 모델별 에러 처리
-- Try-catch 블록으로 세밀한 예외 처리
-- 사용자 친화적 에러 메시지 (Fluttertoast)
-- 디버그 로그로 개발자 디버깅 지원
+#### 유용한 Git 명령어
 
----
+```bash
+# 현재 브랜치 확인
+git branch
 
-## 🔄 상태 관리 패턴
+# 모든 브랜치 확인 (원격 포함)
+git branch -a
 
-### Provider + ChangeNotifier 구조
-```dart
-// Controller Layer (ChangeNotifier)
-class AuthController extends ChangeNotifier {
-  final AuthModel _authModel = AuthModel();
-  
-  // View에서 호출할 메서드들
-  Future<void> signIn() async {
-    // Model 호출 후 notifyListeners()
-  }
-}
+# 최신 변경사항 받아오기
+git pull origin [브랜치명]
 
-// Model Layer (비즈니스 로직)
-class AuthModel {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  
-  // 실제 Firebase 연동 로직
-}
+# 변경사항 임시 저장
+git stash
 
-// View Layer
-Consumer<AuthController>(
-  builder: (context, controller, child) {
-    // UI 빌드
-  }
-)
+# 임시 저장한 내용 복원
+git stash pop
+
+# 커밋 히스토리 확인
+git log --oneline --graph --all
+
+# 원격 저장소 정보 확인
+git remote -v
 ```
 
 ---
 
-## 📱 UI/UX 디자인 시스템
+## 🔄 다른 레포지토리에 브랜치 구조 복제하기
 
-### 테마 (`theme/theme.dart`)
-- **다크 테마 기반**: 검은색 배경 + 회색 톤
-- **커스텀 컬러**: `Color(0xFF292929)`, `Color(0xFF232121)`
-- **반응형 디자인**: MediaQuery 기반 화면 크기 대응
+다른 Git 레포지토리(예: 팀 레포지토리)에도 동일한 브랜치 구조를 만들고 싶다면 아래 방법을 사용하세요.
 
-### 주요 UI 컴포넌트
-- **드래그 가능한 바텀시트**: 카테고리 선택
-- **그리드 갤러리**: 사진 표시
-- **실시간 카메라 미리보기**: 네이티브 플러그인
-- **프로필 이미지 행**: 참여자 표시
+### 옵션 A: 브랜치 복사 방식 (빠른 방법 ⭐)
+
+**현재 레포지토리의 브랜치를 다른 레포지토리에 푸시하는 방법**
+
+#### 1단계: 대상 레포지토리를 remote로 추가
+
+```bash
+# 현재 SOI 디렉토리에서 실행
+git remote add target https://github.com/[조직명]/[레포명].git
+
+# 예시: NewdawnSOI/SOI_FE 레포지토리에 추가
+git remote add newdawn https://github.com/NewdawnSOI/SOI_FE.git
+
+# remote 확인
+git remote -v
+```
+
+#### 2단계: firebase-version 브랜치 푸시
+
+```bash
+# firebase-version 브랜치로 전환
+git checkout firebase-version
+
+# 대상 레포지토리에 푸시
+git push target firebase-version
+
+# 예시
+git push newdawn firebase-version
+```
+
+#### 3단계: api-version 브랜치 푸시
+
+```bash
+# api-version 브랜치로 전환
+git checkout api-version
+
+# 대상 레포지토리에 푸시
+git push target api-version
+
+# 예시
+git push newdawn api-version
+```
+
+#### 4단계: 푸시 확인
+
+```bash
+# 대상 레포지토리의 브랜치 확인
+git ls-remote target
+
+# 예시
+git ls-remote newdawn
+```
+
+**✅ 완료!** 이제 대상 레포지토리에도 `firebase-version`과 `api-version` 브랜치가 생성되었습니다.
+
+#### ⚠️ 주의사항
+
+- 대상 레포지토리에 푸시 권한이 있어야 합니다
+- 두 레포지토리의 코드가 호환되는지 확인하세요
+- 필요시 대상 레포지토리에서 별도로 코드 수정 후 커밋하세요
 
 ---
 
-## 🔮 확장 가능성
+## �🚀 시작하기
 
-### 현재 구조의 장점
-1. **모듈화**: 각 기능이 독립적으로 구현
-2. **확장성**: 새로운 기능 추가 용이
-3. **재사용성**: 컴포넌트 기반 구조
-4. **테스트 가능성**: 계층 분리로 단위 테스트 가능
+### 프로젝트 설정
 
-### 향후 개선 방향
-1. **프로덕션 보안**: Firestore 규칙 세분화
-2. **성능 최적화**: 이미지 CDN 도입
-3. **오프라인 지원**: 로컬 캐시 강화
-4. **푸시 알림**: FCM 댓글 알림 시스템
-5. **소셜 기능**: 좋아요, 팔로우 시스템
+\`\`\`bash
+# 1. 저장소 클론
+git clone https://github.com/minchanpark/SOI.git
+cd SOI
+
+# 2. 브랜치 선택
+git checkout firebase-version  # Firebase 버전
+# 또는
+git checkout api-version       # API 버전
+
+# 3. 의존성 설치
+flutter pub get
+
+# 4. iOS 의존성 (macOS만 해당)
+cd ios && pod install && cd ..
+\`\`\`
+
+### 실행
+
+\`\`\`bash
+# iOS 시뮬레이터
+flutter run -d ios
+
+# Android 에뮬레이터
+flutter run -d android
+
+# Web
+flutter run -d chrome
+\`\`\`
 
 ---
 
-## 💾 프로젝트 설정
+## 📈 개발 현황
 
-### 빌드 구성
-- **개발**: `soi-sns` Firebase 프로젝트
-- **디버그**: Hot Reload 지원
-- **릴리즈**: 자동 코드 사이닝 및 최적화
+### 완료된 기능
+✅ 전화번호 인증  
+✅ 카메라 촬영 및 음성 녹음  
+✅ 카테고리 관리  
+✅ 음성 댓글 시스템  
+✅ 친구 추가  
+✅ 아카이브 시스템  
 
-### 의존성 관리
-- **Flutter**: SDK 3.7.0+
-- **Dart**: 최신 stable 버전
-- **Firebase**: 최신 stable 버전들
-- **네이티브**: iOS 12.0+, Android API 21+
+### 개발 예정
+🔜 푸시 알림 시스템  
+🔜 사진 좋아요 기능  
+🔜 프로필 편집  
+🔜 검색 기능  
 
-이 SOI 앱은 현대적인 Flutter 아키텍처 패턴을 따라 구현되었으며, 확장 가능하고 유지보수가 용이한 구조로 설계되었습니다. 소셜 이미징 플랫폼으로서 필요한 모든 핵심 기능을 포함하고 있으며, 실시간 동기화와 멀티미디어 처리에 최적화되어 있습니다.
+---
+
+## 👥 개발자
+
+**민찬** - [@minchanpark](https://github.com/minchanpark)
+
+---
+
+<div align="center">
+
+**SOI** - 진정한 소통을 위한 폐쇄형 SNS
+
+*Made with ❤️ by minchanpark*
+
+</div>
