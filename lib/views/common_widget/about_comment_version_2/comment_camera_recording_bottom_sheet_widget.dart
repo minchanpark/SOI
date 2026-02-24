@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eva_icons_flutter/eva_icons_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../api/services/camera_service.dart';
 import '../../../utils/video_thumbnail_cache.dart';
@@ -23,6 +24,8 @@ class CommentCameraSheetResult {
   });
 }
 
+enum _PendingVideoAction { none, stop, cancel }
+
 class CommentCameraRecordingBottomSheetWidget extends StatefulWidget {
   const CommentCameraRecordingBottomSheetWidget({super.key});
 
@@ -34,7 +37,7 @@ class CommentCameraRecordingBottomSheetWidget extends StatefulWidget {
 class _CommentCameraRecordingBottomSheetWidgetState
     extends State<CommentCameraRecordingBottomSheetWidget> {
   static const double _sheetHeight = 320;
-  static const double _previewSize = 170;
+  static const double _previewMaxSize = 170;
   static const int _maxVideoDurationSeconds = 30;
 
   final CameraService _cameraService = CameraService.instance;
@@ -46,10 +49,17 @@ class _CommentCameraRecordingBottomSheetWidgetState
   bool _supportsLiveSwitch = false;
   bool _cameraSwitchInFlight = false;
   double _cameraSwitchTurns = 0.0;
+  bool _videoStartInFlight = false;
+  bool _videoStopInFlight = false;
+  _PendingVideoAction _pendingVideoAction = _PendingVideoAction.none;
 
   String? _capturedPath;
   bool _capturedIsVideo = false;
   int _capturedDurationMs = 0;
+  bool _showCapturedVideoPlayOverlay = true;
+  bool _capturedVideoLoadFailed = false;
+  VideoPlayerController? _capturedVideoController;
+  Future<void>? _capturedVideoInitialization;
 
   DateTime? _recordingStartedAt;
   int _recordingDurationMs = 0;
@@ -73,9 +83,13 @@ class _CommentCameraRecordingBottomSheetWidgetState
     _videoRecordedSubscription?.cancel();
     _videoErrorSubscription?.cancel();
     _stopVideoProgressTimer();
-    if (_isVideoRecording) {
+    if (_isVideoRecording || _videoStartInFlight) {
       unawaited(_cameraService.cancelVideoRecording());
     }
+    _videoStartInFlight = false;
+    _videoStopInFlight = false;
+    _pendingVideoAction = _PendingVideoAction.none;
+    _disposeCapturedVideoController();
     unawaited(_cameraService.pauseCamera());
     _videoProgress.dispose();
     super.dispose();
@@ -88,7 +102,6 @@ class _CommentCameraRecordingBottomSheetWidgetState
       setState(() {
         _isLoading = false;
       });
-      _showSnackBar(tr('camera.preview_start_failed'));
       return;
     }
 
@@ -115,6 +128,9 @@ class _CommentCameraRecordingBottomSheetWidgetState
       if (!mounted || path.isEmpty) {
         return;
       }
+      _videoStartInFlight = false;
+      _videoStopInFlight = false;
+      _pendingVideoAction = _PendingVideoAction.none;
       _applyCapturedResult(
         path: path,
         isVideo: true,
@@ -130,6 +146,9 @@ class _CommentCameraRecordingBottomSheetWidgetState
       setState(() {
         _isVideoRecording = false;
       });
+      _videoStartInFlight = false;
+      _videoStopInFlight = false;
+      _pendingVideoAction = _PendingVideoAction.none;
       _showSnackBar(message);
     });
   }
@@ -151,7 +170,15 @@ class _CommentCameraRecordingBottomSheetWidgetState
       _capturedDurationMs = durationMs;
       _recordingDurationMs = 0;
       _recordingStartedAt = null;
+      _showCapturedVideoPlayOverlay = true;
+      _capturedVideoLoadFailed = false;
     });
+
+    if (isVideo) {
+      unawaited(_prepareCapturedVideoController(path));
+    } else {
+      _disposeCapturedVideoController();
+    }
   }
 
   Future<void> _takePicture() async {
@@ -165,7 +192,6 @@ class _CommentCameraRecordingBottomSheetWidgetState
     }
 
     if (path.isEmpty) {
-      _showSnackBar(tr('camera.preview_start_failed'));
       return;
     }
 
@@ -173,19 +199,26 @@ class _CommentCameraRecordingBottomSheetWidgetState
   }
 
   Future<void> _startVideoRecording() async {
-    if (_isLoading || _isVideoRecording || _hasCapturedMedia) {
+    if (_isLoading ||
+        _isVideoRecording ||
+        _videoStartInFlight ||
+        _hasCapturedMedia) {
       return;
     }
 
+    _videoStartInFlight = true;
     _recordingStartedAt = DateTime.now();
     _recordingDurationMs = 0;
     final started = await _cameraService.startVideoRecording();
 
     if (!mounted) {
+      _videoStartInFlight = false;
       return;
     }
 
+    _videoStartInFlight = false;
     if (!started) {
+      _pendingVideoAction = _PendingVideoAction.none;
       _showSnackBar(tr('camera.video_record_start_failed'));
       return;
     }
@@ -194,17 +227,36 @@ class _CommentCameraRecordingBottomSheetWidgetState
       _isVideoRecording = true;
     });
     _startVideoProgressTimer();
+
+    if (_pendingVideoAction != _PendingVideoAction.none) {
+      final nextAction = _pendingVideoAction;
+      _pendingVideoAction = _PendingVideoAction.none;
+      if (nextAction == _PendingVideoAction.stop) {
+        await _stopVideoRecording();
+      } else if (nextAction == _PendingVideoAction.cancel) {
+        await _cancelVideoRecording();
+      }
+    }
   }
 
   Future<void> _stopVideoRecording() async {
+    if (_videoStopInFlight) {
+      return;
+    }
     if (!_isVideoRecording) {
+      if (_videoStartInFlight) {
+        _pendingVideoAction = _PendingVideoAction.stop;
+      }
       return;
     }
 
+    _videoStopInFlight = true;
     final path = await _cameraService.stopVideoRecording();
     if (!mounted) {
+      _videoStopInFlight = false;
       return;
     }
+    _videoStopInFlight = false;
 
     if (path != null && path.isNotEmpty) {
       _applyCapturedResult(
@@ -219,6 +271,32 @@ class _CommentCameraRecordingBottomSheetWidgetState
     setState(() {
       _isVideoRecording = false;
     });
+    _pendingVideoAction = _PendingVideoAction.none;
+  }
+
+  Future<void> _cancelVideoRecording() async {
+    if (_videoStopInFlight) {
+      return;
+    }
+    if (!_isVideoRecording) {
+      if (_videoStartInFlight) {
+        _pendingVideoAction = _PendingVideoAction.cancel;
+      }
+      return;
+    }
+
+    _videoStopInFlight = true;
+    await _cameraService.cancelVideoRecording();
+    if (!mounted) {
+      _videoStopInFlight = false;
+      return;
+    }
+    _videoStopInFlight = false;
+    _stopVideoProgressTimer();
+    setState(() {
+      _isVideoRecording = false;
+    });
+    _pendingVideoAction = _PendingVideoAction.none;
   }
 
   void _startVideoProgressTimer() {
@@ -273,7 +351,7 @@ class _CommentCameraRecordingBottomSheetWidgetState
   }
 
   Future<void> _onSwitchCameraPressed() async {
-    if (_cameraSwitchInFlight || _isLoading) {
+    if (_cameraSwitchInFlight || _isLoading || _videoStartInFlight) {
       return;
     }
     if (_isVideoRecording && !_supportsLiveSwitch) {
@@ -298,6 +376,7 @@ class _CommentCameraRecordingBottomSheetWidgetState
   }
 
   void _resetCapturedState() {
+    _disposeCapturedVideoController();
     if (!mounted) {
       return;
     }
@@ -305,18 +384,16 @@ class _CommentCameraRecordingBottomSheetWidgetState
       _capturedPath = null;
       _capturedIsVideo = false;
       _capturedDurationMs = 0;
+      _showCapturedVideoPlayOverlay = true;
+      _capturedVideoLoadFailed = false;
     });
   }
 
   Future<void> _closeSheet() async {
-    if (_isVideoRecording) {
-      await _cameraService.cancelVideoRecording();
-      _stopVideoProgressTimer();
-      if (mounted) {
-        setState(() {
-          _isVideoRecording = false;
-        });
-      }
+    if (_isVideoRecording ||
+        _videoStartInFlight ||
+        _pendingVideoAction != _PendingVideoAction.none) {
+      await _cancelVideoRecording();
     }
     if (!mounted) {
       return;
@@ -345,6 +422,85 @@ class _CommentCameraRecordingBottomSheetWidgetState
         durationMs: _capturedIsVideo ? _capturedDurationMs : 0,
       ),
     );
+  }
+
+  void _disposeCapturedVideoController() {
+    _capturedVideoController?.pause();
+    _capturedVideoController?.dispose();
+    _capturedVideoController = null;
+    _capturedVideoInitialization = null;
+  }
+
+  Future<void> _prepareCapturedVideoController(String path) async {
+    _disposeCapturedVideoController();
+
+    final file = File(path);
+    if (!await file.exists()) {
+      if (!mounted) return;
+      setState(() {
+        _capturedVideoLoadFailed = true;
+      });
+      return;
+    }
+
+    final controller = VideoPlayerController.file(file);
+    _capturedVideoController = controller;
+    _capturedVideoInitialization = controller
+        .initialize()
+        .then((_) async {
+          await controller.setLooping(true);
+          await controller.setVolume(1.0); // 영상의 음량을 최대치로 설정
+          if (!mounted) return;
+          setState(() {
+            _capturedVideoLoadFailed = false;
+            _showCapturedVideoPlayOverlay = true;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() {
+            _capturedVideoLoadFailed = true;
+          });
+        });
+
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _toggleCapturedVideoPlayback() async {
+    final controller = _capturedVideoController;
+    final initialization = _capturedVideoInitialization;
+    if (controller == null || initialization == null) {
+      return;
+    }
+
+    try {
+      if (!controller.value.isInitialized) {
+        await initialization;
+      }
+      if (!mounted || !controller.value.isInitialized) {
+        return;
+      }
+
+      if (controller.value.isPlaying) {
+        await controller.pause();
+        if (!mounted) return;
+        setState(() {
+          _showCapturedVideoPlayOverlay = true;
+        });
+      } else {
+        await controller.play();
+        if (!mounted) return;
+        setState(() {
+          _showCapturedVideoPlayOverlay = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _capturedVideoLoadFailed = true;
+      });
+    }
   }
 
   Widget _buildTopBar() {
@@ -417,8 +573,6 @@ class _CommentCameraRecordingBottomSheetWidgetState
 
   Widget _buildPreviewShell({required Widget child}) {
     return Container(
-      width: _previewSize,
-      height: _previewSize,
       decoration: const BoxDecoration(
         color: Color(0xFF505050),
         shape: BoxShape.circle,
@@ -448,17 +602,47 @@ class _CommentCameraRecordingBottomSheetWidgetState
   }
 
   Widget _buildVideoPreview(String path) {
-    return FutureBuilder<Uint8List?>(
-      future: VideoThumbnailCache.getThumbnail(videoUrl: path, cacheKey: path),
-      builder: (context, snapshot) {
-        final bytes = snapshot.data;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (bytes != null)
-              Image.memory(bytes, fit: BoxFit.cover)
-            else
-              const ColoredBox(color: Color(0xFF5A5A5A)),
+    final controller = _capturedVideoController;
+    final initialization = _capturedVideoInitialization;
+    final canUsePlayer =
+        !_capturedVideoLoadFailed &&
+        controller != null &&
+        initialization != null;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleCapturedVideoPlayback,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (canUsePlayer)
+            FutureBuilder<void>(
+              future: initialization,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done ||
+                    !controller.value.isInitialized) {
+                  return _buildVideoThumbnailFallback(path);
+                }
+
+                final width = controller.value.size.width;
+                final height = controller.value.size.height;
+                if (width <= 0 || height <= 0) {
+                  return _buildVideoThumbnailFallback(path);
+                }
+
+                return FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: width,
+                    height: height,
+                    child: VideoPlayer(controller),
+                  ),
+                );
+              },
+            )
+          else
+            _buildVideoThumbnailFallback(path),
+          if (_showCapturedVideoPlayOverlay)
             const Center(
               child: Icon(
                 Icons.play_circle_fill,
@@ -466,8 +650,20 @@ class _CommentCameraRecordingBottomSheetWidgetState
                 size: 42,
               ),
             ),
-          ],
-        );
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoThumbnailFallback(String path) {
+    return FutureBuilder<Uint8List?>(
+      future: VideoThumbnailCache.getThumbnail(videoUrl: path, cacheKey: path),
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        if (bytes != null) {
+          return Image.memory(bytes, fit: BoxFit.cover);
+        }
+        return const ColoredBox(color: Color(0xFF5A5A5A));
       },
     );
   }
@@ -583,11 +779,36 @@ class _CommentCameraRecordingBottomSheetWidgetState
                 const SizedBox(height: 8),
                 Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildCircularPreview(),
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxWidth: _previewMaxSize,
+                              maxHeight: _previewMaxSize,
+                            ),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: _buildCircularPreview(),
+                            ),
+                          ),
+                        ),
+                      ),
                       _buildDurationLabel(),
-                      _buildControls(),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 65,
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              minHeight: 56,
+                              maxHeight: 65,
+                            ),
+                            child: _buildControls(),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

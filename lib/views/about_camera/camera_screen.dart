@@ -345,6 +345,12 @@ class _CameraScreenState extends State<CameraScreen>
     ) {
       if (!mounted) return;
 
+      // CameraScreen이 비활성 탭일 때(예: Feed에서 댓글용 녹화) 들어오는
+      // 전역 비디오 완료 이벤트는 CameraScreen 내 에디터 이동으로 처리하지 않습니다.
+      if (!widget.isActive) {
+        return;
+      }
+
       setState(() {
         _isVideoRecording = false;
       });
@@ -739,7 +745,7 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   void _openVideoEditor(String path) {
-    if (!mounted || path.isEmpty || _isNavigatingToEditor) {
+    if (!mounted || !widget.isActive || path.isEmpty || _isNavigatingToEditor) {
       return;
     }
 

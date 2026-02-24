@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 import '../../../api/controller/friend_controller.dart';
 import '../../../api/controller/post_controller.dart';
 import '../../../api/controller/user_controller.dart';
@@ -15,13 +17,6 @@ import '../../../utils/video_thumbnail_cache.dart';
 import '../../about_feed/manager/feed_data_manager.dart';
 import '../report/report_bottom_sheet.dart';
 
-/// API 기반 음성 댓글 리스트 Bottom Sheet
-///
-/// Firebase 버전의 VoiceCommentListSheet와 동일한 디자인을 유지하면서
-/// API Comment 모델을 사용합니다.
-///
-/// 주의: 현재 서버 API에서 comment.userProfile은 프로필 이미지 URL입니다.
-/// 사용자 ID나 닉네임은 별도 필드가 없으므로 표시하지 않습니다.
 class ApiVoiceCommentListSheet extends StatefulWidget {
   final int postId;
   final List<Comment> comments;
@@ -54,7 +49,6 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
     super.initState();
     _scrollController = ScrollController();
 
-    // 선택된 댓글이 있으면 스크롤 예약
     if (widget.selectedCommentId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToSelectedComment();
@@ -68,15 +62,12 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
     super.dispose();
   }
 
-  /// 선택된 댓글로 자동 스크롤
   void _scrollToSelectedComment() {
     if (widget.selectedCommentId == null) return;
 
     final targetHash = _selectedHashCode(widget.selectedCommentId);
     if (targetHash == null) return;
 
-    // selectedCommentId는 "index_hashCode" 형식이지만, 이모지 댓글이 섞이면 index가 달라질 수 있어
-    // hashCode 기준으로 찾습니다.
     final filteredComments = widget.comments.toList();
     final targetIndex = filteredComments.indexWhere(
       (comment) => comment.hashCode == targetHash,
@@ -84,17 +75,14 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
     if (targetIndex < 0) return;
 
     if (_scrollController.hasClients) {
-      // 아이템 높이 추정 (각 댓글 행의 대략적인 높이 + separator)
       const itemHeight = 80.0;
       const separatorHeight = 12.0;
       final scrollOffset = targetIndex * (itemHeight + separatorHeight);
 
-      // 선택된 댓글이 화면 중앙에 오도록 오프셋 조정
       final viewportHeight = _scrollController.position.viewportDimension;
       final centeredOffset =
           scrollOffset - (viewportHeight / 2) + (itemHeight / 2);
 
-      // jumpTo를 사용하여 애니메이션 없이 즉시 중앙 위치로 이동
       _scrollController.jumpTo(
         centeredOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
       );
@@ -134,7 +122,6 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
   }
 
   Widget _buildCommentList() {
-    // 텍스트/오디오/이모지 댓글 모두 표시
     final filteredComments = widget.comments.toList();
 
     if (filteredComments.isEmpty) {
@@ -172,7 +159,6 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
   }
 }
 
-/// API 댓글 행 위젯
 class _ApiCommentRow extends StatelessWidget {
   final Comment comment;
   final bool isHighlighted;
@@ -379,19 +365,101 @@ class _ApiCommentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (comment.type) {
       case CommentType.emoji:
-        return _buildEmojiRow(context); // 이모지 댓글
+        return _buildEmojiRow(context);
       case CommentType.text:
-        return _buildTextRow(context); // 텍스트 댓글
+        return _buildTextRow(context);
       case CommentType.audio:
-        return _buildAudioRow(context); // 음성 댓글
+        return _buildAudioRow(context);
       case CommentType.photo:
-        return _buildMediaRow(context); // 사진/비디오 댓글
+        return _buildMediaRow(context);
       case CommentType.reply:
-        return _buildTextRow(context); // 답글 댓글(텍스트 UI 재사용)
+        return _buildTextRow(context);
     }
   }
 
-  /// 이모지 ID를 이모지 문자열로 매핑
+  String get _profileUrl => comment.userProfileUrl ?? '';
+  String get _userName => comment.nickname ?? '알 수 없는 사용자';
+
+  bool _shouldShowActions(BuildContext context) {
+    final currentUserId = context.read<UserController>().currentUser?.userId;
+    return _canShowActions(currentUserId);
+  }
+
+  TextStyle _userNameStyle() => TextStyle(
+    color: Colors.white,
+    fontSize: 14.sp,
+    fontFamily: 'Pretendard',
+    fontWeight: FontWeight.w600,
+  );
+
+  TextStyle _relativeTimeStyle() => TextStyle(
+    color: const Color(0xFFC4C4C4),
+    fontSize: 10.sp,
+    fontFamily: 'Pretendard',
+    fontWeight: FontWeight.w500,
+    letterSpacing: -0.40,
+  );
+
+  Widget _buildRelativeTimeRow() {
+    return Row(
+      children: [
+        const Spacer(),
+        Text(_formatRelativeTime(), style: _relativeTimeStyle()),
+        SizedBox(width: 12.w),
+      ],
+    );
+  }
+
+  Widget _wrapRowContent(Widget content) {
+    if (isHighlighted) {
+      return Container(
+        color: const Color(0xff000000).withValues(alpha: 0.23),
+        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
+        child: content,
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 27.w),
+      child: content,
+    );
+  }
+
+  Widget _buildCommentRowLayout({
+    required BuildContext context,
+    required Widget body,
+    required bool showActions,
+    double bodySpacing = 8,
+  }) {
+    return _wrapRowContent(
+      Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProfileImage(_profileUrl),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_userName, style: _userNameStyle()),
+                    if (bodySpacing > 0) SizedBox(height: bodySpacing.h),
+                    body,
+                  ],
+                ),
+              ),
+              if (showActions) _buildActionMenu(context),
+              SizedBox(width: 10.w),
+            ],
+          ),
+          SizedBox(height: 7.h),
+          _buildRelativeTimeRow(),
+        ],
+      ),
+    );
+  }
+
   String _emojiFromId(int? emojiId) {
     switch (emojiId) {
       case 0:
@@ -407,258 +475,73 @@ class _ApiCommentRow extends StatelessWidget {
     }
   }
 
-  /// 이모지 댓글 UI
   Widget _buildEmojiRow(BuildContext context) {
-    final profileUrl = comment.userProfileUrl ?? '';
-    final userName = comment.nickname ?? '알 수 없는 사용자';
-    final emoji = _emojiFromId(comment.emojiId);
-    final currentUserId = context.read<UserController>().currentUser?.userId;
-    final showActions = _canShowActions(currentUserId);
-
-    final content = Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileImage(profileUrl),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  //  SizedBox(height: 8.h),
-                  Text(emoji, style: TextStyle(fontSize: 22.sp)),
-                ],
-              ),
-            ),
-            if (showActions) _buildActionMenu(context),
-            SizedBox(width: 10.w),
-          ],
-        ),
-        SizedBox(height: 7.h),
-        Row(
-          children: [
-            const Spacer(),
-            Text(
-              _formatRelativeTime(),
-              style: TextStyle(
-                color: const Color(0xFFC4C4C4),
-                fontSize: 10.sp,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.40,
-              ),
-            ),
-            SizedBox(width: 12.w),
-          ],
-        ),
-      ],
-    );
-
-    if (isHighlighted) {
-      return Container(
-        color: const Color(0xff000000).withValues(alpha: 0.23),
-        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
-        child: content,
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 27.w),
-      child: content,
+    return _buildCommentRowLayout(
+      context: context,
+      showActions: _shouldShowActions(context),
+      bodySpacing: 0,
+      body: Text(
+        _emojiFromId(comment.emojiId),
+        style: TextStyle(fontSize: 22.sp),
+      ),
     );
   }
 
-  /// 텍스트 댓글 UI
+  Widget _buildTextCommentText(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 14.sp,
+        fontFamily: 'Pretendard',
+        fontWeight: FontWeight.w400,
+        letterSpacing: -0.5,
+      ),
+    );
+  }
+
   Widget _buildTextRow(BuildContext context) {
-    // userProfile은 프로필 이미지 URL
-    final profileUrl = comment.userProfileUrl ?? '';
-    final userName = comment.nickname ?? '알 수 없는 사용자';
-    final currentUserId = context.read<UserController>().currentUser?.userId;
-    final showActions = _canShowActions(currentUserId);
-
-    final content = Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 프로필 이미지
-            _buildProfileImage(profileUrl),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  // 텍스트 댓글 내용
-                  Text(
-                    comment.text ?? '',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (showActions) _buildActionMenu(context),
-            SizedBox(width: 10.w),
-          ],
-        ),
-        SizedBox(height: 7.h),
-        Row(
-          children: [
-            const Spacer(),
-            Text(
-              _formatRelativeTime(),
-              style: TextStyle(
-                color: const Color(0xFFC4C4C4),
-                fontSize: 10.sp,
-                fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.40,
-              ),
-            ),
-            SizedBox(width: 12.w),
-          ],
-        ),
-      ],
-    );
-
-    if (isHighlighted) {
-      return Container(
-        color: const Color(0xff000000).withValues(alpha: 0.23),
-        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
-        child: content,
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 27.w),
-      child: content,
+    return _buildCommentRowLayout(
+      context: context,
+      showActions: _shouldShowActions(context),
+      body: _buildTextCommentText(comment.text ?? ''),
     );
   }
 
-  /// 음성 댓글 UI
   Widget _buildAudioRow(BuildContext context) {
-    final profileUrl = comment.userProfileUrl ?? '';
-    final userName = comment.nickname ?? '알 수 없는 사용자';
-    final currentUserId = context.read<UserController>().currentUser?.userId;
-    final showActions = _canShowActions(currentUserId);
-
-    // waveformData 파싱 (String -> List<double>)
     final waveformData = _parseWaveformData(comment.waveformData);
+    final showActions = _shouldShowActions(context);
 
-    final content = Consumer<AudioController>(
+    return Consumer<AudioController>(
       builder: (context, audioController, child) {
         final isPlaying = audioController.isUrlPlaying(comment.audioUrl ?? '');
-        final progress = audioController.progress;
-        final position = audioController.currentPosition;
-        final duration = audioController.totalDuration;
-
-        return Column(
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                // 프로필 이미지
-                _buildProfileImage(profileUrl),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        userName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                          fontFamily: 'Pretendard',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      _ApiWaveformPlaybackBar(
-                        isPlaying: isPlaying,
-                        progress: isPlaying ? progress : 0.0,
-                        onPlayPause: () async {
-                          if (comment.audioUrl != null &&
-                              comment.audioUrl!.isNotEmpty) {
-                            if (isPlaying) {
-                              await audioController.pause();
-                            } else {
-                              await audioController.play(comment.audioUrl!);
-                            }
-                          }
-                        },
-                        position: isPlaying ? position : Duration.zero,
-                        duration: isPlaying
-                            ? duration
-                            : Duration(milliseconds: comment.duration ?? 0),
-                        waveformData: waveformData,
-                      ),
-                    ],
-                  ),
-                ),
-                if (showActions) _buildActionMenu(context),
-                SizedBox(width: 10.w),
-              ],
-            ),
-            SizedBox(height: 7.h),
-            Row(
-              children: [
-                const Spacer(),
-                Text(
-                  _formatRelativeTime(),
-                  style: TextStyle(
-                    color: const Color(0xFFC4C4C4),
-                    fontSize: 10.sp,
-                    fontFamily: 'Pretendard',
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.40,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-              ],
-            ),
-          ],
+        return _buildCommentRowLayout(
+          context: context,
+          showActions: showActions,
+          bodySpacing: 4,
+          body: _ApiWaveformPlaybackBar(
+            isPlaying: isPlaying,
+            onPlayPause: () async {
+              final audioUrl = comment.audioUrl;
+              if (audioUrl == null || audioUrl.isEmpty) {
+                return;
+              }
+              if (isPlaying) {
+                await audioController.pause();
+              } else {
+                await audioController.play(audioUrl);
+              }
+            },
+            position: isPlaying
+                ? audioController.currentPosition
+                : Duration.zero,
+            duration: isPlaying
+                ? audioController.totalDuration
+                : Duration(milliseconds: comment.duration ?? 0),
+            waveformData: waveformData,
+          ),
         );
       },
-    );
-
-    if (isHighlighted) {
-      return Container(
-        color: const Color(0xff000000).withValues(alpha: 0.23),
-        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
-        child: content,
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 27.w),
-      child: content,
     );
   }
 
@@ -672,7 +555,6 @@ class _ApiCommentRow extends StatelessWidget {
     if (fileKey.isNotEmpty) {
       return fileKey;
     }
-
     return null;
   }
 
@@ -689,14 +571,8 @@ class _ApiCommentRow extends StatelessWidget {
     return videoExtensions.any(normalized.endsWith);
   }
 
-  /// 사진/비디오 댓글 UI
   Widget _buildMediaRow(BuildContext context) {
-    final profileUrl = comment.userProfileUrl ?? '';
-    final userName = comment.nickname ?? '알 수 없는 사용자';
-    final currentUserId = context.read<UserController>().currentUser?.userId;
-    final showActions = _canShowActions(currentUserId);
     final mediaSource = _resolveMediaSource();
-
     if (mediaSource == null) {
       return _buildTextRow(context);
     }
@@ -705,88 +581,37 @@ class _ApiCommentRow extends StatelessWidget {
     final cacheKey = (comment.fileKey ?? '').trim().isEmpty
         ? mediaSource
         : comment.fileKey!;
+    final trimmedText = (comment.text ?? '').trim();
 
-    final content = Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileImage(profileUrl),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                      fontFamily: 'Pretendard',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  _ApiCommentMediaPreview(
-                    source: mediaSource,
-                    isVideo: isVideo,
-                    cacheKey: cacheKey,
-                  ),
-                  if ((comment.text ?? '').trim().isNotEmpty) ...[
-                    SizedBox(height: 8.h),
-                    Text(
-                      comment.text!.trim(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontFamily: 'Pretendard',
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (showActions) _buildActionMenu(context),
-            SizedBox(width: 10.w),
-          ],
-        ),
-        SizedBox(height: 7.h),
-        Row(
-          children: [
-            const Spacer(),
+    return _buildCommentRowLayout(
+      context: context,
+      showActions: _shouldShowActions(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ApiCommentMediaPreview(
+            source: mediaSource,
+            isVideo: isVideo,
+            cacheKey: cacheKey,
+          ),
+          if (trimmedText.isNotEmpty) ...[
+            SizedBox(height: 8.h),
             Text(
-              _formatRelativeTime(),
+              trimmedText,
               style: TextStyle(
-                color: const Color(0xFFC4C4C4),
-                fontSize: 10.sp,
+                color: Colors.white,
+                fontSize: 14.sp,
                 fontFamily: 'Pretendard',
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.40,
+                fontWeight: FontWeight.w400,
+                letterSpacing: -0.4,
               ),
             ),
-            SizedBox(width: 12.w),
           ],
-        ),
-      ],
-    );
-
-    if (isHighlighted) {
-      return Container(
-        color: const Color(0xff000000).withValues(alpha: 0.23),
-        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
-        child: content,
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 27.w),
-      child: content,
+        ],
+      ),
     );
   }
 
-  /// 프로필 이미지 빌더
   Widget _buildProfileImage(String? profileUrl) {
     return ClipOval(
       child: profileUrl != null && profileUrl.isNotEmpty
@@ -818,35 +643,28 @@ class _ApiCommentRow extends StatelessWidget {
     );
   }
 
-  /// waveformData 문자열을 `List<double>`로 파싱
   List<double> _parseWaveformData(String? waveformString) {
     if (waveformString == null || waveformString.isEmpty) {
       return [];
     }
 
-    // waveformString의 앞뒤 공백 제거
     final trimmed = waveformString.trim();
     if (trimmed.isEmpty) return [];
 
     try {
-      // JSON 배열로 파싱 시도
       final decoded = jsonDecode(trimmed);
       if (decoded is List) {
         return decoded.map((e) => (e as num).toDouble()).toList();
       }
-    }
-    // JSON 파싱 실패 시, 대괄호 및 공백 제거 후 쉼표/공백 기준으로 분리
-    catch (e) {
+    } catch (e) {
       final sanitized = trimmed.replaceAll('[', '').replaceAll(']', '').trim();
       if (sanitized.isEmpty) return [];
 
-      // 쉼표 또는 공백으로 분리
       final parts = sanitized
           .split(RegExp(r'[,\s]+'))
           .where((part) => part.isNotEmpty);
 
       try {
-        // 각 부분을 double로 변환
         final values = parts.map((part) => double.parse(part)).toList();
         return values;
       } catch (_) {
@@ -857,10 +675,7 @@ class _ApiCommentRow extends StatelessWidget {
     return [];
   }
 
-  /// 상대 시간 포맷 (createdAt이 없으므로 빈 문자열 반환)
   String _formatRelativeTime() {
-    // Comment 모델에 createdAt이 없으므로 빈 문자열 반환
-    // TODO: Comment 모델에 createdAt 추가 시 수정
     return '';
   }
 }
@@ -883,11 +698,15 @@ class _ApiCommentMediaPreview extends StatefulWidget {
 
 class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
   Future<Uint8List?>? _thumbnailFuture;
+  VideoPlayerController? _videoController;
+  Future<void>? _videoInitialization;
+  bool _videoLoadFailed = false;
+  bool _showPlayOverlay = true;
 
   @override
   void initState() {
     super.initState();
-    _refreshThumbnailFuture();
+    _refreshPreviewState();
   }
 
   @override
@@ -895,7 +714,23 @@ class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source ||
         oldWidget.cacheKey != widget.cacheKey) {
-      _refreshThumbnailFuture();
+      _refreshPreviewState();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposeVideoController();
+    super.dispose();
+  }
+
+  void _refreshPreviewState() {
+    _showPlayOverlay = true;
+    _refreshThumbnailFuture();
+    if (widget.isVideo) {
+      _initializeVideoController();
+    } else {
+      _disposeVideoController();
     }
   }
 
@@ -913,6 +748,103 @@ class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
       videoUrl: widget.source,
       cacheKey: stableKey,
     );
+  }
+
+  Future<void> _initializeVideoController() async {
+    _disposeVideoController();
+    _videoLoadFailed = false;
+    _showPlayOverlay = true;
+
+    final source = widget.source;
+    final isLocal = _isLocalFile(source);
+
+    VideoPlayerController? controller;
+    try {
+      if (isLocal) {
+        final file = File(source);
+        if (!await file.exists()) {
+          if (!mounted) return;
+          setState(() {
+            _videoLoadFailed = true;
+          });
+          return;
+        }
+        controller = VideoPlayerController.file(file);
+      } else {
+        controller = VideoPlayerController.networkUrl(Uri.parse(source));
+      }
+
+      _videoController = controller;
+      _videoInitialization = controller
+          .initialize()
+          .then((_) async {
+            await controller?.setLooping(true);
+            await controller?.setVolume(1.0);
+            if (!mounted) return;
+            setState(() {});
+          })
+          .catchError((_) {
+            if (!mounted) return;
+            setState(() {
+              _videoLoadFailed = true;
+              _showPlayOverlay = true;
+            });
+          });
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _videoLoadFailed = true;
+        _showPlayOverlay = true;
+      });
+    }
+  }
+
+  void _disposeVideoController() {
+    _videoController?.pause();
+    _videoController?.dispose();
+    _videoController = null;
+    _videoInitialization = null;
+  }
+
+  Future<void> _toggleVideoPlayback() async {
+    final controller = _videoController;
+    final initialization = _videoInitialization;
+    if (controller == null || initialization == null) {
+      return;
+    }
+
+    try {
+      if (!controller.value.isInitialized) {
+        await initialization;
+      }
+      if (!mounted || !controller.value.isInitialized) {
+        return;
+      }
+
+      if (controller.value.isPlaying) {
+        await controller.pause();
+        if (!mounted) return;
+        setState(() {
+          _showPlayOverlay = true;
+        });
+      } else {
+        await controller.play();
+        if (!mounted) return;
+        setState(() {
+          _showPlayOverlay = false;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _videoLoadFailed = true;
+        _showPlayOverlay = true;
+      });
+    }
   }
 
   bool _isLocalFile(String source) {
@@ -963,6 +895,78 @@ class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
     );
   }
 
+  Widget _buildThumbnail({bool showPlayIcon = false}) {
+    return FutureBuilder<Uint8List?>(
+      future: _thumbnailFuture,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            if (bytes != null)
+              Image.memory(bytes, fit: BoxFit.cover)
+            else
+              _buildPlaceholder(),
+            if (showPlayIcon)
+              const Center(
+                child: Icon(
+                  Icons.play_circle_fill,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVideoPreview() {
+    final controller = _videoController;
+    final initialization = _videoInitialization;
+
+    final videoContent =
+        _videoLoadFailed || controller == null || initialization == null
+        ? _buildThumbnail()
+        : FutureBuilder<void>(
+            future: initialization,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done ||
+                  !controller.value.isInitialized) {
+                return _buildThumbnail();
+              }
+
+              return FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller),
+                ),
+              );
+            },
+          );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _toggleVideoPlayback,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          videoContent,
+          if (_showPlayOverlay)
+            const Center(
+              child: Icon(
+                Icons.play_circle_fill,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -970,39 +974,14 @@ class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
       child: SizedBox(
         width: 82.w,
         height: 82.w,
-        child: widget.isVideo
-            ? FutureBuilder<Uint8List?>(
-                future: _thumbnailFuture,
-                builder: (context, snapshot) {
-                  final bytes = snapshot.data;
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (bytes != null)
-                        Image.memory(bytes, fit: BoxFit.cover)
-                      else
-                        _buildPlaceholder(),
-                      const Center(
-                        child: Icon(
-                          Icons.play_circle_fill,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              )
-            : _buildImagePreview(),
+        child: widget.isVideo ? _buildVideoPreview() : _buildImagePreview(),
       ),
     );
   }
 }
 
-/// API 버전 Waveform 재생 바
 class _ApiWaveformPlaybackBar extends StatelessWidget {
   final bool isPlaying;
-  final double progress;
   final Future<void> Function() onPlayPause;
   final Duration position;
   final Duration duration;
@@ -1010,7 +989,6 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
 
   const _ApiWaveformPlaybackBar({
     required this.isPlaying,
-    required this.progress,
     required this.onPlayPause,
     required this.position,
     required this.duration,
@@ -1045,7 +1023,6 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
                 return Stack(
                   alignment: Alignment.centerLeft,
                   children: [
-                    // 회색 배경 파형 (기본 흰색이지만 재생 시 회색으로)
                     GestureDetector(
                       onTap: onPlayPause,
                       child: _buildWaveformBase(
@@ -1055,7 +1032,6 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
                         availableWidth: availableWidth,
                       ),
                     ),
-                    // 흰색 진행 파형 (재생 중에만 표시)
                     if (isPlaying)
                       ClipRect(
                         child: Align(
@@ -1084,7 +1060,6 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
     const maxBars = 40;
 
     if (waveformData.isEmpty) {
-      // 데이터가 없으면 기본 패턴 사용
       return SizedBox(
         width: availableWidth,
         child: Row(
@@ -1104,7 +1079,6 @@ class _ApiWaveformPlaybackBar extends StatelessWidget {
       );
     }
 
-    // 실제 waveformData 사용
     const minHeight = 4.0;
     const maxHeight = 20.0;
 
