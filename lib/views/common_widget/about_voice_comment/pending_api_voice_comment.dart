@@ -17,6 +17,8 @@ typedef PendingApiCommentDraft = ({
   bool isTextComment,
   String? text,
   String? audioPath,
+  String? mediaPath,
+  bool? isVideo,
   List<double>? waveformData,
   int? duration,
   int recorderUserId,

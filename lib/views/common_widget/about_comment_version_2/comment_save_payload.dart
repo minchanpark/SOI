@@ -127,7 +127,7 @@ class CommentSavePayload {
       replyUserName: null,
       nickname: nickname,
       userProfileUrl: userProfileUrl ?? profileImageUrlKey,
-      fileUrl: null,
+      fileUrl: localFilePath,
       emojiId: 0,
     );
   }

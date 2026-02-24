@@ -1024,7 +1024,7 @@ class _CameraScreenState extends State<CameraScreen>
         child: Container(
           width: previewWidth,
           height: previewHeight,
-          color: const Color(0xFF111111),
+          color: const Color(0xFF1c1c1c),
           child: Stack(
             children: [
               Padding(

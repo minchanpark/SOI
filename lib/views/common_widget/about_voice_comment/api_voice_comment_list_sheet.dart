@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +11,7 @@ import '../../../api/controller/post_controller.dart';
 import '../../../api/controller/user_controller.dart';
 import '../../../api/models/comment.dart';
 import '../../../api/controller/audio_controller.dart';
+import '../../../utils/video_thumbnail_cache.dart';
 import '../../about_feed/manager/feed_data_manager.dart';
 import '../report/report_bottom_sheet.dart';
 
@@ -196,11 +199,15 @@ class _ApiCommentRow extends StatelessWidget {
 
   Future<void> _blockUser(BuildContext context) async {
     final userController = context.read<UserController>();
+    final friendController = context.read<FriendController>();
+    final feedDataManager = context.read<FeedDataManager>();
+    final postController = context.read<PostController>();
+    final messenger = ScaffoldMessenger.of(context);
     final currentUser = userController.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text(tr('common.login_required', context: context)),
+          content: Text(tr('common.login_required')),
           backgroundColor: const Color(0xFF5A5A5A),
         ),
       );
@@ -209,12 +216,13 @@ class _ApiCommentRow extends StatelessWidget {
 
     final shouldBlock = await _showBlockConfirmation(context);
     if (shouldBlock != true) return;
+    if (!context.mounted) return;
 
     final nickname = comment.nickname ?? '';
     if (nickname.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text(tr('common.user_info_unavailable', context: context)),
+          content: Text(tr('common.user_info_unavailable')),
           backgroundColor: const Color(0xFF5A5A5A),
         ),
       );
@@ -223,16 +231,15 @@ class _ApiCommentRow extends StatelessWidget {
 
     final targetUser = await userController.getUserByNickname(nickname);
     if (targetUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text(tr('common.user_info_unavailable', context: context)),
+          content: Text(tr('common.user_info_unavailable')),
           backgroundColor: const Color(0xFF5A5A5A),
         ),
       );
       return;
     }
 
-    final friendController = context.read<FriendController>();
     final ok = await friendController.blockFriend(
       requesterId: currentUser.id,
       receiverId: targetUser.id,
@@ -240,18 +247,18 @@ class _ApiCommentRow extends StatelessWidget {
     if (!context.mounted) return;
 
     if (ok) {
-      context.read<FeedDataManager>().removePostsByNickname(nickname);
-      context.read<PostController>().notifyPostsChanged();
-      ScaffoldMessenger.of(context).showSnackBar(
+      feedDataManager.removePostsByNickname(nickname);
+      postController.notifyPostsChanged();
+      messenger.showSnackBar(
         SnackBar(
-          content: Text(tr('common.block_success', context: context)),
+          content: Text(tr('common.block_success')),
           backgroundColor: const Color(0xFF5A5A5A),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text(tr('common.block_failed', context: context)),
+          content: Text(tr('common.block_failed')),
           backgroundColor: const Color(0xFF5A5A5A),
         ),
       );
@@ -378,7 +385,7 @@ class _ApiCommentRow extends StatelessWidget {
       case CommentType.audio:
         return _buildAudioRow(context); // 음성 댓글
       case CommentType.photo:
-        return _buildTextRow(context); // 사진 댓글(텍스트 UI 재사용)
+        return _buildMediaRow(context); // 사진/비디오 댓글
       case CommentType.reply:
         return _buildTextRow(context); // 답글 댓글(텍스트 UI 재사용)
     }
@@ -655,6 +662,130 @@ class _ApiCommentRow extends StatelessWidget {
     );
   }
 
+  String? _resolveMediaSource() {
+    final fileUrl = (comment.fileUrl ?? '').trim();
+    if (fileUrl.isNotEmpty) {
+      return fileUrl;
+    }
+
+    final fileKey = (comment.fileKey ?? '').trim();
+    if (fileKey.isNotEmpty) {
+      return fileKey;
+    }
+
+    return null;
+  }
+
+  bool _isVideoMediaSource(String source) {
+    final normalized = source.split('?').first.split('#').first.toLowerCase();
+    const videoExtensions = <String>[
+      '.mp4',
+      '.mov',
+      '.m4v',
+      '.avi',
+      '.mkv',
+      '.webm',
+    ];
+    return videoExtensions.any(normalized.endsWith);
+  }
+
+  /// 사진/비디오 댓글 UI
+  Widget _buildMediaRow(BuildContext context) {
+    final profileUrl = comment.userProfileUrl ?? '';
+    final userName = comment.nickname ?? '알 수 없는 사용자';
+    final currentUserId = context.read<UserController>().currentUser?.userId;
+    final showActions = _canShowActions(currentUserId);
+    final mediaSource = _resolveMediaSource();
+
+    if (mediaSource == null) {
+      return _buildTextRow(context);
+    }
+
+    final isVideo = _isVideoMediaSource(mediaSource);
+    final cacheKey = (comment.fileKey ?? '').trim().isEmpty
+        ? mediaSource
+        : comment.fileKey!;
+
+    final content = Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileImage(profileUrl),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontFamily: 'Pretendard',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  _ApiCommentMediaPreview(
+                    source: mediaSource,
+                    isVideo: isVideo,
+                    cacheKey: cacheKey,
+                  ),
+                  if ((comment.text ?? '').trim().isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    Text(
+                      comment.text!.trim(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontFamily: 'Pretendard',
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (showActions) _buildActionMenu(context),
+            SizedBox(width: 10.w),
+          ],
+        ),
+        SizedBox(height: 7.h),
+        Row(
+          children: [
+            const Spacer(),
+            Text(
+              _formatRelativeTime(),
+              style: TextStyle(
+                color: const Color(0xFFC4C4C4),
+                fontSize: 10.sp,
+                fontFamily: 'Pretendard',
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.40,
+              ),
+            ),
+            SizedBox(width: 12.w),
+          ],
+        ),
+      ],
+    );
+
+    if (isHighlighted) {
+      return Container(
+        color: const Color(0xff000000).withValues(alpha: 0.23),
+        padding: EdgeInsets.symmetric(horizontal: 27.w, vertical: 10.h),
+        child: content,
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 27.w),
+      child: content,
+    );
+  }
+
   /// 프로필 이미지 빌더
   Widget _buildProfileImage(String? profileUrl) {
     return ClipOval(
@@ -731,6 +862,140 @@ class _ApiCommentRow extends StatelessWidget {
     // Comment 모델에 createdAt이 없으므로 빈 문자열 반환
     // TODO: Comment 모델에 createdAt 추가 시 수정
     return '';
+  }
+}
+
+class _ApiCommentMediaPreview extends StatefulWidget {
+  final String source;
+  final bool isVideo;
+  final String cacheKey;
+
+  const _ApiCommentMediaPreview({
+    required this.source,
+    required this.isVideo,
+    required this.cacheKey,
+  });
+
+  @override
+  State<_ApiCommentMediaPreview> createState() =>
+      _ApiCommentMediaPreviewState();
+}
+
+class _ApiCommentMediaPreviewState extends State<_ApiCommentMediaPreview> {
+  Future<Uint8List?>? _thumbnailFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshThumbnailFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ApiCommentMediaPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.source != widget.source ||
+        oldWidget.cacheKey != widget.cacheKey) {
+      _refreshThumbnailFuture();
+    }
+  }
+
+  void _refreshThumbnailFuture() {
+    if (!widget.isVideo) {
+      _thumbnailFuture = null;
+      return;
+    }
+
+    final stableKey = VideoThumbnailCache.buildStableCacheKey(
+      fileKey: widget.cacheKey,
+      videoUrl: widget.source,
+    );
+    _thumbnailFuture = VideoThumbnailCache.getThumbnail(
+      videoUrl: widget.source,
+      cacheKey: stableKey,
+    );
+  }
+
+  bool _isLocalFile(String source) {
+    final uri = Uri.tryParse(source);
+    if (uri == null) {
+      return false;
+    }
+    if (uri.hasScheme) {
+      return uri.scheme == 'file';
+    }
+    return true;
+  }
+
+  Widget _buildImagePreview() {
+    final source = widget.source;
+    final isLocal = _isLocalFile(source);
+    final file = File(source);
+
+    if (isLocal) {
+      if (!file.existsSync()) {
+        return _buildPlaceholder();
+      }
+      return Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildPlaceholder(),
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: source,
+      cacheKey: widget.cacheKey,
+      useOldImageOnUrlChange: true,
+      fit: BoxFit.cover,
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      placeholder: (_, __) => _buildPlaceholder(),
+      errorWidget: (_, __, ___) => _buildPlaceholder(),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return const ColoredBox(
+      color: Color(0xFF4A4A4A),
+      child: Center(
+        child: Icon(Icons.image_not_supported, color: Colors.white70, size: 24),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 82.w,
+        height: 82.w,
+        child: widget.isVideo
+            ? FutureBuilder<Uint8List?>(
+                future: _thumbnailFuture,
+                builder: (context, snapshot) {
+                  final bytes = snapshot.data;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (bytes != null)
+                        Image.memory(bytes, fit: BoxFit.cover)
+                      else
+                        _buildPlaceholder(),
+                      const Center(
+                        child: Icon(
+                          Icons.play_circle_fill,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              )
+            : _buildImagePreview(),
+      ),
+    );
   }
 }
 

@@ -305,6 +305,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
                 onTextCommentCompleted: (postId, text) async {
                   await _onTextCommentCreated(postId, text);
                 },
+                onAudioCommentCompleted: _onAudioCommentCompleted,
+                onMediaCommentCompleted: _onMediaCommentCompleted,
                 onProfileImageDragged: (postId, absolutePosition) {
                   _onProfileImageDragged(postId, absolutePosition);
                 },
@@ -486,6 +488,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         isTextComment: true,
         text: text,
         audioPath: null,
+        mediaPath: null,
+        isVideo: null,
         waveformData: null,
         duration: null,
         recorderUserId: userId,
@@ -497,6 +501,71 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       }
     } catch (e) {
       debugPrint('텍스트 댓글 임시 저장 실패: $e');
+    }
+  }
+
+  Future<void> _onAudioCommentCompleted(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
+  ) async {
+    try {
+      final userId = _userController?.currentUser?.id;
+      if (userId == null) return;
+
+      final currentUserProfileImageUrl =
+          _userController?.currentUser?.profileImageUrlKey;
+
+      _pendingCommentDrafts[postId] = (
+        isTextComment: false,
+        text: null,
+        audioPath: audioPath,
+        mediaPath: null,
+        isVideo: null,
+        waveformData: waveformData,
+        duration: durationMs,
+        recorderUserId: userId,
+        profileImageUrlKey: currentUserProfileImageUrl,
+      );
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('음성 댓글 임시 저장 실패: $e');
+    }
+  }
+
+  Future<void> _onMediaCommentCompleted(
+    int postId,
+    String localFilePath,
+    bool isVideo,
+  ) async {
+    try {
+      final userId = _userController?.currentUser?.id;
+      if (userId == null) return;
+
+      final currentUserProfileImageUrl =
+          _userController?.currentUser?.profileImageUrlKey;
+
+      _pendingCommentDrafts[postId] = (
+        isTextComment: false,
+        text: null,
+        audioPath: null,
+        mediaPath: localFilePath,
+        isVideo: isVideo,
+        waveformData: null,
+        duration: null,
+        recorderUserId: userId,
+        profileImageUrlKey: currentUserProfileImageUrl,
+      );
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('미디어 댓글 임시 저장 실패: $e');
     }
   }
 

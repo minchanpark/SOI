@@ -40,6 +40,15 @@ class ApiPhotoCardWidget extends StatefulWidget {
   // 콜백 함수들
   final Function(Post) onToggleAudio;
   final Function(int, String) onTextCommentCompleted;
+  final Future<void> Function(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
+  )
+  onAudioCommentCompleted;
+  final Future<void> Function(int postId, String localFilePath, bool isVideo)
+  onMediaCommentCompleted;
   final Function(int, Offset) onProfileImageDragged;
   final void Function(int, double) onCommentSaveProgress;
   final void Function(int, Comment) onCommentSaveSuccess;
@@ -65,6 +74,8 @@ class ApiPhotoCardWidget extends StatefulWidget {
     this.pendingVoiceComments = const {},
     required this.onToggleAudio,
     required this.onTextCommentCompleted,
+    required this.onAudioCommentCompleted,
+    required this.onMediaCommentCompleted,
     required this.onProfileImageDragged,
     required this.onCommentSaveProgress,
     required this.onCommentSaveSuccess,
@@ -174,6 +185,16 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
             pendingCommentDrafts: widget.pendingCommentDrafts,
             onTextCommentCompleted: (postId, text) =>
                 _handleTextCommentCreated(text),
+            onAudioCommentCompleted:
+                (postId, audioPath, waveformData, durationMs) =>
+                    widget.onAudioCommentCompleted(
+                      postId,
+                      audioPath,
+                      waveformData,
+                      durationMs,
+                    ),
+            onMediaCommentCompleted: (postId, localFilePath, isVideo) =>
+                widget.onMediaCommentCompleted(postId, localFilePath, isVideo),
             resolveDropRelativePosition: _resolveDropRelativePosition,
             onCommentSaveProgress: widget.onCommentSaveProgress,
             onCommentSaveSuccess: widget.onCommentSaveSuccess,

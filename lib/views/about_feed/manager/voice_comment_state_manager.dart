@@ -164,6 +164,8 @@ class VoiceCommentStateManager {
       isTextComment: true,
       text: text.trim(),
       audioPath: null,
+      mediaPath: null,
+      isVideo: null,
       waveformData: null,
       duration: null,
       recorderUserId: currentUser.id,
@@ -203,6 +205,8 @@ class VoiceCommentStateManager {
       isTextComment: false,
       text: null,
       audioPath: audioPath,
+      mediaPath: null,
+      isVideo: null,
       waveformData: waveformData,
       duration: duration,
       recorderUserId: currentUser.id,
@@ -216,6 +220,41 @@ class VoiceCommentStateManager {
     _voiceCommentSavedStates[postId] = false;
 
     // 상태 변경 알림
+    _notifyStateChanged();
+  }
+
+  /// 사진/비디오 댓글이 완료되었을 때 호출되는 메서드
+  Future<void> onMediaCommentCompleted(
+    int postId,
+    String localFilePath,
+    bool isVideo,
+    UserController userController,
+  ) async {
+    if (localFilePath.trim().isEmpty) {
+      debugPrint('[VoiceCommentStateManager] media path is empty');
+      return;
+    }
+
+    final currentUser = userController.currentUser;
+    if (currentUser == null) {
+      debugPrint('[VoiceCommentStateManager] current user is null');
+      return;
+    }
+
+    _pendingCommentDrafts[postId] = (
+      isTextComment: false,
+      text: null,
+      audioPath: null,
+      mediaPath: localFilePath.trim(),
+      isVideo: isVideo,
+      waveformData: null,
+      duration: null,
+      recorderUserId: currentUser.id,
+      profileImageUrlKey: currentUser.profileImageUrlKey,
+    );
+
+    _pendingTextComments.remove(postId);
+    _voiceCommentSavedStates[postId] = false;
     _notifyStateChanged();
   }
 

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../api/models/comment.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
+import 'comment_audio_recording_bottom_sheet_widget.dart';
+import 'comment_camera_recording_bottom_sheet_widget.dart';
 import 'comment_base_bar_widget.dart';
 import 'comment_profile_tag_widget.dart';
 import 'comment_save_payload.dart';
@@ -15,6 +17,15 @@ class CommentComposerV2Widget extends StatefulWidget {
   final int postId;
   final Map<int, PendingApiCommentDraft> pendingCommentDrafts;
   final Future<void> Function(int postId, String text) onTextCommentCompleted;
+  final Future<void> Function(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
+  )
+  onAudioCommentCompleted;
+  final Future<void> Function(int postId, String localFilePath, bool isVideo)
+  onMediaCommentCompleted;
   final FutureOr<Offset?> Function(int postId) resolveDropRelativePosition;
   final void Function(int postId, double progress) onCommentSaveProgress;
   final void Function(int postId, Comment comment) onCommentSaveSuccess;
@@ -28,6 +39,8 @@ class CommentComposerV2Widget extends StatefulWidget {
     required this.postId,
     required this.pendingCommentDrafts,
     required this.onTextCommentCompleted,
+    required this.onAudioCommentCompleted,
+    required this.onMediaCommentCompleted,
     required this.resolveDropRelativePosition,
     required this.onCommentSaveProgress,
     required this.onCommentSaveSuccess,
@@ -79,11 +92,88 @@ class _CommentComposerV2WidgetState extends State<CommentComposerV2Widget> {
       );
     }
 
+    if ((draft.mediaPath ?? '').isNotEmpty) {
+      return CommentSavePayload(
+        postId: widget.postId,
+        userId: draft.recorderUserId,
+        kind: draft.isVideo == true
+            ? CommentDraftKind.video
+            : CommentDraftKind.image,
+        localFilePath: draft.mediaPath,
+        profileImageUrlKey: draft.profileImageUrlKey,
+      );
+    }
+
     return null;
   }
 
   Future<void> _handleTextSubmit(String text) async {
     await widget.onTextCommentCompleted(widget.postId, text);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _mode = _CommentComposerMode.placing;
+    });
+    widget.onTextFieldFocusChanged?.call(false);
+  }
+
+  Future<void> _handleCameraPressed() async {
+    widget.onCameraPressed?.call();
+
+    final result = await showModalBottomSheet<CommentCameraSheetResult>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CommentCameraRecordingBottomSheetWidget(),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    await widget.onMediaCommentCompleted(
+      widget.postId,
+      result.localFilePath,
+      result.isVideo,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _mode = _CommentComposerMode.placing;
+    });
+    widget.onTextFieldFocusChanged?.call(false);
+  }
+
+  Future<void> _handleMicPressed() async {
+    widget.onMicPressed?.call();
+
+    final result = await showModalBottomSheet<CommentAudioSheetResult>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const CommentAudioRecordingBottomSheetWidget(),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    await widget.onAudioCommentCompleted(
+      widget.postId,
+      result.audioPath,
+      result.waveformData,
+      result.durationMs,
+    );
+
     if (!mounted) {
       return;
     }
@@ -138,8 +228,8 @@ class _CommentComposerV2WidgetState extends State<CommentComposerV2Widget> {
     if (payload == null) {
       return CommentBaseBarWidget(
         onCenterTap: _showTyping,
-        onCameraPressed: widget.onCameraPressed,
-        onMicPressed: widget.onMicPressed,
+        onCameraPressed: _handleCameraPressed,
+        onMicPressed: _handleMicPressed,
       );
     }
 
@@ -165,8 +255,8 @@ class _CommentComposerV2WidgetState extends State<CommentComposerV2Widget> {
       case _CommentComposerMode.base:
         child = CommentBaseBarWidget(
           onCenterTap: _showTyping,
-          onCameraPressed: widget.onCameraPressed,
-          onMicPressed: widget.onMicPressed,
+          onCameraPressed: _handleCameraPressed,
+          onMicPressed: _handleMicPressed,
         );
         break;
       case _CommentComposerMode.typing:

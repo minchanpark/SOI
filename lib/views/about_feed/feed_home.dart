@@ -215,6 +215,36 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
     );
   }
 
+  Future<void> _onAudioCommentCompleted(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
+  ) async {
+    if (_userController == null) return;
+    await _voiceCommentStateManager?.onVoiceCommentCompleted(
+      postId,
+      audioPath,
+      waveformData,
+      durationMs,
+      _userController!,
+    );
+  }
+
+  Future<void> _onMediaCommentCompleted(
+    int postId,
+    String localFilePath,
+    bool isVideo,
+  ) async {
+    if (_userController == null) return;
+    await _voiceCommentStateManager?.onMediaCommentCompleted(
+      postId,
+      localFilePath,
+      isVideo,
+      _userController!,
+    );
+  }
+
   /// 프로필 이미지 드래그 이벤트 처리
   ///
   /// Parameters:
@@ -377,6 +407,8 @@ class _FeedHomeScreenState extends State<FeedHomeScreen> {
         pendingVoiceComments: _voiceCommentStateManager!.pendingVoiceComments,
         onToggleAudio: _toggleAudio,
         onTextCommentCompleted: _onTextCommentCompleted,
+        onAudioCommentCompleted: _onAudioCommentCompleted,
+        onMediaCommentCompleted: _onMediaCommentCompleted,
         onProfileImageDragged: _onProfileImageDragged,
         onCommentSaveProgress: _onCommentSaveProgress,
         onCommentSaveSuccess: _onCommentSaveSuccess,

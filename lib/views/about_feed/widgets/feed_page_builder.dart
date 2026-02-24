@@ -14,6 +14,15 @@ class FeedPageBuilder extends StatelessWidget {
   final Map<int, PendingApiCommentMarker> pendingVoiceComments;
   final Function(FeedPostItem) onToggleAudio;
   final Future<void> Function(int, String) onTextCommentCompleted;
+  final Future<void> Function(
+    int postId,
+    String audioPath,
+    List<double> waveformData,
+    int durationMs,
+  )
+  onAudioCommentCompleted;
+  final Future<void> Function(int postId, String localFilePath, bool isVideo)
+  onMediaCommentCompleted;
   final Function(int, Offset) onProfileImageDragged;
   final void Function(int, double) onCommentSaveProgress;
   final void Function(int, Comment) onCommentSaveSuccess;
@@ -37,6 +46,8 @@ class FeedPageBuilder extends StatelessWidget {
     required this.pendingVoiceComments,
     required this.onToggleAudio,
     required this.onTextCommentCompleted,
+    required this.onAudioCommentCompleted,
+    required this.onMediaCommentCompleted,
     required this.onProfileImageDragged,
     required this.onCommentSaveProgress,
     required this.onCommentSaveSuccess,
@@ -84,6 +95,8 @@ class FeedPageBuilder extends StatelessWidget {
           pendingVoiceComments: pendingVoiceComments,
           onToggleAudio: (p) => onToggleAudio(feedItem),
           onTextCommentCompleted: onTextCommentCompleted,
+          onAudioCommentCompleted: onAudioCommentCompleted,
+          onMediaCommentCompleted: onMediaCommentCompleted,
           onProfileImageDragged: onProfileImageDragged,
           onCommentSaveProgress: onCommentSaveProgress,
           onCommentSaveSuccess: onCommentSaveSuccess,
