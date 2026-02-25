@@ -41,6 +41,26 @@ Widget _heroFlightShuttleBuilder(
   );
 }
 
+class ExpandedMediaTagOverlayData {
+  final String tagKey;
+  final Comment comment;
+  final Offset globalCircleCenter;
+  final double collapsedContentSize;
+  final double expandedContentSize;
+  final VoidCallback onDismiss;
+  final VoidCallback? onLongPress;
+
+  const ExpandedMediaTagOverlayData({
+    required this.tagKey,
+    required this.comment,
+    required this.globalCircleCenter,
+    required this.collapsedContentSize,
+    required this.expandedContentSize,
+    required this.onDismiss,
+    this.onLongPress,
+  });
+}
+
 /// API 사진/비디오 표시 위젯
 /// 게시물의 사진 또는 비디오를 표시하고, 댓글 아바타 및 캡션 오버레이를 관리합니다.
 ///
@@ -68,6 +88,8 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final Function(Post) onToggleAudio;
   final Map<int, PendingApiCommentMarker> pendingVoiceComments;
   final Future<void> Function(int postId)? onCommentsReloadRequested;
+  final ValueChanged<ExpandedMediaTagOverlayData?>?
+  onExpandedMediaOverlayChanged;
 
   const ApiPhotoDisplayWidget({
     super.key,
@@ -81,6 +103,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
     required this.onToggleAudio,
     this.pendingVoiceComments = const {},
     this.onCommentsReloadRequested,
+    this.onExpandedMediaOverlayChanged,
   });
 
   @override
@@ -90,6 +113,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
 class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     with WidgetsBindingObserver {
   static const double _avatarSize = 27.0;
+  static const double _expandedAvatarSize = 108.0;
   static const double _imageWidth = 354.0;
   static const double _imageHeight = 500.0;
 
@@ -116,6 +140,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   }
 
   String? _selectedCommentKey;
+  String? _expandedMediaTagKey;
   int? _selectedCommentId;
   Offset? _selectedCommentPosition;
   bool _showActionOverlay = false;
@@ -124,6 +149,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   bool _isCaptionExpanded = false;
   String? _uploaderProfileImageUrl;
   bool _isProfileLoading = false;
+  final GlobalKey _displayStackKey = GlobalKey();
 
   /// 댓글 목록을 해당 게시물 ID로부터 가져오는 getter
   List<Comment> get _postComments =>
@@ -331,6 +357,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _clearExpandedMediaOverlay();
     _disposeVideoController();
     super.dispose();
   }
@@ -659,6 +686,90 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     return Offset(anchor.dx.clamp(minX, maxX), anchor.dy.clamp(minY, maxY));
   }
 
+  /// 태그의 포인터 끝점(anchor) 좌표를 원(circle) 중심 좌표로 변환
+  /// 확장/축소 시 같은 중심점을 유지하기 위한 계산입니다.
+  Offset _tagCircleCenterFromTipAnchor(Offset tipAnchor, double contentSize) {
+    final tipOffset = TagBubble.pointerTipOffset(contentSize: contentSize);
+    final diameter = TagBubble.diameterForContent(contentSize: contentSize);
+    final left = tipAnchor.dx - tipOffset.dx;
+    final top = tipAnchor.dy - tipOffset.dy;
+    return Offset(left + (diameter / 2), top + (diameter / 2));
+  }
+
+  /// 태그 포인터 끝점(anchor) 좌표로부터 TagBubble 좌상단 좌표를 계산합니다.
+  Offset _tagTopLeftFromTipAnchor(Offset tipAnchor, double contentSize) {
+    final tipOffset = TagBubble.pointerTipOffset(contentSize: contentSize);
+    return Offset(tipAnchor.dx - tipOffset.dx, tipAnchor.dy - tipOffset.dy);
+  }
+
+  void _notifyExpandedMediaOverlay(ExpandedMediaTagOverlayData? data) {
+    widget.onExpandedMediaOverlayChanged?.call(data);
+  }
+
+  void _clearExpandedMediaOverlay() {
+    _notifyExpandedMediaOverlay(null);
+  }
+
+  void _emitExpandedMediaOverlay({
+    required String tagKey,
+    required Comment comment,
+    required Offset localCircleCenter,
+    required double collapsedContentSize,
+    required double expandedContentSize,
+    VoidCallback? onLongPress,
+  }) {
+    final callback = widget.onExpandedMediaOverlayChanged;
+    if (callback == null) return;
+
+    final renderBox = _displayStackKey.currentContext?.findRenderObject();
+    if (renderBox is! RenderBox) return;
+
+    final globalCircleCenter = renderBox.localToGlobal(localCircleCenter);
+    callback(
+      ExpandedMediaTagOverlayData(
+        tagKey: tagKey,
+        comment: comment,
+        globalCircleCenter: globalCircleCenter,
+        collapsedContentSize: collapsedContentSize,
+        expandedContentSize: expandedContentSize,
+        onDismiss: _collapseExpandedMediaTag,
+        onLongPress: onLongPress,
+      ),
+    );
+  }
+
+  void _collapseExpandedMediaTag() {
+    if (!mounted) return;
+    if (_expandedMediaTagKey == null) {
+      _clearExpandedMediaOverlay();
+      return;
+    }
+    setState(() {
+      _expandedMediaTagKey = null;
+    });
+    _clearExpandedMediaOverlay();
+  }
+
+  void _showExpandedMediaOverlay({
+    required String tagKey,
+    required Comment comment,
+    required Offset tipAnchor,
+    VoidCallback? onLongPress,
+  }) {
+    final localCircleCenter = _tagCircleCenterFromTipAnchor(
+      tipAnchor,
+      _avatarSize,
+    );
+    _emitExpandedMediaOverlay(
+      tagKey: tagKey,
+      comment: comment,
+      localCircleCenter: localCircleCenter,
+      collapsedContentSize: _avatarSize,
+      expandedContentSize: _expandedAvatarSize,
+      onLongPress: onLongPress,
+    );
+  }
+
   /// 댓글의 프로필 이미지를 위치에 맞게 배치
   /// 댓글이 위치 정보를 가지고 있고, 댓글 표시가 활성화된 경우에만 아바타를 표시합니다.
   List<Widget> _buildCommentAvatars() {
@@ -669,11 +780,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         .toList();
 
     final actualSize = _imageSize;
-    final tagTipOffset = TagBubble.pointerTipOffset(contentSize: _avatarSize);
 
     return List<Widget>.generate(filteredComments.length, (index) {
       final comment = filteredComments[index];
       final key = '${index}_${comment.hashCode}';
+      final canExpandMedia = _canExpandMediaComment(comment);
       final relative = Offset(
         comment.locationX ?? 0.5,
         comment.locationY ?? 0.5,
@@ -682,41 +793,107 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
         relative,
         actualSize,
       );
-      final clamped = _clampTagAnchor(absolute, actualSize, _avatarSize);
+      final clampedSmallTip = _clampTagAnchor(
+        absolute,
+        actualSize,
+        _avatarSize,
+      );
+      final topLeft = _tagTopLeftFromTipAnchor(clampedSmallTip, _avatarSize);
       final hideOther =
           _showActionOverlay &&
           _selectedCommentKey != null &&
           key != _selectedCommentKey;
-      if (hideOther) {
+      final hideExpandedTag = _expandedMediaTagKey == key && canExpandMedia;
+      if (hideOther || hideExpandedTag) {
         return const SizedBox.shrink();
       }
 
       final isSelected = _selectedCommentKey == key;
+      final tagBody = _buildCircleAvatar(
+        key: ValueKey('avatar_$key'),
+        imageUrl: comment.userProfileUrl,
+        size: _avatarSize,
+        showBorder: isSelected,
+        borderColor: Colors.white,
+      );
 
       return Positioned(
-        left: clamped.dx - tagTipOffset.dx,
-        top: clamped.dy - tagTipOffset.dy,
+        left: topLeft.dx,
+        top: topLeft.dy,
         child: GestureDetector(
-          onTap: () => _openCommentSheet(key),
+          onTap: () => _handleCommentTap(
+            comment: comment,
+            key: key,
+            tipAnchor: clampedSmallTip,
+          ),
           onLongPress: () => _handleCommentLongPress(
             key: key,
             commentId: comment.id,
-            position: clamped,
+            position: clampedSmallTip,
           ),
-          // 드래그로 프로필 이미지 위치 조정
-          child: TagBubble(
-            contentSize: _avatarSize,
-            // 댓글 아바타 빌드
-            child: _buildCircleAvatar(
-              imageUrl: comment.userProfileUrl,
-              size: _avatarSize,
-              showBorder: isSelected,
-              borderColor: Colors.white,
-            ),
-          ),
+          child: TagBubble(contentSize: _avatarSize, child: tagBody),
         ),
       );
     });
+  }
+
+  /// 댓글이 미디어(사진) 타입이고, 미디어 프리뷰가 가능한지 여부를 판단하는 메서드
+  bool _canExpandMediaComment(Comment comment) {
+    if (comment.type != CommentType.photo) {
+      // 사진 타입이 아닌 경우 미디어 프리뷰 불가능
+      return false;
+    }
+
+    final fileUrl = (comment.fileUrl ?? '').trim();
+    if (fileUrl.isNotEmpty) {
+      return true;
+    }
+
+    final fileKey = (comment.fileKey ?? '').trim();
+    return fileKey.isNotEmpty;
+  }
+
+  /// 댓글을 탭했을 때의 처리 메서드
+  void _handleCommentTap({
+    required Comment comment,
+    required String key,
+    required Offset tipAnchor,
+  }) {
+    if (comment.type == CommentType.photo) {
+      if (!_canExpandMediaComment(comment)) {
+        _openCommentSheet(key); // 미디어 프리뷰가 불가능한 경우, 바로 댓글 시트 오픈
+        return;
+      }
+      if (widget.onExpandedMediaOverlayChanged == null) {
+        _openCommentSheet(key);
+        return;
+      }
+
+      if (_expandedMediaTagKey == key) {
+        _collapseExpandedMediaTag();
+        return;
+      }
+
+      setState(() {
+        _expandedMediaTagKey = key;
+      });
+      _showExpandedMediaOverlay(
+        tagKey: key,
+        comment: comment,
+        tipAnchor: tipAnchor,
+        onLongPress: () => _handleCommentLongPress(
+          key: key,
+          commentId: comment.id,
+          position: tipAnchor,
+        ),
+      );
+      return;
+    }
+
+    if (_expandedMediaTagKey != null) {
+      _collapseExpandedMediaTag();
+    }
+    _openCommentSheet(key);
   }
 
   /// 업로드 중인 음성 댓글 마커 빌드
@@ -973,6 +1150,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   ///   - [opacity]: 아바타 투명도 (기본값: 1.0)
   ///   - [isCaption]: 캡션 모드 여부 (기본값: null)
   Widget _buildCircleAvatar({
+    Key? key, // 위젯 키
     required String? imageUrl,
     double size = 32.0,
     bool showBorder = false,
@@ -985,7 +1163,6 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     Widget avatarContent;
 
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      final dpr = MediaQuery.of(context).devicePixelRatio;
       avatarContent = ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl,
@@ -996,10 +1173,8 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
           width: size,
           height: size,
           fit: BoxFit.cover,
+
           // 아바타는 실제 표시 크기만큼만 디코딩하면 충분합니다.
-          memCacheWidth: (size * dpr).round(),
-          memCacheHeight: (size * dpr).round(),
-          maxWidthDiskCache: (size * 4).round(),
           placeholder: (context, url) => Shimmer.fromColors(
             baseColor: const Color(0xFF2A2A2A),
             highlightColor: const Color(0xFF3A3A3A),
@@ -1050,9 +1225,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       );
     }
 
-    return opacity < 1.0
+    final resolved = opacity < 1.0
         ? Opacity(opacity: opacity, child: avatarContent)
         : avatarContent;
+    if (key == null) {
+      return resolved;
+    }
+    return KeyedSubtree(key: key, child: resolved);
   }
 
   /// 기본 영역 탭 처리
@@ -1061,10 +1240,20 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       _dismissOverlay();
       return;
     }
+    if (_expandedMediaTagKey != null) {
+      _collapseExpandedMediaTag();
+      return;
+    }
     if (_hasComments || _hasPendingMarker) {
       setState(() {
         _isShowingComments = !_isShowingComments;
+        if (!_isShowingComments) {
+          _expandedMediaTagKey = null; // 댓글 숨길 때 미디어 태그 확장 해제
+        }
       });
+      if (!_isShowingComments) {
+        _clearExpandedMediaOverlay();
+      }
     }
   }
 
@@ -1074,9 +1263,11 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     setState(() {
       _showActionOverlay = false; // 액션 오버레이 숨기기
       _selectedCommentKey = null; // 선택된 댓글 키 초기화
+      _expandedMediaTagKey = null; // 확장 미디어 태그 초기화
       _selectedCommentId = null; // 선택된 댓글 ID 초기화
       _selectedCommentPosition = null; // 선택된 댓글 위치 초기화
     });
+    _clearExpandedMediaOverlay();
   }
 
   /// 댓글 시트 열기
@@ -1085,6 +1276,12 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   ///  - [selectedKey]: 선택된 댓글의 고유 키
   void _openCommentSheet(String selectedKey) {
     final comments = _postComments;
+    if (_expandedMediaTagKey != null) {
+      setState(() {
+        _expandedMediaTagKey = null; // 댓글 시트 열 때 미디어 태그 확장 해제
+      });
+      _clearExpandedMediaOverlay();
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1123,6 +1320,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     setState(() {
       // 선택된 댓글 정보 저장
       _selectedCommentKey = key;
+      _expandedMediaTagKey = null;
 
       // 댓글 ID와 위치 저장
       _selectedCommentId = commentId;
@@ -1133,6 +1331,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
       // 액션 오버레이 표시
       _showActionOverlay = true;
     });
+    _clearExpandedMediaOverlay();
   }
 
   /// 댓글 삭제 처리
@@ -1256,6 +1455,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                 return GestureDetector(
                   onTap: _handleBaseTap,
                   child: Stack(
+                    key: _displayStackKey,
                     clipBehavior: Clip.none,
                     alignment: Alignment.topCenter,
                     children: [
@@ -1338,7 +1538,13 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                                   onTap: () {
                                     setState(() {
                                       _isShowingComments = !_isShowingComments;
+                                      if (!_isShowingComments) {
+                                        _expandedMediaTagKey = null;
+                                      }
                                     });
+                                    if (!_isShowingComments) {
+                                      _clearExpandedMediaOverlay();
+                                    }
                                   },
                                   child: Image.asset(
                                     "assets/comment_profile_icon.png",

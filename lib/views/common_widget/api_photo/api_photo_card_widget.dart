@@ -8,9 +8,11 @@ import '../../../api/controller/audio_controller.dart';
 import 'api_photo_display_widget.dart';
 import 'api_user_info_widget.dart';
 import '../about_comment_version_2/comment_composer_v2_widget.dart';
+import '../about_comment_version_2/comment_media_tag_preview_widget.dart';
 import '../about_voice_comment/api_voice_comment_list_sheet.dart';
 import '../about_voice_comment/pending_api_voice_comment.dart';
 import '../report/report_bottom_sheet.dart';
+import 'tag_pointer.dart';
 
 /// API 기반 사진 카드 위젯
 ///
@@ -88,8 +90,16 @@ class ApiPhotoCardWidget extends StatefulWidget {
   State<ApiPhotoCardWidget> createState() => _ApiPhotoCardWidgetState();
 }
 
-class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
+class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget>
+    with SingleTickerProviderStateMixin {
+  static const Duration _kOverlayExpandDuration = Duration(milliseconds: 220);
+  static const Curve _kOverlayExpandCurve = Curves.easeOutCubic;
+
   bool _isTextFieldFocused = false;
+  ExpandedMediaTagOverlayData? _expandedOverlayData;
+  OverlayEntry? _expandedOverlayEntry;
+  late final AnimationController _overlayExpandController;
+  late final Animation<double> _overlayExpandAnimation;
 
   Future<void> _handleTextCommentCreated(String text) async {
     debugPrint(
@@ -103,6 +113,145 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _overlayExpandController = AnimationController(
+      vsync: this,
+      duration: _kOverlayExpandDuration,
+    );
+    _overlayExpandAnimation = CurvedAnimation(
+      parent: _overlayExpandController,
+      curve: _kOverlayExpandCurve,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant ApiPhotoCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id) {
+      _removeExpandedMediaOverlay();
+    }
+  }
+
+  @override
+  void deactivate() {
+    _removeExpandedMediaOverlay();
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    _removeExpandedMediaOverlay();
+    _overlayExpandController.dispose();
+    super.dispose();
+  }
+
+  void _removeExpandedMediaOverlay() {
+    _overlayExpandController.stop();
+    _overlayExpandController.reset();
+    _expandedOverlayEntry?.remove();
+    _expandedOverlayEntry = null;
+    _expandedOverlayData = null;
+  }
+
+  void _handleExpandedMediaOverlayChanged(ExpandedMediaTagOverlayData? data) {
+    if (!mounted) return;
+    if (data == null) {
+      _removeExpandedMediaOverlay();
+      return;
+    }
+
+    _expandedOverlayData = data;
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    if (_expandedOverlayEntry == null) {
+      _expandedOverlayEntry = OverlayEntry(
+        builder: _buildExpandedMediaOverlayEntry,
+      );
+      overlay.insert(_expandedOverlayEntry!);
+    }
+    _expandedOverlayEntry!.markNeedsBuild();
+    _overlayExpandController.forward(from: 0.0);
+  }
+
+  Widget _buildExpandedMediaOverlayEntry(BuildContext overlayContext) {
+    final data = _expandedOverlayData;
+    if (data == null) return const SizedBox.shrink();
+
+    final mediaQuery = MediaQuery.of(overlayContext);
+    final screenSize = mediaQuery.size;
+    final safePadding = mediaQuery.padding;
+
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: data.onDismiss,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          AnimatedBuilder(
+            animation: _overlayExpandAnimation,
+            builder: (_, __) {
+              final progress = _overlayExpandAnimation.value;
+              final contentSize =
+                  data.collapsedContentSize +
+                  ((data.expandedContentSize - data.collapsedContentSize) *
+                      progress);
+              final diameter = TagBubble.diameterForContent(
+                contentSize: contentSize,
+              );
+              final totalHeight = TagBubble.totalHeightForContent(
+                contentSize: contentSize,
+              );
+              final topLeft = Offset(
+                data.globalCircleCenter.dx - (diameter / 2),
+                data.globalCircleCenter.dy - (diameter / 2),
+              );
+
+              final clampedLeft = topLeft.dx.clamp(
+                0.0,
+                (screenSize.width - diameter).clamp(0.0, double.infinity),
+              );
+              final maxTop = (screenSize.height - totalHeight).clamp(
+                0.0,
+                double.infinity,
+              );
+              final minTop = safePadding.top.clamp(0.0, maxTop);
+              final clampedTop = topLeft.dy.clamp(minTop, maxTop);
+
+              return Positioned(
+                left: clampedLeft,
+                top: clampedTop,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: data.onDismiss,
+                  onLongPress: data.onLongPress,
+                  child: TagBubble(
+                    contentSize: contentSize,
+                    child: CommentMediaTagPreviewWidget(
+                      key: ValueKey('overlay_media_${data.tagKey}'),
+                      comment: data.comment,
+                      size: contentSize,
+                      autoplayVideo: true,
+                      playWithSound: true,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isKeyboardVisible = _isTextFieldFocused;
     final bottomPadding = isKeyboardVisible
@@ -110,8 +259,10 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
         : (widget.isCategory ? 55.0 : 10.0);
 
     return Stack(
+      clipBehavior: Clip.none, // 오버레이와 하단 코멘트 컴포저 레이어를 유지
       children: [
         SingleChildScrollView(
+          clipBehavior: Clip.none,
           physics: const NeverScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -133,6 +284,8 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget> {
                 onToggleAudio: widget.onToggleAudio,
                 pendingVoiceComments: widget.pendingVoiceComments,
                 onCommentsReloadRequested: widget.onCommentsReloadRequested,
+                onExpandedMediaOverlayChanged:
+                    _handleExpandedMediaOverlayChanged,
               ),
               SizedBox(height: 12.h),
 

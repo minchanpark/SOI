@@ -26,7 +26,6 @@ import 'package:soi/api/controller/post_controller.dart';
 import 'package:soi/api/controller/user_controller.dart';
 import 'package:soi/views/about_friends/friend_management_screen.dart';
 import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
-
 import 'package:soi/api/controller/category_search_controller.dart'
     as api_category_search;
 import 'package:soi/views/about_friends/friend_request_screen.dart';

@@ -65,6 +65,7 @@ class FeedPageBuilder extends StatelessWidget {
     final itemCount = posts.length + (hasMoreData ? 1 : 0);
     return PageView.builder(
       scrollDirection: Axis.vertical,
+      clipBehavior: Clip.none,
       itemCount: itemCount,
       onPageChanged: (index) {
         onPageChanged(index);

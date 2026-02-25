@@ -268,6 +268,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
             controller: _pageController,
             itemCount: _posts.length,
             scrollDirection: Axis.vertical,
+            clipBehavior: Clip.none,
             onPageChanged: _onPageChanged,
             itemBuilder: (context, index) {
               final post = _posts[index];

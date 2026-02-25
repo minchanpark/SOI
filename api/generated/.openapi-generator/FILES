@@ -131,5 +131,3 @@ lib/model/user_find_resp_dto.dart
 lib/model/user_resp_dto.dart
 lib/model/user_update_req_dto.dart
 pubspec.yaml
-test/api_response_dto_slice_post_resp_dto_test.dart
-test/slice_post_resp_dto_test.dart

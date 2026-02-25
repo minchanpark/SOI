@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../../api/controller/audio_controller.dart';
@@ -315,21 +317,25 @@ class _CommentAudioRecordingBottomSheetWidgetState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.graphic_eq, color: Color(0xFF6D6D6D), size: 58),
-          const SizedBox(height: 14),
+          Image.asset('waveform_icon.png'),
           Text(
             tr('comments.audio_sheet.start_tag'),
-            style: const TextStyle(
-              color: Color(0xFFF1F1F1),
-              fontSize: 16,
-              fontFamily: 'Pretendard',
+            style: TextStyle(
+              color: Color(0xFFCBCBCB),
+              fontSize: 16.sp,
+              fontFamily: 'Pretendard Variable',
               fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 18),
-          _buildPrimaryCircleButton(
-            icon: const Icon(Icons.mic, color: Colors.white, size: 24),
-            onTap: _startRecording,
+
+          // 녹음 시작 버튼
+          IconButton(
+            onPressed: _startRecording,
+            icon: SvgPicture.asset(
+              'assets/record_icon.svg',
+              width: 54.sp,
+              height: 54.sp,
+            ),
           ),
         ],
       ),
