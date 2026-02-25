@@ -143,6 +143,7 @@ flutter:
     - assets/icon/icon.png
     - assets/camera_mode.png
     - assets/text_mode.png
+    - assets/waveform_icon.png
     - assets/translations/ko.json
     - assets/translations/es.json
     - .env

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -229,7 +227,7 @@ class _AudioControlSurface extends StatelessWidget {
   final bool isProfileLoading;
   final bool isAudioLoading;
 
-  _AudioControlSurface({
+  const _AudioControlSurface({
     required this.isPlaying,
     required this.progress,
     required this.waveformData,
@@ -275,6 +273,12 @@ class _AudioControlSurface extends StatelessWidget {
                           progress: progress,
                           activeColor: Colors.white,
                           color: Colors.grey[600]!,
+                          barThickness: 3.0,
+                          barSpacing: 7.0,
+                          maxBarHeightFactor: 0.5,
+                          amplitudeScale: 1.0,
+                          minBarHeight: 0.0,
+                          strokeCap: StrokeCap.round,
                         )
                       else
                         LinearProgressIndicator(

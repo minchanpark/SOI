@@ -85,3 +85,6 @@ amplifytools.xcconfig
 
 # Google Cloud Service Account credentials
 android/soi-sns-*.json
+
+# Flutter Demon user preferences (not tracked)
+.fdemon/settings.local.toml

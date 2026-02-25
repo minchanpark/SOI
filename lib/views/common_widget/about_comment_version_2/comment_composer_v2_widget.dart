@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../api/models/comment.dart';
-import '../about_voice_comment/pending_api_voice_comment.dart';
+import '../about_comment_version_1/pending_api_voice_comment.dart';
 import 'comment_audio_recording_bottom_sheet_widget.dart';
 import 'comment_camera_recording_bottom_sheet_widget.dart';
 import 'comment_base_bar_widget.dart';

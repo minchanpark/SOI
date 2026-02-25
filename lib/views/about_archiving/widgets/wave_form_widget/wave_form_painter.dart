@@ -7,27 +7,39 @@ class WaveformPainter extends CustomPainter {
   final Color color;
   final Color activeColor;
   final double progress;
+  final double barThickness;
+  final double barSpacing;
+  final double maxBarHeightFactor;
+  final double amplitudeScale;
+  final double minBarHeight;
+  final StrokeCap strokeCap;
 
   WaveformPainter({
     required this.waveformData,
     required this.color,
     required this.activeColor,
     required this.progress,
+    this.barThickness = 3.0,
+    this.barSpacing = 7.0,
+    this.maxBarHeightFactor = 0.5,
+    this.amplitudeScale = 1.0,
+    this.minBarHeight = 0.0,
+    this.strokeCap = StrokeCap.round,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (waveformData.isEmpty) return;
 
+    final effectiveSpacing = barSpacing <= 0 ? 1.0 : barSpacing;
+    final barCount = max(1, (size.width / effectiveSpacing).floor());
+    final effectiveHeightFactor = maxBarHeightFactor.clamp(0.0, 1.0);
+    final effectiveAmplitudeScale = amplitudeScale <= 0 ? 1.0 : amplitudeScale;
+    final effectiveMinBarHeight = minBarHeight < 0 ? 0.0 : minBarHeight;
+
     final paint = Paint()
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    // 항상 전체 너비를 채우도록 고정된 바 개수 사용
-    final barSpacing = 7.0;
-
-    // 전체 너비를 채우는 바 개수
-    final barCount = (size.width / barSpacing).floor();
+      ..strokeWidth = barThickness
+      ..strokeCap = strokeCap;
 
     // 바의 샘플링된 데이터
     final sampledData = _stretchData(waveformData, barCount);
@@ -35,16 +47,22 @@ class WaveformPainter extends CustomPainter {
     final centerY = size.height / 2;
 
     // 파형의 최대 바의 높이는 전체적으로 조절하는 부분
-    final maxBarHeight = size.height * 0.5;
+    final maxBarHeight = size.height * effectiveHeightFactor;
 
     for (int i = 0; i < barCount; i++) {
-      final x = i * barSpacing;
+      final x = i * effectiveSpacing;
       if (x >= size.width) break;
 
       // 파형 높이 계산 (0.0 ~ 1.0 범위의 데이터를 바 높이로 변환)
-      // sampledData[i] * 3 --> 파형을 얼마나 민감하게 감지하고 표시하는 지 조절하는 부분
-      final normalizedHeight = (sampledData[i] * 1).clamp(0.0, 1.0);
-      final barHeight = normalizedHeight * maxBarHeight;
+      final normalizedHeight = (sampledData[i] * effectiveAmplitudeScale).clamp(
+        0.0,
+        1.0,
+      );
+      var barHeight = max(
+        effectiveMinBarHeight,
+        normalizedHeight * maxBarHeight,
+      );
+      barHeight = barHeight.clamp(0.0, maxBarHeight);
 
       // 진행 상태에 따라 색상 결정
       final isActive = progress > 0 && (i / barCount) <= progress;
@@ -119,6 +137,12 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.waveformData != waveformData ||
         oldDelegate.progress != progress ||
         oldDelegate.color != color ||
-        oldDelegate.activeColor != activeColor;
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.barThickness != barThickness ||
+        oldDelegate.barSpacing != barSpacing ||
+        oldDelegate.maxBarHeightFactor != maxBarHeightFactor ||
+        oldDelegate.amplitudeScale != amplitudeScale ||
+        oldDelegate.minBarHeight != minBarHeight ||
+        oldDelegate.strokeCap != strokeCap;
   }
 }

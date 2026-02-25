@@ -261,8 +261,14 @@ class AudioController extends ChangeNotifier {
   /// 네이티브 녹음 시작
   Future<void> startRecording() async {
     if (_isRecording) {
-      debugPrint('⚠️ 녹음이 이미 진행 중입니다.');
-      return;
+      // stale 상태를 자동 복구한 뒤 재시작
+      debugPrint('녹음 상태가 남아 있어 강제 중지 후 재시작합니다.');
+      try {
+        await stopRecordingSimple(force: true);
+      } catch (_) {
+        // 강제 중지 실패 시 내부 상태를 초기화하고 재시도
+        clearCurrentRecording();
+      }
     }
 
     final hasPermission = await _requestMicrophonePermission();
@@ -294,8 +300,8 @@ class AudioController extends ChangeNotifier {
   }
 
   /// 네이티브 녹음을 중지하고 파일 경로를 반환합니다.
-  Future<void> stopRecordingSimple() async {
-    if (!_isRecording) {
+  Future<void> stopRecordingSimple({bool force = false}) async {
+    if (!_isRecording && !force) {
       debugPrint('녹음이 진행 중이 아닙니다.');
       return;
     }

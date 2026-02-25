@@ -707,6 +707,12 @@ class _ApiPhotoGridItemState extends State<ApiPhotoGridItem> {
                     : const Color(0xffffffff),
                 activeColor: Colors.white,
                 progress: progress,
+                barThickness: 3.0,
+                barSpacing: 7.0,
+                maxBarHeightFactor: 0.5,
+                amplitudeScale: 1.0,
+                minBarHeight: 0.0,
+                strokeCap: StrokeCap.round,
               ),
             ),
             if (_isAudioLoading)

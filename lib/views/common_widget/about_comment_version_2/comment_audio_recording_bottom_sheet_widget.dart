@@ -63,9 +63,9 @@ class _CommentAudioRecordingBottomSheetWidgetState
 
   @override
   void dispose() {
-    unawaited(_stopRecordingIfNeeded());
+    unawaited(_stopRecordingIfNeeded(force: true));
+    unawaited(_stopPlaybackIfNeeded());
     _recorderController.dispose();
-    _playerController?.dispose();
     super.dispose();
   }
 
@@ -76,18 +76,38 @@ class _CommentAudioRecordingBottomSheetWidgetState
 
     _isTransitioning = true;
     try {
+      // 이전 사이클의 잔여 상태를 먼저 정리
       await _stopPlaybackIfNeeded();
-      await _recorderController.record();
-      _recordingStartedAt = DateTime.now();
-      _recordingDurationMs = 0;
+      await _stopRecordingIfNeeded(force: true);
+      _audioController.clearCurrentRecording();
+
+      // native 녹음부터 시작한 뒤 wave recorder를 시작한다.
       await _audioController.startRecording();
+      await _recorderController.record();
+
+      _recordingStartedAt = DateTime.now();
       if (!mounted) {
         return;
       }
       setState(() {
+        _audioPath = null;
+        _waveformData = const [];
+        _recordingDurationMs = 0;
         _state = _CommentAudioSheetState.recording;
       });
     } catch (_) {
+      // 부분 시작 실패 시 즉시 롤백
+      await _stopRecordingIfNeeded(force: true);
+      _audioController.clearCurrentRecording();
+      if (mounted) {
+        setState(() {
+          _audioPath = null;
+          _waveformData = const [];
+          _recordingStartedAt = null;
+          _recordingDurationMs = 0;
+          _state = _CommentAudioSheetState.ready;
+        });
+      }
       _showSnackBar(tr('comments.audio_sheet.recording_failed'));
     } finally {
       _isTransitioning = false;
@@ -109,7 +129,7 @@ class _CommentAudioRecordingBottomSheetWidgetState
         await _recorderController.stop();
       }
 
-      await _audioController.stopRecordingSimple();
+      await _audioController.stopRecordingSimple(force: true);
 
       final path = _audioController.currentRecordingPath;
       if (path == null || path.isEmpty) {
@@ -121,7 +141,9 @@ class _CommentAudioRecordingBottomSheetWidgetState
           : DateTime.now().difference(_recordingStartedAt!).inMilliseconds;
       _recordingDurationMs = durationMs;
 
-      final player = _playerController ??= PlayerController();
+      await _stopPlaybackIfNeeded();
+      final player = PlayerController();
+      _playerController = player;
       await player.preparePlayer(path: path, shouldExtractWaveform: true);
 
       if (waveform.isEmpty) {
@@ -182,12 +204,17 @@ class _CommentAudioRecordingBottomSheetWidgetState
     await _discardRecordingAndReset();
   }
 
-  Future<void> _stopRecordingIfNeeded() async {
+  Future<void> _stopRecordingIfNeeded({bool force = false}) async {
     if (_recorderController.isRecording) {
-      await _recorderController.stop();
+      try {
+        await _recorderController.stop();
+      } catch (_) {}
     }
-    if (_audioController.isRecording) {
-      await _audioController.stopRecordingSimple();
+
+    if (force || _audioController.isRecording) {
+      try {
+        await _audioController.stopRecordingSimple(force: force);
+      } catch (_) {}
     }
   }
 
@@ -196,14 +223,23 @@ class _CommentAudioRecordingBottomSheetWidgetState
     if (player == null) {
       return;
     }
-    if (player.playerState.isPlaying) {
+
+    try {
       await player.stopPlayer();
+    } catch (_) {}
+
+    try {
+      player.dispose();
+    } catch (_) {}
+
+    if (identical(_playerController, player)) {
+      _playerController = null;
     }
   }
 
   Future<void> _discardRecordingAndReset() async {
     await _stopPlaybackIfNeeded();
-    await _stopRecordingIfNeeded();
+    await _stopRecordingIfNeeded(force: true);
 
     final oldPath = _audioPath ?? _audioController.currentRecordingPath;
     _audioController.clearCurrentRecording();
@@ -317,7 +353,7 @@ class _CommentAudioRecordingBottomSheetWidgetState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset('waveform_icon.png'),
+          Image.asset("assets/waveform_icon.png", width: 93.sp, height: 93.sp),
           Text(
             tr('comments.audio_sheet.start_tag'),
             style: TextStyle(
@@ -327,7 +363,7 @@ class _CommentAudioRecordingBottomSheetWidgetState
               fontWeight: FontWeight.w400,
             ),
           ),
-
+          SizedBox(height: 10.sp),
           // 녹음 시작 버튼
           IconButton(
             onPressed: _startRecording,
@@ -353,6 +389,7 @@ class _CommentAudioRecordingBottomSheetWidgetState
     );
   }
 
+  /// 녹음 중 UI
   Widget _buildRecordingBody() {
     return Expanded(
       child: Column(
@@ -374,19 +411,15 @@ class _CommentAudioRecordingBottomSheetWidgetState
               );
             },
           ),
-          SizedBox(
-            height: 70,
-            width: double.infinity,
-            child: AudioWaveforms(
-              size: const Size(double.infinity, 70),
-              recorderController: _recorderController,
-              waveStyle: const WaveStyle(
-                waveColor: Colors.white,
-                showMiddleLine: false,
-                extendWaveform: true,
-                waveThickness: 2.5,
-                spacing: 5,
-              ),
+          AudioWaveforms(
+            size: const Size(double.infinity, 70),
+            recorderController: _recorderController,
+            waveStyle: const WaveStyle(
+              waveColor: Colors.white,
+              showMiddleLine: false,
+              extendWaveform: true,
+              waveThickness: 2.5,
+              spacing: 5,
             ),
           ),
           Row(
@@ -409,6 +442,7 @@ class _CommentAudioRecordingBottomSheetWidgetState
     );
   }
 
+  /// 녹음 완료 후 재생 UI
   Widget _buildPlaybackWaveform() {
     final player = _playerController;
     if (player == null || _waveformData.isEmpty) {
@@ -421,14 +455,20 @@ class _CommentAudioRecordingBottomSheetWidgetState
         final current = snapshot.data ?? 0;
         final total = player.maxDuration;
         final progress = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
-        return SizedBox(
-          height: 70,
-          width: double.infinity,
+        return Container(
+          height: 90.sp,
+          padding: EdgeInsets.symmetric(horizontal: 42.sp),
           child: CustomWaveformWidget(
             waveformData: _waveformData,
             color: const Color(0xFF5A5A5A),
             activeColor: Colors.white,
             progress: progress,
+            barThickness: 3.0, // 녹음된 파형의 두께
+            barSpacing: 8.0, // 녹음된 파형의 간격
+            maxBarHeightFactor: 2.0, // 녹음된 파형의 최대 높이 비율
+            amplitudeScale: 1.2, // 녹음된 파형의 진폭 스케일
+            minBarHeight: 3.0, // 녹음된 파형의 최소 높이
+            strokeCap: StrokeCap.round, // 녹음된 파형의 끝 모양
           ),
         );
       },
@@ -571,19 +611,15 @@ class _CommentAudioRecordingBottomSheetWidgetState
               color: Color(0xFF1F1F1F),
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: Column(
-                children: [
-                  _buildTopBar(),
-                  const SizedBox(height: 8),
-                  switch (_state) {
-                    _CommentAudioSheetState.ready => _buildReadyBody(),
-                    _CommentAudioSheetState.recording => _buildRecordingBody(),
-                    _CommentAudioSheetState.playback => _buildPlaybackBody(),
-                  },
-                ],
-              ),
+            child: Column(
+              children: [
+                _buildTopBar(),
+                switch (_state) {
+                  _CommentAudioSheetState.ready => _buildReadyBody(),
+                  _CommentAudioSheetState.recording => _buildRecordingBody(),
+                  _CommentAudioSheetState.playback => _buildPlaybackBody(),
+                },
+              ],
             ),
           ),
         ),
