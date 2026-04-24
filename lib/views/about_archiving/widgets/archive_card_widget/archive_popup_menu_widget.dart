@@ -304,6 +304,10 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
   }
 
   Future<void> _leaveCategory() async {
+    final loginRequiredMessage = tr('common.login_required', context: context);
+    final leaveSuccessMessage = tr('category.leave.success', context: context);
+    final leaveFailedMessage = tr('category.leave.failed', context: context);
+
     try {
       userController = Provider.of<UserController>(context, listen: false);
       categoryController = Provider.of<CategoryController>(
@@ -313,7 +317,7 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
 
       final userId = userController!.currentUser?.id;
       if (userId == null) {
-        _showSnackBar(tr('common.login_required', context: context));
+        _showSnackBar(loginRequiredMessage);
         return;
       }
 
@@ -324,13 +328,16 @@ class _ApiArchivePopupMenuWidgetState extends State<ApiArchivePopupMenuWidget>
 
       if (success) {
         await categoryController!.loadCategories(userId, forceReload: true);
-        _showSnackBar(tr('category.leave.success', context: context));
+        if (!mounted) return;
+        _showSnackBar(leaveSuccessMessage);
       } else {
-        _showSnackBar(tr('category.leave.failed', context: context));
+        if (!mounted) return;
+        _showSnackBar(leaveFailedMessage);
       }
     } catch (e) {
       debugPrint('[LeaveCategory] 실패: $e');
-      _showSnackBar(tr('category.leave.failed', context: context));
+      if (!mounted) return;
+      _showSnackBar(leaveFailedMessage);
     }
   }
 

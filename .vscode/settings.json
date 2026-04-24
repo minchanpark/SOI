@@ -1,29 +1,48 @@
 {
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [80]
   },
-  "cmake.sourceDirectory": "/Users/minchanpark/Documents/SOI/linux",
-  "deno.enable": true,
-  "deno.enablePaths": [
-    "supabase/functions"
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "chatgpt.openOnStartup": false,
+  "dart.analysisExcludedFolders": [
+    "${workspaceFolder}/.dart_tool",
+    "${workspaceFolder}/build",
+    "${workspaceFolder}/api/build",
+    "${workspaceFolder}/api/generated/.dart_tool",
+    "${workspaceFolder}/functions/node_modules",
+    "${workspaceFolder}/packages/build",
+    "${workspaceFolder}/packages/soi_media_native/.dart_tool",
+    "${workspaceFolder}/scripts/profiler/.dart_tool"
   ],
-  "deno.lint": true,
-  "deno.unstable": [
-    "bare-node-builtins",
-    "byonm",
-    "sloppy-imports",
-    "unsafe-proto",
-    "webgpu",
-    "broadcast-channel",
-    "worker-options",
-    "cron",
-    "kv",
-    "ffi",
-    "fs",
-    "http",
-    "net"
+  "eslint.workingDirectories": [
+    {
+      "directory": "functions",
+      "changeProcessCWD": true
+    }
   ],
-  "java.import.gradle.enabled": false,
+  "files.exclude": {
+    "**/.DS_Store": true,
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/node_modules": true,
+    "flutter_*.log": true
+  },
+  "files.watcherExclude": {
+    "**/.dart_tool/**": true,
+    "**/build/**": true,
+    "**/node_modules/**": true
+  },
   "java.configuration.updateBuildConfiguration": "automatic",
-  "chatgpt.openOnStartup": false
+  "java.import.gradle.enabled": false,
+  "search.exclude": {
+    "**/.DS_Store": true,
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/node_modules": true,
+    "flutter_*.log": true
+  }
 }

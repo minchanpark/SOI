@@ -84,7 +84,7 @@ class _FriendAddAndSharePageState extends State<FriendAddAndSharePage> {
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       SnackBarUtils.showSnackBar(
         context,
         tr(

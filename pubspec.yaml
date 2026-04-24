@@ -149,7 +149,6 @@ flutter:
   assets:
     - assets/
     - assets/translations/
-    - assets/fonts/PretendardVariable.ttf
     - assets/notification.png
     - assets/app_launch_video/SOI.mp4
     - assets/icon/icon.png
@@ -172,9 +171,12 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-fonts:
-  - family: Pretendard
-    fonts:
-      - asset: assets/fonts/PretendardVariable.ttf
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
+    - family: Pretendard Variable
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

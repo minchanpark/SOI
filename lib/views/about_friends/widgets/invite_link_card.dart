@@ -44,7 +44,10 @@ class InviteLinkCard extends StatelessWidget {
   }
 
   String _buildInviteLink(BuildContext context) {
-    final user = Provider.of<UserController>(context, listen: false).currentUser;
+    final user = Provider.of<UserController>(
+      context,
+      listen: false,
+    ).currentUser;
     return _buildInviteLinkWithUser(user);
   }
 
@@ -52,7 +55,10 @@ class InviteLinkCard extends StatelessWidget {
   void _copyLink(BuildContext context) {
     final link = _buildInviteLink(context);
     Clipboard.setData(ClipboardData(text: link));
-    SnackBarUtils.showSnackBar(context, tr('friends.invite.link_copied', context: context));
+    SnackBarUtils.showSnackBar(
+      context,
+      tr('friends.invite.link_copied', context: context),
+    );
   }
 
   /// 시스템 공유 시트 열기
@@ -73,6 +79,7 @@ class InviteLinkCard extends StatelessWidget {
       context: context,
       namedArgs: {'link': link},
     );
+    final fallbackShareParams = _buildShareParams(context, link);
     // 먼저 링크를 클립보드에 복사
     await Clipboard.setData(ClipboardData(text: message));
 
@@ -85,14 +92,17 @@ class InviteLinkCard extends StatelessWidget {
         await InstagramShareChannel.shareToInstagramDirect(message);
       } else {
         if (context.mounted) {
-          SnackBarUtils.showSnackBar(context, tr('friends.invite.instagram_missing', context: context));
+          SnackBarUtils.showSnackBar(
+            context,
+            tr('friends.invite.instagram_missing', context: context),
+          );
         }
       }
     } catch (e) {
       debugPrint('인스타그램 공유 실패: $e');
       // 실패 시 시스템 공유 시트로 대체
       try {
-        await SharePlus.instance.share(_buildShareParams(context, link));
+        await SharePlus.instance.share(fallbackShareParams);
       } catch (shareError) {
         debugPrint('시스템 공유도 실패: $shareError');
       }
@@ -119,7 +129,10 @@ class InviteLinkCard extends StatelessWidget {
         await launchUrl(uri);
       } else {
         if (context.mounted) {
-          SnackBarUtils.showSnackBar(context, tr('friends.invite.sms_unavailable', context: context));
+          SnackBarUtils.showSnackBar(
+            context,
+            tr('friends.invite.sms_unavailable', context: context),
+          );
         }
       }
     } catch (e) {
@@ -164,8 +177,9 @@ class InviteLinkCard extends StatelessWidget {
             androidExecutionParams: executionParams.isEmpty
                 ? null
                 : executionParams,
-            iosExecutionParams:
-                executionParams.isEmpty ? null : executionParams,
+            iosExecutionParams: executionParams.isEmpty
+                ? null
+                : executionParams,
           ),
         ),
       ],
@@ -180,7 +194,10 @@ class InviteLinkCard extends StatelessWidget {
       } catch (e) {
         debugPrint('카카오톡 공유 실패: $e');
         if (context.mounted) {
-          SnackBarUtils.showSnackBar(context, tr('friends.invite.kakao_failed', context: context));
+          SnackBarUtils.showSnackBar(
+            context,
+            tr('friends.invite.kakao_failed', context: context),
+          );
         }
       }
     } else {
@@ -193,7 +210,10 @@ class InviteLinkCard extends StatelessWidget {
       } catch (e) {
         debugPrint('웹 공유 실패: $e');
         if (context.mounted) {
-          SnackBarUtils.showSnackBar(context, tr('friends.invite.kakao_missing', context: context));
+          SnackBarUtils.showSnackBar(
+            context,
+            tr('friends.invite.kakao_missing', context: context),
+          );
         }
       }
     }

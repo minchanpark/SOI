@@ -1858,20 +1858,16 @@ packages:
   tagging_core:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "v0.1.0"
-      resolved-ref: "5df8e2ba1677957a5ce7ef10bb2c31a0ba4ef0f8"
-      url: "https://github.com/minchanpark/tagging_core.git"
-    source: git
+      path: "../tagging_core"
+      relative: true
+    source: path
     version: "0.1.0"
   tagging_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "v0.1.0"
-      resolved-ref: e7fb520421788fa9ae719e9ef37c2befca5e8e91
-      url: "https://github.com/minchanpark/tagging_flutter.git"
-    source: git
+      path: "../tagging_flutter"
+      relative: true
+    source: path
     version: "0.1.0"
   term_glyph:
     dependency: transitive
@@ -2050,7 +2046,7 @@ packages:
     source: hosted
     version: "2.11.0"
   video_player_android:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: video_player_android
       sha256: "9862c67c4661c98f30fe707bc1a4f97d6a0faa76784f485d282668e4651a7ac3"
