@@ -8,13 +8,13 @@ import 'package:soi_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**pageable** | [**PageableObject**](PageableObject.md) |  | [optional] 
 **first** | **bool** |  | [optional] 
 **size** | **int** |  | [optional] 
 **content** | [**List<PostRespDto>**](PostRespDto.md) |  | [optional] [default to const []]
 **number** | **int** |  | [optional] 
 **sort** | [**SortObject**](SortObject.md) |  | [optional] 
 **numberOfElements** | **int** |  | [optional] 
+**pageable** | [**PageableObject**](PageableObject.md) |  | [optional] 
 **last** | **bool** |  | [optional] 
 **empty** | **bool** |  | [optional] 
 

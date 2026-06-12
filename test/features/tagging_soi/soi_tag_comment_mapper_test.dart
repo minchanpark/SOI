@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:tagging_core/tagging_core.dart';
+import 'package:test/test.dart';
 
 import 'package:soi/api/models/comment.dart';
 import 'package:soi/features/tagging_soi/tagging_soi.dart';
@@ -7,7 +7,7 @@ import 'package:soi/features/tagging_soi/tagging_soi.dart';
 void main() {
   group('SoiTagCommentMapper', () {
     test(
-      'maps SOI comment variants into tag comments without losing coordinates',
+      'maps SOI comment variants into tag entries without losing coordinates',
       () {
         final replyComment = Comment(
           id: 9,
@@ -29,31 +29,39 @@ void main() {
           type: CommentType.reply,
         );
 
-        final tagComment = SoiTagCommentMapper.fromComment(replyComment);
+        final tagComment = SoiTagCommentMapper.fromComment(
+          replyComment,
+          scopeId: 'post:4',
+        );
 
         expect(tagComment.id, '9');
+        expect(tagComment.scopeId, 'post:4');
         expect(tagComment.threadParentId, '4');
         expect(tagComment.replyUserName, 'target');
         expect(tagComment.locationX, 0.35);
         expect(tagComment.locationY, 0.8);
         expect(tagComment.waveformData, '0.1000,0.2000');
-        expect(tagComment.kind, TagCommentKind.reply);
+        expect(tagComment.soiCommentType, CommentType.reply);
       },
     );
 
     test(
-      'maps tag media comments back to SOI comments preserving nullability',
+      'maps tag media entries back to SOI comments preserving nullability',
       () {
-        const tagComment = TagComment(
+        const tagComment = TagEntry(
           id: '21',
-          threadParentId: '11',
-          userId: '4',
-          nickname: 'artist',
-          userProfileKey: 'profiles/a.png',
-          fileKey: 'comments/video.mp4',
-          locationX: 0.45,
-          locationY: 0.12,
-          kind: TagCommentKind.video,
+          scopeId: 'post:11',
+          actorId: '4',
+          parentEntryId: '11',
+          anchor: TagPosition(x: 0.45, y: 0.12),
+          content: TagContent.video(reference: 'comments/video.mp4'),
+          metadata: <String, Object?>{
+            SoiTaggingMetadata.nickname: 'artist',
+            SoiTaggingMetadata.userProfileKey: 'profiles/a.png',
+            SoiTaggingMetadata.fileKey: 'comments/video.mp4',
+            SoiTaggingMetadata.commentType: 'video',
+            SoiTaggingMetadata.userId: 4,
+          },
         );
 
         final comment = SoiTagCommentMapper.toComment(tagComment);
@@ -85,10 +93,13 @@ void main() {
         type: CommentType.photo,
       );
 
-      final tagComment = SoiTagCommentMapper.fromComment(source);
+      final tagComment = SoiTagCommentMapper.fromComment(
+        source,
+        scopeId: 'post:33',
+      );
       final restored = SoiTagCommentMapper.toComment(tagComment);
 
-      expect(tagComment.kind, TagCommentKind.image);
+      expect(tagComment.isImage, isTrue);
       expect(restored.type, CommentType.photo);
       expect(restored.fileUrl, source.fileUrl);
       expect(restored.fileKey, source.fileKey);

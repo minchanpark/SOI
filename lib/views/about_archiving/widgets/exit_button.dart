@@ -99,11 +99,19 @@ class ExitButton extends StatelessWidget {
                             .read<api_category.CategoryController>();
                         final userController = context.read<UserController>();
                         final currentUser = userController.currentUser;
+                        final userInfoUnavailableMessage = tr(
+                          'common.user_info_unavailable',
+                          context: context,
+                        );
+                        final leaveFailedMessage = tr(
+                          'category.leave.failed',
+                          context: context,
+                        );
 
                         if (currentUser == null) {
                           SnackBarUtils.showWithMessenger(
                             scaffoldMessenger,
-                            tr('common.user_info_unavailable', context: context),
+                            userInfoUnavailableMessage,
                           );
                           return;
                         }
@@ -112,13 +120,17 @@ class ExitButton extends StatelessWidget {
                           categoryId: category.id,
                         );
 
+                        if (!context.mounted) return;
                         if (success) {
                           navigator.popUntil((route) => route.isFirst);
                         } else {
                           final message =
                               categoryController.errorMessage ??
-                              tr('category.leave.failed', context: context);
-                          SnackBarUtils.showWithMessenger(scaffoldMessenger, message);
+                              leaveFailedMessage;
+                          SnackBarUtils.showWithMessenger(
+                            scaffoldMessenger,
+                            message,
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(

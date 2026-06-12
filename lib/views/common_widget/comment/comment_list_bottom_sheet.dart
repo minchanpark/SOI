@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -850,6 +852,7 @@ class _ApiVoiceCommentListSheetState extends State<ApiVoiceCommentListSheet> {
     SnackBarUtils.showSnackBar(context, message);
   }
 
+  /// 댓글 시트 본문은 헤더, 리스트, 액션 바를 조합해 현재 댓글 상호작용 상태를 렌더링합니다.
   @override
   Widget build(BuildContext context) {
     final sheetHeight = MediaQuery.of(context).size.height * _sheetHeightFactor;

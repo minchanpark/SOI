@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:tagging_flutter/tagging_flutter.dart';
 
 import '../../api/controller/user_controller.dart';
 import '../../views/common_widget/user/current_user_image_builder.dart';
+import 'soi_tag_entry_extensions.dart';
 import 'soi_tagging_ids.dart';
+import 'soi_tagging_metadata.dart';
 
 /// SOI의 현재 사용자 selector를 tagging_flutter avatar builder 계약으로 연결합니다.
 class SoiTaggingAvatarBuilders {
@@ -12,14 +15,20 @@ class SoiTaggingAvatarBuilders {
 
   static Widget buildComposerAvatar(
     BuildContext context,
-    TagSavePayload payload,
+    TagSaveRequest request,
     double size,
   ) {
+    final fallbackSource = request.metadata[SoiTaggingMetadata.profileImageSource];
+    final normalizedSource = fallbackSource is String ? fallbackSource.trim() : null;
+    final fallbackImageUrl = _isAbsoluteUrl(normalizedSource)
+        ? normalizedSource
+        : null;
+    final fallbackImageKey = fallbackImageUrl == null ? normalizedSource : null;
     return CurrentUserImageBuilder(
       imageKind: CurrentUserImageKind.profile,
-      targetUserId: SoiTaggingIds.intFromEntityId(payload.userId),
-      fallbackImageUrl: payload.profileImageUrl,
-      fallbackImageKey: payload.profileImageKey,
+      targetUserId: SoiTaggingIds.intFromEntityId(request.actorId),
+      fallbackImageUrl: fallbackImageUrl,
+      fallbackImageKey: fallbackImageKey,
       builder: (context, imageUrl, cacheKey) {
         return TagCircleAvatar(
           imageUrl: imageUrl,
@@ -32,13 +41,13 @@ class SoiTaggingAvatarBuilders {
 
   static Widget buildCommentAvatar(
     BuildContext context,
-    TagComment comment,
+    TagEntry comment,
     double size,
     bool isSelected,
   ) {
     return CurrentUserImageBuilder(
       imageKind: CurrentUserImageKind.profile,
-      targetUserId: SoiTaggingIds.intFromEntityId(comment.userId),
+      targetUserId: comment.userId,
       targetUserHandle: comment.nickname,
       fallbackImageUrl: comment.userProfileUrl,
       fallbackImageKey: comment.userProfileKey,
@@ -63,20 +72,11 @@ class SoiTaggingAvatarBuilders {
     double size,
     double? progress,
   ) {
-    final normalizedMarkerSource = _normalize(marker.profileImageSource);
-    final pendingFallbackImageUrl = _isAbsoluteUrl(normalizedMarkerSource)
-        ? normalizedMarkerSource
-        : null;
-    final pendingFallbackImageKey = pendingFallbackImageUrl == null
-        ? normalizedMarkerSource
-        : null;
     final currentUserId = context.read<UserController?>()?.currentUserId;
 
     return CurrentUserImageBuilder(
       imageKind: CurrentUserImageKind.profile,
       targetUserId: currentUserId,
-      fallbackImageUrl: pendingFallbackImageUrl,
-      fallbackImageKey: pendingFallbackImageKey,
       builder: (context, imageUrl, cacheKey) {
         return TagPendingProgressAvatar(
           imageUrl: imageUrl,

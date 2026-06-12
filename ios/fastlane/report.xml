@@ -5,42 +5,37 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000303">
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000292">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.003453">
+      <testcase classname="fastlane.lanes" name="1: app_store_connect_api_key" time="0.003429">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.990025">
+      <testcase classname="fastlane.lanes" name="2: latest_testflight_build_number" time="1.826465">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod --version" time="0.682544">
+      <testcase classname="fastlane.lanes" name="3: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/SOI_main/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod --version" time="0.575987">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod install" time="19.023969">
+      <testcase classname="fastlane.lanes" name="4: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/SOI_main/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec pod install" time="1.081903">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="5: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter pub get" time="2.265626">
+      <testcase classname="fastlane.lanes" name="5: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/SOI_main/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter pub get" time="3.418953">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="6: BUNDLE_GEMFILE=/Users/minchanpark/Documents/SOI/ios/Gemfile /opt/homebrew/opt/ruby/bin/bundle exec flutter build ipa --release" time="479.906434">
-        
-      </testcase>
-    
-      
-      <testcase classname="fastlane.lanes" name="7: pilot" time="710.728452">
+      <testcase classname="fastlane.lanes" name="6: shorebird release ios" time="116.118608">
         
       </testcase>
     

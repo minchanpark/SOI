@@ -6,12 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:soi/views/about_camera/widgets/about_camera/gallery_thumbnail.dart';
 
+class _MutableValue<T> {
+  _MutableValue(this.value);
+
+  T value;
+}
+
 class _FakeThumbnailAssetEntity extends Fake implements AssetEntity {
   _FakeThumbnailAssetEntity(this.assetId);
 
   final String assetId;
-  int thumbnailCallCount = 0;
-  ThumbnailSize? lastRequestedSize;
+  final _thumbnailCallCount = _MutableValue<int>(0);
+  final _lastRequestedSize = _MutableValue<ThumbnailSize?>(null);
+
+  int get thumbnailCallCount => _thumbnailCallCount.value;
+
+  ThumbnailSize? get lastRequestedSize => _lastRequestedSize.value;
 
   @override
   String get id => assetId;
@@ -25,8 +35,8 @@ class _FakeThumbnailAssetEntity extends Fake implements AssetEntity {
     PMCancelToken? cancelToken,
     int frame = 0,
   }) async {
-    thumbnailCallCount++;
-    lastRequestedSize = size;
+    _thumbnailCallCount.value++;
+    _lastRequestedSize.value = size;
     return null;
   }
 }

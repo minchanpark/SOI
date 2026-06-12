@@ -253,7 +253,7 @@ void main() {
 
       expect(find.text('대댓글의 답글'), findsOneWidget);
 
-      await tester.tap(find.byType(IconButton).first);
+      await tester.tap(find.byType(IconButton).last);
       await tester.pumpAndSettle();
 
       expect(commentController.capturedPostId, 77);

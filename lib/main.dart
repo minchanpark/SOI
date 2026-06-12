@@ -40,10 +40,14 @@ void main() async {
     PlatformDispatcher.instance.locale,
   );
 
+  // 앱 시작시 로딩 페이지 표시 여부 결정
   final prefs = await SharedPreferences.getInstance();
+
+  // 앱 시작시 로딩 페이지 표시 여부 결정
   final hasSeenLaunchVideo =
       prefs.getBool(AppConstant.hasSeenLaunchVideoKey) ?? false;
 
+  // 로딩 페이지 표시
   if (hasSeenLaunchVideo) {
     FlutterNativeSplash.preserve(widgetsBinding: binding);
   } else {

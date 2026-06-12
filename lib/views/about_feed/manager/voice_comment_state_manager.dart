@@ -15,6 +15,7 @@ import '../../../api/models/comment_creation_result.dart';
 import '../../../utils/position_converter.dart';
 import '../../../api/media_processing/waveform_codec.dart';
 import '../../../utils/snackbar_utils.dart';
+import '../../../features/tagging_soi/soi_tag_entry_extensions.dart';
 
 /// 게시물별 음성/텍스트 댓글 상태를 관리하는 매니저 클래스
 /// 피드 화면에서 각 게시물에 대해 음성/텍스트 댓글의 활성화 상태, 저장 상태, 대기 중인 댓글 정보 등을 관리하여,
@@ -671,10 +672,9 @@ class VoiceCommentStateManager {
 
     // 텍스트 댓글 초안 저장 (위치는 드래그로 별도 저장)
     _pendingCommentDrafts[postId] = TagDraft(
-      kind: TagDraftKind.text,
-      text: text.trim(),
-      recorderUserId: currentUser.id.toString(),
-      profileImageSource: currentUser.profileImageKey,
+      actorId: currentUser.id.toString(),
+      content: TagContent.text(text.trim()),
+      metadata: {'profileImageSource': currentUser.profileImageKey},
     );
 
     // 텍스트 댓글 대기 상태 설정
@@ -707,12 +707,13 @@ class VoiceCommentStateManager {
 
     // 음성 댓글 초안 저장 (위치는 드래그로 별도 저장)
     _pendingCommentDrafts[postId] = TagDraft(
-      kind: TagDraftKind.audio,
-      audioPath: audioPath,
-      waveformData: waveformData,
-      durationMs: duration,
-      recorderUserId: currentUser.id.toString(),
-      profileImageSource: currentUser.profileImageKey,
+      actorId: currentUser.id.toString(),
+      content: TagContent.audio(
+        reference: audioPath,
+        waveformSamples: waveformData,
+        durationMs: duration,
+      ),
+      metadata: {'profileImageSource': currentUser.profileImageKey},
     );
 
     // 저장된 댓글 상태 업데이트
@@ -744,10 +745,11 @@ class VoiceCommentStateManager {
     }
 
     _pendingCommentDrafts[postId] = TagDraft(
-      kind: isVideo ? TagDraftKind.video : TagDraftKind.image,
-      mediaPath: localFilePath.trim(),
-      recorderUserId: currentUser.id.toString(),
-      profileImageSource: currentUser.profileImageKey,
+      actorId: currentUser.id.toString(),
+      content: isVideo
+          ? TagContent.video(reference: localFilePath.trim())
+          : TagContent.image(reference: localFilePath.trim()),
+      metadata: {'profileImageSource': currentUser.profileImageKey},
     );
 
     _pendingTextComments.remove(postId);
@@ -775,7 +777,6 @@ class VoiceCommentStateManager {
         x: relativePosition.dx,
         y: relativePosition.dy,
       ),
-      profileImageSource: draft.profileImageSource,
       progress: previousProgress,
     );
 
@@ -840,7 +841,6 @@ class VoiceCommentStateManager {
     // 저장 중에도 UI 마커가 유지되도록 최종 위치를 마커에 기록
     _pendingCommentMarkers[postId] = TagPendingMarker(
       relativePosition: finalPosition,
-      profileImageSource: draft.profileImageSource,
       progress: 0.0,
     );
 

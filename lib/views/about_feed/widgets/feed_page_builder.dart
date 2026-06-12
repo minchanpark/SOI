@@ -4,7 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:tagging_flutter/tagging_flutter.dart';
+import 'package:tagging_core/tagging_core.dart';
 
 import '../../common_widget/comment/comment_list_bottom_sheet.dart';
 import '../../common_widget/photo/photo_card_widget.dart';
@@ -26,8 +26,8 @@ class FeedPageBuilder extends StatefulWidget {
   final Map<TagScopeId, String?> selectedEmojisByScopeId;
   final Map<TagScopeId, TagDraft> pendingCommentDrafts;
   final Map<TagScopeId, TagPendingMarker> pendingVoiceComments;
-  final TaggingSessionController taggingController;
-  final TaggingSaveDelegate saveDelegate;
+  final SoiTaggingController taggingController;
+  final TagMutationPort saveDelegate;
   final Function(FeedPostItem) onToggleAudio;
   final Future<void> Function(int, String) onTextCommentCompleted;
   final Future<void> Function(
@@ -104,7 +104,10 @@ class _FeedPageBuilderState extends State<FeedPageBuilder> {
   void _replaceCommentCaches(int postId, List<Comment> updatedComments) {
     widget.taggingController.replaceCommentsCache(
       _postScopeId(postId),
-      SoiTagCommentMapper.fromComments(updatedComments),
+      SoiTagCommentMapper.fromComments(
+        updatedComments,
+        scopeId: _postScopeId(postId),
+      ),
     );
   }
 
@@ -333,10 +336,10 @@ class _FeedPageBuilderState extends State<FeedPageBuilder> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               padding: EdgeInsets.only(bottom: composerBottomInset),
-              child: TagComposerWidget(
+              child: SoiTagComposerWidget(
                 scopeId: _postScopeId(currentPost.post.id),
                 pendingDrafts: widget.pendingCommentDrafts,
-                saveDelegate: widget.saveDelegate,
+                mutationPort: widget.saveDelegate,
                 avatarBuilder: SoiTaggingAvatarBuilders.buildComposerAvatar,
                 onTextDraftSubmitted: (scopeId, text) =>
                     widget.onTextCommentCompleted(

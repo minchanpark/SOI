@@ -13,24 +13,16 @@ part of openapi.api;
 class SliceCommentRespDto {
   /// Returns a new [SliceCommentRespDto] instance.
   SliceCommentRespDto({
-    this.pageable,
     this.first,
     this.size,
     this.content = const [],
     this.number,
     this.sort,
     this.numberOfElements,
+    this.pageable,
     this.last,
     this.empty,
   });
-
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  PageableObject? pageable;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -80,6 +72,14 @@ class SliceCommentRespDto {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
+  PageableObject? pageable;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   bool? last;
 
   ///
@@ -92,39 +92,34 @@ class SliceCommentRespDto {
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is SliceCommentRespDto &&
-    other.pageable == pageable &&
     other.first == first &&
     other.size == size &&
     _deepEquality.equals(other.content, content) &&
     other.number == number &&
     other.sort == sort &&
     other.numberOfElements == numberOfElements &&
+    other.pageable == pageable &&
     other.last == last &&
     other.empty == empty;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (pageable == null ? 0 : pageable!.hashCode) +
     (first == null ? 0 : first!.hashCode) +
     (size == null ? 0 : size!.hashCode) +
     (content.hashCode) +
     (number == null ? 0 : number!.hashCode) +
     (sort == null ? 0 : sort!.hashCode) +
     (numberOfElements == null ? 0 : numberOfElements!.hashCode) +
+    (pageable == null ? 0 : pageable!.hashCode) +
     (last == null ? 0 : last!.hashCode) +
     (empty == null ? 0 : empty!.hashCode);
 
   @override
-  String toString() => 'SliceCommentRespDto[pageable=$pageable, first=$first, size=$size, content=$content, number=$number, sort=$sort, numberOfElements=$numberOfElements, last=$last, empty=$empty]';
+  String toString() => 'SliceCommentRespDto[first=$first, size=$size, content=$content, number=$number, sort=$sort, numberOfElements=$numberOfElements, pageable=$pageable, last=$last, empty=$empty]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.pageable != null) {
-      json[r'pageable'] = this.pageable;
-    } else {
-      json[r'pageable'] = null;
-    }
     if (this.first != null) {
       json[r'first'] = this.first;
     } else {
@@ -150,6 +145,11 @@ class SliceCommentRespDto {
       json[r'numberOfElements'] = this.numberOfElements;
     } else {
       json[r'numberOfElements'] = null;
+    }
+    if (this.pageable != null) {
+      json[r'pageable'] = this.pageable;
+    } else {
+      json[r'pageable'] = null;
     }
     if (this.last != null) {
       json[r'last'] = this.last;
@@ -183,13 +183,13 @@ class SliceCommentRespDto {
       }());
 
       return SliceCommentRespDto(
-        pageable: PageableObject.fromJson(json[r'pageable']),
         first: mapValueOfType<bool>(json, r'first'),
         size: mapValueOfType<int>(json, r'size'),
         content: CommentRespDto.listFromJson(json[r'content']),
         number: mapValueOfType<int>(json, r'number'),
         sort: SortObject.fromJson(json[r'sort']),
         numberOfElements: mapValueOfType<int>(json, r'numberOfElements'),
+        pageable: PageableObject.fromJson(json[r'pageable']),
         last: mapValueOfType<bool>(json, r'last'),
         empty: mapValueOfType<bool>(json, r'empty'),
       );

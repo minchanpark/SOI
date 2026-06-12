@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:tagging_flutter/tagging_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../api/controller/media_controller.dart';
+import '../../../features/tagging_soi/tagging_soi.dart';
 
 /// 댓글에 첨부된 사진이나 영상을 사진 위 태그 규격에 맞춰 원형 미리보기로 표시합니다.
 /// - 바깥 프레임은 94x94, 내부 미디어는 85x85로 고정합니다.
@@ -18,7 +20,7 @@ import '../../../api/controller/media_controller.dart';
 /// - [autoplayVideo]: 영상 미리보기에서 영상을 자동으로 재생할지 여부를 결정하는 플래그입니다. 기본값은 true입니다.
 /// - [playWithSound]: 영상 미리보기에서 소리를 재생할지 여부를 결정하는 플래그입니다. 기본값은 true입니다.
 class CommentMediaTagPreviewWidget extends StatefulWidget {
-  final TagComment comment;
+  final TagEntry comment;
   final bool autoplayVideo;
   final bool playWithSound;
   final double frameSize;
@@ -123,7 +125,7 @@ class _CommentMediaTagPreviewWidgetState
     }
   }
 
-  Future<String?> _resolveMediaSource(TagComment comment) async {
+  Future<String?> _resolveMediaSource(TagEntry comment) async {
     final fileUrl = (comment.fileUrl ?? '').trim();
     if (fileUrl.isNotEmpty) {
       return fileUrl;

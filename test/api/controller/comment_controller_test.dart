@@ -759,6 +759,78 @@ void main() {
     );
 
     test(
+      'refetches when tag cache only contains a provisional local append',
+      () async {
+        var getTagCommentsCallCount = 0;
+
+        final controller = CommentController(
+          commentService: _FakeCommentService(
+            onCreate:
+                ({
+                  required int postId,
+                  required int userId,
+                  int? emojiId,
+                  int? parentId,
+                  int? replyUserId,
+                  String? text,
+                  String? audioFileKey,
+                  String? fileKey,
+                  String? waveformData,
+                  int? duration,
+                  double? locationX,
+                  double? locationY,
+                  CommentType? type,
+                }) async => const CommentCreationResult(success: true),
+            onGetTagComments: ({required int postId}) async {
+              getTagCommentsCallCount += 1;
+              return const [
+                Comment(
+                  id: 1,
+                  nickname: 'me',
+                  locationX: 0.2,
+                  locationY: 0.3,
+                  type: CommentType.text,
+                ),
+                Comment(
+                  id: 2,
+                  nickname: 'other-user',
+                  locationX: 0.7,
+                  locationY: 0.5,
+                  type: CommentType.text,
+                ),
+              ];
+            },
+          ),
+        );
+
+        controller.replaceTagCommentsCache(postId: 77, comments: const []);
+        controller.appendCreatedComment(
+          postId: 77,
+          newComment: const Comment(
+            id: 1,
+            nickname: 'me',
+            locationX: 0.2,
+            locationY: 0.3,
+            type: CommentType.text,
+          ),
+        );
+
+        expect(
+          controller
+              .peekTagCommentsCache(postId: 77)
+              ?.map((comment) => comment.id)
+              .toList(),
+          [1],
+        );
+
+        final refreshedTags = await controller.getTagComments(postId: 77);
+
+        expect(getTagCommentsCallCount, 1);
+        expect(refreshedTags.map((comment) => comment.id).toList(), [1, 2]);
+      },
+    );
+
+    test(
       'getAllParentComments clears stale full cache on force reload and refreshes preview caches',
       () async {
         var getParentCommentsCallCount = 0;

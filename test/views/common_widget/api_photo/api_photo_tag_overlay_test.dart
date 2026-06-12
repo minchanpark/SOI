@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:tagging_flutter/tagging_flutter.dart';
 import 'package:soi/api/controller/comment_controller.dart';
 import 'package:soi/api/controller/media_controller.dart';
@@ -93,13 +94,13 @@ class _FakeMediaController extends MediaController {
   }
 }
 
-/// 오버레이 경로에서는 저장 로직이 호출되면 안 되므로 즉시 실패시키는 delegate입니다.
-class _NoopTaggingSaveDelegate implements TaggingSaveDelegate {
-  const _NoopTaggingSaveDelegate();
+/// 오버레이 경로에서는 저장 로직이 호출되면 안 되므로 즉시 실패시키는 mutation port입니다.
+class _NoopTaggingMutationPort implements TagMutationPort {
+  const _NoopTaggingMutationPort();
 
   @override
-  Future<TagSaveResult> save({
-    required TagSavePayload payload,
+  Future<TagMutationResult> save({
+    required TagSaveRequest request,
     void Function(double progress)? onProgress,
   }) {
     throw UnimplementedError('save should not run in overlay tests');
@@ -145,9 +146,11 @@ void main() {
       postId: post.id,
       comments: comments,
     );
-    final taggingController = TaggingSessionController(
-      commentGateway: SoiTaggingCommentGateway(effectiveCommentController),
-      mediaResolver: SoiTaggingMediaResolver(effectiveMediaController),
+    final taggingController = SoiTaggingController(
+      commentController: effectiveCommentController,
+      coreController: TaggingSessionController(
+        queryPort: SoiTaggingQueryPort(effectiveCommentController),
+      ),
     );
 
     return ScreenUtilInit(
@@ -194,7 +197,7 @@ void main() {
         pendingCommentDrafts: const <TagScopeId, TagDraft>{},
         pendingVoiceComments: const <TagScopeId, TagPendingMarker>{},
         taggingController: taggingController,
-        saveDelegate: const _NoopTaggingSaveDelegate(),
+        saveDelegate: const _NoopTaggingMutationPort(),
         onToggleAudio: (_) {},
         onTextCommentCompleted: (_, __) {},
         onAudioCommentCompleted: (_, __, ___, ____) async {},

@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:tagging_flutter/tagging_flutter.dart';
 
 import '../../../../api/models/post.dart';
 import '../../../../api/models/comment.dart';
@@ -75,8 +75,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   FriendController? _friendController;
   VoidCallback? _friendListener;
   int _lastBlockedFriendsRevision = 0;
-  TaggingSessionController? _taggingController;
-  TaggingSaveDelegate? _taggingSaveDelegate;
+  SoiTaggingController? _taggingController;
+  TagMutationPort? _taggingSaveDelegate;
   VoidCallback? _taggingControllerListener;
 
   // 상태 맵 (Firebase 버전과 동일한 구조)
@@ -129,10 +129,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     _audioController = AudioController();
     _userController = Provider.of<UserController>(context, listen: false);
     _friendController = Provider.of<FriendController>(context, listen: false);
-    _taggingController = SoiTaggingFactory.createSessionController(
-      context,
-      currentUserHandleResolver: () => _userController?.currentUser?.userId,
-    );
+    _taggingController = SoiTaggingFactory.createSessionController(context);
     _taggingSaveDelegate = SoiTaggingFactory.createSaveDelegate(context);
     _taggingControllerListener = () {
       if (mounted) {
@@ -169,8 +166,8 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         return;
       }
 
-      // 초기 댓글 로드
-      _loadTagCommentsForPost(_posts[_currentIndex].id);
+      // 초기 댓글 로드는 부모 댓글 미리보기 기준으로 태그 cache를 함께 맞춥니다.
+      unawaited(_loadParentCommentsForPost(_posts[_currentIndex].id));
     });
   }
 
@@ -478,10 +475,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               padding: EdgeInsets.only(bottom: composerBottomInset),
-              child: TagComposerWidget(
+              child: SoiTagComposerWidget(
                 scopeId: _postScopeId(_posts[_currentIndex].id),
                 pendingDrafts: _pendingCommentDrafts,
-                saveDelegate: _taggingSaveDelegate!,
+                mutationPort: _taggingSaveDelegate!,
                 avatarBuilder: SoiTaggingAvatarBuilders.buildComposerAvatar,
                 onTextDraftSubmitted: (scopeId, text) async {
                   await _onTextCommentCreated(
@@ -622,7 +619,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     });
     _stopAudio();
     unawaited(_loadUserProfileImage());
-    _loadTagCommentsForPost(_posts[index].id);
+    unawaited(_loadParentCommentsForPost(_posts[index].id));
   }
 
   /// 서버가 내려준 URL을 즉시 표시용 값으로 정규화합니다.
@@ -751,18 +748,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
     );
   }
 
-  /// 상세 화면은 overlay용 tag cache를 우선 사용하고 full thread는 시트를 열 때만 가져옵니다.
-  Future<void> _loadTagCommentsForPost(
-    int postId, {
-    bool forceReload = false,
-  }) async {
-    await _taggingController?.loadTagCommentsForScope(
-      _postScopeId(postId),
-      forceReload: forceReload,
-    );
-  }
-
-  /// 알림 진입/수동 새로고침에서는 원댓글만 다시 받아 태그와 시트 초기 미리보기를 가볍게 최신화합니다.
+  /// 상세 화면 초기 렌더와 새로고침은 부모 댓글 미리보기 기준으로 태그와 시트 초기값을 함께 최신화합니다.
   Future<List<Comment>> _loadParentCommentsForPost(
     int postId, {
     bool forceReload = false,
@@ -804,7 +790,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
       await _loadParentCommentsForPost(postId, forceReload: true);
       return;
     }
-    await _loadTagCommentsForPost(postId, forceReload: true);
+    await _loadParentCommentsForPost(postId, forceReload: true);
   }
 
   /// 댓글 시트는 full cache가 없을 때 원댓글 미리보기를 먼저 보여 주고, 없으면 태그 캐시로 즉시 엽니다.
@@ -828,7 +814,10 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
   void _replaceCommentCaches(int postId, List<Comment> comments) {
     _taggingController?.replaceCommentsCache(
       _postScopeId(postId),
-      SoiTagCommentMapper.fromComments(comments),
+      SoiTagCommentMapper.fromComments(
+        comments,
+        scopeId: _postScopeId(postId),
+      ),
     );
   }
 
@@ -844,7 +833,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
         x: absolutePosition.dx,
         y: absolutePosition.dy,
       ),
-      imageSize: TagViewportSize(width: 354.w, height: 500.h),
+      viewportSize: TagViewportSize(width: 354.w, height: 500.h),
     );
   }
 
@@ -1062,7 +1051,7 @@ class _ApiPhotoDetailScreenState extends State<ApiPhotoDetailScreen> {
 
     // profile 이미지 및 댓글 재로딩
     unawaited(_loadUserProfileImage());
-    _loadTagCommentsForPost(_posts[_currentIndex].id);
+    unawaited(_loadParentCommentsForPost(_posts[_currentIndex].id));
   }
 
   Future<void> _stopAudio() async {

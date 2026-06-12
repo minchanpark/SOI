@@ -1,0 +1,7 @@
+name: soi_vm_profiler
+description: VM service CPU profiler for SOI performance analysis
+publish_to: none
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  vm_service: ^14.0.0

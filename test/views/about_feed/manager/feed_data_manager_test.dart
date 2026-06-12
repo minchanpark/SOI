@@ -191,6 +191,55 @@ void main() {
       },
     );
 
+    testWidgets('re-emits loaded candidates when warm feed cache is reused', (
+      tester,
+    ) async {
+      final manager = FeedDataManager();
+      final userController =
+          UserController(userService: UserService(userApi: _NoopUserApi()))
+            ..setCurrentUser(
+              const User(
+                id: 7,
+                userId: 'viewer',
+                name: 'Viewer',
+                phoneNumber: '01000000000',
+              ),
+            );
+      final categoryController = _RecordingCategoryController(
+        categories: _categories,
+      );
+      final postController = _RecordingPostController();
+      final friendController = _NoopFriendController();
+      final emittedSnapshots = <List<int>>[];
+
+      final context = await _pumpProviderTree(
+        tester: tester,
+        manager: manager,
+        userController: userController,
+        categoryController: categoryController,
+        postController: postController,
+        friendController: friendController,
+      );
+
+      await manager.loadUserCategoriesAndPhotos(context);
+      final firstLoadCallCount = postController.calls.length;
+
+      manager.setOnPostsLoaded((items) {
+        emittedSnapshots.add(
+          items.map((item) => item.post.id).toList(growable: false),
+        );
+      });
+
+      await manager.loadUserCategoriesAndPhotos(context);
+
+      expect(postController.calls.length, firstLoadCallCount);
+      expect(emittedSnapshots, isNotEmpty);
+      expect(
+        emittedSnapshots.single,
+        manager.allPosts.map((item) => item.post.id).toList(growable: false),
+      );
+    });
+
     testWidgets('keeps visible feed while warm cache refresh is in flight', (
       tester,
     ) async {

@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.7+103
+version: 1.0.7+106
 environment:
   sdk: ^3.8.0
 
@@ -38,9 +38,13 @@ dependencies:
   soi_media_native:
     path: packages/soi_media_native
   tagging_core:
-    path: packages/tagging_core
+    git:
+      url: https://github.com/minchanpark/tagging_core.git
+      ref: v0.1.0
   tagging_flutter:
-    path: packages/tagging_flutter
+    git:
+      url: https://github.com/minchanpark/tagging_flutter.git
+      ref: v0.1.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -51,8 +55,8 @@ dependencies:
   google_fonts: ^6.2.1
   fluttertoast: ^8.2.12
   cloud_firestore: ^6.0.0
-  firebase_core: ^4.4.0
-  firebase_messaging: ^16.0.4
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
   connectivity_plus: ^6.0.5
   permission_handler: ^12.0.0+1
   rxdart: ^0.28.0
@@ -84,7 +88,7 @@ dependencies:
   app_links: ^6.4.0
   kakao_flutter_sdk_share: ^1.10.0
   cloud_functions: ^6.0.0
-  mixpanel_flutter: ^2.5.0
+  mixpanel_flutter: ^2.9.0
   flutter_material_design_icons: ^1.1.7447
   bitcoin_icons: ^0.0.4
   iconoir_flutter: ^7.11.0
@@ -108,13 +112,15 @@ dependencies:
   flutter_animate: ^4.5.2
   flutter_staggered_grid_view: ^0.7.0
   flutter_local_notifications: ^19.4.0
-  firebase_auth: ^6.3.0
+  firebase_auth: ^6.5.2
 
 dependency_overrides:
   video_player_android: ^2.9.1
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -143,7 +149,6 @@ flutter:
   assets:
     - assets/
     - assets/translations/
-    - assets/fonts/PretendardVariable.ttf
     - assets/notification.png
     - assets/app_launch_video/SOI.mp4
     - assets/icon/icon.png
@@ -166,9 +171,12 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-fonts:
-  - family: Pretendard
-    fonts:
-      - asset: assets/fonts/PretendardVariable.ttf
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
+    - family: Pretendard Variable
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

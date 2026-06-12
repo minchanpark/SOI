@@ -1,7 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:tagging_flutter/tagging_flutter.dart';
+
+import '../../../../../features/tagging_soi/tagging_soi.dart';
 
 /// 댓글 시트 입력바의 액션 버튼과 텍스트 입력 필드를 담당하는 위젯입니다.
 /// - 댓글 시트의 하단에 고정되어, 사용자가 댓글을 작성하거나 미디어 첨부 등의 액션을 수행할 수 있도록 합니다.
@@ -170,7 +171,7 @@ class ApiCommentSheetActionBar extends StatelessWidget {
                         key: ValueKey(
                           'reply_input_${replyTargetId ?? 0}_$textInputSession',
                         ),
-                        child: TagTextInputWidget(
+                        child: SoiTagTextInputWidget(
                           initialText: pendingInitialReplyText,
                           onSubmitText: onSubmitText,
                           onEditingCancelled: onEditingCancelled,

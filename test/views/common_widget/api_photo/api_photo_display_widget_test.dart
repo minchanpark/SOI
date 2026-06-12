@@ -73,9 +73,11 @@ Widget _buildHarness({
   required Post post,
 }) {
   final commentController = _FakeCommentController();
-  final taggingController = TaggingSessionController(
-    commentGateway: SoiTaggingCommentGateway(commentController),
-    mediaResolver: SoiTaggingMediaResolver(mediaController),
+  final taggingController = SoiTaggingController(
+    commentController: commentController,
+    coreController: TaggingSessionController(
+      queryPort: SoiTaggingQueryPort(commentController),
+    ),
   );
 
   return MultiProvider(

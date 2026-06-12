@@ -2,9 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "SOI",
+      "name": "SOI (Debug)",
       "type": "dart",
-      "request": "launch"
+      "request": "launch",
+      "flutterMode": "debug"
+    },
+    {
+      "name": "SOI (Profile)",
+      "type": "dart",
+      "request": "launch",
+      "flutterMode": "profile"
     }
   ]
 }

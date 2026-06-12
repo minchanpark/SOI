@@ -13,18 +13,10 @@ part of openapi.api;
 class SortObject {
   /// Returns a new [SortObject] instance.
   SortObject({
-    this.sorted,
     this.empty,
+    this.sorted,
     this.unsorted,
   });
-
-  ///
-  /// Please note: This property should have been non-nullable! Since the specification file
-  /// does not include a default value (using the "default:" property), however, the generated
-  /// source code must fall back to having a nullable type.
-  /// Consider adding a "default:" property in the specification file to hide this note.
-  ///
-  bool? sorted;
 
   ///
   /// Please note: This property should have been non-nullable! Since the specification file
@@ -40,35 +32,43 @@ class SortObject {
   /// source code must fall back to having a nullable type.
   /// Consider adding a "default:" property in the specification file to hide this note.
   ///
+  bool? sorted;
+
+  ///
+  /// Please note: This property should have been non-nullable! Since the specification file
+  /// does not include a default value (using the "default:" property), however, the generated
+  /// source code must fall back to having a nullable type.
+  /// Consider adding a "default:" property in the specification file to hide this note.
+  ///
   bool? unsorted;
 
   @override
   bool operator ==(Object other) => identical(this, other) || other is SortObject &&
-    other.sorted == sorted &&
     other.empty == empty &&
+    other.sorted == sorted &&
     other.unsorted == unsorted;
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
-    (sorted == null ? 0 : sorted!.hashCode) +
     (empty == null ? 0 : empty!.hashCode) +
+    (sorted == null ? 0 : sorted!.hashCode) +
     (unsorted == null ? 0 : unsorted!.hashCode);
 
   @override
-  String toString() => 'SortObject[sorted=$sorted, empty=$empty, unsorted=$unsorted]';
+  String toString() => 'SortObject[empty=$empty, sorted=$sorted, unsorted=$unsorted]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
-    if (this.sorted != null) {
-      json[r'sorted'] = this.sorted;
-    } else {
-      json[r'sorted'] = null;
-    }
     if (this.empty != null) {
       json[r'empty'] = this.empty;
     } else {
       json[r'empty'] = null;
+    }
+    if (this.sorted != null) {
+      json[r'sorted'] = this.sorted;
+    } else {
+      json[r'sorted'] = null;
     }
     if (this.unsorted != null) {
       json[r'unsorted'] = this.unsorted;
@@ -97,8 +97,8 @@ class SortObject {
       }());
 
       return SortObject(
-        sorted: mapValueOfType<bool>(json, r'sorted'),
         empty: mapValueOfType<bool>(json, r'empty'),
+        sorted: mapValueOfType<bool>(json, r'sorted'),
         unsorted: mapValueOfType<bool>(json, r'unsorted'),
       );
     }

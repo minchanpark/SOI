@@ -1,35 +1,17 @@
 {
-  "name": "soi",
-  "version": "1.0.0",
-  "description": "**SOI (Social Imaging)** - 친구들과 함께 사진과 음성을 공유하는 소셜 이미징 플랫폼",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib"
-  },
+  "name": "soi-tooling",
+  "private": true,
+  "description": "Workspace-level scripts for the SOI app and Firebase tooling.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "api:regen": "bash ./regen_api.sh",
+    "api:patch": "bash ./api/patch_generated.sh",
+    "functions:lint": "npm --prefix functions run lint",
+    "functions:serve": "npm --prefix functions run serve",
+    "functions:deploy": "npm --prefix functions run deploy",
+    "firebase:emulators": "firebase emulators:start",
+    "firebase:hosting:deploy": "firebase deploy --only hosting"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/newaadwn/SOI.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/newaadwn/SOI/issues"
-  },
-  "homepage": "https://github.com/newaadwn/SOI#readme",
-  "devDependencies": {
-    "@aws-amplify/backend": "^1.16.1",
-    "@aws-amplify/backend-cli": "^1.8.0",
-    "aws-cdk-lib": "^2.204.0",
-    "constructs": "^10.4.2",
-    "esbuild": "^0.25.9",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "aws-amplify": "^6.15.5"
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -1,9 +1,14 @@
 export 'soi_tag_comment_mapper.dart';
+export 'soi_tag_entry_extensions.dart';
 export 'soi_tagging_analytics.dart';
 export 'soi_tagging_avatar_builders.dart';
 export 'soi_tagging_comment_gateway.dart';
 export 'soi_tagging_composer_actions.dart';
+export 'soi_tagging_controller.dart';
 export 'soi_tagging_factory.dart';
 export 'soi_tagging_ids.dart';
-export 'soi_tagging_media_resolver.dart';
+export 'soi_tagging_metadata.dart';
 export 'soi_tagging_save_delegate.dart';
+export 'widgets/soi_tag_base_bar_widget.dart';
+export 'widgets/soi_tag_composer_widget.dart';
+export 'widgets/soi_tag_text_input_widget.dart';

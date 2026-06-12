@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:tagging_flutter/tagging_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -70,8 +71,8 @@ class ApiPhotoCardWidget extends StatefulWidget {
   // 상태 관리 관련
   final Map<TagScopeId, TagDraft> pendingCommentDrafts;
   final Map<TagScopeId, TagPendingMarker> pendingVoiceComments;
-  final TaggingSessionController taggingController;
-  final TaggingSaveDelegate saveDelegate;
+  final SoiTaggingController taggingController;
+  final TagMutationPort saveDelegate;
 
   // 콜백 함수들
   final Function(Post) onToggleAudio;
@@ -280,7 +281,7 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget>
   void _replaceCommentCaches(List<Comment> updatedComments) {
     widget.taggingController.replaceCommentsCache(
       _scopeId,
-      SoiTagCommentMapper.fromComments(updatedComments),
+      SoiTagCommentMapper.fromComments(updatedComments, scopeId: _scopeId),
     );
   }
 
@@ -591,10 +592,10 @@ class _ApiPhotoCardWidgetState extends State<ApiPhotoCardWidget>
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               padding: EdgeInsets.only(bottom: composerBottomInset),
-              child: TagComposerWidget(
+              child: SoiTagComposerWidget(
                 scopeId: _scopeId,
                 pendingDrafts: widget.pendingCommentDrafts,
-                saveDelegate: widget.saveDelegate,
+                mutationPort: widget.saveDelegate,
                 avatarBuilder: SoiTaggingAvatarBuilders.buildComposerAvatar,
                 onTextDraftSubmitted: (_, text) =>
                     _handleTextCommentCreated(text),

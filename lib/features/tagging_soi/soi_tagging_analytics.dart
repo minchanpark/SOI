@@ -16,7 +16,7 @@ class SoiTaggingAnalytics {
     required String surface,
     required String tagContentType,
     required int existingTagCountBefore,
-    required TagComment comment,
+    required TagEntry comment,
   }) async {
     try {
       final analytics = context.read<AnalyticsService>();

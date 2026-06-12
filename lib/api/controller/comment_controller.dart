@@ -22,6 +22,10 @@ class CommentController extends ChangeNotifier {
   /// - 태그 오버레이(사진에 태그를 표시하는 것)를 빠르게 다시 그릴 때 씀.
   final Map<int, List<Comment>> _cachedTagCommentsByPost = {};
 
+  /// 태그 캐시가 서버/parent/full 기준으로 완전하게 hydrate됐는지 추적합니다.
+  /// - 로컬에서 내 태그만 임시 반영된 경우에는 제외해 다음 로드에서 재조회합니다.
+  final Set<int> _hydratedTagCommentPosts = <int>{};
+
   /// 같은 게시물의 전체 댓글 요청이 여러 번 겹치지 않게 막는 맵.
   /// - 키는 postId, 값은 해당 게시물에 대한 **댓글**을 가져오는 Future 형식.
   final Map<int, Future<List<Comment>>> _inFlightCommentsByPost = {};
@@ -179,6 +183,10 @@ class CommentController extends ChangeNotifier {
   List<Comment>? peekTagCommentsCache({required int postId}) =>
       _cachedTagCommentsByPost[postId];
 
+  /// 현재 태그 캐시가 서버 기준의 완전한 목록인지 호출부가 판단할 수 있게 노출합니다.
+  bool hasHydratedTagCommentsCache({required int postId}) =>
+      _hydratedTagCommentPosts.contains(postId);
+
   /// 새로 받아온 데이터로 캐시를 통째로 바꿈.
   /// - 댓글 데이터가 바뀌는 시점에 두 캐시를 항상 동시에 교체해서 둘 사이의 불일치를 방지
   ///
@@ -221,6 +229,7 @@ class CommentController extends ChangeNotifier {
     _cachedTagCommentsByPost[postId] = _freeze(
       _filterTagComments(frozenParents),
     );
+    _hydratedTagCommentPosts.add(postId);
     notifyListeners();
   }
 
@@ -240,6 +249,7 @@ class CommentController extends ChangeNotifier {
     required List<Comment> comments,
   }) {
     _cachedTagCommentsByPost[postId] = _freeze(comments);
+    _hydratedTagCommentPosts.add(postId);
     notifyListeners();
   }
 
@@ -258,6 +268,7 @@ class CommentController extends ChangeNotifier {
   /// - [newComment]: 새로 만들어진 댓글.
   ///
   /// Returns: 값을 반환하지 않음.
+  /// - full/parent cache가 없는 tag-only 상태에서 추가된 값은 임시 cache로 간주합니다.
   void appendCreatedComment({
     required int postId,
     required Comment newComment,
@@ -300,6 +311,7 @@ class CommentController extends ChangeNotifier {
         tags != null &&
         !_contains(tags, newComment.id)) {
       _cachedTagCommentsByPost[postId] = _freeze([...tags, newComment]);
+      _hydratedTagCommentPosts.remove(postId);
       didChange = true; // 태그 캐시에 새 댓글을 추가했으니 변경이 있었음.
     }
 
@@ -339,6 +351,7 @@ class CommentController extends ChangeNotifier {
           _cachedTagCommentsByPost[postId] = _freeze(
             tags.where((c) => c.id != commentId).toList(),
           );
+          _hydratedTagCommentPosts.remove(postId);
           didChange = true;
         }
       }
@@ -373,6 +386,7 @@ class CommentController extends ChangeNotifier {
     }
     if (tag) {
       didChange = _cachedTagCommentsByPost.remove(postId) != null || didChange;
+      _hydratedTagCommentPosts.remove(postId);
     }
     if (didChange) {
       notifyListeners();
@@ -623,7 +637,9 @@ class CommentController extends ChangeNotifier {
   }) async {
     if (!forceReload) {
       final cached = peekTagCommentsCache(postId: postId);
-      if (cached != null) return cached;
+      if (cached != null && hasHydratedTagCommentsCache(postId: postId)) {
+        return cached;
+      }
     } else {
       invalidatePostCaches(postId: postId, tag: true, full: false);
     }
@@ -897,6 +913,7 @@ class CommentController extends ChangeNotifier {
     final fullComments = _cachedCommentsByPost[postId];
     if (fullComments == null) {
       _cachedParentCommentsByPost.remove(postId);
+      _hydratedTagCommentPosts.remove(postId);
       return;
     }
     final parentComments = _freeze(_filterParentComments(fullComments));
@@ -904,6 +921,7 @@ class CommentController extends ChangeNotifier {
     _cachedTagCommentsByPost[postId] = _freeze(
       _filterTagComments(parentComments),
     );
+    _hydratedTagCommentPosts.add(postId);
   }
 
   /// 댓글 목록에 특정 ID가 이미 있는지 확인함.

@@ -5,6 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:soi/api/services/camera_service.dart';
 
+class _CallCounter {
+  int value = 0;
+
+  void increment() => value++;
+}
+
 class _FakeAssetEntity extends Fake implements AssetEntity {
   _FakeAssetEntity(this.assetId);
 
@@ -18,14 +24,16 @@ class _FakeAssetPathEntity extends Fake implements AssetPathEntity {
   _FakeAssetPathEntity(this.assets);
 
   final List<AssetEntity> assets;
-  int getAssetListCallCount = 0;
+  final _getAssetListCounter = _CallCounter();
+
+  int get getAssetListCallCount => _getAssetListCounter.value;
 
   @override
   Future<List<AssetEntity>> getAssetListPaged({
     required int page,
     required int size,
   }) async {
-    getAssetListCallCount++;
+    _getAssetListCounter.increment();
     return assets.take(size).toList();
   }
 }

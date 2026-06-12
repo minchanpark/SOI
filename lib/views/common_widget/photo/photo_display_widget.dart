@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
+import 'package:tagging_core/tagging_core.dart';
 import 'package:tagging_flutter/tagging_flutter.dart';
 import 'package:video_player/video_player.dart';
 
@@ -84,7 +85,7 @@ class ApiPhotoDisplayWidget extends StatefulWidget {
   final String categoryName;
   final bool isArchive;
   final bool isFromCamera;
-  final TaggingSessionController taggingController;
+  final SoiTaggingController taggingController;
   final Future<List<Comment>> Function(int postId)? loadFullComments;
   final Function(int, Offset) onProfileImageDragged;
   final Function(Post) onToggleAudio;
@@ -748,7 +749,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
     required Offset tipAnchor,
   }) async {
     if (comment.isImage || comment.isVideo) {
-      if (!TagGeometryService.canExpandMediaComment(comment)) {
+      if (!comment.hasMediaAttachment) {
         _openCommentSheet(key);
         return;
       }
@@ -911,7 +912,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
   void _replaceCommentCaches(List<Comment> updatedComments) {
     widget.taggingController.replaceCommentsCache(
       _scopeId,
-      SoiTagCommentMapper.fromComments(updatedComments),
+      SoiTagCommentMapper.fromComments(updatedComments, scopeId: _scopeId),
     );
   }
 
@@ -1141,6 +1142,7 @@ class _ApiPhotoDisplayWidgetState extends State<ApiPhotoDisplayWidget>
                           selectedCommentKey: _selectedCommentKey,
                           expandedMediaTagKey: _expandedMediaTagKey,
                           imageSize: _imageSize,
+                          canExpandEntry: (entry) => entry.hasMediaAttachment,
                           commentAvatarBuilder:
                               SoiTaggingAvatarBuilders.buildCommentAvatar,
                           pendingAvatarBuilder:

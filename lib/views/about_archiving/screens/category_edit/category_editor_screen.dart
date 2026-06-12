@@ -535,6 +535,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         await _updateCoverPhoto(imageFile);
       }
     } catch (e) {
+      if (!mounted) return;
       SnackBarUtils.showSnackBar(
         context,
         tr('category.cover.camera_error', context: context),
@@ -556,6 +557,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         await _updateCoverPhoto(imageFile);
       }
     } catch (e) {
+      if (!mounted) return;
       SnackBarUtils.showSnackBar(
         context,
         tr('category.cover.gallery_error', context: context),
@@ -590,6 +592,8 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       }
 
       final mediaController = context.read<MediaController>();
+      final categoryController = context
+          .read<api_category.CategoryController>();
       final multipart = await mediaController.fileToMultipart(imageFile);
       final keys = await mediaController.uploadMedia(
         files: [multipart],
@@ -600,19 +604,18 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         usageCount: 1,
       );
 
+      if (!mounted) return;
       if (keys.isEmpty) {
         _showSnackBar(tr('category.cover.upload_failed', context: context));
         return;
       }
 
-      final categoryController = context
-          .read<api_category.CategoryController>();
       final success = await categoryController.updateCustomProfile(
         categoryId: widget.category.id,
-
         profileImageKey: keys.first,
       );
 
+      if (!mounted) return;
       if (!success) {
         final message =
             categoryController.errorMessage ??
@@ -622,8 +625,10 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       }
 
       await _reloadCategoryCache();
+      if (!mounted) return;
       _showSnackBar(tr('category.cover.updated', context: context));
     } catch (_) {
+      if (!mounted) return;
       _showSnackBar(tr('category.cover.update_error', context: context));
     }
   }
@@ -645,6 +650,7 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
         profileImageKey: '',
       );
 
+      if (!mounted) return;
       if (!success) {
         final message =
             categoryController.errorMessage ??
@@ -654,8 +660,10 @@ class _CategoryEditorScreenState extends State<CategoryEditorScreen>
       }
 
       await _reloadCategoryCache();
+      if (!mounted) return;
       _showSnackBar(tr('category.cover.deleted', context: context));
     } catch (_) {
+      if (!mounted) return;
       _showSnackBar(tr('category.cover.delete_error', context: context));
     }
   }

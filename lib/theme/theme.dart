@@ -48,25 +48,25 @@ class AppTheme {
   static const TextTheme _textTheme = TextTheme(
     displayMedium: TextStyle(
       fontSize: 20,
-      fontFamily: 'inter',
+      fontFamily: 'Pretendard',
       fontWeight: FontWeight.w600,
       color: Color(0xff232121), // 기본 색상
     ),
     displayLarge: TextStyle(
       fontSize: 20,
-      fontFamily: 'inter',
+      fontFamily: 'Pretendard',
       fontWeight: FontWeight.w700,
       color: Color(0xff232121), // 기본 색상
     ),
     labelMedium: TextStyle(
       fontSize: 16,
-      fontFamily: 'inter',
+      fontFamily: 'Pretendard',
       fontWeight: FontWeight.w500,
       color: Color(0xff535252), // 기본 색상
     ),
     labelSmall: TextStyle(
       fontSize: 12,
-      fontFamily: 'inter',
+      fontFamily: 'Pretendard',
       fontWeight: FontWeight.w700,
       color: Color(0xff232121), // 기본 색상
     ),

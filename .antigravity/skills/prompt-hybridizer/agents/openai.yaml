@@ -1,6 +1,0 @@
-interface:
-  display_name: "Prompt Hybridizer"
-  short_description: "Turn natural language into a compact hybrid execution prompt."
-  default_prompt: "Use $prompt-hybridizer to rewrite this request into a compact English JSON-hybrid execution contract before carrying it out."
-policy:
-  allow_implicit_invocation: false

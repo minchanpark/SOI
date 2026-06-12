@@ -9,9 +9,10 @@ import '../../api/models/comment.dart';
 import '../../api/services/media_service.dart';
 import 'soi_tag_comment_mapper.dart';
 import 'soi_tagging_ids.dart';
+import 'soi_tagging_metadata.dart';
 
-/// SOI의 댓글/미디어 컨트롤러를 이용해 태그 저장을 수행하는 앱 전용 delegate입니다.
-class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
+/// SOI의 댓글/미디어 컨트롤러를 이용해 core 저장 요청을 서버 댓글 저장으로 변환합니다.
+class SoiTaggingSaveDelegate implements TagMutationPort {
   const SoiTaggingSaveDelegate({
     required CommentController commentController,
     required MediaController mediaController,
@@ -27,44 +28,44 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
   final MediaController _mediaController;
 
   @override
-  Future<TagSaveResult> save({
-    required TagSavePayload payload,
+  Future<TagMutationResult> save({
+    required TagSaveRequest request,
     void Function(double progress)? onProgress,
   }) async {
-    final validationError = payload.validateForSave();
+    final validationError = request.validateForSave();
     if (validationError != null) {
-      throw StateError(validationError);
+      throw StateError(validationError.name);
     }
 
-    switch (payload.kind) {
-      case TagDraftKind.text:
-        return _saveTextComment(payload, onProgress);
-      case TagDraftKind.audio:
-        return _saveAudioComment(payload, onProgress);
-      case TagDraftKind.image:
-      case TagDraftKind.video:
-        return _saveMediaComment(payload, onProgress);
+    switch (request.content.type) {
+      case TagContentType.text:
+        return _saveTextComment(request, onProgress);
+      case TagContentType.audio:
+        return _saveAudioComment(request, onProgress);
+      case TagContentType.image:
+      case TagContentType.video:
+        return _saveMediaComment(request, onProgress);
     }
   }
 
-  Future<TagSaveResult> _saveTextComment(
-    TagSavePayload payload,
+  Future<TagMutationResult> _saveTextComment(
+    TagSaveRequest request,
     void Function(double progress)? onProgress,
   ) async {
-    final postId = SoiTaggingIds.postIdFromScopeId(payload.scopeId);
+    final postId = SoiTaggingIds.postIdFromScopeId(request.scopeId);
     final userId = SoiTaggingIds.requiredIntFromEntityId(
-      payload.userId,
-      fieldName: 'userId',
+      request.actorId,
+      fieldName: 'actorId',
     );
     onProgress?.call(0.45);
     final result = await _commentController.createComment(
       postId: postId,
       userId: userId,
-      parentId: SoiTaggingIds.intFromEntityId(payload.parentId) ?? 0,
-      replyUserId: SoiTaggingIds.intFromEntityId(payload.replyUserId) ?? 0,
-      text: payload.text,
-      locationX: payload.locationX,
-      locationY: payload.locationY,
+      parentId: SoiTaggingIds.intFromEntityId(request.parentEntryId) ?? 0,
+      replyUserId: _replyUserId(request),
+      text: request.content.text,
+      locationX: request.anchor?.x,
+      locationY: request.anchor?.y,
       type: CommentType.text,
     );
     onProgress?.call(0.9);
@@ -74,23 +75,28 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     }
 
     final comment = await _resolvePersistedComment(
-      payload: payload,
+      request: request,
       directComment: result.comment,
-      matcher: (comments) => _findSavedTextComment(comments, payload),
+      matcher: (comments) => _findSavedTextComment(comments, request),
     );
-    return TagSaveResult(comment: SoiTagCommentMapper.fromComment(comment));
+    return TagMutationResult(
+      entry: SoiTagCommentMapper.fromComment(
+        comment,
+        scopeId: request.scopeId,
+      ),
+    );
   }
 
-  Future<TagSaveResult> _saveAudioComment(
-    TagSavePayload payload,
+  Future<TagMutationResult> _saveAudioComment(
+    TagSaveRequest request,
     void Function(double progress)? onProgress,
   ) async {
-    final postId = SoiTaggingIds.postIdFromScopeId(payload.scopeId);
+    final postId = SoiTaggingIds.postIdFromScopeId(request.scopeId);
     final userId = SoiTaggingIds.requiredIntFromEntityId(
-      payload.userId,
-      fieldName: 'userId',
+      request.actorId,
+      fieldName: 'actorId',
     );
-    final audioPath = (payload.audioPath ?? '').trim();
+    final audioPath = (request.content.reference ?? '').trim();
     if (audioPath.isEmpty) {
       throw StateError('오디오 경로가 없습니다.');
     }
@@ -113,7 +119,7 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     }
 
     final waveformJson = _waveformCodec.encodeOrEmpty(
-      payload.waveformData,
+      request.content.waveformSamples,
       maxSamples: _kMaxWaveformSamples,
     );
 
@@ -121,13 +127,13 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     final result = await _commentController.createComment(
       postId: postId,
       userId: userId,
-      parentId: SoiTaggingIds.intFromEntityId(payload.parentId) ?? 0,
-      replyUserId: SoiTaggingIds.intFromEntityId(payload.replyUserId) ?? 0,
+      parentId: SoiTaggingIds.intFromEntityId(request.parentEntryId) ?? 0,
+      replyUserId: _replyUserId(request),
       audioKey: audioKey,
       waveformData: waveformJson,
-      duration: payload.duration,
-      locationX: payload.locationX,
-      locationY: payload.locationY,
+      duration: request.content.durationMs,
+      locationX: request.anchor?.x,
+      locationY: request.anchor?.y,
       type: CommentType.audio,
     );
     onProgress?.call(0.95);
@@ -137,23 +143,28 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     }
 
     final comment = await _resolvePersistedComment(
-      payload: payload,
+      request: request,
       directComment: result.comment,
-      matcher: (comments) => _findSavedAudioComment(comments, payload),
+      matcher: (comments) => _findSavedAudioComment(comments, request),
     );
-    return TagSaveResult(comment: SoiTagCommentMapper.fromComment(comment));
+    return TagMutationResult(
+      entry: SoiTagCommentMapper.fromComment(
+        comment,
+        scopeId: request.scopeId,
+      ),
+    );
   }
 
-  Future<TagSaveResult> _saveMediaComment(
-    TagSavePayload payload,
+  Future<TagMutationResult> _saveMediaComment(
+    TagSaveRequest request,
     void Function(double progress)? onProgress,
   ) async {
-    final postId = SoiTaggingIds.postIdFromScopeId(payload.scopeId);
+    final postId = SoiTaggingIds.postIdFromScopeId(request.scopeId);
     final userId = SoiTaggingIds.requiredIntFromEntityId(
-      payload.userId,
-      fieldName: 'userId',
+      request.actorId,
+      fieldName: 'actorId',
     );
-    final localFilePath = (payload.localFilePath ?? '').trim();
+    final localFilePath = (request.content.reference ?? '').trim();
     if (localFilePath.isEmpty) {
       throw StateError('미디어 경로가 없습니다.');
     }
@@ -165,7 +176,7 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
 
     onProgress?.call(0.18);
     final multipartFile = await _mediaController.fileToMultipart(mediaFile);
-    final mediaType = payload.kind == TagDraftKind.video
+    final mediaType = request.content.type == TagContentType.video
         ? MediaType.video
         : MediaType.image;
     final uploadedKeys = await _mediaController.uploadMedia(
@@ -185,12 +196,12 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     final result = await _commentController.createComment(
       postId: postId,
       userId: userId,
-      parentId: SoiTaggingIds.intFromEntityId(payload.parentId) ?? 0,
-      replyUserId: SoiTaggingIds.intFromEntityId(payload.replyUserId) ?? 0,
+      parentId: SoiTaggingIds.intFromEntityId(request.parentEntryId) ?? 0,
+      replyUserId: _replyUserId(request),
       fileKey: fileKey,
-      locationX: payload.locationX,
-      locationY: payload.locationY,
-      type: payload.kind == TagDraftKind.video
+      locationX: request.anchor?.x,
+      locationY: request.anchor?.y,
+      type: request.content.type == TagContentType.video
           ? CommentType.video
           : CommentType.photo,
     );
@@ -201,19 +212,24 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
     }
 
     final comment = await _resolvePersistedComment(
-      payload: payload,
+      request: request,
       directComment: result.comment,
-      matcher: (comments) => _findSavedMediaComment(comments, payload, fileKey),
+      matcher: (comments) => _findSavedMediaComment(comments, request, fileKey),
     );
-    return TagSaveResult(comment: SoiTagCommentMapper.fromComment(comment));
+    return TagMutationResult(
+      entry: SoiTagCommentMapper.fromComment(
+        comment,
+        scopeId: request.scopeId,
+      ),
+    );
   }
 
   Future<Comment> _resolvePersistedComment({
-    required TagSavePayload payload,
+    required TagSaveRequest request,
     required Comment? directComment,
     required Comment? Function(List<Comment> comments) matcher,
   }) async {
-    final postId = SoiTaggingIds.postIdFromScopeId(payload.scopeId);
+    final postId = SoiTaggingIds.postIdFromScopeId(request.scopeId);
     final persistedDirect = _persistedCommentOrNull(directComment);
     if (persistedDirect != null) {
       return persistedDirect;
@@ -242,10 +258,10 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
 
   Comment? _findSavedTextComment(
     List<Comment> comments,
-    TagSavePayload payload,
+    TagSaveRequest request,
   ) {
-    final trimmedText = (payload.text ?? '').trim();
-    final userId = SoiTaggingIds.intFromEntityId(payload.userId);
+    final trimmedText = (request.content.text ?? '').trim();
+    final userId = SoiTaggingIds.intFromEntityId(request.actorId);
     if (trimmedText.isEmpty) {
       return null;
     }
@@ -255,8 +271,8 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
         continue;
       }
 
-      final matchesX = _isNearCoordinate(comment.locationX, payload.locationX);
-      final matchesY = _isNearCoordinate(comment.locationY, payload.locationY);
+      final matchesX = _isNearCoordinate(comment.locationX, request.anchor?.x);
+      final matchesY = _isNearCoordinate(comment.locationY, request.anchor?.y);
       final sameText = (comment.text ?? '').trim() == trimmedText;
       if (matchesX && matchesY && sameText) {
         return comment;
@@ -268,18 +284,18 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
 
   Comment? _findSavedAudioComment(
     List<Comment> comments,
-    TagSavePayload payload,
+    TagSaveRequest request,
   ) {
-    final expectedDuration = payload.duration ?? 0;
-    final userId = SoiTaggingIds.intFromEntityId(payload.userId);
+    final expectedDuration = request.content.durationMs ?? 0;
+    final userId = SoiTaggingIds.intFromEntityId(request.actorId);
 
     for (final comment in comments.reversed) {
       if (!comment.isAudio || comment.userId != userId) {
         continue;
       }
 
-      final matchesX = _isNearCoordinate(comment.locationX, payload.locationX);
-      final matchesY = _isNearCoordinate(comment.locationY, payload.locationY);
+      final matchesX = _isNearCoordinate(comment.locationX, request.anchor?.x);
+      final matchesY = _isNearCoordinate(comment.locationY, request.anchor?.y);
       final matchesDuration =
           expectedDuration <= 0 ||
           comment.duration == null ||
@@ -294,10 +310,10 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
 
   Comment? _findSavedMediaComment(
     List<Comment> comments,
-    TagSavePayload payload,
+    TagSaveRequest request,
     String fileKey,
   ) {
-    final userId = SoiTaggingIds.intFromEntityId(payload.userId);
+    final userId = SoiTaggingIds.intFromEntityId(request.actorId);
     for (final comment in comments.reversed) {
       if (comment.userId != userId) {
         continue;
@@ -312,8 +328,8 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
         continue;
       }
 
-      final matchesX = _isNearCoordinate(comment.locationX, payload.locationX);
-      final matchesY = _isNearCoordinate(comment.locationY, payload.locationY);
+      final matchesX = _isNearCoordinate(comment.locationX, request.anchor?.x);
+      final matchesY = _isNearCoordinate(comment.locationY, request.anchor?.y);
       if (matchesX && matchesY) {
         return comment;
       }
@@ -327,5 +343,13 @@ class SoiTaggingSaveDelegate implements TaggingSaveDelegate {
       return false;
     }
     return (lhs - rhs).abs() <= 0.0001;
+  }
+
+  int _replyUserId(TagSaveRequest request) {
+    final rawValue = request.metadata[SoiTaggingMetadata.replyUserId];
+    if (rawValue is String) {
+      return SoiTaggingIds.intFromEntityId(rawValue) ?? 0;
+    }
+    return 0;
   }
 }

@@ -330,6 +330,7 @@ class FeedDataManager extends ChangeNotifier {
           visibleCount: _visibleCount == 0 ? _pageSize : _visibleCount,
         );
         _notifyStateChanged();
+        _emitLoadedPostCandidates(_allPosts);
         return;
       }
 
