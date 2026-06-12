@@ -1,4 +1,0 @@
-interface:
-  display_name: "API Lib Sync"
-  short_description: "Sync lib/api wrappers to api/generated contracts with method/model-level full audit"
-  default_prompt: "Use $api-lib-sync with api/generated/lib as source of truth: run impact detection or --full-audit, compare every generated API method and model against lib/api services/controllers/models plus api.dart/api_client.dart, then add or update missing/stale wrappers."

@@ -1,6 +1,0 @@
-interface:
-  display_name: "SOI 최적화"
-  short_description: "SOI Flutter 성능 병목을 분석하고 최소 수정으로 최적화"
-  default_prompt: "Use $soi-optimizer to optimize this SOI Flutter 코드 경로를 최소 변경으로 개선하고, 집중 테스트와 검증까지 진행해줘."
-policy:
-  allow_implicit_invocation: true
